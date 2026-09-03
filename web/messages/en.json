@@ -347,6 +347,15 @@
     "byoDescription": "Your personal access runs on your machine, not on our servers.",
     "byoBody1": "The computer running the program must stay on and connected to the internet for searches and downloads to work. If you turn the PC off, access becomes unavailable.",
     "byoBody2": "For 24/7 use, a small always-on server is a good option: install the same program there and link it with the same connection code.",
+    "mcpTitle": "Connect via the MCP API",
+    "mcpDescription": "No token to copy. The agent runs the OAuth flow.",
+    "mcpBody": "An agent (for example Claude Code) can connect to the MCP URL",
+    "mcpBodyAfter": "via OAuth 2.1. You do not copy any token: the agent handles the authorization flow. No API key is required.",
+    "dockerAltTitle": "Install with Docker",
+    "dockerAltDescription": "Alternative to install.sh — one command, then add your sources.",
+    "dockerAltBody": "If you already have Docker, you can skip the install script. Replace CODE with your connection code, then run:",
+    "dockerAltAfter": "Then open",
+    "dockerAltAfterEnd": "in your browser to add your sources.",
     "createAccess": "Create an access",
     "backHome": "Back to home"
   }

@@ -347,6 +347,15 @@
     "byoDescription": "Votre accès personnel tourne chez vous, pas sur nos serveurs.",
     "byoBody1": "La machine qui fait tourner le programme doit rester allumée et connectée à Internet pour que les recherches et téléchargements fonctionnent. Si vous éteignez le PC, l'accès devient indisponible.",
     "byoBody2": "Pour un fonctionnement 24 h/24, un petit serveur toujours allumé est une bonne option : installez-y le même programme et reliez-le avec le même code de connexion.",
+    "mcpTitle": "Se connecter via l’API MCP",
+    "mcpDescription": "Aucun jeton à copier. L’agent exécute le flux OAuth.",
+    "mcpBody": "Un agent (par exemple Claude Code) peut se connecter à l’URL MCP",
+    "mcpBodyAfter": "via OAuth 2.1. Vous n’avez aucun jeton à copier : l’agent mène le flux d’autorisation. Aucune clé n’est requise.",
+    "dockerAltTitle": "Installer avec Docker",
+    "dockerAltDescription": "Alternative à install.sh — une commande, puis ajoutez vos sources.",
+    "dockerAltBody": "Si Docker est déjà installé, vous pouvez passer le script d’installation. Remplacez CODE par votre code de connexion, puis lancez :",
+    "dockerAltAfter": "Puis ouvrez",
+    "dockerAltAfterEnd": "dans votre navigateur pour ajouter vos sources.",
     "createAccess": "Créer un accès",
     "backHome": "Retour à l'accueil"
   }
