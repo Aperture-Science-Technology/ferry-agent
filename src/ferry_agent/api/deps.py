@@ -86,17 +86,24 @@ async def get_current_user(
 
     try:
         signing_key = jwks_client.get_signing_key_from_jwt(token)
-        options = {"verify_aud": settings.clerk_audience is not None}
+        # CLERK_AUDIENCE="" (prod actuelle) ne doit PAS activer verify_aud :
+        # `is not None` serait True pour "" et comparerait contre audience vide.
+        verify_aud = bool(settings.clerk_audience)
         payload = jwt.decode(
             token,
             signing_key.key,
             algorithms=["RS256"],
-            audience=settings.clerk_audience,
-            issuer=settings.clerk_issuer,
-            options=options,
+            audience=(settings.clerk_audience if settings.clerk_audience else None),
+            options={"verify_aud": verify_aud, "verify_iss": False},
         )
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"JWT invalide: {exc}") from exc
+
+    # Clerk peut emettre `iss` avec ou sans slash final : comparer normalise.
+    token_iss = (payload.get("iss") or "").rstrip("/")
+    expected_iss = (settings.clerk_issuer or "").rstrip("/")
+    if not token_iss or token_iss != expected_iss:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="JWT issuer invalide")
 
     email = payload.get("email") or payload.get("sub")
     if not email:
