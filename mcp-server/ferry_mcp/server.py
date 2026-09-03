@@ -18,8 +18,41 @@ from ferry_mcp.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+
+def build_mcp_auth_provider():
+    settings = get_settings()
+    if not settings.mcp_auth_enabled:
+        return None
+
+    missing = [
+        name
+        for name, value in (
+            ("CLERK_DOMAIN", settings.clerk_domain),
+            ("CLERK_OAUTH_CLIENT_ID", settings.clerk_oauth_client_id),
+            ("CLERK_OAUTH_CLIENT_SECRET", settings.clerk_oauth_client_secret),
+            ("MCP_BASE_URL", settings.mcp_base_url),
+        )
+        if not (value or "").strip()
+    ]
+    if missing:
+        raise RuntimeError(
+            "MCP_AUTH_ENABLED is true but OAuth config is incomplete: "
+            + ", ".join(missing)
+        )
+
+    from fastmcp.server.auth.providers.clerk import ClerkProvider
+
+    return ClerkProvider(
+        domain=settings.clerk_domain,
+        client_id=settings.clerk_oauth_client_id,
+        client_secret=settings.clerk_oauth_client_secret,
+        base_url=settings.mcp_base_url,
+    )
+
+
 mcp = FastMCP(
-    name="ferry-agent",
+    "ferry-agent-mcp",
+    auth=build_mcp_auth_provider(),
     instructions=(
         "Ferry Agent MCP : gérez votre bibliothèque d'ebooks et envoyez-les "
         "sur vos liseuses. Utilisez search_library pour chercher, "
