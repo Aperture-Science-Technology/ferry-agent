@@ -24,6 +24,17 @@ class Settings(BaseSettings):
     gateway_search_wait_seconds: float = 15.0
     virustotal_api_key: str | None = None
 
+    # Send-to-Kindle / envoi email (tier A). Laisser smtp_user/smtp_password
+    # vides desactive l'envoi (mailer.is_configured() -> False) sans crash.
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+
+    # URL publique de base pour les liens courts du mini-catalogue tier C.
+    public_base_url: str = "https://ferry-agent.aperture-agency.org"
+
     app_env: str = "development"
 
 
