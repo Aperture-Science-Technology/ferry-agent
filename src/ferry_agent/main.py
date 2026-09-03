@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import jwt
 from fastapi import FastAPI
 
-from ferry_agent.api import books, deliveries, devices, gateways, health, tierc
+from ferry_agent.api import books, deliveries, devices, gateways, health, sources, tierc, users
 from ferry_agent.config import get_settings
 from ferry_agent.connectors.registry import log_startup
 from ferry_agent.services.converters import calibre_status_line
@@ -40,4 +40,6 @@ app.include_router(books.router)
 app.include_router(devices.router)
 app.include_router(deliveries.router)
 app.include_router(gateways.router)
+app.include_router(sources.router)
+app.include_router(users.router)
 app.include_router(tierc.router)

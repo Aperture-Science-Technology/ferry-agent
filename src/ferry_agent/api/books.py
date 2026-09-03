@@ -25,6 +25,19 @@ from ferry_agent.services import library
 router = APIRouter(prefix="/api/v1/books", tags=["books"])
 
 
+@router.get("", response_model=list[LibraryItemOut])
+async def list_books(
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[LibraryItemOut]:
+    """Liste les LibraryItem de l'utilisateur courant."""
+    from sqlalchemy import select as _select
+    from ferry_agent.models import LibraryItem
+    result = await db.execute(_select(LibraryItem).where(LibraryItem.user_id == user.id))
+    items = result.scalars().all()
+    return [LibraryItemOut.model_validate(item) for item in items]
+
+
 @router.post("/search", response_model=list[ResultOut])
 async def search_books(
     payload: SearchRequest,

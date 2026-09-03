@@ -12,13 +12,49 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
-from ferry_agent.models import Device
-from ferry_agent.schemas import DeviceLinkCallback, DeviceLinkUrlOut, DeviceOut
+from ferry_agent.models import Device, DeviceBrand, DeliveryTier
+from ferry_agent.schemas import DeviceCreate, DeviceLinkCallback, DeviceLinkUrlOut, DeviceOut
 from ferry_agent.services import cloud_links
+
+# Mapping brand → tier par défaut (peut être affiné par modèle)
+_KOBO_HIGH_END = {"forma", "sage", "elipsa", "libra colour", "libra color"}
+
+
+def _compute_tier(brand: DeviceBrand, model: str | None) -> DeliveryTier:
+    if brand == DeviceBrand.kindle:
+        return DeliveryTier.A
+    if brand == DeviceBrand.kobo:
+        m = (model or "").lower()
+        if any(name in m for name in _KOBO_HIGH_END):
+            return DeliveryTier.B
+        return DeliveryTier.C
+    if brand == DeviceBrand.tolino:
+        return DeliveryTier.C
+    return DeliveryTier.D
 
 router = APIRouter(prefix="/api/v1/devices", tags=["devices"])
 
 _PROVIDERS = ("dropbox", "drive")
+
+
+@router.post("", response_model=DeviceOut, status_code=status.HTTP_201_CREATED)
+async def create_device(
+    payload: DeviceCreate,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DeviceOut:
+    """Crée un Device pour l'utilisateur ; calcule delivery_tier selon la marque/modèle."""
+    tier = _compute_tier(payload.brand, payload.model)
+    device = Device(
+        user_id=user.id,
+        brand=payload.brand,
+        model=payload.model,
+        delivery_tier=tier,
+    )
+    db.add(device)
+    await db.commit()
+    await db.refresh(device)
+    return DeviceOut.model_validate(device)
 
 
 @router.get("", response_model=list[DeviceOut])

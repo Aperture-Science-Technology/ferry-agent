@@ -116,6 +116,33 @@ class LibraryItemOut(BaseModel):
     added_at: datetime
 
 
+class DeviceCreate(BaseModel):
+    brand: DeviceBrand
+    model: str | None = None
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    kindle_email: str | None
+    default_format: str
+
+
+class UserPatch(BaseModel):
+    kindle_email: str | None = None
+    default_format: str | None = None
+
+
+class SourceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    type: str
+    created_at: datetime
+
+
 class DeviceOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
