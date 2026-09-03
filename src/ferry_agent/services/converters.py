@@ -97,3 +97,20 @@ async def epub_to_azw3(epub_path: str, azw3_path: str | None = None) -> str:
 
     logger.warning("ebook-convert indisponible: fallback PyMuPDF (export PDF a la place de l'AZW3 demande)")
     return await epub_to_pdf(epub_path, str(out.with_suffix(".pdf")))
+
+
+async def convert_to_epub(src_path: str, epub_path: str | None = None) -> str:
+    """Convertit un ebook (pdf/mobi/azw3...) en EPUB via `ebook-convert`.
+
+    Pas de fallback PyMuPDF ici : `fitz` sait lire/exporter en PDF mais pas
+    ecrire d'EPUB, contrairement a `epub_to_mobi`/`epub_to_azw3` qui partent
+    toujours d'un EPUB source.
+    """
+    out = Path(epub_path) if epub_path else Path(src_path).with_suffix(".epub")
+
+    if not ebook_convert_available():
+        raise RuntimeError("ebook-convert indisponible: conversion vers EPUB impossible")
+
+    await _run_ebook_convert(src_path, str(out))
+    _check_output(out)
+    return str(out)

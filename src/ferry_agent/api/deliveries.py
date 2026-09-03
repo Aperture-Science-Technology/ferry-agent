@@ -61,7 +61,7 @@ async def create_delivery(
     await db.refresh(job)
 
     download_url = None
-    if device.delivery_tier == DeliveryTier.A:
+    if device.delivery_tier in (DeliveryTier.A, DeliveryTier.B):
         background_tasks.add_task(delivery_service.run_delivery, job.id, payload.format)
     elif device.delivery_tier == DeliveryTier.C:
         download_url = await delivery_service.deliver(db, job, payload.format)
