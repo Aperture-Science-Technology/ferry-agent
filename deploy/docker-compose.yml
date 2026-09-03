@@ -121,6 +121,11 @@ services:
     environment:
       FERRY_CORE_URL: ${FERRY_CORE_URL:?required}
       MCP_API_KEY: ${MCP_API_KEY:?required}
+      MCP_AUTH_ENABLED: ${MCP_AUTH_ENABLED:-}
+      CLERK_DOMAIN: ${CLERK_DOMAIN:-}
+      CLERK_OAUTH_CLIENT_ID: ${CLERK_OAUTH_CLIENT_ID:-}
+      CLERK_OAUTH_CLIENT_SECRET: ${CLERK_OAUTH_CLIENT_SECRET:-}
+      MCP_BASE_URL: ${MCP_BASE_URL:-}
       PORT: 8000
     networks:
       - ferry-net
