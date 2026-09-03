@@ -56,6 +56,15 @@ const STEPS = [
         dossier facile à retrouver.
       </>
     ),
+    cta: (
+      <Button
+        render={
+          <a href="https://ferry-agent.aperture-agency.org/bundle/ferry-agent-bundle.tar.gz">
+            Télécharger le bundle (tar.gz)
+          </a>
+        }
+      />
+    ),
   },
   {
     number: "03",
@@ -152,6 +161,9 @@ export function ByoInstallGuide() {
                     {step.title}
                   </h3>
                   <p className="mt-2 text-muted-foreground">{step.body}</p>
+                  {"cta" in step && step.cta ? (
+                    <div className="mt-4">{step.cta}</div>
+                  ) : null}
                   {"code" in step && step.code ? (
                     <div className="mt-4">
                       <CodeBlock>{step.code}</CodeBlock>

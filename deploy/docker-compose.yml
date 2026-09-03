@@ -134,6 +134,23 @@ services:
       - "traefik.http.services.ferry-agent-mcp.loadbalancer.server.port=8000"
       - "com.centurylinklabs.watchtower.enable=true"
 
+  bundle:
+    image: nginx:alpine
+    container_name: ferry-agent-bundle-serve
+    restart: unless-stopped
+    volumes:
+      - /home/glados/deployments/ferry-agent/dist:/usr/share/nginx/html/bundle:ro
+    networks:
+      - ferry-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ferry-agent-bundle.rule=Host(`ferry-agent.aperture-agency.org`) && PathPrefix(`/bundle`)"
+      - "traefik.http.routers.ferry-agent-bundle.entrypoints=websecure"
+      - "traefik.http.routers.ferry-agent-bundle.tls=true"
+      - "traefik.http.routers.ferry-agent-bundle.tls.certresolver=cf"
+      - "traefik.http.services.ferry-agent-bundle.loadbalancer.server.port=80"
+      - "com.centurylinklabs.watchtower.enable=true"
+
 networks:
   ferry-net:
     name: infrastructure_infra-network
