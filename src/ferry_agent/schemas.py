@@ -127,6 +127,15 @@ class DeviceOut(BaseModel):
     last_synced_at: datetime | None
 
 
+class DeviceLinkUrlOut(BaseModel):
+    url: str
+
+
+class DeviceLinkCallback(BaseModel):
+    provider: str
+    code: str = Field(min_length=1)
+
+
 class DeliveryCreate(BaseModel):
     library_item_id: uuid.UUID
     device_id: uuid.UUID

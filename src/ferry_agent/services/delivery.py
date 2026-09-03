@@ -25,7 +25,7 @@ from ferry_agent.models import (
     LibraryItem,
     User,
 )
-from ferry_agent.services import converters, mailer, tierc
+from ferry_agent.services import cloud_links, converters, mailer, tierc
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +83,51 @@ async def _deliver_tier_a(
     await db.commit()
 
 
+async def _deliver_tier_b(
+    db: AsyncSession,
+    job: DeliveryJob,
+    item: LibraryItem,
+    device: Device,
+    user: User,
+) -> None:
+    """Upload Dropbox/Google Drive : l'utilisateur recupere le fichier depuis
+    l'app cloud sur sa liseuse (Kobo haut de gamme), puis tape "Sync"."""
+    if not device.link_ref:
+        await _fail(db, job, "provider cloud non lie (voir GET /api/v1/devices/{id}/link)")
+        return
+
+    try:
+        link_ref = cloud_links.parse_link_ref(device.link_ref)
+    except cloud_links.CloudLinkError as exc:
+        await _fail(db, job, str(exc))
+        return
+
+    file_path = item.storage_path
+    if item.original_format.lower() != "epub":
+        try:
+            file_path = await converters.convert_to_epub(item.storage_path)
+        except Exception as exc:
+            await _fail(db, job, f"conversion EPUB echouee: {exc}")
+            return
+
+    filename = Path(file_path).name
+    file_bytes = Path(file_path).read_bytes()
+
+    job.status = DeliveryStatus.sent
+    job.method = DeliveryMethod.dropbox if link_ref["provider"] == "dropbox" else DeliveryMethod.drive
+    await db.commit()
+
+    try:
+        await cloud_links.upload_job_file(device.link_ref, filename, file_bytes)
+    except Exception as exc:
+        await _fail(db, job, str(exc))
+        return
+
+    job.status = DeliveryStatus.delivered
+    job.delivered_at = _utcnow()
+    await db.commit()
+
+
 async def _deliver_tier_c(db: AsyncSession, job: DeliveryJob, item: LibraryItem) -> str:
     """Mini-catalogue HTTP + code court : cree la session de telechargement."""
     _short_code, url = await tierc.create_download_session(db, job.id)
@@ -117,6 +162,14 @@ async def deliver(
                 await _fail(db, job, "utilisateur introuvable")
                 return None
             await _deliver_tier_a(db, job, item, device, user, requested_format)
+            return None
+        if device.delivery_tier == DeliveryTier.B:
+            user_result = await db.execute(select(User).where(User.id == item.user_id))
+            user = user_result.scalar_one_or_none()
+            if user is None:
+                await _fail(db, job, "utilisateur introuvable")
+                return None
+            await _deliver_tier_b(db, job, item, device, user)
             return None
         if device.delivery_tier == DeliveryTier.C:
             return await _deliver_tier_c(db, job, item)
