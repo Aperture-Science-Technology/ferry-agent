@@ -1,0 +1,158 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: aperture-science-technology/ferry-agent
+
+jobs:
+  build-push-core:
+    name: Build & push core image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/core
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=sha,format=short
+
+      - name: Build & push core image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=core
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/core:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=core
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/core:buildcache,mode=max
+
+  build-push-web:
+    name: Build & push web image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=sha,format=short
+
+      - name: Build & push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: ./web/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_APP_URL=https://ferry-agent.aperture-agency.org
+            NEXT_PUBLIC_BACKEND_BASE=https://ferry-agent.aperture-agency.org/api/v1
+          cache-from: |
+            type=gha,scope=web
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=web
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web:buildcache,mode=max
+
+  build-push-mcp-server:
+    name: Build & push mcp-server image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/mcp-server
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=sha,format=short
+
+      - name: Build & push mcp-server image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./mcp-server
+          file: ./mcp-server/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=mcp-server
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/mcp-server:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=mcp-server
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/mcp-server:buildcache,mode=max
