@@ -65,6 +65,7 @@ async def import_from_connector(
         author="",
         source_id=source.id,
         original_format=dest.suffix.lstrip(".") or "epub",
+        storage_path=str(dest),
     )
     db.add(item)
     await db.commit()
@@ -88,6 +89,7 @@ async def import_from_upload(
         author="",
         source_id=source.id,
         original_format=Path(filename).suffix.lstrip(".") or "epub",
+        storage_path=str(dest),
     )
     db.add(item)
     await db.commit()
@@ -128,6 +130,7 @@ async def import_from_gateway(
         author=metadata.get("author") or "",
         source_id=source.id,
         original_format=detected_format,
+        storage_path=str(dest),
     )
     db.add(item)
     await db.commit()
