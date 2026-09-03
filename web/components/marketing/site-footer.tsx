@@ -9,6 +9,9 @@ export function SiteFooter() {
         <p>Built by Aperture Science Technology</p>
         <div className="flex items-center gap-6">
           <span>open-source</span>
+          <Link href="/docs" className="transition hover:text-foreground">
+            docs
+          </Link>
           <Link href="/app/bibliotheque" className="transition hover:text-foreground">
             dashboard
           </Link>
