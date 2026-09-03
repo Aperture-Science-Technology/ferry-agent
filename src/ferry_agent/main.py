@@ -1,4 +1,4 @@
-"""Point d'entree FastAPI de Ferry Agent (M0: fondations)."""
+"""Point d'entree FastAPI de Ferry Agent."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import jwt
 from fastapi import FastAPI
 
-from ferry_agent.api import books, deliveries, devices, health
+from ferry_agent.api import books, deliveries, devices, gateways, health
 from ferry_agent.config import get_settings
 from ferry_agent.connectors.registry import log_startup
 from ferry_agent.services.converters import calibre_status_line
@@ -39,3 +39,4 @@ app.include_router(health.router)
 app.include_router(books.router)
 app.include_router(devices.router)
 app.include_router(deliveries.router)
+app.include_router(gateways.router)

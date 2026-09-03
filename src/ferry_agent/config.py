@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     library_storage_dir: str = "./data/library"
     temp_dir: str = "./data/tmp"
 
+    max_fetch_bytes: int = 200 * 1024 * 1024
+    pairing_token_ttl_minutes: int = 15
+    gateway_online_seconds: int = 60
+    gateway_search_wait_seconds: float = 15.0
+    virustotal_api_key: str | None = None
+
     app_env: str = "development"
 
 

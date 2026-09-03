@@ -5,9 +5,9 @@ sources légales (Project Gutenberg, Standard Ebooks), upload utilisateur,
 conversion de formats, et mise en file de livraisons vers des liseuses
 (Kindle, Kobo, Tolino, PocketBook...).
 
-Ce dépôt couvre le périmètre **M0 (fondations)** : modèle de données complet,
-squelette API FastAPI, connecteurs de sources légales, pipeline de
-conversion. Les sources torrent/pirate et le serveur MCP sont hors périmètre.
+Le périmètre **M0.5** ajoute le peering avec un connecteur torrent détaché :
+ce core ne télécharge aucun torrent. Il orchestre des `GatewayJob` et reçoit
+les résultats/fichiers d'un bundle BYO installé chez l'utilisateur.
 
 ## Démarrage
 
@@ -29,6 +29,16 @@ jamais être actif en production.
 
 `GET /health` et `GET /healthz` sont publics et ne nécessitent pas de DB.
 
+## Gateway détaché
+
+Le dashboard crée une gateway avec `POST /api/v1/gateways`. Le pairing token
+et la clé gateway ne sont renvoyés qu'à cette occasion. Le bundle consomme
+ensuite `/pair`, `/poll` et les routes de résultat avec `X-Gateway-Key`.
+
+Paramètres importants : `PAIRING_TOKEN_TTL_MINUTES`,
+`GATEWAY_ONLINE_SECONDS`, `GATEWAY_SEARCH_WAIT_SECONDS`,
+`MAX_FETCH_BYTES` et, facultativement, `VIRUSTOTAL_API_KEY`.
+
 ## Structure
 
 ```
@@ -38,7 +48,7 @@ src/ferry_agent/
   db.py             engine/session SQLAlchemy async
   models.py         modèles SQLAlchemy (User, Device, Source, LibraryItem, DeliveryJob, Gateway, GatewayJob)
   schemas.py        schémas Pydantic
-  api/              routes FastAPI (health, books, devices, deliveries) + dépendance d'auth
+  api/              routes FastAPI (health, books, devices, deliveries, gateways) + dépendances d'auth
   services/         conversion de formats, import de bibliothèque
   connectors/       connecteurs de sources légales (gutenberg, standard_ebooks, upload) + registry
 ```
