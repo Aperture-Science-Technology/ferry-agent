@@ -11,6 +11,11 @@ class MCPSettings(BaseSettings):
     ferry_core_url: str = "http://ferry-core:8000"
     mcp_api_key: str = ""
     port: int = 8000
+    mcp_auth_enabled: bool = False
+    clerk_domain: str = ""
+    clerk_oauth_client_id: str = ""
+    clerk_oauth_client_secret: str = ""
+    mcp_base_url: str = "https://ferry-agent.aperture-agency.org"
 
 
 @lru_cache
