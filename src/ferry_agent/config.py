@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     # URL publique de base pour les liens courts du mini-catalogue tier C.
     public_base_url: str = "https://ferry-agent.aperture-agency.org"
 
+    # Livraison tier B (upload Dropbox / Google Drive). Credentials OAuth de
+    # config runtime (env) : jamais commits. Laisser client_id/secret vides
+    # desactive le provider correspondant (l'endpoint /link renvoie 503
+    # plutot que de planter). `{id}` dans les redirect_uri est remplace par
+    # l'UUID du device au moment de la requete.
+    dropbox_client_id: str | None = None
+    dropbox_client_secret: str | None = None
+    dropbox_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/{id}/link/callback"
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    google_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/{id}/link/callback"
+
     app_env: str = "development"
 
 

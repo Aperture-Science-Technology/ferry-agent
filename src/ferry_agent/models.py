@@ -62,6 +62,7 @@ class DeliveryStatus(str, enum.Enum):
 class DeliveryMethod(str, enum.Enum):
     email = "email"
     dropbox = "dropbox"
+    drive = "drive"
     browser_code = "browser_code"
     usb = "usb"
 
