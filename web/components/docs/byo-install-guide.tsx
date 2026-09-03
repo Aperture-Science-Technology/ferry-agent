@@ -162,6 +162,37 @@ export function ByoInstallGuide() {
 
       <Card className="border-border/60 bg-card/40">
         <CardHeader>
+          <CardTitle>{t("mcpTitle")}</CardTitle>
+          <CardDescription>{t("mcpDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-muted-foreground">
+          <p>
+            {t("mcpBody")}{" "}
+            <Code>https://ferry-agent.aperture-agency.org/mcp</Code>{" "}
+            {t("mcpBodyAfter")}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/40">
+        <CardHeader>
+          <CardTitle>{t("dockerAltTitle")}</CardTitle>
+          <CardDescription>{t("dockerAltDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-muted-foreground">
+          <p>{t("dockerAltBody")}</p>
+          <CodeBlock>
+            {`docker run -d --name ferry-gateway --restart unless-stopped -e PAIRING_TOKEN=CODE -e PUID=$(id -u) -e PGID=$(id -g) -p 9696:9696 -p 51413:51413 -p 51413:51413/udp -v "$PWD/downloads:/downloads" ghcr.io/aperture-science-technology/ferry-agent/gateway:latest`}
+          </CodeBlock>
+          <p>
+            {t("dockerAltAfter")} <Code>http://127.0.0.1:9696</Code>{" "}
+            {t("dockerAltAfterEnd")}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/40">
+        <CardHeader>
           <CardTitle>{t("byoTitle")}</CardTitle>
           <CardDescription>{t("byoDescription")}</CardDescription>
         </CardHeader>
