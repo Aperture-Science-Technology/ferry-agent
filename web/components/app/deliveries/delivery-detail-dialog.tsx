@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -21,6 +22,8 @@ export function DeliveryDetailDialog({
   jobId: string | null;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("deliveryDetail");
+  const tDeliveries = useTranslations("deliveries");
   const { call } = useApiClient();
   const [job, setJob] = useState<DeliveryJob | null>(null);
   const [failedId, setFailedId] = useState<string | null>(null);
@@ -36,16 +39,13 @@ export function DeliveryDetailDialog({
       .catch(() => {
         if (cancelled) return;
         setFailedId(jobId);
-        toast.error("Impossible de charger le suivi de cette livraison.");
+        toast.error(t("toastLoadFailed"));
       });
     return () => {
       cancelled = true;
     };
-  }, [jobId, call]);
+  }, [jobId, call, t]);
 
-  // The dialog is hidden whenever jobId is null (see `open` below), so we
-  // only need to make sure stale data from a previous job isn't shown while
-  // the next one is loading.
   const displayJob = job?.id === jobId ? job : null;
   const loading = jobId !== null && displayJob === null && failedId !== jobId;
 
@@ -53,7 +53,7 @@ export function DeliveryDetailDialog({
     <Dialog open={jobId !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Suivi de la livraison</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>{jobId}</DialogDescription>
         </DialogHeader>
         {loading || !displayJob ? (
@@ -63,20 +63,20 @@ export function DeliveryDetailDialog({
         ) : (
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Statut</span>
-              <Badge className="capitalize">{displayJob.status}</Badge>
+              <span className="text-muted-foreground">{t("status")}</span>
+              <Badge>{tDeliveries(`statuses.${displayJob.status}`)}</Badge>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Méthode</span>
+              <span className="text-muted-foreground">{t("method")}</span>
               <span className="capitalize">{displayJob.method}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Créée</span>
+              <span className="text-muted-foreground">{t("created")}</span>
               <span>{new Date(displayJob.created_at).toLocaleString()}</span>
             </div>
             {displayJob.delivered_at && (
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Livrée</span>
+                <span className="text-muted-foreground">{t("delivered")}</span>
                 <span>{new Date(displayJob.delivered_at).toLocaleString()}</span>
               </div>
             )}

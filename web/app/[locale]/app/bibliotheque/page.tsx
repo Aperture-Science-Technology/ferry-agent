@@ -1,9 +1,18 @@
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/app/page-header";
 import { LibraryView } from "@/components/app/library/library-view";
 import { safeApiFetch } from "@/lib/api";
 import type { Device, LibraryItem } from "@/lib/types";
 
-export default async function BibliothequePage() {
+export default async function BibliothequePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("pages.library");
+
   const [items, devices] = await Promise.all([
     safeApiFetch<LibraryItem[]>("/api/v1/books"),
     safeApiFetch<Device[]>("/api/v1/devices"),
@@ -11,10 +20,7 @@ export default async function BibliothequePage() {
 
   return (
     <div>
-      <PageHeader
-        title="Bibliothèque"
-        description="Vos livres, ajoutés depuis une source légale, un gateway pairé ou un upload."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
       <LibraryView
         initialItems={items ?? []}
         itemsUnavailable={items === null}

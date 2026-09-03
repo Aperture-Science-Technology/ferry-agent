@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { ExternalLink, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,8 @@ export function CloudLinkDialog({
   onOpenChange: (open: boolean) => void;
   onLinked: (device: Device) => void;
 }) {
+  const t = useTranslations("cloudLink");
+  const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [provider, setProvider] = useState<Provider>("dropbox");
   const [authorizeUrl, setAuthorizeUrl] = useState<string | null>(null);
@@ -42,9 +45,6 @@ export function CloudLinkDialog({
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset the authorize URL / code whenever the target device or provider
-  // changes, without an Effect (see "Adjusting state when a prop changes"
-  // in the React docs — this runs during render, not after commit).
   const resetKey = `${device?.id ?? ""}:${provider}`;
   const [lastResetKey, setLastResetKey] = useState(resetKey);
   if (resetKey !== lastResetKey) {
@@ -63,7 +63,11 @@ export function CloudLinkDialog({
       setAuthorizeUrl(url);
       window.open(url, "_blank", "noopener,noreferrer");
     } catch {
-      toast.error(`${provider === "dropbox" ? "Dropbox" : "Google Drive"} n'est pas configuré côté core.`);
+      toast.error(
+        t("toastNotConfigured", {
+          provider: provider === "dropbox" ? "Dropbox" : "Google Drive",
+        })
+      );
     } finally {
       setLoadingUrl(false);
     }
@@ -78,10 +82,10 @@ export function CloudLinkDialog({
         body: JSON.stringify({ provider, code: code.trim() }),
       });
       onLinked(updated);
-      toast.success("Compte cloud lié.");
+      toast.success(t("toastLinked"));
       onOpenChange(false);
     } catch {
-      toast.error("Le code n'a pas pu être échangé.");
+      toast.error(t("toastCodeFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -91,15 +95,12 @@ export function CloudLinkDialog({
     <Dialog open={device !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Lier un compte cloud</DialogTitle>
-          <DialogDescription>
-            Ouvrez la page d&apos;autorisation, puis collez le code renvoyé
-            dans l&apos;URL de redirection.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Fournisseur</Label>
+            <Label>{t("provider")}</Label>
             <Select
               value={provider}
               onValueChange={(value) => value && setProvider(value as Provider)}
@@ -115,26 +116,26 @@ export function CloudLinkDialog({
           </div>
           <Button variant="outline" onClick={fetchAuthorizeUrl} disabled={loadingUrl} className="w-full">
             {loadingUrl ? <Loader2 className="animate-spin" /> : <ExternalLink />}
-            Ouvrir la page d&apos;autorisation
+            {t("openAuth")}
           </Button>
           {authorizeUrl && (
             <div className="space-y-2">
-              <Label>Code d&apos;autorisation</Label>
+              <Label>{t("authCode")}</Label>
               <Input
                 value={code}
                 onChange={(event) => setCode(event.target.value)}
-                placeholder="Collez le code ici"
+                placeholder={t("codePlaceholder")}
               />
             </div>
           )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annuler
+            {tCommon("cancel")}
           </Button>
           <Button onClick={submitCode} disabled={!authorizeUrl || !code.trim() || submitting}>
             {submitting && <Loader2 className="animate-spin" />}
-            Lier
+            {t("link")}
           </Button>
         </DialogFooter>
       </DialogContent>

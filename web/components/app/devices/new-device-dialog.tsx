@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -25,12 +26,7 @@ import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
 const BRANDS: Device["brand"][] = ["kindle", "kobo", "tolino", "pocketbook", "other"];
-const TIERS: { value: Device["delivery_tier"]; label: string }[] = [
-  { value: "A", label: "A — Email (Send-to-Kindle)" },
-  { value: "B", label: "B — Cloud (Dropbox/Drive)" },
-  { value: "C", label: "C — Code navigateur" },
-  { value: "D", label: "D — USB" },
-];
+const TIER_VALUES: Device["delivery_tier"][] = ["A", "B", "C", "D"];
 
 export function NewDeviceDialog({
   open,
@@ -41,6 +37,8 @@ export function NewDeviceDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: (device: Device) => void;
 }) {
+  const t = useTranslations("newDevice");
+  const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [brand, setBrand] = useState<Device["brand"]>("kindle");
   const [model, setModel] = useState("");
@@ -55,13 +53,11 @@ export function NewDeviceDialog({
         body: JSON.stringify({ brand, model: model || null, delivery_tier: tier }),
       });
       onCreated(device);
-      toast.success("Appareil ajouté.");
+      toast.success(t("toastCreated"));
       onOpenChange(false);
       setModel("");
     } catch {
-      toast.error(
-        "Impossible de créer l'appareil (POST /api/v1/devices n'est pas encore disponible côté core)."
-      );
+      toast.error(t("toastFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -71,14 +67,12 @@ export function NewDeviceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nouvel appareil</DialogTitle>
-          <DialogDescription>
-            Renseignez la marque et le tier de livraison de votre liseuse.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Marque</Label>
+            <Label>{t("brand")}</Label>
             <Select
               value={brand}
               onValueChange={(value) => value && setBrand(value as Device["brand"])}
@@ -96,11 +90,11 @@ export function NewDeviceDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Modèle (optionnel)</Label>
+            <Label>{t("modelOptional")}</Label>
             <Input value={model} onChange={(event) => setModel(event.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Tier de livraison</Label>
+            <Label>{t("deliveryMode")}</Label>
             <Select
               value={tier}
               onValueChange={(value) => value && setTier(value as Device["delivery_tier"])}
@@ -109,9 +103,9 @@ export function NewDeviceDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {TIERS.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
+                {TIER_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`tierOptions.${value}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -120,11 +114,11 @@ export function NewDeviceDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annuler
+            {tCommon("cancel")}
           </Button>
           <Button onClick={submit} disabled={submitting}>
             {submitting && <Loader2 className="animate-spin" />}
-            Créer
+            {tCommon("create")}
           </Button>
         </DialogFooter>
       </DialogContent>

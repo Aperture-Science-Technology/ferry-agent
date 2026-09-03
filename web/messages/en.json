@@ -1,0 +1,353 @@
+{
+  "meta": {
+    "title": "Ferry Agent",
+    "description": "Get your books onto your e-reader. Runs at home, free book sources, delivery to Kindle, Kobo, Tolino and more."
+  },
+  "locale": {
+    "switch": "Language",
+    "fr": "FR",
+    "en": "EN"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "done": "Done",
+    "copied": "Copied.",
+    "never": "Never",
+    "dash": "—",
+    "loading": "Loading…"
+  },
+  "header": {
+    "howItWorks": "How it works",
+    "delivered": "On your device",
+    "faq": "FAQ",
+    "docs": "Guide",
+    "signIn": "Sign in",
+    "openDashboard": "Open dashboard",
+    "dashboard": "Dashboard"
+  },
+  "footer": {
+    "builtBy": "Built by Aperture Science Technology",
+    "openSource": "open-source",
+    "docs": "guide",
+    "dashboard": "dashboard"
+  },
+  "hero": {
+    "badge": "Your personal access is ready",
+    "titleBefore": "The bridge between your books and",
+    "titleHighlight": "your e-reader.",
+    "subtitle": "Runs at home. Free book sources, one tap away. Your access stays yours.",
+    "ctaDashboard": "Open dashboard",
+    "ctaHow": "How it works"
+  },
+  "valueProps": {
+    "eyebrow": "Why Ferry Agent",
+    "items": {
+      "selfHosted": {
+        "title": "Runs at home.",
+        "body": "Your books stay on your machine. Nothing is stored on our side."
+      },
+      "legal": {
+        "title": "Free book sources.",
+        "body": "Gutenberg, Standard Ebooks, your own files… Search once, send anywhere."
+      },
+      "detached": {
+        "title": "On your machine, not ours.",
+        "body": "Your personal access runs on your computer. It never goes through our servers."
+      }
+    }
+  },
+  "delivered": {
+    "title": "On your device.",
+    "items": {
+      "kindle": {
+        "name": "Kindle",
+        "body": "Arrives by email on its own."
+      },
+      "kobo": {
+        "name": "Kobo",
+        "body": "One sync away."
+      },
+      "tolino": {
+        "name": "Tolino",
+        "body": "A code in your browser."
+      },
+      "usb": {
+        "name": "USB",
+        "body": "Always available by hand."
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "How it works.",
+    "steps": {
+      "pair": {
+        "number": "01",
+        "title": "Connect your personal access",
+        "body": "Create your access, run the small program at home, you're set."
+      },
+      "search": {
+        "number": "02",
+        "title": "Search for a book",
+        "body": "Free sources and your personal access, in one search."
+      },
+      "deliver": {
+        "number": "03",
+        "title": "Send it to your e-reader",
+        "body": "Pick a device. Ferry Agent handles the format and the delivery."
+      }
+    }
+  },
+  "faq": {
+    "title": "Questions. Answered.",
+    "items": {
+      "selfHosted": {
+        "q": "Does it run on my machine?",
+        "a": "Yes. The core and your library stay on your machine. Nothing is stored on servers we control."
+      },
+      "gatewayNeeded": {
+        "q": "Do I need personal access for free book sources?",
+        "a": "No. Gutenberg, Standard Ebooks and your uploads work right away. Personal access is only needed for sources that live on your own network."
+      },
+      "readers": {
+        "q": "Which e-readers are supported?",
+        "a": "Kindle (sent by email), Kobo and cloud-linked devices, Tolino and browsers via a short-lived code, and any USB-connected reader."
+      },
+      "myData": {
+        "q": "Is my data mine?",
+        "a": "Yes. Your library, your devices, your delivery history — all stored on your own setup."
+      },
+      "agent": {
+        "q": "Can I automate deliveries?",
+        "a": "Yes. A technical interface (API) uses the same sign-in as the dashboard, so something automated can search and deliver for you."
+      }
+    }
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "library": "Library",
+    "devices": "Devices",
+    "access": "Access",
+    "sources": "Sources",
+    "deliveries": "Deliveries",
+    "settings": "Settings"
+  },
+  "pages": {
+    "library": {
+      "title": "Library",
+      "description": "Your books, found in a free source, via your personal access, or added yourself."
+    },
+    "devices": {
+      "title": "Devices",
+      "description": "Your e-readers and how books arrive on them (email, cloud, browser code, USB)."
+    },
+    "access": {
+      "title": "Access",
+      "description": "Your personal access, installed at home and linked to your account."
+    },
+    "sources": {
+      "title": "Sources",
+      "description": "Your free book sources and those set up for search."
+    },
+    "deliveries": {
+      "title": "Deliveries",
+      "description": "Track your deliveries to your devices."
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Your delivery preferences."
+    }
+  },
+  "library": {
+    "searchPlaceholder": "Search by title, author…",
+    "search": "Search",
+    "myLibrary": "My library",
+    "title": "Title",
+    "author": "Author",
+    "source": "Source",
+    "format": "Format",
+    "added": "Added",
+    "action": "Action",
+    "add": "Add",
+    "deliver": "Send",
+    "emptyTitle": "Your library is empty",
+    "emptyDescription": "Search for a book above to add it.",
+    "emptyUnavailable": "Your library couldn't be loaded right now. Please try again later.",
+    "toastNoResults": "No results for this search.",
+    "toastSearchFailed": "Search didn't work. Please try again.",
+    "toastFetchStarted": "Download started on your personal access.",
+    "toastAdded": "“{title}” was added to your library.",
+    "toastAddFailed": "Couldn't add this book. Please try again."
+  },
+  "deliverDialog": {
+    "title": "Send “{title}”",
+    "description": "Choose a destination device. The device's usual format will be used if you leave this field empty.",
+    "device": "Device",
+    "devicePlaceholder": "Choose a device",
+    "noDevices": "No devices yet. Add one under Devices.",
+    "formatOptional": "Format (optional)",
+    "formatPlaceholder": "epub, mobi, azw3, pdf…",
+    "submit": "Send",
+    "toastReady": "Ready to download.",
+    "toastStarted": "Delivery started ({status}).",
+    "toastFailed": "Delivery didn't work. Please try again."
+  },
+  "devices": {
+    "newDevice": "New device",
+    "emptyTitle": "No devices",
+    "emptyDescription": "Add your first e-reader to start receiving books.",
+    "emptyUnavailable": "Your devices couldn't be loaded right now. Please try again later.",
+    "colDevice": "Device",
+    "colDelivery": "How it arrives",
+    "colCloud": "Cloud account",
+    "colLastSync": "Last sync",
+    "colAction": "Action",
+    "linked": "Linked",
+    "linkCloud": "Link a cloud account",
+    "tiers": {
+      "A": "Arrives by email (Kindle)",
+      "B": "Arrives via the cloud",
+      "C": "Code in the browser",
+      "D": "USB transfer"
+    }
+  },
+  "newDevice": {
+    "title": "New device",
+    "description": "Choose the brand and how books will arrive on your e-reader.",
+    "brand": "Brand",
+    "modelOptional": "Model (optional)",
+    "deliveryMode": "How it arrives",
+    "tierOptions": {
+      "A": "Arrives by email (Kindle)",
+      "B": "Arrives via the cloud (Dropbox/Drive)",
+      "C": "Code in the browser",
+      "D": "USB transfer"
+    },
+    "toastCreated": "Device added.",
+    "toastFailed": "Couldn't add the device right now. Please try again."
+  },
+  "cloudLink": {
+    "title": "Link a cloud account",
+    "description": "Open the authorization page, then paste the code shown.",
+    "provider": "Provider",
+    "openAuth": "Open authorization page",
+    "authCode": "Authorization code",
+    "codePlaceholder": "Paste the code here",
+    "link": "Link",
+    "toastNotConfigured": "{provider} isn't set up yet.",
+    "toastLinked": "Cloud account linked.",
+    "toastCodeFailed": "That code couldn't be used. Please try again."
+  },
+  "access": {
+    "createLink": "Create / link",
+    "emptyTitle": "No personal access",
+    "emptyDescription": "Create an access to link the program installed on your machine.",
+    "emptyUnavailable": "Your access list couldn't be loaded right now. Please try again later.",
+    "colName": "Name",
+    "colStatus": "Status",
+    "colLastSeen": "Last seen",
+    "colAction": "Action",
+    "revoke": "Revoke",
+    "toastRevoked": "Access revoked.",
+    "toastRevokeFailed": "Couldn't revoke this access. Please try again."
+  },
+  "createAccess": {
+    "title": "Create / link an access",
+    "description": "The connection code lets the program on your machine link to this account.",
+    "name": "Name",
+    "defaultName": "My access",
+    "createdTitle": "Access created",
+    "createdDescription": "This connection code and key will never be shown again. Copy them now into the program's configuration on your machine.",
+    "pairingToken": "Connection code",
+    "gatewayKey": "Access key",
+    "toastFailed": "Couldn't create the access. Please try again."
+  },
+  "sources": {
+    "emptyTitle": "No sources listed",
+    "emptyUnavailable": "The list couldn't be loaded right now. Gutenberg and Standard Ebooks still work from search.",
+    "emptyNone": "No sources configured yet.",
+    "colType": "Type",
+    "colConfig": "Configuration",
+    "colAdded": "Added"
+  },
+  "deliveries": {
+    "emptyTitle": "No deliveries",
+    "emptyDescription": "Send a book from your library to track your deliveries here.",
+    "emptyUnavailable": "Your deliveries couldn't be loaded right now. Please try again later.",
+    "colStatus": "Status",
+    "colMethod": "Method",
+    "colCreated": "Created",
+    "colDelivered": "Arrived",
+    "colError": "Error",
+    "colAction": "Action",
+    "track": "Track",
+    "statuses": {
+      "queued": "queued",
+      "sent": "sent",
+      "delivered": "arrived",
+      "failed": "failed"
+    }
+  },
+  "deliveryDetail": {
+    "title": "Delivery tracking",
+    "status": "Status",
+    "method": "Method",
+    "created": "Created",
+    "delivered": "Arrived",
+    "toastLoadFailed": "Couldn't load tracking for this delivery."
+  },
+  "settings": {
+    "unavailable": "These settings aren't available yet. Default values are shown.",
+    "deliveryTitle": "Delivery",
+    "deliveryDescription": "Used as the default destination and format when you send a book.",
+    "kindleEmail": "Your Kindle email",
+    "kindleEmailPlaceholder": "your-name@kindle.com",
+    "defaultFormat": "Default format",
+    "smtpTitle": "Email delivery",
+    "smtpDescription": "So books can arrive on your Kindle by email.",
+    "smtpHint": "Configured by the administrator in the server settings.",
+    "toastSaved": "Settings saved.",
+    "toastFailed": "Couldn't save right now. Please try again."
+  },
+  "docs": {
+    "metaTitle": "Guide — Personal access | Ferry Agent",
+    "metaDescription": "A simple tutorial to install your Ferry Agent personal access at home: Docker Desktop or OrbStack, connection code, and the page that lists your sources.",
+    "eyebrow": "Guide",
+    "title": "Install your personal access",
+    "intro": "A step-by-step tutorial to install the small program on your machine. No advanced technical knowledge needed — follow the steps in order.",
+    "openAccess": "Open Access",
+    "prereqTitle": "Before you start",
+    "prereqDescription": "Install a small program that runs services, then start the setup.",
+    "orbstackTitle": "OrbStack",
+    "orbstackBadge": "Recommended on macOS",
+    "orbstackBody": "A lighter alternative to Docker Desktop on Mac. Install it, let it start, you're done.",
+    "dockerTitle": "Docker Desktop",
+    "dockerBody": "A small program that runs services, on Windows, macOS or Linux. Make sure it's running before you execute <command></command>.",
+    "stepsTitle": "Steps",
+    "step1Title": "Get your connection code",
+    "step1BodyBefore": "Open the dashboard, go to",
+    "step1BodyLink": "Access",
+    "step1BodyAfter": ", then create an access. Immediately copy the",
+    "step1Token": "connection code",
+    "step1BodyEnd": "(and the access key): they will never be shown again.",
+    "step2Title": "Download the program",
+    "step2Body": "Download the install file from the Access page (or the link provided when you create it). Unzip it into a folder you can find easily.",
+    "step2Cta": "Download the file (tar.gz)",
+    "step3Title": "Run the installer",
+    "step3BodyBefore": "Open a terminal in the program folder, then run the install script. On",
+    "step3Mac": "macOS",
+    "step3BodyMid": ", use Terminal. On",
+    "step3Win": "Windows",
+    "step3BodyEnd": ", use Git Bash (not PowerShell or CMD).",
+    "step4Title": "Set up your sources",
+    "step4BodyBefore": "Once the program is running, open in your browser",
+    "step4BodyAfter": "— that's the page that lists your sources. Add your sources as usual. Ferry Agent uses them to search from your machine.",
+    "byoTitle": "Good to know — runs at home",
+    "byoDescription": "Your personal access runs on your machine, not on our servers.",
+    "byoBody1": "The computer running the program must stay on and connected to the internet for searches and downloads to work. If you turn the PC off, access becomes unavailable.",
+    "byoBody2": "For 24/7 use, a small always-on server is a good option: install the same program there and link it with the same connection code.",
+    "createAccess": "Create an access",
+    "backHome": "Back to home"
+  }
+}
