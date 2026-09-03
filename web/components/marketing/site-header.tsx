@@ -19,6 +19,9 @@ export function SiteHeader() {
           <Link href="#faq" className="transition hover:text-foreground">
             FAQ
           </Link>
+          <Link href="/docs" className="transition hover:text-foreground">
+            Docs
+          </Link>
         </nav>
         <div className="flex items-center gap-3">
           <Show when="signed-out">
