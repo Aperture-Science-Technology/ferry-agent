@@ -1,0 +1,142 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ferry-agent-db
+    restart: unless-stopped
+    volumes:
+      - ferry_pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ferry_agent
+      POSTGRES_USER: ferry
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ferry"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ferry-net
+    labels:
+      - "traefik.enable=false"
+
+  migrate:
+    image: ghcr.io/aperture-science-technology/ferry-agent/core:latest
+    pull_policy: always
+    container_name: ferry-agent-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    command: ["sh", "-c", "alembic upgrade head"]
+    environment:
+      PYTHONPATH: /app/src
+      DATABASE_URL: ${DATABASE_URL:?required}
+    networks:
+      - ferry-net
+    labels:
+      - "traefik.enable=false"
+
+  ferry-agent-core:
+    image: ghcr.io/aperture-science-technology/ferry-agent/core:latest
+    pull_policy: always
+    container_name: ferry-agent-core
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?required}
+      APP_ENV: production
+      CLERK_ISSUER: ${CLERK_ISSUER:?required}
+      CLERK_AUDIENCE: ${CLERK_AUDIENCE:-}
+      LIBRARY_STORAGE_DIR: ${LIBRARY_STORAGE_DIR:?required}
+      TEMP_DIR: ${TEMP_DIR:?required}
+      MAX_FETCH_BYTES: ${MAX_FETCH_BYTES:?required}
+      PAIRING_TOKEN_TTL_MINUTES: ${PAIRING_TOKEN_TTL_MINUTES:?required}
+      GATEWAY_ONLINE_SECONDS: ${GATEWAY_ONLINE_SECONDS:?required}
+      GATEWAY_SEARCH_WAIT_SECONDS: ${GATEWAY_SEARCH_WAIT_SECONDS:?required}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:?required}
+      SMTP_PORT: ${SMTP_PORT:?required}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?required}
+      DROPBOX_CLIENT_ID: ${DROPBOX_CLIENT_ID:-}
+      DROPBOX_CLIENT_SECRET: ${DROPBOX_CLIENT_SECRET:-}
+      DROPBOX_REDIRECT_URI: ${DROPBOX_REDIRECT_URI:?required}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:?required}
+      MCP_API_KEY: ${MCP_API_KEY:?required}
+    networks:
+      - ferry-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=infrastructure_infra-network"
+      - "traefik.http.routers.ferry-agent-core.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/api/v1`) || PathPrefix(`/c/`))"
+      - "traefik.http.routers.ferry-agent-core.priority=100"
+      - "traefik.http.routers.ferry-agent-core.entrypoints=websecure"
+      - "traefik.http.routers.ferry-agent-core.tls=true"
+      - "traefik.http.routers.ferry-agent-core.tls.certresolver=cf"
+      - "traefik.http.services.ferry-agent-core.loadbalancer.server.port=8000"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  web:
+    image: ghcr.io/aperture-science-technology/ferry-agent/web:latest
+    pull_policy: always
+    container_name: ferry-agent-web
+    depends_on:
+      - ferry-agent-core
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?required}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?required}
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:?required}
+      NEXT_PUBLIC_BACKEND_BASE: ${NEXT_PUBLIC_BACKEND_BASE:?required}
+    networks:
+      - ferry-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=infrastructure_infra-network"
+      - "traefik.http.routers.ferry-agent-web.rule=Host(`ferry-agent.aperture-agency.org`)"
+      - "traefik.http.routers.ferry-agent-web.entrypoints=websecure"
+      - "traefik.http.routers.ferry-agent-web.tls=true"
+      - "traefik.http.routers.ferry-agent-web.tls.certresolver=cf"
+      - "traefik.http.services.ferry-agent-web.loadbalancer.server.port=3000"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  mcp-server:
+    image: ghcr.io/aperture-science-technology/ferry-agent/mcp-server:latest
+    pull_policy: always
+    container_name: ferry-agent-mcp
+    restart: unless-stopped
+    depends_on:
+      - ferry-agent-core
+    environment:
+      FERRY_CORE_URL: ${FERRY_CORE_URL:?required}
+      MCP_API_KEY: ${MCP_API_KEY:?required}
+      PORT: 8000
+    networks:
+      - ferry-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=infrastructure_infra-network"
+      - "traefik.http.routers.ferry-agent-mcp.rule=Host(`ferry-agent.aperture-agency.org`) && PathPrefix(`/mcp`)"
+      - "traefik.http.routers.ferry-agent-mcp.entrypoints=websecure"
+      - "traefik.http.routers.ferry-agent-mcp.tls=true"
+      - "traefik.http.routers.ferry-agent-mcp.tls.certresolver=cf"
+      - "traefik.http.services.ferry-agent-mcp.loadbalancer.server.port=8000"
+      - "com.centurylinklabs.watchtower.enable=true"
+
+networks:
+  ferry-net:
+    name: infrastructure_infra-network
+    external: true
+
+volumes:
+  ferry_pgdata:
+    name: ferry_pgdata
