@@ -1,6 +1,7 @@
 import { UserButton } from "@clerk/nextjs";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 
 export function DashboardHeader() {
   return (
@@ -8,6 +9,7 @@ export function DashboardHeader() {
       <SidebarTrigger />
       <Separator orientation="vertical" className="h-5" />
       <div className="flex-1" />
+      <LocaleSwitcher />
       <UserButton />
     </header>
   );

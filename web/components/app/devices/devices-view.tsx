@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Tablet, Plus, Link2, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,13 +18,6 @@ import { NewDeviceDialog } from "@/components/app/devices/new-device-dialog";
 import { CloudLinkDialog } from "@/components/app/devices/cloud-link-dialog";
 import type { Device } from "@/lib/types";
 
-const TIER_LABEL: Record<Device["delivery_tier"], string> = {
-  A: "Email (Send-to-Kindle)",
-  B: "Cloud (Dropbox/Drive)",
-  C: "Code navigateur",
-  D: "USB",
-};
-
 export function DevicesView({
   initialDevices,
   devicesUnavailable,
@@ -31,6 +25,8 @@ export function DevicesView({
   initialDevices: Device[];
   devicesUnavailable: boolean;
 }) {
+  const t = useTranslations("devices");
+  const tCommon = useTranslations("common");
   const [devices, setDevices] = useState(initialDevices);
   const [createOpen, setCreateOpen] = useState(false);
   const [linkTarget, setLinkTarget] = useState<Device | null>(null);
@@ -40,30 +36,26 @@ export function DevicesView({
       <div className="flex justify-end">
         <Button onClick={() => setCreateOpen(true)}>
           <Plus />
-          Nouvel appareil
+          {t("newDevice")}
         </Button>
       </div>
 
       {devices.length === 0 ? (
         <EmptyState
           icon={Tablet}
-          title="Aucun appareil"
-          description={
-            devicesUnavailable
-              ? "Le core est injoignable ou ne renvoie pas encore la liste des appareils."
-              : "Ajoutez votre première liseuse pour commencer à recevoir des livres."
-          }
+          title={t("emptyTitle")}
+          description={devicesUnavailable ? t("emptyUnavailable") : t("emptyDescription")}
         />
       ) : (
         <div className="overflow-hidden rounded-lg border border-border/60">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Appareil</TableHead>
-                <TableHead>Tier de livraison</TableHead>
-                <TableHead>Compte cloud</TableHead>
-                <TableHead>Dernière synchro</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>{t("colDevice")}</TableHead>
+                <TableHead>{t("colDelivery")}</TableHead>
+                <TableHead>{t("colCloud")}</TableHead>
+                <TableHead>{t("colLastSync")}</TableHead>
+                <TableHead className="text-right">{t("colAction")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,27 +68,27 @@ export function DevicesView({
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{TIER_LABEL[device.delivery_tier]}</Badge>
+                    <Badge variant="secondary">{t(`tiers.${device.delivery_tier}`)}</Badge>
                   </TableCell>
                   <TableCell>
                     {device.link_ref ? (
                       <Badge variant="outline" className="gap-1">
-                        <Check className="size-3" /> Lié
+                        <Check className="size-3" /> {t("linked")}
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">{tCommon("dash")}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {device.last_synced_at
                       ? new Date(device.last_synced_at).toLocaleString()
-                      : "Jamais"}
+                      : tCommon("never")}
                   </TableCell>
                   <TableCell className="text-right">
                     {device.delivery_tier === "B" && (
                       <Button size="sm" variant="outline" onClick={() => setLinkTarget(device)}>
                         <Link2 />
-                        Lier un compte cloud
+                        {t("linkCloud")}
                       </Button>
                     )}
                   </TableCell>

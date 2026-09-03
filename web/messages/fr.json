@@ -1,0 +1,353 @@
+{
+  "meta": {
+    "title": "Ferry Agent",
+    "description": "Mettez vos livres sur votre liseuse. Tourne chez vous, sources en accès libre, envoi vers Kindle, Kobo, Tolino et plus."
+  },
+  "locale": {
+    "switch": "Langue",
+    "fr": "FR",
+    "en": "EN"
+  },
+  "common": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "create": "Créer",
+    "done": "Terminé",
+    "copied": "Copié.",
+    "never": "Jamais",
+    "dash": "—",
+    "loading": "Chargement…"
+  },
+  "header": {
+    "howItWorks": "Comment ça marche",
+    "delivered": "Sur votre liseuse",
+    "faq": "FAQ",
+    "docs": "Guide",
+    "signIn": "Connexion",
+    "openDashboard": "Ouvrir l'espace",
+    "dashboard": "Espace"
+  },
+  "footer": {
+    "builtBy": "Conçu par Aperture Science Technology",
+    "openSource": "open-source",
+    "docs": "guide",
+    "dashboard": "espace"
+  },
+  "hero": {
+    "badge": "Votre accès personnel est prêt",
+    "titleBefore": "Le pont entre vos livres et",
+    "titleHighlight": "votre liseuse.",
+    "subtitle": "Tourne chez vous. Des livres en accès libre, en un clic. Votre accès reste le vôtre.",
+    "ctaDashboard": "Ouvrir l'espace",
+    "ctaHow": "Comment ça marche"
+  },
+  "valueProps": {
+    "eyebrow": "Pourquoi Ferry Agent",
+    "items": {
+      "selfHosted": {
+        "title": "Tourne chez vous.",
+        "body": "Vos livres restent sur votre machine. Rien n'est stocké chez nous."
+      },
+      "legal": {
+        "title": "Des livres en accès libre.",
+        "body": "Gutenberg, Standard Ebooks, vos fichiers… Cherchez une fois, envoyez où vous voulez."
+      },
+      "detached": {
+        "title": "Installé chez vous, pas chez nous.",
+        "body": "Votre accès personnel tourne sur votre ordinateur. Il ne passe jamais par nos serveurs."
+      }
+    }
+  },
+  "delivered": {
+    "title": "Sur votre liseuse.",
+    "items": {
+      "kindle": {
+        "name": "Kindle",
+        "body": "Arrive tout seul par email."
+      },
+      "kobo": {
+        "name": "Kobo",
+        "body": "Synchronisé en un geste."
+      },
+      "tolino": {
+        "name": "Tolino",
+        "body": "Un code dans votre navigateur."
+      },
+      "usb": {
+        "name": "USB",
+        "body": "Toujours possible, à la main."
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "Comment ça marche.",
+    "steps": {
+      "pair": {
+        "number": "01",
+        "title": "Connectez votre accès personnel",
+        "body": "Créez votre accès, lancez le petit programme chez vous, c'est prêt."
+      },
+      "search": {
+        "number": "02",
+        "title": "Cherchez un livre",
+        "body": "Sources en accès libre et votre accès personnel, en une seule recherche."
+      },
+      "deliver": {
+        "number": "03",
+        "title": "Envoyez-le à votre liseuse",
+        "body": "Choisissez l'appareil. Ferry Agent s'occupe du format et de l'envoi."
+      }
+    }
+  },
+  "faq": {
+    "title": "Questions. Réponses.",
+    "items": {
+      "selfHosted": {
+        "q": "Est-ce que ça tourne chez moi ?",
+        "a": "Oui. L'essentiel et votre bibliothèque restent sur votre machine. Rien n'est stocké sur des serveurs que nous contrôlons."
+      },
+      "gatewayNeeded": {
+        "q": "Ai-je besoin d'un accès personnel pour les livres en accès libre ?",
+        "a": "Non. Gutenberg, Standard Ebooks et vos fichiers fonctionnent tout de suite. L'accès personnel sert seulement pour les sources installées chez vous."
+      },
+      "readers": {
+        "q": "Quelles liseuses sont prises en charge ?",
+        "a": "Kindle (envoi par email), Kobo et appareils liés au cloud, Tolino et navigateurs via un code temporaire, et toute liseuse branchée en USB."
+      },
+      "myData": {
+        "q": "Mes données m'appartiennent-elles ?",
+        "a": "Oui. Votre bibliothèque, vos appareils, l'historique de vos envois — tout reste chez vous."
+      },
+      "agent": {
+        "q": "Puis-je automatiser les envois ?",
+        "a": "Oui. Une interface technique (API) utilise la même connexion que l'espace, pour chercher et envoyer à votre place."
+      }
+    }
+  },
+  "nav": {
+    "dashboard": "Espace",
+    "library": "Bibliothèque",
+    "devices": "Appareils",
+    "access": "Accès",
+    "sources": "Sources",
+    "deliveries": "Envois",
+    "settings": "Réglages"
+  },
+  "pages": {
+    "library": {
+      "title": "Bibliothèque",
+      "description": "Vos livres, trouvés dans une source en accès libre, via votre accès personnel, ou ajoutés vous-même."
+    },
+    "devices": {
+      "title": "Appareils",
+      "description": "Vos liseuses et la façon dont les livres y arrivent (email, cloud, code navigateur, USB)."
+    },
+    "access": {
+      "title": "Accès",
+      "description": "Votre accès personnel, installé chez vous et relié à votre compte."
+    },
+    "sources": {
+      "title": "Sources",
+      "description": "Vos sources de livres en accès libre et celles configurées pour la recherche."
+    },
+    "deliveries": {
+      "title": "Envois",
+      "description": "Le suivi de vos envois vers vos appareils."
+    },
+    "settings": {
+      "title": "Réglages",
+      "description": "Vos préférences d'envoi."
+    }
+  },
+  "library": {
+    "searchPlaceholder": "Rechercher un titre, un auteur…",
+    "search": "Rechercher",
+    "myLibrary": "Ma bibliothèque",
+    "title": "Titre",
+    "author": "Auteur",
+    "source": "Source",
+    "format": "Format",
+    "added": "Ajouté",
+    "action": "Action",
+    "add": "Ajouter",
+    "deliver": "Envoyer",
+    "emptyTitle": "Votre bibliothèque est vide",
+    "emptyDescription": "Recherchez un livre ci-dessus pour l'ajouter.",
+    "emptyUnavailable": "Impossible de charger votre bibliothèque pour le moment. Réessayez un peu plus tard.",
+    "toastNoResults": "Aucun résultat pour cette recherche.",
+    "toastSearchFailed": "La recherche n'a pas fonctionné. Réessayez.",
+    "toastFetchStarted": "Récupération lancée sur votre accès personnel.",
+    "toastAdded": "« {title} » a été ajouté à votre bibliothèque.",
+    "toastAddFailed": "Impossible d'ajouter ce livre. Réessayez."
+  },
+  "deliverDialog": {
+    "title": "Envoyer « {title} »",
+    "description": "Choisissez l'appareil de destination. Le format habituel de l'appareil sera utilisé si vous laissez ce champ vide.",
+    "device": "Appareil",
+    "devicePlaceholder": "Choisir un appareil",
+    "noDevices": "Aucun appareil. Ajoutez-en un dans Appareils.",
+    "formatOptional": "Format (optionnel)",
+    "formatPlaceholder": "epub, mobi, azw3, pdf…",
+    "submit": "Envoyer",
+    "toastReady": "Prêt à télécharger.",
+    "toastStarted": "Envoi lancé ({status}).",
+    "toastFailed": "L'envoi n'a pas fonctionné. Réessayez."
+  },
+  "devices": {
+    "newDevice": "Nouvel appareil",
+    "emptyTitle": "Aucun appareil",
+    "emptyDescription": "Ajoutez votre première liseuse pour commencer à recevoir des livres.",
+    "emptyUnavailable": "Impossible de charger vos appareils pour le moment. Réessayez un peu plus tard.",
+    "colDevice": "Appareil",
+    "colDelivery": "Mode d'arrivée",
+    "colCloud": "Compte cloud",
+    "colLastSync": "Dernière synchro",
+    "colAction": "Action",
+    "linked": "Lié",
+    "linkCloud": "Lier un compte cloud",
+    "tiers": {
+      "A": "Arrive par email (Kindle)",
+      "B": "Arrive via le cloud",
+      "C": "Code dans le navigateur",
+      "D": "Transfert USB"
+    }
+  },
+  "newDevice": {
+    "title": "Nouvel appareil",
+    "description": "Indiquez la marque et la façon dont les livres arriveront sur votre liseuse.",
+    "brand": "Marque",
+    "modelOptional": "Modèle (optionnel)",
+    "deliveryMode": "Mode d'arrivée",
+    "tierOptions": {
+      "A": "Arrive par email (Kindle)",
+      "B": "Arrive via le cloud (Dropbox/Drive)",
+      "C": "Code dans le navigateur",
+      "D": "Transfert USB"
+    },
+    "toastCreated": "Appareil ajouté.",
+    "toastFailed": "Impossible d'ajouter l'appareil pour le moment. Réessayez."
+  },
+  "cloudLink": {
+    "title": "Lier un compte cloud",
+    "description": "Ouvrez la page d'autorisation, puis collez le code affiché.",
+    "provider": "Fournisseur",
+    "openAuth": "Ouvrir la page d'autorisation",
+    "authCode": "Code d'autorisation",
+    "codePlaceholder": "Collez le code ici",
+    "link": "Lier",
+    "toastNotConfigured": "{provider} n'est pas encore configuré.",
+    "toastLinked": "Compte cloud lié.",
+    "toastCodeFailed": "Ce code n'a pas pu être utilisé. Réessayez."
+  },
+  "access": {
+    "createLink": "Créer / relier",
+    "emptyTitle": "Aucun accès personnel",
+    "emptyDescription": "Créez un accès pour le relier au programme installé chez vous.",
+    "emptyUnavailable": "Impossible de charger vos accès pour le moment. Réessayez un peu plus tard.",
+    "colName": "Nom",
+    "colStatus": "Statut",
+    "colLastSeen": "Dernière activité",
+    "colAction": "Action",
+    "revoke": "Révoquer",
+    "toastRevoked": "Accès révoqué.",
+    "toastRevokeFailed": "Impossible de révoquer cet accès. Réessayez."
+  },
+  "createAccess": {
+    "title": "Créer / relier un accès",
+    "description": "Le code de connexion généré permet au programme installé chez vous de se relier à ce compte.",
+    "name": "Nom",
+    "defaultName": "Mon accès",
+    "createdTitle": "Accès créé",
+    "createdDescription": "Ce code de connexion et cette clé ne seront plus jamais affichés. Copiez-les maintenant dans la configuration du programme chez vous.",
+    "pairingToken": "Code de connexion",
+    "gatewayKey": "Clé d'accès",
+    "toastFailed": "Impossible de créer l'accès. Réessayez."
+  },
+  "sources": {
+    "emptyTitle": "Aucune source listée",
+    "emptyUnavailable": "Impossible de charger la liste pour le moment. Gutenberg et Standard Ebooks restent utilisables depuis la recherche.",
+    "emptyNone": "Aucune source configurée pour le moment.",
+    "colType": "Type",
+    "colConfig": "Configuration",
+    "colAdded": "Ajoutée"
+  },
+  "deliveries": {
+    "emptyTitle": "Aucun envoi",
+    "emptyDescription": "Envoyez un livre depuis votre bibliothèque pour suivre vos envois ici.",
+    "emptyUnavailable": "Impossible de charger vos envois pour le moment. Réessayez un peu plus tard.",
+    "colStatus": "Statut",
+    "colMethod": "Méthode",
+    "colCreated": "Créé",
+    "colDelivered": "Arrivé",
+    "colError": "Erreur",
+    "colAction": "Action",
+    "track": "Suivre",
+    "statuses": {
+      "queued": "en file",
+      "sent": "envoyé",
+      "delivered": "arrivé",
+      "failed": "échoué"
+    }
+  },
+  "deliveryDetail": {
+    "title": "Suivi de l'envoi",
+    "status": "Statut",
+    "method": "Méthode",
+    "created": "Créé",
+    "delivered": "Arrivé",
+    "toastLoadFailed": "Impossible de charger le suivi de cet envoi."
+  },
+  "settings": {
+    "unavailable": "Ces réglages ne sont pas encore disponibles. Les valeurs par défaut sont affichées.",
+    "deliveryTitle": "Envoi",
+    "deliveryDescription": "Utilisés comme destination et format par défaut lors d'un envoi.",
+    "kindleEmail": "Votre email Kindle",
+    "kindleEmailPlaceholder": "votre-nom@kindle.com",
+    "defaultFormat": "Format par défaut",
+    "smtpTitle": "Envoi par email",
+    "smtpDescription": "Pour faire arriver les livres sur votre Kindle par email.",
+    "smtpHint": "Configuré par l'administrateur via les réglages du serveur.",
+    "toastSaved": "Réglages enregistrés.",
+    "toastFailed": "Impossible d'enregistrer pour le moment. Réessayez."
+  },
+  "docs": {
+    "metaTitle": "Guide — Accès personnel | Ferry Agent",
+    "metaDescription": "Tutoriel simple pour installer votre accès personnel Ferry Agent chez vous : Docker Desktop ou OrbStack, code de connexion, et la page qui liste vos sources.",
+    "eyebrow": "Guide",
+    "title": "Installer votre accès personnel",
+    "intro": "Tutoriel pas à pas pour installer le petit programme chez vous. Aucune connaissance technique avancée n'est requise — suivez les étapes dans l'ordre.",
+    "openAccess": "Ouvrir Accès",
+    "prereqTitle": "Avant de commencer",
+    "prereqDescription": "Installez un petit programme qui fait tourner des services, puis lancez l'installation.",
+    "orbstackTitle": "OrbStack",
+    "orbstackBadge": "Recommandé sur macOS",
+    "orbstackBody": "Une alternative plus légère que Docker Desktop sur Mac. Installez-le, laissez-le démarrer, c'est tout.",
+    "dockerTitle": "Docker Desktop",
+    "dockerBody": "Un petit programme qui fait tourner des services, sur Windows, macOS ou Linux. Vérifiez qu'il est bien démarré avant d'exécuter <command></command>.",
+    "stepsTitle": "Étapes",
+    "step1Title": "Récupérer le code de connexion",
+    "step1BodyBefore": "Ouvrez l'espace, allez dans",
+    "step1BodyLink": "Accès",
+    "step1BodyAfter": ", puis créez un accès. Copiez immédiatement le",
+    "step1Token": "code de connexion",
+    "step1BodyEnd": "(et la clé d'accès) : ils ne seront plus jamais réaffichés.",
+    "step2Title": "Télécharger le programme",
+    "step2Body": "Téléchargez le fichier d'installation depuis la page Accès (ou le lien fourni à la création). Décompressez-le dans un dossier facile à retrouver.",
+    "step2Cta": "Télécharger le fichier (tar.gz)",
+    "step3Title": "Lancer l'installation",
+    "step3BodyBefore": "Ouvrez un terminal dans le dossier du programme, puis lancez le script d'installation. Sur",
+    "step3Mac": "macOS",
+    "step3BodyMid": ", utilisez Terminal. Sur",
+    "step3Win": "Windows",
+    "step3BodyEnd": ", utilisez Git Bash (pas PowerShell ni CMD).",
+    "step4Title": "Configurer vos sources",
+    "step4BodyBefore": "Une fois le programme démarré, ouvrez dans votre navigateur",
+    "step4BodyAfter": "— c'est la page qui liste vos sources. Ajoutez-y vos sources comme d'habitude. Ferry Agent s'appuie dessus pour chercher depuis chez vous.",
+    "byoTitle": "À savoir — installé chez vous",
+    "byoDescription": "Votre accès personnel tourne chez vous, pas sur nos serveurs.",
+    "byoBody1": "La machine qui fait tourner le programme doit rester allumée et connectée à Internet pour que les recherches et téléchargements fonctionnent. Si vous éteignez le PC, l'accès devient indisponible.",
+    "byoBody2": "Pour un fonctionnement 24 h/24, un petit serveur toujours allumé est une bonne option : installez-y le même programme et reliez-le avec le même code de connexion.",
+    "createAccess": "Créer un accès",
+    "backHome": "Retour à l'accueil"
+  }
+}

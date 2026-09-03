@@ -1,4 +1,5 @@
 import { Database } from "lucide-react";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/app/page-header";
 import { EmptyState } from "@/components/app/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -13,23 +14,26 @@ import {
 import { safeApiFetch } from "@/lib/api";
 import type { Source } from "@/lib/types";
 
-export default async function SourcesPage() {
+export default async function SourcesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("pages.sources");
+  const tSources = await getTranslations("sources");
   const sources = await safeApiFetch<Source[]>("/api/v1/sources");
 
   return (
     <div>
-      <PageHeader
-        title="Sources"
-        description="Sources légales et connecteurs configurés pour la recherche."
-      />
+      <PageHeader title={t("title")} description={t("description")} />
       {!sources || sources.length === 0 ? (
         <EmptyState
           icon={Database}
-          title="Aucune source listée"
+          title={tSources("emptyTitle")}
           description={
-            sources === null
-              ? "Le core ne renvoie pas encore de liste de sources (endpoint GET /api/v1/sources manquant). Gutenberg et Standard Ebooks restent utilisables depuis la recherche."
-              : "Aucune source configurée pour le moment."
+            sources === null ? tSources("emptyUnavailable") : tSources("emptyNone")
           }
         />
       ) : (
@@ -37,9 +41,9 @@ export default async function SourcesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Configuration</TableHead>
-                <TableHead>Ajoutée</TableHead>
+                <TableHead>{tSources("colType")}</TableHead>
+                <TableHead>{tSources("colConfig")}</TableHead>
+                <TableHead>{tSources("colAdded")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

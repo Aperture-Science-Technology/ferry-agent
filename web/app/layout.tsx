@@ -1,46 +1,11 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Toaster } from "@/components/ui/sonner";
+import type { ReactNode } from "react";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  axes: ["opsz", "SOFT", "WONK"],
-});
-
-export const metadata: Metadata = {
-  title: "Ferry Agent",
-  description:
-    "The bridge between your books and every reader. Self-hosted, legal sources, delivered to Kindle, Kobo, Tolino and more.",
+type Props = {
+  children: ReactNode;
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
-  return (
-    <html
-      lang="en"
-      className={`dark ${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
-        <ClerkProvider dynamic>
-          <TooltipProvider>
-            {children}
-            <Toaster richColors position="bottom-right" />
-          </TooltipProvider>
-        </ClerkProvider>
-      </body>
-    </html>
-  );
+// Root layout must exist; html/body live in [locale]/layout.tsx so lang can follow the locale.
+export default function RootLayout({ children }: Props) {
+  return children;
 }

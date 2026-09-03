@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
 import {
   Library,
   Tablet,
@@ -23,16 +23,17 @@ import {
 } from "@/components/ui/sidebar";
 
 const NAV = [
-  { href: "/app/bibliotheque", label: "Bibliothèque", icon: Library },
-  { href: "/app/appareils", label: "Appareils", icon: Tablet },
-  { href: "/app/gateways", label: "Gateways", icon: Radio },
-  { href: "/app/sources", label: "Sources", icon: Database },
-  { href: "/app/livraisons", label: "Livraisons", icon: Send },
-  { href: "/app/reglages", label: "Réglages", icon: Settings },
-];
+  { href: "/app/bibliotheque", labelKey: "library", icon: Library },
+  { href: "/app/appareils", labelKey: "devices", icon: Tablet },
+  { href: "/app/gateways", labelKey: "access", icon: Radio },
+  { href: "/app/sources", labelKey: "sources", icon: Database },
+  { href: "/app/livraisons", labelKey: "deliveries", icon: Send },
+  { href: "/app/reglages", labelKey: "settings", icon: Settings },
+] as const;
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const t = useTranslations("nav");
 
   return (
     <Sidebar>
@@ -45,7 +46,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("dashboard")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {NAV.map((item) => {
@@ -57,7 +58,7 @@ export function AppSidebar() {
                       render={
                         <Link href={item.href}>
                           <item.icon />
-                          <span>{item.label}</span>
+                          <span>{t(item.labelKey)}</span>
                         </Link>
                       }
                     />

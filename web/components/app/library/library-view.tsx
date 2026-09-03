@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { BookOpen, Loader2, Search, Send } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,6 +29,7 @@ export function LibraryView({
   itemsUnavailable: boolean;
   devices: Device[];
 }) {
+  const t = useTranslations("library");
   const { call } = useApiClient();
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -45,9 +47,9 @@ export function LibraryView({
         body: JSON.stringify({ query, scope: ["legal", "gateways"] }),
       });
       setResults(found);
-      if (found.length === 0) toast.info("Aucun résultat.");
+      if (found.length === 0) toast.info(t("toastNoResults"));
     } catch {
-      toast.error("La recherche a échoué.");
+      toast.error(t("toastSearchFailed"));
     } finally {
       setSearching(false);
     }
@@ -66,13 +68,13 @@ export function LibraryView({
         }),
       });
       if ("gateway_job_id" in added) {
-        toast.success("Récupération lancée sur le gateway.");
+        toast.success(t("toastFetchStarted"));
       } else {
         setItems((prev) => [added, ...prev]);
-        toast.success(`« ${added.title} » ajouté à la bibliothèque.`);
+        toast.success(t("toastAdded", { title: added.title }));
       }
     } catch {
-      toast.error("Impossible d'ajouter ce livre.");
+      toast.error(t("toastAddFailed"));
     } finally {
       setAddingId(null);
     }
@@ -88,13 +90,13 @@ export function LibraryView({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => event.key === "Enter" && runSearch()}
-              placeholder="Rechercher un titre, un auteur…"
+              placeholder={t("searchPlaceholder")}
               className="pl-9"
             />
           </div>
           <Button onClick={runSearch} disabled={searching}>
             {searching ? <Loader2 className="animate-spin" /> : <Search />}
-            Rechercher
+            {t("search")}
           </Button>
         </div>
 
@@ -103,11 +105,11 @@ export function LibraryView({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Titre</TableHead>
-                  <TableHead>Auteur</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Format</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>{t("title")}</TableHead>
+                  <TableHead>{t("author")}</TableHead>
+                  <TableHead>{t("source")}</TableHead>
+                  <TableHead>{t("format")}</TableHead>
+                  <TableHead className="text-right">{t("action")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -133,7 +135,7 @@ export function LibraryView({
                           {addingId === resultKey ? (
                             <Loader2 className="animate-spin" />
                           ) : null}
-                          Ajouter
+                          {t("add")}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -146,27 +148,23 @@ export function LibraryView({
       </div>
 
       <div>
-        <h2 className="mb-4 font-heading text-lg font-medium">Ma bibliothèque</h2>
+        <h2 className="mb-4 font-heading text-lg font-medium">{t("myLibrary")}</h2>
         {items.length === 0 ? (
           <EmptyState
             icon={BookOpen}
-            title="Bibliothèque vide"
-            description={
-              itemsUnavailable
-                ? "Le core ne renvoie pas encore la liste de la bibliothèque (endpoint GET /api/v1/books manquant)."
-                : "Recherchez un livre ci-dessus pour l'ajouter à votre bibliothèque."
-            }
+            title={t("emptyTitle")}
+            description={itemsUnavailable ? t("emptyUnavailable") : t("emptyDescription")}
           />
         ) : (
           <div className="overflow-hidden rounded-lg border border-border/60">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Titre</TableHead>
-                  <TableHead>Auteur</TableHead>
-                  <TableHead>Format</TableHead>
-                  <TableHead>Ajouté</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead>{t("title")}</TableHead>
+                  <TableHead>{t("author")}</TableHead>
+                  <TableHead>{t("format")}</TableHead>
+                  <TableHead>{t("added")}</TableHead>
+                  <TableHead className="text-right">{t("action")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -183,7 +181,7 @@ export function LibraryView({
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" onClick={() => setDeliverTarget(item)}>
                         <Send />
-                        Livrer
+                        {t("deliver")}
                       </Button>
                     </TableCell>
                   </TableRow>

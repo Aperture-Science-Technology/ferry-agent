@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Mail } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -28,6 +28,8 @@ export function SettingsForm({
   initialDefaultFormat: string;
   settingsUnavailable: boolean;
 }) {
+  const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [kindleEmail, setKindleEmail] = useState(initialKindleEmail);
   const [defaultFormat, setDefaultFormat] = useState(initialDefaultFormat);
@@ -43,11 +45,9 @@ export function SettingsForm({
           default_format: defaultFormat,
         }),
       });
-      toast.success("Réglages enregistrés.");
+      toast.success(t("toastSaved"));
     } catch {
-      toast.error(
-        "Impossible d'enregistrer (PATCH /api/v1/users/me n'est pas encore disponible côté core)."
-      );
+      toast.error(t("toastFailed"));
     } finally {
       setSaving(false);
     }
@@ -56,32 +56,32 @@ export function SettingsForm({
   return (
     <div className="max-w-xl space-y-6">
       {settingsUnavailable && (
-        <p className="text-sm text-muted-foreground">
-          Le core ne renvoie pas encore ces réglages (endpoint GET/PATCH
-          /api/v1/users/me manquant) — les valeurs par défaut sont affichées.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("unavailable")}</p>
       )}
 
       <Card className="border-border/60 bg-card/40">
         <CardHeader>
-          <CardTitle className="font-heading text-lg font-medium">Livraison</CardTitle>
-          <CardDescription>
-            Utilisées comme destination et format par défaut lors d&apos;une livraison.
-          </CardDescription>
+          <CardTitle className="font-heading text-lg font-medium">
+            {t("deliveryTitle")}
+          </CardTitle>
+          <CardDescription>{t("deliveryDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Adresse Kindle (Send-to-Kindle)</Label>
+            <Label>{t("kindleEmail")}</Label>
             <Input
               type="email"
               value={kindleEmail}
               onChange={(event) => setKindleEmail(event.target.value)}
-              placeholder="votre-nom@kindle.com"
+              placeholder={t("kindleEmailPlaceholder")}
             />
           </div>
           <div className="space-y-2">
-            <Label>Format par défaut</Label>
-            <Select value={defaultFormat} onValueChange={(value) => setDefaultFormat(value ?? "epub")}>
+            <Label>{t("defaultFormat")}</Label>
+            <Select
+              value={defaultFormat}
+              onValueChange={(value) => setDefaultFormat(value ?? "epub")}
+            >
               <SelectTrigger className="w-full uppercase">
                 <SelectValue />
               </SelectTrigger>
@@ -96,24 +96,20 @@ export function SettingsForm({
           </div>
           <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="animate-spin" />}
-            Enregistrer
+            {tCommon("save")}
           </Button>
         </CardContent>
       </Card>
 
       <Card className="border-border/60 bg-card/40">
         <CardHeader>
-          <CardTitle className="font-heading text-lg font-medium">SMTP (tier A)</CardTitle>
-          <CardDescription>Envoi Send-to-Kindle par email.</CardDescription>
+          <CardTitle className="font-heading text-lg font-medium">{t("smtpTitle")}</CardTitle>
+          <CardDescription>{t("smtpDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Mail className="size-4" />
-            Configuré par l&apos;administrateur via les variables
-            <Badge variant="secondary" className="font-mono text-xs">
-              SMTP_*
-            </Badge>
-            du core.
+            {t("smtpHint")}
           </div>
         </CardContent>
       </Card>

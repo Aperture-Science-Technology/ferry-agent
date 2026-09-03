@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Radio, Plus, Ban } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusDot } from "@/components/status-dot";
@@ -26,6 +27,8 @@ export function GatewaysView({
   initialGateways: Gateway[];
   gatewaysUnavailable: boolean;
 }) {
+  const t = useTranslations("access");
+  const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [gateways, setGateways] = useState(initialGateways);
   const [createOpen, setCreateOpen] = useState(false);
@@ -43,9 +46,9 @@ export function GatewaysView({
           g.gateway_id === gateway.gateway_id ? { ...g, status: "revoked" } : g
         )
       );
-      toast.success("Gateway révoqué.");
+      toast.success(t("toastRevoked"));
     } catch {
-      toast.error("Impossible de révoquer ce gateway.");
+      toast.error(t("toastRevokeFailed"));
     } finally {
       setRevokingId(null);
     }
@@ -56,29 +59,25 @@ export function GatewaysView({
       <div className="flex justify-end">
         <Button onClick={() => setCreateOpen(true)}>
           <Plus />
-          Créer / relier
+          {t("createLink")}
         </Button>
       </div>
 
       {gateways.length === 0 ? (
         <EmptyState
           icon={Radio}
-          title="Aucun gateway"
-          description={
-            gatewaysUnavailable
-              ? "Le core est injoignable."
-              : "Créez un gateway pour pairer un bundle détaché sur votre propre réseau."
-          }
+          title={t("emptyTitle")}
+          description={gatewaysUnavailable ? t("emptyUnavailable") : t("emptyDescription")}
         />
       ) : (
         <div className="overflow-hidden rounded-lg border border-border/60">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nom</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Dernière activité</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>{t("colName")}</TableHead>
+                <TableHead>{t("colStatus")}</TableHead>
+                <TableHead>{t("colLastSeen")}</TableHead>
+                <TableHead className="text-right">{t("colAction")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -96,7 +95,7 @@ export function GatewaysView({
                   <TableCell className="text-muted-foreground">
                     {gateway.last_seen_at
                       ? new Date(gateway.last_seen_at).toLocaleString()
-                      : "Jamais"}
+                      : tCommon("never")}
                   </TableCell>
                   <TableCell className="text-right">
                     {gateway.status !== "revoked" && (
@@ -107,7 +106,7 @@ export function GatewaysView({
                         onClick={() => revoke(gateway)}
                       >
                         <Ban />
-                        Révoquer
+                        {t("revoke")}
                       </Button>
                     )}
                   </TableCell>
