@@ -139,13 +139,18 @@ async def import_from_gateway(
 
 
 async def search_all(query: str) -> list[Result]:
-    """Interroge tous les connecteurs cherchables et fusionne les resultats."""
+    """Interroge tous les connecteurs cherchables et fusionne les resultats.
+
+    Un echec sur un connecteur est isole (warning) : les autres continuent
+    a contribuer leurs resultats.
+    """
     from ferry_agent.connectors.registry import get_search_connectors
 
     results: list[Result] = []
     for connector in get_search_connectors():
+        name = getattr(connector, "name", connector)
         try:
             results.extend(await connector.search(query))
-        except Exception:  # pragma: no cover - resilience reseau
-            logger.exception("recherche echouee pour le connecteur %s", getattr(connector, "name", connector))
+        except Exception as exc:
+            logger.warning("recherche echouee pour le connecteur %s: %s", name, exc)
     return results
