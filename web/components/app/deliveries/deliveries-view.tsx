@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Send, Eye } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,6 +31,8 @@ export function DeliveriesView({
   initialDeliveries: DeliveryJob[];
   deliveriesUnavailable: boolean;
 }) {
+  const t = useTranslations("deliveries");
+  const tCommon = useTranslations("common");
   const [deliveries] = useState(initialDeliveries);
   const [detailId, setDetailId] = useState<string | null>(null);
 
@@ -37,11 +40,9 @@ export function DeliveriesView({
     return (
       <EmptyState
         icon={Send}
-        title="Aucune livraison"
+        title={t("emptyTitle")}
         description={
-          deliveriesUnavailable
-            ? "Le core est injoignable."
-            : "Livrez un livre depuis votre bibliothèque pour voir son suivi ici."
+          deliveriesUnavailable ? t("emptyUnavailable") : t("emptyDescription")
         }
       />
     );
@@ -52,20 +53,20 @@ export function DeliveriesView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Statut</TableHead>
-            <TableHead>Méthode</TableHead>
-            <TableHead>Créée</TableHead>
-            <TableHead>Livrée</TableHead>
-            <TableHead>Erreur</TableHead>
-            <TableHead className="text-right">Action</TableHead>
+            <TableHead>{t("colStatus")}</TableHead>
+            <TableHead>{t("colMethod")}</TableHead>
+            <TableHead>{t("colCreated")}</TableHead>
+            <TableHead>{t("colDelivered")}</TableHead>
+            <TableHead>{t("colError")}</TableHead>
+            <TableHead className="text-right">{t("colAction")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {deliveries.map((job) => (
             <TableRow key={job.id}>
               <TableCell>
-                <Badge variant={STATUS_VARIANT[job.status]} className="capitalize">
-                  {job.status}
+                <Badge variant={STATUS_VARIANT[job.status]}>
+                  {t(`statuses.${job.status}`)}
                 </Badge>
               </TableCell>
               <TableCell className="text-muted-foreground capitalize">{job.method}</TableCell>
@@ -73,13 +74,17 @@ export function DeliveriesView({
                 {new Date(job.created_at).toLocaleString()}
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {job.delivered_at ? new Date(job.delivered_at).toLocaleString() : "—"}
+                {job.delivered_at
+                  ? new Date(job.delivered_at).toLocaleString()
+                  : tCommon("dash")}
               </TableCell>
-              <TableCell className="max-w-48 truncate text-destructive">{job.error ?? "—"}</TableCell>
+              <TableCell className="max-w-48 truncate text-destructive">
+                {job.error ?? tCommon("dash")}
+              </TableCell>
               <TableCell className="text-right">
                 <Button size="sm" variant="outline" onClick={() => setDetailId(job.id)}>
                   <Eye />
-                  Suivre
+                  {t("track")}
                 </Button>
               </TableCell>
             </TableRow>

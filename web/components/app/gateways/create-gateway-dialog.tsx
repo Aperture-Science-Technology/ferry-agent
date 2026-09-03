@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Copy, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { useApiClient } from "@/lib/api-client";
 import type { Gateway, GatewayCredentials } from "@/lib/types";
 
 function CopyField({ label, value }: { label: string; value: string }) {
+  const tCommon = useTranslations("common");
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -29,7 +31,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
           size="icon"
           onClick={() => {
             navigator.clipboard.writeText(value);
-            toast.success("Copié.");
+            toast.success(tCommon("copied"));
           }}
         >
           <Copy />
@@ -48,27 +50,31 @@ export function CreateGatewayDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: (gateway: Gateway) => void;
 }) {
+  const t = useTranslations("createAccess");
+  const tCommon = useTranslations("common");
   const { call } = useApiClient();
-  const [name, setName] = useState("Gateway");
+  const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [credentials, setCredentials] = useState<GatewayCredentials | null>(null);
+
+  const displayName = name || t("defaultName");
 
   async function submit() {
     setSubmitting(true);
     try {
       const created = await call<GatewayCredentials>("/api/v1/gateways", {
         method: "POST",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name: displayName }),
       });
       setCredentials(created);
       onCreated({
         gateway_id: created.gateway_id,
-        name,
+        name: displayName,
         status: "pending",
         last_seen_at: null,
       });
     } catch {
-      toast.error("Impossible de créer le gateway.");
+      toast.error(t("toastFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -77,7 +83,7 @@ export function CreateGatewayDialog({
   function close(nextOpen: boolean) {
     if (!nextOpen) {
       setCredentials(null);
-      setName("Gateway");
+      setName("");
     }
     onOpenChange(nextOpen);
   }
@@ -88,41 +94,38 @@ export function CreateGatewayDialog({
         {credentials ? (
           <>
             <DialogHeader>
-              <DialogTitle>Gateway créé</DialogTitle>
-              <DialogDescription>
-                Ce jeton de pairing et cette clé ne seront plus jamais
-                affichés. Copiez-les dans la configuration de votre bundle
-                détaché maintenant.
-              </DialogDescription>
+              <DialogTitle>{t("createdTitle")}</DialogTitle>
+              <DialogDescription>{t("createdDescription")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <CopyField label="Pairing token" value={credentials.pairing_token} />
-              <CopyField label="Gateway key" value={credentials.gateway_key} />
+              <CopyField label={t("pairingToken")} value={credentials.pairing_token} />
+              <CopyField label={t("gatewayKey")} value={credentials.gateway_key} />
             </div>
             <DialogFooter>
-              <Button onClick={() => close(false)}>Terminé</Button>
+              <Button onClick={() => close(false)}>{tCommon("done")}</Button>
             </DialogFooter>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Créer / relier un gateway</DialogTitle>
-              <DialogDescription>
-                Le jeton de pairing généré permet à votre bundle détaché de
-                se relier à ce compte.
-              </DialogDescription>
+              <DialogTitle>{t("title")}</DialogTitle>
+              <DialogDescription>{t("description")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
-              <Label>Nom</Label>
-              <Input value={name} onChange={(event) => setName(event.target.value)} />
+              <Label>{t("name")}</Label>
+              <Input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder={t("defaultName")}
+              />
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => close(false)}>
-                Annuler
+                {tCommon("cancel")}
               </Button>
-              <Button onClick={submit} disabled={submitting || !name.trim()}>
+              <Button onClick={submit} disabled={submitting || !displayName.trim()}>
                 {submitting && <Loader2 className="animate-spin" />}
-                Créer
+                {tCommon("create")}
               </Button>
             </DialogFooter>
           </>
