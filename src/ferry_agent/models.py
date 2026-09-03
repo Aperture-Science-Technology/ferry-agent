@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -49,6 +49,7 @@ class SourceType(str, enum.Enum):
     gutenberg = "gutenberg"
     standard_ebooks = "standard_ebooks"
     opds = "opds"
+    torrent_gateway = "torrent_gateway"
 
 
 class DeliveryStatus(str, enum.Enum):
@@ -68,6 +69,7 @@ class DeliveryMethod(str, enum.Enum):
 class PairingStatus(str, enum.Enum):
     pending = "pending"
     paired = "paired"
+    revoked = "revoked"
 
 
 class GatewayJobType(str, enum.Enum):
@@ -154,7 +156,10 @@ class Gateway(Base):
     pairing_status: Mapped[PairingStatus] = mapped_column(
         SAEnum(PairingStatus, name="pairing_status"), default=PairingStatus.pending, nullable=False
     )
-    api_key_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    api_key_hash: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    pairing_token_hash: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    pairing_expires_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+    pairing_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_seen_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
 
