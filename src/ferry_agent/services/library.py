@@ -95,6 +95,46 @@ async def import_from_upload(
     return item
 
 
+async def import_from_gateway(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    gateway_id: uuid.UUID,
+    job_id: uuid.UUID,
+    filename: str,
+    content: bytes,
+    detected_format: str,
+    metadata: dict,
+) -> LibraryItem:
+    """Persiste un ebook relaye et conserve sa provenance dans Source.config."""
+    safe_name = Path(filename).name or f"gateway-book.{detected_format}"
+    dest = _library_storage_path(safe_name)
+    dest.write_bytes(content)
+
+    source = Source(
+        user_id=user_id,
+        type=SourceType.torrent_gateway,
+        config={
+            "gateway_id": str(gateway_id),
+            "gateway_job_id": str(job_id),
+            "storage_path": str(dest),
+        },
+    )
+    db.add(source)
+    await db.flush()
+
+    item = LibraryItem(
+        user_id=user_id,
+        title=metadata.get("title") or Path(safe_name).stem,
+        author=metadata.get("author") or "",
+        source_id=source.id,
+        original_format=detected_format,
+    )
+    db.add(item)
+    await db.commit()
+    await db.refresh(item)
+    return item
+
+
 async def search_all(query: str) -> list[Result]:
     """Interroge tous les connecteurs cherchables et fusionne les resultats."""
     from ferry_agent.connectors.registry import get_search_connectors

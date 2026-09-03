@@ -1,16 +1,25 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, RootModel
 
-from ferry_agent.models import DeliveryMethod, DeliveryStatus, DeviceBrand, DeliveryTier
+from ferry_agent.models import (
+    DeliveryMethod,
+    DeliveryStatus,
+    DeviceBrand,
+    DeliveryTier,
+    GatewayJobStatus,
+    GatewayJobType,
+    PairingStatus,
+)
 
 
 class SearchRequest(BaseModel):
     query: str
+    scope: list[str] | None = None
 
 
-class ResultOut(BaseModel):
+class Result(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     source: str
@@ -19,6 +28,80 @@ class ResultOut(BaseModel):
     author: str = ""
     format: str = "epub"
     size_bytes: int = 0
+    magnet_url: str | None = None
+    indexer_id: int | str | None = None
+    guid: str | None = None
+    seeders: int | None = None
+
+
+class ResultOut(Result):
+    pass
+
+
+class SearchResults(RootModel[list[Result]]):
+    """Liste JSON nue acceptee depuis le gateway-agent."""
+
+
+class GatewayCreate(BaseModel):
+    name: str = Field(default="Gateway", min_length=1, max_length=120)
+
+
+class GatewayCredentials(BaseModel):
+    gateway_id: uuid.UUID
+    pairing_token: str
+    gateway_key: str
+
+
+class GatewayPair(BaseModel):
+    token: str = Field(
+        min_length=16,
+        validation_alias=AliasChoices("pairing_token", "token"),
+    )
+
+
+class GatewayId(BaseModel):
+    gateway_id: uuid.UUID
+
+
+class GatewayRevoke(BaseModel):
+    gateway_id: uuid.UUID
+
+
+class GatewayOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    gateway_id: uuid.UUID = Field(validation_alias="id")
+    name: str
+    status: PairingStatus = Field(validation_alias="pairing_status")
+    last_seen_at: datetime | None
+
+
+class GatewayJobOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    job_id: uuid.UUID = Field(validation_alias="id")
+    type: GatewayJobType
+    payload: dict
+    status: GatewayJobStatus
+
+
+class GatewayJobStatusOut(GatewayJobOut):
+    library_item_id: uuid.UUID | None = None
+    error: str | None = None
+
+
+class GatewayJobAck(BaseModel):
+    job_id: uuid.UUID
+    status: GatewayJobStatus
+
+
+class GatewayFetchQueued(BaseModel):
+    gateway_job_id: uuid.UUID
+    status: GatewayJobStatus
+
+
+class GatewayFetchResult(BaseModel):
+    library_item_id: uuid.UUID
 
 
 class LibraryItemOut(BaseModel):
