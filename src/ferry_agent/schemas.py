@@ -130,7 +130,7 @@ class DeviceOut(BaseModel):
 class DeliveryCreate(BaseModel):
     library_item_id: uuid.UUID
     device_id: uuid.UUID
-    format: str
+    format: str | None = None
     method: DeliveryMethod = DeliveryMethod.email
 
 
@@ -145,3 +145,4 @@ class DeliveryOut(BaseModel):
     created_at: datetime
     delivered_at: datetime | None
     error: str | None
+    download_url: str | None = None
