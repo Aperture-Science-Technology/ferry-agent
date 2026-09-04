@@ -13,6 +13,7 @@ import logging
 
 import httpx
 from fastmcp import FastMCP
+from fastmcp.server.dependencies import get_access_token
 
 from ferry_mcp.config import get_settings
 
@@ -64,12 +65,45 @@ mcp = FastMCP(
 _USER_AGENT = "ferry-agent-mcp"
 
 
-def _client() -> httpx.AsyncClient:
+def _resolve_user_token() -> str | None:
+    """Retourne le token Clerk de l'utilisateur authentifié courant, si dispo.
+
+    FastMCP expose l'identité OAuth validée via `get_access_token()`
+    (fastmcp.server.dependencies) : elle lit le ContextVar posé par le
+    middleware d'auth (ou `request.scope["user"]` en HTTP) sans qu'il soit
+    besoin d'injecter `ctx: Context` dans les tools. `AccessToken.token`
+    porte le jeton amont Clerk obtenu par `ClerkProvider` (un `OAuthProxy`)
+    lors de l'échange OAuth — c'est ce jeton qu'on relaie au core en
+    `Authorization: Bearer`, à la place du `X-API-Key` de service.
+
+    Si MCP_AUTH_ENABLED=false (dev local sans OAuth), retourne None : les
+    appels retombent sur le compte service `X-API-Key` (comportement dev
+    uniquement). Si MCP_AUTH_ENABLED=true et qu'aucune identité n'est
+    résolue, lève une erreur explicite plutôt que de retomber
+    silencieusement sur le compte service (c'était le bug de liaison
+    compte/DB : livres ajoutés au compte service, invisibles pour
+    l'utilisateur).
+    """
     settings = get_settings()
-    headers = {
-        "User-Agent": _USER_AGENT,
-        "X-API-Key": settings.mcp_api_key,
-    }
+    if not settings.mcp_auth_enabled:
+        return None
+
+    access_token = get_access_token()
+    if access_token is None or not access_token.token:
+        raise RuntimeError(
+            "Aucune identité utilisateur Clerk authentifiée n'a été trouvée pour "
+            "cet appel MCP alors que MCP_AUTH_ENABLED=true. Reconnectez-vous."
+        )
+    return access_token.token
+
+
+def _client(token: str | None = None) -> httpx.AsyncClient:
+    settings = get_settings()
+    headers = {"User-Agent": _USER_AGENT}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    else:
+        headers["X-API-Key"] = settings.mcp_api_key
     return httpx.AsyncClient(base_url=settings.ferry_core_url, headers=headers, timeout=30.0)
 
 
@@ -92,7 +126,7 @@ async def search_library(query: str) -> str:
     Returns:
         Liste lisible des résultats (titre, auteur, source, format, taille).
     """
-    async with _client() as client:
+    async with _client(_resolve_user_token()) as client:
         resp = await client.post("/api/v1/books/search", json={"query": query})
     _raise_for(resp)
     results = resp.json()
@@ -120,7 +154,7 @@ async def add_to_library(source: str, result_id: str) -> str:
     Returns:
         library_item_id créé, ou gateway_job_id si l'ajout est asynchrone (gateway).
     """
-    async with _client() as client:
+    async with _client(_resolve_user_token()) as client:
         resp = await client.post("/api/v1/books", json={"source": source, "result_id": result_id})
     _raise_for(resp)
     data = resp.json()
@@ -145,7 +179,7 @@ async def list_devices() -> str:
     Returns:
         Description lisible de chaque liseuse (marque, modèle, tier, lien cloud).
     """
-    async with _client() as client:
+    async with _client(_resolve_user_token()) as client:
         resp = await client.get("/api/v1/devices")
     _raise_for(resp)
     devices = resp.json()
@@ -179,11 +213,13 @@ async def deliver(item_id: str, device_id: str, confirm: bool = False) -> str:
     Returns:
         Confirmation de l'envoi avec le statut du job, ou message de refus.
     """
+    token = _resolve_user_token()
+
     if not confirm:
         # Récupère le nom de la liseuse pour un message plus explicite
         device_label = device_id
         try:
-            async with _client() as client:
+            async with _client(token) as client:
                 resp = await client.get("/api/v1/devices")
             if not resp.is_error:
                 for d in resp.json():
@@ -198,7 +234,7 @@ async def deliver(item_id: str, device_id: str, confirm: bool = False) -> str:
             f"pour envoyer vers {device_label}."
         )
 
-    async with _client() as client:
+    async with _client(token) as client:
         resp = await client.post(
             "/api/v1/deliveries",
             json={"library_item_id": item_id, "device_id": device_id},
@@ -228,7 +264,7 @@ async def get_delivery_status(job_id: str) -> str:
     Returns:
         Statut, horodatage de livraison (si disponible) et éventuelle erreur.
     """
-    async with _client() as client:
+    async with _client(_resolve_user_token()) as client:
         resp = await client.get(f"/api/v1/deliveries/{job_id}")
     _raise_for(resp)
     data = resp.json()

@@ -8,6 +8,8 @@ Vérifie :
 - que get_delivery_status transmet le bon path
 - que deliver REFUSE sans confirm=True (garde-fou)
 - que deliver appelle bien le core avec confirm=True
+- qu'un utilisateur authentifié (OAuth Clerk) fait passer un Bearer token
+  au core au lieu du X-API-Key de service (voir test_mcp_identity.py)
 """
 
 import sys
@@ -103,7 +105,7 @@ async def test_search_library_sends_correct_request(monkeypatch) -> None:
                    "result_id": "r1", "format": "epub", "size_bytes": 512000}],
         )
 
-    monkeypatch.setattr(server, "_client", lambda: _mock_client(handler))
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
     result = await server.search_library("Dune")
 
@@ -133,7 +135,7 @@ async def test_list_devices_sends_correct_request(monkeypatch) -> None:
                    "delivery_tier": "A", "link_ref": None}],
         )
 
-    monkeypatch.setattr(server, "_client", lambda: _mock_client(handler))
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
     result = await server.list_devices()
 
@@ -163,7 +165,7 @@ async def test_add_to_library_sends_payload(monkeypatch) -> None:
                   "original_format": "epub", "added_at": "2026-01-01T00:00:00Z"},
         )
 
-    monkeypatch.setattr(server, "_client", lambda: _mock_client(handler))
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
     result = await server.add_to_library("gutenberg", "r1")
 
@@ -195,7 +197,7 @@ async def test_get_delivery_status_sends_correct_path(monkeypatch) -> None:
                   "download_url": None},
         )
 
-    monkeypatch.setattr(server, "_client", lambda: _mock_client(handler))
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
     result = await server.get_delivery_status(job_id)
 
@@ -219,7 +221,7 @@ async def test_deliver_refuses_without_confirm(monkeypatch) -> None:
         calls.append(req)
         return httpx.Response(200, json=[])
 
-    monkeypatch.setattr(server, "_client", lambda: _mock_client(handler))
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
     result = await server.deliver("item-1", "device-1", confirm=False)
 
@@ -251,7 +253,7 @@ async def test_deliver_with_confirm_calls_core(monkeypatch) -> None:
                   "delivered_at": None, "error": None, "download_url": None},
         )
 
-    monkeypatch.setattr(server, "_client", lambda: _mock_client(handler))
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
     result = await server.deliver("item-1", "device-1", confirm=True)
 
