@@ -174,7 +174,6 @@
     "emptyTitle": "Your library is empty",
     "emptyDescription": "Search for a book above to add it.",
     "emptyUnavailable": "Your library couldn't be loaded right now. Please try again later.",
-    "toastNoResults": "No results for this search.",
     "toastSearchFailed": "Search didn't work. Please try again.",
     "toastFetchStarted": "Download started on your personal access.",
     "toastAdded": "“{title}” was added to your library.",
@@ -190,8 +189,14 @@
     "filterSourceAll": "All sources",
     "sourceLinked": "Personal access",
     "sourceManual": "Manually added",
+    "sourceGutenberg": "Gutenberg",
+    "sourceStandardEbooks": "Standard Ebooks",
     "gridView": "Grid view",
-    "listView": "List view"
+    "listView": "List view",
+    "searchHelp": "Type a title or author. Search covers all your access points and partner libraries (Project Gutenberg, Standard Ebooks).",
+    "searchHelpMatch": "Search matches on title and author, with no guaranteed approximate matching.",
+    "searching": "Searching…",
+    "noResultsHint": "No results. Check your spelling or try a different term."
   },
   "deliverDialog": {
     "title": "Send “{title}”",
@@ -267,12 +272,26 @@
     "description": "Choose the brand and how books will arrive on your e-reader.",
     "brand": "Brand",
     "modelOptional": "Model (optional)",
+    "modelPlaceholder": "Choose a model",
     "deliveryMode": "How it arrives",
     "tierOptions": {
       "A": "Arrives by email (Kindle)",
       "B": "Arrives via the cloud (Dropbox/Drive)",
       "C": "Code in the browser",
       "D": "USB transfer"
+    },
+    "brands": {
+      "kindle": "Kindle",
+      "kobo": "Kobo",
+      "tolino": "Tolino",
+      "pocketbook": "PocketBook",
+      "other": "Other"
+    },
+    "models": {
+      "kindle": ["Paperwhite", "Oasis", "Scribe", "Basic", "Basic Kids", "Keyboard", "Voyage", "Fire", "Kids"],
+      "kobo": ["Clara", "Libra", "Forma", "Sage", "Elipsa", "Nia", "Aura", "Sage Colour"],
+      "tolino": ["Shine", "Vision", "Page", "Epos", "Tab"],
+      "pocketbook": ["Touch", "InkPad", "Basic Lux", "Verse", "Era"]
     },
     "toastCreated": "Device added.",
     "toastFailed": "Couldn't add the device right now. Please try again."

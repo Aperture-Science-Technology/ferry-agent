@@ -174,7 +174,6 @@
     "emptyTitle": "Votre bibliothèque est vide",
     "emptyDescription": "Recherchez un livre ci-dessus pour l'ajouter.",
     "emptyUnavailable": "Impossible de charger votre bibliothèque pour le moment. Réessayez un peu plus tard.",
-    "toastNoResults": "Aucun résultat pour cette recherche.",
     "toastSearchFailed": "La recherche n'a pas fonctionné. Réessayez.",
     "toastFetchStarted": "Récupération lancée sur votre accès personnel.",
     "toastAdded": "« {title} » a été ajouté à votre bibliothèque.",
@@ -190,8 +189,14 @@
     "filterSourceAll": "Toutes les sources",
     "sourceLinked": "Accès personnel",
     "sourceManual": "Ajout manuel",
+    "sourceGutenberg": "Gutenberg",
+    "sourceStandardEbooks": "Standard Ebooks",
     "gridView": "Vue grille",
-    "listView": "Vue liste"
+    "listView": "Vue liste",
+    "searchHelp": "Tapez un titre ou un auteur. La recherche s'applique à tous vos accès et aux bibliothèques partenaires (Project Gutenberg, Standard Ebooks).",
+    "searchHelpMatch": "La recherche porte sur le titre et l'auteur, sans correspondance approximative garantie.",
+    "searching": "Recherche en cours…",
+    "noResultsHint": "Aucun résultat. Vérifiez l'orthographe ou changez de terme."
   },
   "deliverDialog": {
     "title": "Envoyer « {title} »",
@@ -267,12 +272,26 @@
     "description": "Indiquez la marque et la façon dont les livres arriveront sur votre liseuse.",
     "brand": "Marque",
     "modelOptional": "Modèle (optionnel)",
+    "modelPlaceholder": "Choisir un modèle",
     "deliveryMode": "Mode d'arrivée",
     "tierOptions": {
       "A": "Arrive par email (Kindle)",
       "B": "Arrive via le cloud (Dropbox/Drive)",
       "C": "Code dans le navigateur",
       "D": "Transfert USB"
+    },
+    "brands": {
+      "kindle": "Kindle",
+      "kobo": "Kobo",
+      "tolino": "Tolino",
+      "pocketbook": "PocketBook",
+      "other": "Autre"
+    },
+    "models": {
+      "kindle": ["Paperwhite", "Oasis", "Scribe", "Basic", "Basic Kids", "Keyboard", "Voyage", "Fire", "Kids"],
+      "kobo": ["Clara", "Libra", "Forma", "Sage", "Elipsa", "Nia", "Aura", "Sage Colour"],
+      "tolino": ["Shine", "Vision", "Page", "Epos", "Tab"],
+      "pocketbook": ["Touch", "InkPad", "Basic Lux", "Verse", "Era"]
     },
     "toastCreated": "Appareil ajouté.",
     "toastFailed": "Impossible d'ajouter l'appareil pour le moment. Réessayez."
