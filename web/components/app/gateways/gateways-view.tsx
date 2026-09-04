@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Radio, Plus, Ban } from "lucide-react";
+import { Radio, Plus, Ban, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/app/empty-state";
 import { CreateGatewayDialog } from "@/components/app/gateways/create-gateway-dialog";
 import { useApiClient } from "@/lib/api-client";
@@ -33,6 +41,8 @@ export function GatewaysView({
   const [gateways, setGateways] = useState(initialGateways);
   const [createOpen, setCreateOpen] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Gateway | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function revoke(gateway: Gateway) {
     setRevokingId(gateway.gateway_id);
@@ -51,6 +61,21 @@ export function GatewaysView({
       toast.error(t("toastRevokeFailed"));
     } finally {
       setRevokingId(null);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await call(`/api/v1/gateways/${deleteTarget.gateway_id}`, { method: "DELETE" });
+      setGateways((prev) => prev.filter((g) => g.gateway_id !== deleteTarget.gateway_id));
+      toast.success(t("toastDeleted"));
+      setDeleteTarget(null);
+    } catch {
+      toast.error(t("toastDeleteFailed"));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -98,17 +123,27 @@ export function GatewaysView({
                       : tCommon("never")}
                   </TableCell>
                   <TableCell className="text-right">
-                    {gateway.status !== "revoked" && (
+                    <div className="flex justify-end gap-2">
+                      {gateway.status === "paired" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={revokingId === gateway.gateway_id}
+                          onClick={() => revoke(gateway)}
+                        >
+                          <Ban />
+                          {t("revoke")}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        variant="outline"
-                        disabled={revokingId === gateway.gateway_id}
-                        onClick={() => revoke(gateway)}
+                        variant="destructive"
+                        onClick={() => setDeleteTarget(gateway)}
                       >
-                        <Ban />
-                        {t("revoke")}
+                        <Trash2 />
+                        {t("delete")}
                       </Button>
-                    )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -122,6 +157,27 @@ export function GatewaysView({
         onOpenChange={setCreateOpen}
         onCreated={(gateway) => setGateways((prev) => [gateway, ...prev])}
       />
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("deleteConfirmTitle")}</DialogTitle>
+            <DialogDescription>{t("deleteConfirmDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
+              <Trash2 />
+              {t("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
