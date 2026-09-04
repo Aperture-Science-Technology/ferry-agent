@@ -261,6 +261,7 @@
     "colAction": "Action",
     "linked": "Lié",
     "linkCloud": "Lier un compte cloud",
+    "edit": "Modifier",
     "delete": "Supprimer",
     "deleteConfirmTitle": "Supprimer cet appareil ?",
     "deleteConfirmDescription": "Après suppression, les livres ne seront plus envoyés vers cet appareil.",
@@ -272,6 +273,12 @@
       "C": "Code dans le navigateur",
       "D": "Transfert USB"
     }
+  },
+  "editDevice": {
+    "title": "Modifier l'appareil",
+    "description": "Changez le nom, la marque ou le modèle de cet appareil.",
+    "toastUpdated": "Appareil mis à jour.",
+    "toastFailed": "Impossible de mettre à jour cet appareil. Réessayez."
   },
   "newDevice": {
     "title": "Nouvel appareil",

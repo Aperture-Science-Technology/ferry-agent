@@ -261,6 +261,7 @@
     "colAction": "Action",
     "linked": "Linked",
     "linkCloud": "Link a cloud account",
+    "edit": "Edit",
     "delete": "Delete",
     "deleteConfirmTitle": "Delete this device?",
     "deleteConfirmDescription": "After deletion, books will no longer be sent to this device.",
@@ -272,6 +273,12 @@
       "C": "Code in the browser",
       "D": "USB transfer"
     }
+  },
+  "editDevice": {
+    "title": "Edit device",
+    "description": "Change this device's name, brand, or model.",
+    "toastUpdated": "Device updated.",
+    "toastFailed": "Couldn't update this device. Please try again."
   },
   "newDevice": {
     "title": "New device",

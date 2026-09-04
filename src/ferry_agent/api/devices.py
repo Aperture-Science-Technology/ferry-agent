@@ -87,7 +87,10 @@ async def update_device(
     """Met a jour le nom/marque/modele d'un device ; recalcule delivery_tier
     si la marque ou le modele changent (jamais choisi a la main)."""
     device = await _get_owned_device(db, device_id, user)
-    updates = payload.model_dump(exclude_unset=True, exclude_defaults=True)
+    # exclude_unset seul : un champ explicitement envoye a `null` (ex. pour
+    # effacer le nom ou le modele) doit etre applique. `exclude_defaults`
+    # casserait ce cas car `None` est aussi la valeur par defaut du champ.
+    updates = payload.model_dump(exclude_unset=True)
 
     brand_or_model_changed = "brand" in updates or "model" in updates
     for field, value in updates.items():
