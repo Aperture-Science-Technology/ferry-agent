@@ -1,22 +1,54 @@
 "use client";
 
-import type { ComponentType } from "react";
 import { Tablet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { DeviceBrand } from "@/lib/types";
-import { KindleLogo } from "@/components/app/devices/kindle-logo";
-import { KoboLogo } from "@/components/app/devices/kobo-logo";
-import { TolinoLogo } from "@/components/app/devices/tolino-logo";
-import { PocketBookLogo } from "@/components/app/devices/pocketbook-logo";
 
-const BRAND_LOGOS: Record<DeviceBrand, ComponentType<{ className?: string }>> = {
-  kindle: KindleLogo,
-  kobo: KoboLogo,
-  tolino: TolinoLogo,
-  pocketbook: PocketBookLogo,
-  other: Tablet,
-};
+const MARK_CLASS =
+  "inline-flex h-5 min-w-5 shrink-0 items-center justify-center overflow-hidden rounded-full";
+
+function BrandMark({ brand }: { brand: DeviceBrand }) {
+  switch (brand) {
+    case "kindle":
+      return (
+        <span className={cn(MARK_CLASS, "bg-white px-1")}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brands/kindle.svg" alt="" className="h-2.5 w-auto" />
+        </span>
+      );
+    case "kobo":
+      return (
+        <span className={cn(MARK_CLASS, "bg-white p-1")}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brands/kobo.svg" alt="" className="h-3 w-auto" />
+        </span>
+      );
+    case "tolino":
+      return (
+        <span className={cn(MARK_CLASS, "bg-white px-1.5")}>
+          <span className="text-[9px] font-semibold tracking-tight whitespace-nowrap text-neutral-900 lowercase">
+            tolino
+          </span>
+        </span>
+      );
+    case "pocketbook":
+      return (
+        <span className={cn(MARK_CLASS, "bg-white px-1.5")}>
+          <span className="text-[9px] font-bold tracking-tight whitespace-nowrap text-neutral-900">
+            PocketBook
+          </span>
+        </span>
+      );
+    case "other":
+    default:
+      return (
+        <span className={cn(MARK_CLASS, "bg-muted text-foreground")}>
+          <Tablet className="h-3 w-3" />
+        </span>
+      );
+  }
+}
 
 export function BrandBadge({
   brand,
@@ -28,12 +60,9 @@ export function BrandBadge({
   className?: string;
 }) {
   const t = useTranslations("newDevice");
-  const Logo = BRAND_LOGOS[brand];
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-muted px-0.5 text-foreground">
-        <Logo className="h-3.5 w-auto" />
-      </span>
+      <BrandMark brand={brand} />
       {showLabel && <span>{t(`brands.${brand}`)}</span>}
     </span>
   );
