@@ -46,6 +46,9 @@ services:
       migrate:
         condition: service_completed_successfully
     restart: unless-stopped
+    volumes:
+      - ferry_library:/data/library
+      - ferry_tmp:/data/tmp
     environment:
       DATABASE_URL: ${DATABASE_URL:?required}
       APP_ENV: production
@@ -165,3 +168,7 @@ networks:
 volumes:
   ferry_pgdata:
     name: ferry_pgdata
+  ferry_library:
+    name: ferry_library
+  ferry_tmp:
+    name: ferry_tmp
