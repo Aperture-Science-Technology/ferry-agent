@@ -1,0 +1,267 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { BookOpen, Loader2, Pencil, Send, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DeliverDialog } from "@/components/app/library/deliver-dialog";
+import { BookEditDialog } from "@/components/app/library/book-edit-dialog";
+import { useApiClient } from "@/lib/api-client";
+import type { Device, DeliveryJob, DeliveryStatus, LibraryItem } from "@/lib/types";
+
+const STATUS_VARIANT: Record<DeliveryStatus, "default" | "secondary" | "destructive" | "outline"> = {
+  queued: "secondary",
+  sent: "outline",
+  delivered: "default",
+  failed: "destructive",
+};
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB"];
+  let value = bytes;
+  let unitIndex = -1;
+  do {
+    value /= 1024;
+    unitIndex++;
+  } while (value >= 1024 && unitIndex < units.length - 1);
+  return `${value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+export function BookDetailDialog({
+  item,
+  devices,
+  onOpenChange,
+  onUpdated,
+  onDeleted,
+}: {
+  item: LibraryItem | null;
+  devices: Device[];
+  onOpenChange: (open: boolean) => void;
+  onUpdated: (item: LibraryItem) => void;
+  onDeleted: (id: string) => void;
+}) {
+  const t = useTranslations("bookDetail");
+  const tCommon = useTranslations("common");
+  const tDeliveries = useTranslations("deliveries");
+  const { call } = useApiClient();
+
+  const [deliverOpen, setDeliverOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deliveriesState, setDeliveriesState] = useState<{
+    id: string;
+    jobs: DeliveryJob[];
+  } | null>(null);
+  const [failedId, setFailedId] = useState<string | null>(null);
+
+  const itemId = item?.id ?? null;
+
+  useEffect(() => {
+    if (!itemId) return;
+    let cancelled = false;
+    call<DeliveryJob[]>(`/api/v1/books/${itemId}/deliveries`)
+      .then((jobs) => {
+        if (cancelled) return;
+        setDeliveriesState({ id: itemId, jobs });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFailedId(itemId);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [itemId, call]);
+
+  const deliveries = deliveriesState?.id === itemId ? deliveriesState.jobs : null;
+  const loadingDeliveries = itemId !== null && deliveries === null && failedId !== itemId;
+
+  async function handleDelete() {
+    if (!item) return;
+    setDeleting(true);
+    try {
+      await call(`/api/v1/books/${item.id}`, { method: "DELETE" });
+      onDeleted(item.id);
+      toast.success(t("toastDeleted"));
+      setConfirmOpen(false);
+      onOpenChange(false);
+    } catch {
+      toast.error(t("toastDeleteFailed"));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <Dialog open={item !== null} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{item?.title ?? ""}</DialogTitle>
+            <DialogDescription>{item?.author ?? ""}</DialogDescription>
+          </DialogHeader>
+
+          {item && (
+            <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
+              <div className="aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
+                {item.cover_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.cover_url}
+                    alt={item.title}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <BookOpen className="size-10 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3 text-sm">
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge variant="secondary">{item.original_format.toUpperCase()}</Badge>
+                  {item.language && <Badge variant="outline">{item.language}</Badge>}
+                </div>
+
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  {item.page_count !== null && (
+                    <>
+                      <dt className="text-muted-foreground">{t("pages")}</dt>
+                      <dd>{t("pagesValue", { count: item.page_count })}</dd>
+                    </>
+                  )}
+                  {item.size_bytes !== null && (
+                    <>
+                      <dt className="text-muted-foreground">{t("size")}</dt>
+                      <dd>{formatBytes(item.size_bytes)}</dd>
+                    </>
+                  )}
+                  {item.publisher && (
+                    <>
+                      <dt className="text-muted-foreground">{t("publisher")}</dt>
+                      <dd>{item.publisher}</dd>
+                    </>
+                  )}
+                  {item.published_year !== null && (
+                    <>
+                      <dt className="text-muted-foreground">{t("year")}</dt>
+                      <dd>{item.published_year}</dd>
+                    </>
+                  )}
+                  {item.isbn && (
+                    <>
+                      <dt className="text-muted-foreground">{t("isbn")}</dt>
+                      <dd>{item.isbn}</dd>
+                    </>
+                  )}
+                  <dt className="text-muted-foreground">{t("added")}</dt>
+                  <dd>{new Date(item.added_at).toLocaleDateString()}</dd>
+                </dl>
+
+                {item.description && (
+                  <p className="text-muted-foreground">{item.description}</p>
+                )}
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button size="sm" onClick={() => setDeliverOpen(true)}>
+                    <Send />
+                    {t("send")}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+                    <Pencil />
+                    {t("edit")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => setConfirmOpen(true)}
+                  >
+                    <Trash2 />
+                    {t("delete")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">{t("deliveryHistory")}</h3>
+            {loadingDeliveries ? (
+              <div className="space-y-1.5">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </div>
+            ) : deliveries && deliveries.length > 0 ? (
+              <ul className="space-y-1.5">
+                {deliveries.map((job) => (
+                  <li
+                    key={job.id}
+                    className="flex items-center justify-between rounded-lg border border-border/60 px-2.5 py-1.5"
+                  >
+                    <span className="capitalize">{job.method}</span>
+                    <Badge variant={STATUS_VARIANT[job.status]}>
+                      {tDeliveries(`statuses.${job.status}`)}
+                    </Badge>
+                    <span className="text-muted-foreground">
+                      {new Date(job.delivered_at ?? job.created_at).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted-foreground">{t("noDeliveries")}</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <DeliverDialog
+        item={deliverOpen ? item : null}
+        devices={devices}
+        onOpenChange={(open) => !open && setDeliverOpen(false)}
+      />
+
+      <BookEditDialog
+        key={editOpen ? item?.id : "edit-closed"}
+        item={editOpen ? item : null}
+        onOpenChange={(open) => !open && setEditOpen(false)}
+        onSaved={(updated) => {
+          onUpdated(updated);
+          setEditOpen(false);
+        }}
+      />
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("confirmTitle")}</DialogTitle>
+            <DialogDescription>{t("confirmDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
+              {deleting && <Loader2 className="animate-spin" />}
+              {t("confirmButton")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

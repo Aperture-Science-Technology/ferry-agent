@@ -31,6 +31,13 @@ export interface LibraryItem {
   source_id: string | null;
   original_format: string;
   added_at: string;
+  description: string | null;
+  language: string | null;
+  page_count: number | null;
+  size_bytes: number | null;
+  isbn: string | null;
+  publisher: string | null;
+  published_year: number | null;
 }
 
 export interface Device {
