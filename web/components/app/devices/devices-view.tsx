@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Tablet, Plus, Link2, Check } from "lucide-react";
+import { toast } from "sonner";
+import { Tablet, Plus, Link2, Check, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +14,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/app/empty-state";
 import { NewDeviceDialog } from "@/components/app/devices/new-device-dialog";
 import { CloudLinkDialog } from "@/components/app/devices/cloud-link-dialog";
+import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
 export function DevicesView({
@@ -27,9 +37,27 @@ export function DevicesView({
 }) {
   const t = useTranslations("devices");
   const tCommon = useTranslations("common");
+  const { call } = useApiClient();
   const [devices, setDevices] = useState(initialDevices);
   const [createOpen, setCreateOpen] = useState(false);
   const [linkTarget, setLinkTarget] = useState<Device | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await call(`/api/v1/devices/${deleteTarget.id}`, { method: "DELETE" });
+      setDevices((prev) => prev.filter((d) => d.id !== deleteTarget.id));
+      toast.success(t("toastDeleted"));
+      setDeleteTarget(null);
+    } catch {
+      toast.error(t("toastDeleteFailed"));
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -85,12 +113,22 @@ export function DevicesView({
                       : tCommon("never")}
                   </TableCell>
                   <TableCell className="text-right">
-                    {device.delivery_tier === "B" && (
-                      <Button size="sm" variant="outline" onClick={() => setLinkTarget(device)}>
-                        <Link2 />
-                        {t("linkCloud")}
+                    <div className="flex justify-end gap-2">
+                      {device.delivery_tier === "B" && (
+                        <Button size="sm" variant="outline" onClick={() => setLinkTarget(device)}>
+                          <Link2 />
+                          {t("linkCloud")}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => setDeleteTarget(device)}
+                      >
+                        <Trash2 />
+                        {t("delete")}
                       </Button>
-                    )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -111,6 +149,27 @@ export function DevicesView({
           setDevices((prev) => prev.map((d) => (d.id === device.id ? device : d)))
         }
       />
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("deleteConfirmTitle")}</DialogTitle>
+            <DialogDescription>{t("deleteConfirmDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
+              <Trash2 />
+              {t("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

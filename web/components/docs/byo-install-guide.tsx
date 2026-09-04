@@ -17,7 +17,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Separator } from "@/components/ui/separator";
 
 function Code({ children }: { children: ReactNode }) {
   return (
@@ -35,14 +34,25 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
+const DOCKER_PULL_COMMAND =
+  "docker pull ghcr.io/aperture-science-technology/ferry-agent/gateway:latest";
+
+const DOCKER_RUN_COMMAND = `docker run -d \\
+  --name ferry-gateway \\
+  --restart unless-stopped \\
+  -e PAIRING_TOKEN=CODE \\
+  -e PUID=$(id -u) -e PGID=$(id -g) \\
+  -p 9696:9696 \\
+  -p 51413:51413 -p 51413:51413/udp \\
+  -v "$PWD/downloads:/downloads" \\
+  -v ferry-gw-config:/config \\
+  -v ferry-gw-state:/state \\
+  ghcr.io/aperture-science-technology/ferry-agent/gateway:latest`;
+
 export function ByoInstallGuide() {
   const t = useTranslations("docs");
 
-  const checklistItems = [
-    t("checklistItem1"),
-    t("checklistItem2"),
-    t("checklistItem3"),
-  ];
+  const checklistItems = [t("checklistItem1"), t("checklistItem2")];
 
   const glossaryItems = [
     { term: t("glossaryProwlarrTerm"), def: t("glossaryProwlarrDef") },
@@ -65,22 +75,14 @@ export function ByoInstallGuide() {
       number: "02",
       title: t("step2Title"),
       action: t("step2Action"),
+      code: DOCKER_PULL_COMMAND,
       success: t("step2Success"),
-      cta: (
-        <Button
-          render={
-            <a href="https://ferry-agent.aperture-agency.org/bundle/ferry-agent-bundle.tar.gz">
-              {t("step2Cta")}
-            </a>
-          }
-        />
-      ),
     },
     {
       number: "03",
       title: t("step3Title"),
       action: t("step3Action"),
-      code: "./install.sh",
+      code: DOCKER_RUN_COMMAND,
       hint: t("step3Hint"),
       success: t("step3Success"),
     },
@@ -89,7 +91,7 @@ export function ByoInstallGuide() {
       title: t("step4Title"),
       action: (
         <>
-          {t("step4Action")} <Code>http://localhost:9696</Code>
+          {t("step4Action")} <Code>http://127.0.0.1:9696</Code>
         </>
       ),
       success: t("step4Success"),
@@ -154,6 +156,10 @@ export function ByoInstallGuide() {
         </ol>
       </section>
 
+      <p className="text-center font-heading text-lg font-medium text-balance">
+        {t("closingLine")}
+      </p>
+
       <Card className="border-border/60 bg-card/40">
         <CardHeader>
           <CardTitle>{t("glossaryTitle")}</CardTitle>
@@ -178,6 +184,24 @@ export function ByoInstallGuide() {
         </CardHeader>
         <CardContent>
           <Accordion>
+            <AccordionItem value="install-script">
+              <AccordionTrigger>{t("scriptAltTitle")}</AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <p className="text-muted-foreground">{t("scriptAltDescription")}</p>
+                <p className="text-muted-foreground">{t("scriptAltBody")}</p>
+                <Button
+                  variant="outline"
+                  render={
+                    <a href="https://ferry-agent.aperture-agency.org/bundle/ferry-agent-bundle.tar.gz">
+                      {t("scriptAltCta")}
+                    </a>
+                  }
+                />
+                <CodeBlock>./install.sh</CodeBlock>
+                <p className="text-sm text-muted-foreground">{t("scriptAltHint")}</p>
+              </AccordionContent>
+            </AccordionItem>
+
             <AccordionItem value="mcp">
               <AccordionTrigger>{t("mcpTitle")}</AccordionTrigger>
               <AccordionContent className="space-y-3">
@@ -190,27 +214,11 @@ export function ByoInstallGuide() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="docker-alt">
-              <AccordionTrigger>{t("dockerAltTitle")}</AccordionTrigger>
-              <AccordionContent className="space-y-3">
-                <p className="text-muted-foreground">{t("dockerAltDescription")}</p>
-                <p className="text-muted-foreground">{t("dockerAltBody")}</p>
-                <CodeBlock>
-                  {`docker run -d --name ferry-gateway --restart unless-stopped -e PAIRING_TOKEN=CODE -e PUID=$(id -u) -e PGID=$(id -g) -p 9696:9696 -p 51413:51413 -p 51413:51413/udp -v "$PWD/downloads:/downloads" ghcr.io/aperture-science-technology/ferry-agent/gateway:latest`}
-                </CodeBlock>
-                <p className="text-muted-foreground">
-                  {t("dockerAltAfter")} <Code>http://127.0.0.1:9696</Code>{" "}
-                  {t("dockerAltAfterEnd")}
-                </p>
-              </AccordionContent>
-            </AccordionItem>
-
             <AccordionItem value="byo">
               <AccordionTrigger>{t("byoTitle")}</AccordionTrigger>
               <AccordionContent className="space-y-3">
                 <p className="text-muted-foreground">{t("byoDescription")}</p>
                 <p className="text-muted-foreground">{t("byoBody1")}</p>
-                <Separator className="bg-border/60" />
                 <p className="text-muted-foreground">{t("byoBody2")}</p>
               </AccordionContent>
             </AccordionItem>
