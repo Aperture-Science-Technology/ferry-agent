@@ -90,6 +90,7 @@ async def import_from_upload(
         source_id=source.id,
         original_format=Path(filename).suffix.lstrip(".") or "epub",
         storage_path=str(dest),
+        size_bytes=len(content),
     )
     db.add(item)
     await db.commit()
@@ -131,11 +132,27 @@ async def import_from_gateway(
         source_id=source.id,
         original_format=detected_format,
         storage_path=str(dest),
+        size_bytes=len(content),
     )
     db.add(item)
     await db.commit()
     await db.refresh(item)
     return item
+
+
+async def delete_library_item(db: AsyncSession, item: LibraryItem) -> None:
+    """Supprime le fichier stocke et l'enregistrement `LibraryItem`.
+
+    Ne touche pas aux `DeliveryJob` lies : l'historique de livraisons est
+    conserve meme apres suppression du livre (cf. api/books.py).
+    """
+    path = Path(item.storage_path)
+    if path.exists():
+        path.unlink(missing_ok=True)
+    else:
+        logger.warning("fichier introuvable lors de la suppression: %s", path)
+    await db.delete(item)
+    await db.commit()
 
 
 async def search_all(query: str) -> list[Result]:

@@ -3,15 +3,20 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Badge } from "@/components/ui/badge";
+import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
 
 function Code({ children }: { children: ReactNode }) {
@@ -33,29 +38,34 @@ function CodeBlock({ children }: { children: string }) {
 export function ByoInstallGuide() {
   const t = useTranslations("docs");
 
+  const checklistItems = [
+    t("checklistItem1"),
+    t("checklistItem2"),
+    t("checklistItem3"),
+  ];
+
+  const glossaryItems = [
+    { term: t("glossaryProwlarrTerm"), def: t("glossaryProwlarrDef") },
+    { term: t("glossaryIndexerTerm"), def: t("glossaryIndexerDef") },
+    { term: t("glossaryMagnetTerm"), def: t("glossaryMagnetDef") },
+    { term: t("glossaryGatewayTerm"), def: t("glossaryGatewayDef") },
+  ];
+
   const steps = [
     {
       number: "01",
       title: t("step1Title"),
-      body: (
-        <>
-          {t("step1BodyBefore")}{" "}
-          <Link
-            href="/app/gateways"
-            className="text-foreground underline-offset-4 hover:underline"
-          >
-            {t("step1BodyLink")}
-          </Link>
-          {t("step1BodyAfter")}{" "}
-          <strong className="font-medium text-foreground">{t("step1Token")}</strong>{" "}
-          {t("step1BodyEnd")}
-        </>
+      action: t("step1Action"),
+      success: t("step1Success"),
+      cta: (
+        <Button render={<Link href="/app/gateways">{t("step1Cta")}</Link>} />
       ),
     },
     {
       number: "02",
       title: t("step2Title"),
-      body: <>{t("step2Body")}</>,
+      action: t("step2Action"),
+      success: t("step2Success"),
       cta: (
         <Button
           render={
@@ -69,26 +79,20 @@ export function ByoInstallGuide() {
     {
       number: "03",
       title: t("step3Title"),
-      body: (
-        <>
-          {t("step3BodyBefore")}{" "}
-          <strong className="font-medium text-foreground">{t("step3Mac")}</strong>
-          {t("step3BodyMid")}{" "}
-          <strong className="font-medium text-foreground">{t("step3Win")}</strong>
-          {t("step3BodyEnd")}
-        </>
-      ),
+      action: t("step3Action"),
       code: "./install.sh",
+      hint: t("step3Hint"),
+      success: t("step3Success"),
     },
     {
       number: "04",
       title: t("step4Title"),
-      body: (
+      action: (
         <>
-          {t("step4BodyBefore")} <Code>http://localhost:9696</Code>
-          {t("step4BodyAfter")}
+          {t("step4Action")} <Code>http://localhost:9696</Code>
         </>
       ),
+      success: t("step4Success"),
     },
   ];
 
@@ -102,34 +106,21 @@ export function ByoInstallGuide() {
           {t("title")}
         </h1>
         <p className="max-w-2xl text-muted-foreground">{t("intro")}</p>
-        <div className="pt-2">
-          <Button render={<Link href="/app/gateways">{t("openAccess")}</Link>} />
-        </div>
       </header>
 
       <Card className="border-border/60 bg-card/40">
         <CardHeader>
-          <CardTitle>{t("prereqTitle")}</CardTitle>
-          <CardDescription>{t("prereqDescription")}</CardDescription>
+          <CardTitle>{t("checklistTitle")}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-border/60 bg-background/40 p-4">
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-heading font-medium">{t("orbstackTitle")}</p>
-                <Badge variant="secondary">{t("orbstackBadge")}</Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">{t("orbstackBody")}</p>
-            </div>
-          </div>
-          <div className="rounded-lg border border-border/60 bg-background/40 p-4">
-            <p className="font-heading font-medium">{t("dockerTitle")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t.rich("dockerBody", {
-                command: () => <Code>./install.sh</Code>,
-              })}
-            </p>
-          </div>
+        <CardContent>
+          <ul className="space-y-2">
+            {checklistItems.map((item) => (
+              <li key={item} className="flex items-start gap-2 text-sm">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
         </CardContent>
       </Card>
 
@@ -139,20 +130,23 @@ export function ByoInstallGuide() {
           {steps.map((step) => (
             <li key={step.number}>
               <Card className="border-border/60 bg-card/40">
-                <CardContent className="pt-2">
-                  <span className="font-heading text-sm text-muted-foreground">
-                    {step.number}
-                  </span>
-                  <h3 className="mt-2 font-heading text-xl font-medium">{step.title}</h3>
-                  <p className="mt-2 text-muted-foreground">{step.body}</p>
-                  {"cta" in step && step.cta ? (
-                    <div className="mt-4">{step.cta}</div>
+                <CardContent className="space-y-4 pt-2">
+                  <div>
+                    <span className="font-heading text-sm text-muted-foreground">
+                      {step.number}
+                    </span>
+                    <h3 className="mt-2 font-heading text-xl font-medium">{step.title}</h3>
+                    <p className="mt-2 text-muted-foreground">{step.action}</p>
+                  </div>
+                  {"cta" in step && step.cta ? <div>{step.cta}</div> : null}
+                  {"code" in step && step.code ? <CodeBlock>{step.code}</CodeBlock> : null}
+                  {"hint" in step && step.hint ? (
+                    <p className="text-sm text-muted-foreground">{step.hint}</p>
                   ) : null}
-                  {"code" in step && step.code ? (
-                    <div className="mt-4">
-                      <CodeBlock>{step.code}</CodeBlock>
-                    </div>
-                  ) : null}
+                  <p className="text-sm text-foreground">
+                    <span aria-hidden="true">✅</span> {t("stepSuccessLabel")}{" "}
+                    <span className="text-muted-foreground">{step.success}</span>
+                  </p>
                 </CardContent>
               </Card>
             </li>
@@ -162,44 +156,65 @@ export function ByoInstallGuide() {
 
       <Card className="border-border/60 bg-card/40">
         <CardHeader>
-          <CardTitle>{t("mcpTitle")}</CardTitle>
-          <CardDescription>{t("mcpDescription")}</CardDescription>
+          <CardTitle>{t("glossaryTitle")}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-muted-foreground">
-          <p>
-            {t("mcpBody")}{" "}
-            <Code>https://ferry-agent.aperture-agency.org/mcp</Code>{" "}
-            {t("mcpBodyAfter")}
-          </p>
+        <CardContent>
+          <Accordion>
+            {glossaryItems.map((item) => (
+              <AccordionItem key={item.term} value={item.term}>
+                <AccordionTrigger>{item.term}</AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-muted-foreground">{item.def}</p>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </CardContent>
       </Card>
 
       <Card className="border-border/60 bg-card/40">
         <CardHeader>
-          <CardTitle>{t("dockerAltTitle")}</CardTitle>
-          <CardDescription>{t("dockerAltDescription")}</CardDescription>
+          <CardTitle>{t("advancedTitle")}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-muted-foreground">
-          <p>{t("dockerAltBody")}</p>
-          <CodeBlock>
-            {`docker run -d --name ferry-gateway --restart unless-stopped -e PAIRING_TOKEN=CODE -e PUID=$(id -u) -e PGID=$(id -g) -p 9696:9696 -p 51413:51413 -p 51413:51413/udp -v "$PWD/downloads:/downloads" ghcr.io/aperture-science-technology/ferry-agent/gateway:latest`}
-          </CodeBlock>
-          <p>
-            {t("dockerAltAfter")} <Code>http://127.0.0.1:9696</Code>{" "}
-            {t("dockerAltAfterEnd")}
-          </p>
-        </CardContent>
-      </Card>
+        <CardContent>
+          <Accordion>
+            <AccordionItem value="mcp">
+              <AccordionTrigger>{t("mcpTitle")}</AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <p className="text-muted-foreground">{t("mcpDescription")}</p>
+                <p className="text-muted-foreground">
+                  {t("mcpBody")}{" "}
+                  <Code>https://ferry-agent.aperture-agency.org/mcp</Code>{" "}
+                  {t("mcpBodyAfter")}
+                </p>
+              </AccordionContent>
+            </AccordionItem>
 
-      <Card className="border-border/60 bg-card/40">
-        <CardHeader>
-          <CardTitle>{t("byoTitle")}</CardTitle>
-          <CardDescription>{t("byoDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-muted-foreground">
-          <p>{t("byoBody1")}</p>
-          <Separator className="bg-border/60" />
-          <p>{t("byoBody2")}</p>
+            <AccordionItem value="docker-alt">
+              <AccordionTrigger>{t("dockerAltTitle")}</AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <p className="text-muted-foreground">{t("dockerAltDescription")}</p>
+                <p className="text-muted-foreground">{t("dockerAltBody")}</p>
+                <CodeBlock>
+                  {`docker run -d --name ferry-gateway --restart unless-stopped -e PAIRING_TOKEN=CODE -e PUID=$(id -u) -e PGID=$(id -g) -p 9696:9696 -p 51413:51413 -p 51413:51413/udp -v "$PWD/downloads:/downloads" ghcr.io/aperture-science-technology/ferry-agent/gateway:latest`}
+                </CodeBlock>
+                <p className="text-muted-foreground">
+                  {t("dockerAltAfter")} <Code>http://127.0.0.1:9696</Code>{" "}
+                  {t("dockerAltAfterEnd")}
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="byo">
+              <AccordionTrigger>{t("byoTitle")}</AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <p className="text-muted-foreground">{t("byoDescription")}</p>
+                <p className="text-muted-foreground">{t("byoBody1")}</p>
+                <Separator className="bg-border/60" />
+                <p className="text-muted-foreground">{t("byoBody2")}</p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </CardContent>
       </Card>
 
