@@ -204,7 +204,7 @@ async def test_create_delivery_returns_download_url_for_tier_c(monkeypatch: pyte
     # re-resout lui-meme avant de creer la session de telechargement.
     db = FakeSession([item, device, item, device, None])
 
-    payload = DeliveryCreate(library_item_id=item.id, device_id=device.id)
+    payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.browser_code)
     result = await deliveries.create_delivery(
         payload, BackgroundTasks(), CurrentUser(id=user_id, email="reader@example.test"), db
     )

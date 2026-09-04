@@ -207,10 +207,26 @@
   "deliverDialog": {
     "title": "Envoyer « {title} »",
     "description": "Choisissez l'appareil de destination. Le format habituel de l'appareil sera utilisé si vous laissez ce champ vide.",
-    "device": "Appareil",
-    "devicePlaceholder": "Choisir un appareil",
-    "noDevices": "Aucun appareil. Ajoutez-en un dans Appareils.",
-    "formatOptional": "Format (optionnel)",
+  "device": "Appareil",
+  "devicePlaceholder": "Choisir un appareil",
+  "noDevices": "Aucun appareil. Ajoutez-en un dans Appareils.",
+  "methodLabel": "Mode d'envoi",
+  "methodPlaceholder": "Choisir un mode d'envoi",
+  "methodLoading": "Recherche des modes d'envoi disponibles…",
+  "methodLoadFailed": "Impossible de récupérer les modes d'envoi disponibles.",
+  "noMethodsAvailable": "Aucun mode d'envoi disponible pour cet appareil.",
+  "methods": {
+    "email": "Email (Send-to-Kindle)",
+    "dropbox": "Dropbox",
+    "drive": "Google Drive",
+    "browser_code": "Code dans le navigateur",
+    "usb": "Transfert USB"
+  },
+  "methodUnavailable": {
+    "smtp_not_configured": "Send-to-Kindle indisponible (SMTP non configuré).",
+    "cloud_not_linked": "Cloud non relié : reliez Dropbox ou Google Drive depuis Appareils pour activer l'envoi."
+  },
+  "formatOptional": "Format (optionnel)",
     "formatPlaceholder": "epub, mobi, azw3, pdf…",
     "submit": "Envoyer",
     "toastReady": "Prêt à télécharger.",
@@ -281,19 +297,12 @@
     "toastFailed": "Impossible de mettre à jour cet appareil. Réessayez."
   },
   "newDevice": {
-    "title": "Nouvel appareil",
-    "description": "Indiquez la marque et la façon dont les livres arriveront sur votre liseuse.",
-    "brand": "Marque",
-    "modelOptional": "Modèle (optionnel)",
-    "modelPlaceholder": "Choisir un modèle",
-    "deliveryMode": "Mode d'arrivée",
-    "tierOptions": {
-      "A": "Arrive par email (Kindle)",
-      "B": "Arrive via le cloud (Dropbox/Drive)",
-      "C": "Code dans le navigateur",
-      "D": "Transfert USB"
-    },
-    "brands": {
+  "title": "Nouvel appareil",
+  "description": "Indiquez la marque et le modèle : le mode d'arrivée des livres est déterminé automatiquement.",
+  "brand": "Marque",
+  "modelOptional": "Modèle (optionnel)",
+  "modelPlaceholder": "Choisir un modèle",
+  "brands": {
       "kindle": "Kindle",
       "kobo": "Kobo",
       "tolino": "Tolino",

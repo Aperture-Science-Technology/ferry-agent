@@ -207,10 +207,26 @@
   "deliverDialog": {
     "title": "Send “{title}”",
     "description": "Choose a destination device. The device's usual format will be used if you leave this field empty.",
-    "device": "Device",
-    "devicePlaceholder": "Choose a device",
-    "noDevices": "No devices yet. Add one under Devices.",
-    "formatOptional": "Format (optional)",
+  "device": "Device",
+  "devicePlaceholder": "Choose a device",
+  "noDevices": "No devices yet. Add one under Devices.",
+  "methodLabel": "Delivery mode",
+  "methodPlaceholder": "Choose a delivery mode",
+  "methodLoading": "Looking up available delivery modes…",
+  "methodLoadFailed": "Couldn't fetch the available delivery modes.",
+  "noMethodsAvailable": "No delivery mode available for this device.",
+  "methods": {
+    "email": "Email (Send-to-Kindle)",
+    "dropbox": "Dropbox",
+    "drive": "Google Drive",
+    "browser_code": "Code in the browser",
+    "usb": "USB transfer"
+  },
+  "methodUnavailable": {
+    "smtp_not_configured": "Send-to-Kindle unavailable (SMTP not configured).",
+    "cloud_not_linked": "Cloud not linked: link Dropbox or Google Drive from Devices to enable delivery."
+  },
+  "formatOptional": "Format (optional)",
     "formatPlaceholder": "epub, mobi, azw3, pdf…",
     "submit": "Send",
     "toastReady": "Ready to download.",
@@ -281,19 +297,12 @@
     "toastFailed": "Couldn't update this device. Please try again."
   },
   "newDevice": {
-    "title": "New device",
-    "description": "Choose the brand and how books will arrive on your e-reader.",
-    "brand": "Brand",
-    "modelOptional": "Model (optional)",
-    "modelPlaceholder": "Choose a model",
-    "deliveryMode": "How it arrives",
-    "tierOptions": {
-      "A": "Arrives by email (Kindle)",
-      "B": "Arrives via the cloud (Dropbox/Drive)",
-      "C": "Code in the browser",
-      "D": "USB transfer"
-    },
-    "brands": {
+  "title": "New device",
+  "description": "Choose the brand and model: how books arrive is figured out automatically.",
+  "brand": "Brand",
+  "modelOptional": "Model (optional)",
+  "modelPlaceholder": "Choose a model",
+  "brands": {
       "kindle": "Kindle",
       "kobo": "Kobo",
       "tolino": "Tolino",

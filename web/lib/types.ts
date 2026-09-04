@@ -77,6 +77,17 @@ export interface DeliveryJob {
   download_url?: string | null;
 }
 
+/** Mode de livraison candidat pour un device donne, avec sa disponibilite
+ * reelle (voir GET /api/v1/devices/{id}/methods, services/delivery_methods.py
+ * cote backend). `reason_code` est stable et traduit cote frontend. */
+export type DeliveryMethodReasonCode = "smtp_not_configured" | "cloud_not_linked";
+
+export interface MethodAvailability {
+  method: DeliveryMethod;
+  available: boolean;
+  reason_code: DeliveryMethodReasonCode | null;
+}
+
 export interface Source {
   id: string;
   type: SourceType;

@@ -138,6 +138,10 @@ class LibraryItemUpdate(BaseModel):
 
 
 class DeviceCreate(BaseModel):
+    """Pas de `delivery_tier` ici : le tier est toujours calcule cote serveur
+    depuis `brand`/`model` (voir `api.devices._compute_tier`), jamais choisi
+    a la main par le client (extra fields ignores par defaut par pydantic)."""
+
     name: str | None = None
     brand: DeviceBrand
     model: str | None = None
@@ -201,6 +205,13 @@ class DeliveryCreate(BaseModel):
     library_item_id: uuid.UUID
     device_id: uuid.UUID
     format: str | None = None
+    # Le frontend envoie desormais `method` explicitement (voir
+    # `GET /api/v1/devices/{id}/methods` pour les modes reellement
+    # disponibles pour le device cible). Le defaut `email` n'est qu'un
+    # filet de compatibilite pour un vieux client qui omettrait le champ ;
+    # l'API valide dans tous les cas que `method` correspond a un mode
+    # disponible pour le device (voir `create_delivery`), donc ce defaut ne
+    # peut plus faire retomber silencieusement sur un envoi email errone.
     method: DeliveryMethod = DeliveryMethod.email
 
 

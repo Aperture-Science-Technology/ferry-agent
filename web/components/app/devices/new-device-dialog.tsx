@@ -27,7 +27,6 @@ import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
 const BRANDS: Device["brand"][] = ["kindle", "kobo", "tolino", "pocketbook", "other"];
-const TIER_VALUES: Device["delivery_tier"][] = ["A", "B", "C", "D"];
 const MODEL_BRANDS = ["kindle", "kobo", "tolino", "pocketbook"] as const;
 
 export function NewDeviceDialog({
@@ -45,7 +44,6 @@ export function NewDeviceDialog({
   const [name, setName] = useState("");
   const [brand, setBrand] = useState<Device["brand"]>("kindle");
   const [model, setModel] = useState("");
-  const [tier, setTier] = useState<Device["delivery_tier"]>("A");
   const [submitting, setSubmitting] = useState(false);
 
   const modelOptions =
@@ -63,7 +61,7 @@ export function NewDeviceDialog({
     try {
       const device = await call<Device>("/api/v1/devices", {
         method: "POST",
-        body: JSON.stringify({ name: name || null, brand, model: model || null, delivery_tier: tier }),
+        body: JSON.stringify({ name: name || null, brand, model: model || null }),
       });
       onCreated(device);
       toast.success(t("toastCreated"));
@@ -125,24 +123,6 @@ export function NewDeviceDialog({
             ) : (
               <Input value={model} onChange={(event) => setModel(event.target.value)} />
             )}
-          </div>
-          <div className="space-y-2">
-            <Label>{t("deliveryMode")}</Label>
-            <Select
-              value={tier}
-              onValueChange={(value) => value && setTier(value as Device["delivery_tier"])}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIER_VALUES.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(`tierOptions.${value}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
         <DialogFooter>

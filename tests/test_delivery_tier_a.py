@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 
 import pytest
-from fastapi import BackgroundTasks
+from fastapi import BackgroundTasks, HTTPException
 
 from ferry_agent.api import deliveries
 from ferry_agent.api.deps import CurrentUser
@@ -266,14 +266,17 @@ async def test_deliver_routes_tier_a_via_full_lookup(monkeypatch: pytest.MonkeyP
     assert sent["kindle"] is True
 
 
-async def test_create_delivery_schedules_background_task_for_tier_a_device() -> None:
+async def test_create_delivery_schedules_background_task_for_tier_a_device(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(deliveries.mailer, "is_configured", lambda: True)
     user_id = uuid.uuid4()
     item = make_item(user_id=user_id)
     device = make_device(user_id=user_id, delivery_tier=DeliveryTier.A)
     db = FakeSession([item, device])
     background_tasks = BackgroundTasks()
 
-    payload = DeliveryCreate(library_item_id=item.id, device_id=device.id)
+    payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.email)
     result = await deliveries.create_delivery(
         payload, background_tasks, CurrentUser(id=user_id, email="reader@example.test"), db
     )
@@ -282,3 +285,45 @@ async def test_create_delivery_schedules_background_task_for_tier_a_device() -> 
     assert result.download_url is None
     assert len(background_tasks.tasks) == 1
     assert db.added and isinstance(db.added[0], DeliveryJob)
+
+
+async def test_create_delivery_rejects_method_incoherent_with_device_tier(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ex. demander `email` sur un Kobo tier C : 400, pas de job cree."""
+    user_id = uuid.uuid4()
+    item = make_item(user_id=user_id)
+    device = make_device(user_id=user_id, brand=DeviceBrand.kobo, delivery_tier=DeliveryTier.C)
+    db = FakeSession([item, device])
+    background_tasks = BackgroundTasks()
+
+    payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.email)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await deliveries.create_delivery(
+            payload, background_tasks, CurrentUser(id=user_id, email="reader@example.test"), db
+        )
+
+    assert exc_info.value.status_code == 400
+    assert not db.added
+    assert len(background_tasks.tasks) == 0
+
+
+async def test_create_delivery_rejects_email_when_smtp_not_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(deliveries.mailer, "is_configured", lambda: False)
+    user_id = uuid.uuid4()
+    item = make_item(user_id=user_id)
+    device = make_device(user_id=user_id, delivery_tier=DeliveryTier.A)
+    db = FakeSession([item, device])
+    background_tasks = BackgroundTasks()
+
+    payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.email)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await deliveries.create_delivery(
+            payload, background_tasks, CurrentUser(id=user_id, email="reader@example.test"), db
+        )
+
+    assert exc_info.value.status_code == 400

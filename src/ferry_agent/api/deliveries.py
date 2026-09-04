@@ -25,6 +25,8 @@ from ferry_agent.db import get_db
 from ferry_agent.models import DeliveryJob, DeliveryTier, Device, LibraryItem
 from ferry_agent.schemas import DeliveryCreate, DeliveryOut
 from ferry_agent.services import delivery as delivery_service
+from ferry_agent.services import mailer
+from ferry_agent.services.delivery_methods import is_method_allowed
 
 router = APIRouter(prefix="/api/v1/deliveries", tags=["deliveries"])
 
@@ -50,6 +52,12 @@ async def create_delivery(
     device = device_result.scalar_one_or_none()
     if device is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device introuvable")
+
+    if not is_method_allowed(device, payload.method, mailer.is_configured()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"method '{payload.method.value}' indisponible pour ce device (tier {device.delivery_tier.value})",
+        )
 
     job = DeliveryJob(
         library_item_id=payload.library_item_id,

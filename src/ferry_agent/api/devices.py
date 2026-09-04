@@ -16,6 +16,8 @@ from ferry_agent.models import Device, DeviceBrand, DeliveryTier
 from ferry_agent.schemas import DeviceCreate, DeviceLinkCallback, DeviceLinkUrlOut, DeviceOut, DevicePatch
 from ferry_agent.services import cloud_links
 from ferry_agent.services import devices as device_service
+from ferry_agent.services import mailer
+from ferry_agent.services.delivery_methods import MethodAvailability, available_delivery_methods
 
 # Mapping brand → tier par défaut (peut être affiné par modèle)
 _KOBO_HIGH_END = {"forma", "sage", "elipsa", "libra colour", "libra color"}
@@ -112,6 +114,20 @@ async def delete_device(
 ) -> None:
     device = await _get_owned_device(db, device_id, user)
     await device_service.delete_device(db, device)
+
+
+@router.get("/{device_id}/methods", response_model=list[MethodAvailability])
+async def get_delivery_methods(
+    device_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[MethodAvailability]:
+    """Modes de livraison candidats pour ce device (email/dropbox/drive/
+    browser_code), chacun avec sa disponibilite reelle : le frontend s'en
+    sert pour proposer uniquement les modes utilisables au lieu de laisser
+    choisir un tier technique A/B/C/D a la main."""
+    device = await _get_owned_device(db, device_id, user)
+    return available_delivery_methods(device, mailer.is_configured())
 
 
 def _check_provider(provider: str) -> None:
