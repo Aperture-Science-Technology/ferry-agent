@@ -166,9 +166,12 @@
     }
   },
   "library": {
+    "addBooksTitle": "Search for books to add",
     "searchPlaceholder": "Search by title, author…",
     "search": "Search",
     "myLibrary": "My library",
+    "owned": "Owned",
+    "inLibrary": "In library",
     "title": "Title",
     "author": "Author",
     "source": "Source",

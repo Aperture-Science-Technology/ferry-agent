@@ -86,11 +86,17 @@ class TestSearchBooksRespectsDisabledSources:
     def test_disabled_gutenberg_excluded_from_search(self):
         async def fake_db():
             db = AsyncMock()
-            result = MagicMock()
-            result.scalars = MagicMock(
+            disabled_sources_result = MagicMock()
+            disabled_sources_result.scalars = MagicMock(
                 return_value=MagicMock(all=MagicMock(return_value=[SourceType.gutenberg]))
             )
-            db.execute = AsyncMock(return_value=result)
+            # Deuxieme appel : LibraryItem de l'utilisateur pour le croisement
+            # "deja possede" (search_books) -> aucun livre possede ici.
+            owned_items_result = MagicMock()
+            owned_items_result.scalars = MagicMock(
+                return_value=MagicMock(all=MagicMock(return_value=[]))
+            )
+            db.execute = AsyncMock(side_effect=[disabled_sources_result, owned_items_result])
             yield db
 
         _override(fake_db)

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { motion } from "motion/react";
 import { BookOpen, LayoutGrid, List, Loader2, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/app/empty-state";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
+import { Reveal } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
 import type { Device, LibraryItem, SearchResult } from "@/lib/types";
 
@@ -66,14 +68,7 @@ export function LibraryView({
   );
 
   const displayedItems = useMemo(() => {
-    const q = query.trim().toLowerCase();
     let list = items;
-    if (q) {
-      list = list.filter(
-        (item) =>
-          item.title.toLowerCase().includes(q) || item.author.toLowerCase().includes(q)
-      );
-    }
     if (languageFilter !== "all") {
       list = list.filter((item) => item.language === languageFilter);
     }
@@ -90,7 +85,7 @@ export function LibraryView({
       if (sortBy === "author") return a.author.localeCompare(b.author);
       return new Date(b.added_at).getTime() - new Date(a.added_at).getTime();
     });
-  }, [items, query, languageFilter, formatFilter, sourceFilter, sortBy]);
+  }, [items, languageFilter, formatFilter, sourceFilter, sortBy]);
 
   async function runSearch() {
     if (!query.trim()) return;
@@ -126,6 +121,15 @@ export function LibraryView({
         setItems((prev) => [added, ...prev]);
         toast.success(t("toastAdded", { title: added.title }));
       }
+      setResults((prev) =>
+        prev
+          ? prev.map((candidate) =>
+              candidate.source === result.source && candidate.result_id === result.result_id
+                ? { ...candidate, owned: true }
+                : candidate
+            )
+          : prev
+      );
     } catch {
       toast.error(t("toastAddFailed"));
     } finally {
@@ -148,7 +152,11 @@ export function LibraryView({
   return (
     <div className="space-y-10">
       <div>
-        <div className="flex flex-wrap gap-2">
+        <h2 className="font-heading text-lg font-medium">{t("addBooksTitle")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("searchHelp")}</p>
+        <p className="text-sm text-muted-foreground">{t("searchHelpMatch")}</p>
+
+        <div className="mt-3 flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-64">
             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -164,83 +172,95 @@ export function LibraryView({
             {t("search")}
           </Button>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">{t("searchHelp")}</p>
-        <p className="text-sm text-muted-foreground">{t("searchHelpMatch")}</p>
 
         {searching && (
-          <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-lg border border-border/60 py-10">
-            <div className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-primary animate-pulse" />
-              <span className="size-2 rounded-full bg-primary animate-pulse [animation-delay:150ms]" />
-              <span className="size-2 rounded-full bg-primary animate-pulse [animation-delay:300ms]" />
-            </div>
-            <p className="text-sm text-muted-foreground">{t("searching")}</p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-border/60 py-10 text-sm text-muted-foreground"
+          >
+            <Loader2 className="size-4 animate-spin" />
+            {t("searching")}
+          </motion.div>
         )}
 
         {!searching && results !== null && (
-          results.length === 0 ? (
-            <p className="mt-4 text-sm text-muted-foreground">{t("noResultsHint")}</p>
-          ) : (
-            <div className="mt-4 overflow-hidden rounded-lg border border-border/60">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12" />
-                    <TableHead>{t("title")}</TableHead>
-                    <TableHead>{t("author")}</TableHead>
-                    <TableHead>{t("source")}</TableHead>
-                    <TableHead>{t("format")}</TableHead>
-                    <TableHead className="text-right">{t("action")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {results.map((result) => {
-                    const resultKey = `${result.source}:${result.result_id}`;
-                    return (
-                      <TableRow key={resultKey}>
-                        <TableCell>
-                          <div className="flex size-10 items-center justify-center overflow-hidden rounded bg-muted">
-                            {result.cover_url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={result.cover_url}
-                                alt=""
-                                className="h-full w-full object-cover"
-                              />
+          <Reveal className="mt-4">
+            {results.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("noResultsHint")}</p>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-border/60">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12" />
+                      <TableHead>{t("title")}</TableHead>
+                      <TableHead>{t("author")}</TableHead>
+                      <TableHead>{t("source")}</TableHead>
+                      <TableHead>{t("format")}</TableHead>
+                      <TableHead className="text-right">{t("action")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {results.map((result) => {
+                      const resultKey = `${result.source}:${result.result_id}`;
+                      return (
+                        <TableRow key={resultKey}>
+                          <TableCell>
+                            <div className="flex size-10 items-center justify-center overflow-hidden rounded bg-muted">
+                              {result.cover_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={result.cover_url}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <BookOpen className="size-4 text-muted-foreground" />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span>{result.title}</span>
+                              {result.owned && <Badge variant="secondary">{t("owned")}</Badge>}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{result.author}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{sourceLabel(result.source)}</Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground uppercase">
+                            {result.format}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {result.owned ? (
+                              <Button size="sm" variant="outline" disabled>
+                                {t("inLibrary")}
+                              </Button>
                             ) : (
-                              <BookOpen className="size-4 text-muted-foreground" />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={addingId === resultKey}
+                                onClick={() => addResult(result)}
+                              >
+                                {addingId === resultKey ? (
+                                  <Loader2 className="animate-spin" />
+                                ) : null}
+                                {t("add")}
+                              </Button>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">{result.title}</TableCell>
-                        <TableCell className="text-muted-foreground">{result.author}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{sourceLabel(result.source)}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground uppercase">
-                          {result.format}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={addingId === resultKey}
-                            onClick={() => addResult(result)}
-                          >
-                            {addingId === resultKey ? (
-                              <Loader2 className="animate-spin" />
-                            ) : null}
-                            {t("add")}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </Reveal>
         )}
       </div>
 

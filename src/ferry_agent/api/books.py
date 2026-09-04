@@ -36,6 +36,11 @@ from ferry_agent.services import library
 router = APIRouter(prefix="/api/v1/books", tags=["books"])
 
 
+def _normalize(value: str) -> str:
+    """Normalise pour comparaison (lowercase, espaces internes reduits, trim)."""
+    return " ".join(value.strip().lower().split())
+
+
 @router.get("", response_model=list[LibraryItemOut])
 async def list_books(
     user: CurrentUser = Depends(get_current_user),
@@ -100,7 +105,34 @@ async def search_books(
             if job.status == GatewayJobStatus.done:
                 results.extend(Result.model_validate(item) for item in job.payload.get("results", []))
 
-    return [ResultOut.model_validate(result) for result in results]
+    owned_result = await db.execute(
+        select(LibraryItem).where(LibraryItem.user_id == user.id)
+    )
+    # Aucun `result_id`/ref externe n'est stocke sur LibraryItem aujourd'hui
+    # (Source represente un connecteur, pas un livre precis) : le seul
+    # croisement possible est titre (+auteur si les deux cotes en ont un).
+    owned_pairs = {
+        (_normalize(owned.title), _normalize(owned.author or ""))
+        for owned in owned_result.scalars().all()
+    }
+
+    def _is_owned(result: Result) -> bool:
+        title_norm = _normalize(result.title)
+        author_norm = _normalize(result.author)
+        for owned_title, owned_author in owned_pairs:
+            if owned_title != title_norm:
+                continue
+            if author_norm and owned_author and author_norm != owned_author:
+                continue
+            return True
+        return False
+
+    outs = []
+    for result in results:
+        out = ResultOut.model_validate(result)
+        out.owned = _is_owned(result)
+        outs.append(out)
+    return outs
 
 
 @router.post(
