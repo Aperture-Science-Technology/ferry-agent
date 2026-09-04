@@ -2,40 +2,39 @@
 
 import { Tablet } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { KindleLogo, KoboLogo } from "@/components/app/devices/brand-logos";
 import { cn } from "@/lib/utils";
 import type { DeviceBrand } from "@/lib/types";
 
 const MARK_CLASS =
-  "inline-flex h-5 min-w-5 shrink-0 items-center justify-center overflow-hidden rounded-full";
+  "inline-flex h-4 min-w-4 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-foreground";
 
 function BrandMark({ brand }: { brand: DeviceBrand }) {
   switch (brand) {
     case "kindle":
       return (
-        <span className={cn(MARK_CLASS, "bg-white px-1")}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brands/kindle.svg" alt="" className="h-2.5 w-auto" />
+        <span className={cn(MARK_CLASS, "px-1")}>
+          <KindleLogo className="h-2.5 w-auto" />
         </span>
       );
     case "kobo":
       return (
-        <span className={cn(MARK_CLASS, "bg-white p-1")}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brands/kobo.svg" alt="" className="h-3 w-auto" />
+        <span className={cn(MARK_CLASS, "px-1")}>
+          <KoboLogo className="h-2.5 w-auto" />
         </span>
       );
     case "tolino":
       return (
-        <span className={cn(MARK_CLASS, "bg-white px-1.5")}>
-          <span className="text-[9px] font-semibold tracking-tight whitespace-nowrap text-neutral-900 lowercase">
+        <span className={cn(MARK_CLASS, "px-1.5")}>
+          <span className="text-[9px] font-semibold tracking-tight whitespace-nowrap lowercase">
             tolino
           </span>
         </span>
       );
     case "pocketbook":
       return (
-        <span className={cn(MARK_CLASS, "bg-white px-1.5")}>
-          <span className="text-[9px] font-bold tracking-tight whitespace-nowrap text-neutral-900">
+        <span className={cn(MARK_CLASS, "px-1.5")}>
+          <span className="text-[9px] font-bold tracking-tight whitespace-nowrap">
             PocketBook
           </span>
         </span>
@@ -43,7 +42,7 @@ function BrandMark({ brand }: { brand: DeviceBrand }) {
     case "other":
     default:
       return (
-        <span className={cn(MARK_CLASS, "bg-muted text-foreground")}>
+        <span className={MARK_CLASS}>
           <Tablet className="h-3 w-3" />
         </span>
       );
