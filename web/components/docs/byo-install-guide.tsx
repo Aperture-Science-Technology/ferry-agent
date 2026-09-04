@@ -34,11 +34,6 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
-const IMAGE_BUNDLE_URL =
-  "https://ferry-agent.aperture-agency.org/bundle/ferry-agent-gateway.tar.gz";
-
-const DOCKER_LOAD_COMMAND = "docker load -i ferry-agent-gateway.tar.gz";
-
 const DOCKER_PULL_COMMAND =
   "docker pull ghcr.io/aperture-science-technology/ferry-agent/gateway:latest";
 
@@ -82,24 +77,8 @@ export function ByoInstallGuide() {
       number: "02",
       title: t("step2Title"),
       action: t("step2Action"),
+      code: DOCKER_PULL_COMMAND,
       success: t("step2Success"),
-      extra: (
-        <div className="space-y-4">
-          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-4">
-            <p className="text-sm font-medium">{t("step2Method1Title")}</p>
-            <p className="text-sm text-muted-foreground">{t("step2Method1Body")}</p>
-            <Button
-              variant="outline"
-              render={<a href={IMAGE_BUNDLE_URL}>{t("step2Method1Cta")}</a>}
-            />
-            <CodeBlock>{DOCKER_LOAD_COMMAND}</CodeBlock>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t("step2Method2Title")}</p>
-            <CodeBlock>{DOCKER_PULL_COMMAND}</CodeBlock>
-          </div>
-        </div>
-      ),
     },
     {
       number: "03",
