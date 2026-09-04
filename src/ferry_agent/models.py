@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -116,6 +116,7 @@ class Source(Base):
     type: Mapped[SourceType] = mapped_column(SAEnum(SourceType, name="source_type"), nullable=False)
     config: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"), default=True)
 
 
 class LibraryItem(Base):

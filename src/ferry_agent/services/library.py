@@ -176,17 +176,20 @@ async def delete_library_item(db: AsyncSession, item: LibraryItem) -> None:
     await db.commit()
 
 
-async def search_all(query: str) -> list[Result]:
-    """Interroge tous les connecteurs cherchables et fusionne les resultats.
+async def search_all(query: str, *, exclude: set[str] | None = None) -> list[Result]:
+    """Interroge les connecteurs cherchables (hors `exclude`) et fusionne les resultats.
 
     Un echec sur un connecteur est isole (warning) : les autres continuent
     a contribuer leurs resultats.
     """
     from ferry_agent.connectors.registry import get_search_connectors
 
+    exclude = exclude or set()
     results: list[Result] = []
     for connector in get_search_connectors():
         name = getattr(connector, "name", connector)
+        if name in exclude:
+            continue
         try:
             results.extend(await connector.search(query))
         except Exception as exc:

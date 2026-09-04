@@ -162,6 +162,11 @@ class SourceOut(BaseModel):
     id: uuid.UUID
     type: str
     created_at: datetime
+    enabled: bool
+
+
+class SourceUpdate(BaseModel):
+    enabled: bool
 
 
 class DeviceOut(BaseModel):
