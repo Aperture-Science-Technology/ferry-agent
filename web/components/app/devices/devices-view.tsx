@@ -25,6 +25,7 @@ import {
 import { EmptyState } from "@/components/app/empty-state";
 import { NewDeviceDialog } from "@/components/app/devices/new-device-dialog";
 import { CloudLinkDialog } from "@/components/app/devices/cloud-link-dialog";
+import { BrandBadge } from "@/components/app/devices/brand-badge";
 import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
@@ -89,8 +90,8 @@ export function DevicesView({
             <TableBody>
               {devices.map((device) => (
                 <TableRow key={device.id}>
-                  <TableCell className="font-medium capitalize">
-                    {device.brand}
+                  <TableCell className="font-medium">
+                    <BrandBadge brand={device.brand} />
                     {device.model && (
                       <span className="text-muted-foreground"> — {device.model}</span>
                     )}

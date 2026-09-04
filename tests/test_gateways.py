@@ -24,12 +24,23 @@ from ferry_agent.services import gateways
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 
 
+class _Scalars:
+    def __init__(self, values):
+        self.values = values
+
+    def all(self):
+        return self.values
+
+
 class ScalarResult:
     def __init__(self, value):
         self.value = value
 
     def scalar_one_or_none(self):
         return self.value
+
+    def scalars(self):
+        return _Scalars(self.value if isinstance(self.value, list) else [])
 
 
 class FakeSession:
@@ -203,7 +214,7 @@ async def test_search_orchestration_merges_gateway_results(
         status=GatewayJobStatus.pending,
     )
 
-    async def legal_search(_query):
+    async def legal_search(_query, *, exclude=None):
         return [LegalResult(source="gutenberg", title="Legal", result_id="1")]
 
     async def online(*_args):

@@ -47,6 +47,16 @@ async def test_search_all_isolates_connector_failures(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.asyncio
+async def test_search_all_skips_excluded_connectors(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "ferry_agent.connectors.registry.get_search_connectors",
+        lambda: [_OkConnector(), _BoomConnector()],
+    )
+    results = await library.search_all("pride", exclude={"ok"})
+    assert results == []
+
+
+@pytest.mark.asyncio
 async def test_gutenberg_403_returns_empty_without_raising() -> None:
     response = httpx.Response(403, request=httpx.Request("GET", "https://gutendex.com/books/"))
 

@@ -22,11 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { BrandBadge } from "@/components/app/devices/brand-badge";
 import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
 const BRANDS: Device["brand"][] = ["kindle", "kobo", "tolino", "pocketbook", "other"];
 const TIER_VALUES: Device["delivery_tier"][] = ["A", "B", "C", "D"];
+const MODEL_BRANDS = ["kindle", "kobo", "tolino", "pocketbook"] as const;
 
 export function NewDeviceDialog({
   open,
@@ -44,6 +46,16 @@ export function NewDeviceDialog({
   const [model, setModel] = useState("");
   const [tier, setTier] = useState<Device["delivery_tier"]>("A");
   const [submitting, setSubmitting] = useState(false);
+
+  const modelOptions =
+    brand !== "other" && (MODEL_BRANDS as readonly string[]).includes(brand)
+      ? (t.raw(`models.${brand}`) as string[])
+      : null;
+
+  function handleBrandChange(value: Device["brand"]) {
+    setBrand(value);
+    setModel("");
+  }
 
   async function submit() {
     setSubmitting(true);
@@ -75,15 +87,15 @@ export function NewDeviceDialog({
             <Label>{t("brand")}</Label>
             <Select
               value={brand}
-              onValueChange={(value) => value && setBrand(value as Device["brand"])}
+              onValueChange={(value) => value && handleBrandChange(value as Device["brand"])}
             >
-              <SelectTrigger className="w-full capitalize">
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {BRANDS.map((value) => (
-                  <SelectItem key={value} value={value} className="capitalize">
-                    {value}
+                  <SelectItem key={value} value={value}>
+                    <BrandBadge brand={value} />
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -91,7 +103,22 @@ export function NewDeviceDialog({
           </div>
           <div className="space-y-2">
             <Label>{t("modelOptional")}</Label>
-            <Input value={model} onChange={(event) => setModel(event.target.value)} />
+            {modelOptions ? (
+              <Select value={model} onValueChange={(value) => setModel(value ?? "")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t("modelPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {modelOptions.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input value={model} onChange={(event) => setModel(event.target.value)} />
+            )}
           </div>
           <div className="space-y-2">
             <Label>{t("deliveryMode")}</Label>

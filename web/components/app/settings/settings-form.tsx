@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Mail } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,18 +15,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Link } from "@/i18n/navigation";
+import { SourcesManager } from "@/components/app/sources/sources-manager";
 import { useApiClient } from "@/lib/api-client";
+import type { Source } from "@/lib/types";
 
 const FORMATS = ["epub", "mobi", "azw3", "pdf"];
 
 export function SettingsForm({
+  initialEmail,
   initialKindleEmail,
   initialDefaultFormat,
   settingsUnavailable,
+  initialSources,
+  sourcesUnavailable,
 }: {
+  initialEmail: string;
   initialKindleEmail: string;
   initialDefaultFormat: string;
   settingsUnavailable: boolean;
+  initialSources: Source[];
+  sourcesUnavailable: boolean;
 }) {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
@@ -62,11 +71,16 @@ export function SettingsForm({
       <Card className="border-border/60 bg-card/40">
         <CardHeader>
           <CardTitle className="font-heading text-lg font-medium">
-            {t("deliveryTitle")}
+            {t("accountTitle")}
           </CardTitle>
-          <CardDescription>{t("deliveryDescription")}</CardDescription>
+          <CardDescription>{t("accountDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>{t("email")}</Label>
+            <Input value={initialEmail} readOnly disabled />
+            <p className="text-xs text-muted-foreground">{t("emailHint")}</p>
+          </div>
           <div className="space-y-2">
             <Label>{t("kindleEmail")}</Label>
             <Input
@@ -75,6 +89,7 @@ export function SettingsForm({
               onChange={(event) => setKindleEmail(event.target.value)}
               placeholder={t("kindleEmailPlaceholder")}
             />
+            <p className="text-xs text-muted-foreground">{t("kindleEmailHint")}</p>
           </div>
           <div className="space-y-2">
             <Label>{t("defaultFormat")}</Label>
@@ -93,6 +108,7 @@ export function SettingsForm({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">{t("defaultFormatHint")}</p>
           </div>
           <Button onClick={save} disabled={saving}>
             {saving && <Loader2 className="animate-spin" />}
@@ -103,14 +119,25 @@ export function SettingsForm({
 
       <Card className="border-border/60 bg-card/40">
         <CardHeader>
-          <CardTitle className="font-heading text-lg font-medium">{t("smtpTitle")}</CardTitle>
-          <CardDescription>{t("smtpDescription")}</CardDescription>
+          <CardTitle className="font-heading text-lg font-medium">
+            {t("sourcesTitle")}
+          </CardTitle>
+          <CardDescription>{t("sourcesDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Mail className="size-4" />
-            {t("smtpHint")}
-          </div>
+          <SourcesManager initialSources={initialSources} sourcesUnavailable={sourcesUnavailable} />
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/40">
+        <CardHeader>
+          <CardTitle className="font-heading text-lg font-medium">
+            {t("devicesTitle")}
+          </CardTitle>
+          <CardDescription>{t("devicesDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" render={<Link href="/app/appareils">{t("devicesCta")}</Link>} />
         </CardContent>
       </Card>
     </div>

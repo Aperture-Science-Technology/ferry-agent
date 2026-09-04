@@ -17,6 +17,10 @@ class Result:
     author: str = ""
     format: str = "epub"
     size_bytes: int = 0
+    cover_url: str | None = None
+    language: str | None = None
+    description: str | None = None
+    page_count: int | None = None
 
 
 class Connector(Protocol):

@@ -64,13 +64,14 @@ def _fake_device(brand=DeviceBrand.kindle, model="Paperwhite", tier=DeliveryTier
     )
 
 
-def _fake_source():
+def _fake_source(enabled=True):
     return SimpleNamespace(
         id=uuid.uuid4(),
         user_id=_USER_ID,
         type="gutenberg",
         config={},
         created_at=_NOW,
+        enabled=enabled,
     )
 
 

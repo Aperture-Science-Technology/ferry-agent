@@ -99,6 +99,12 @@
       }
     }
   },
+  "mcpSpotlight": {
+    "eyebrow": "For AI assistants too",
+    "title": "Your library, accessible by AI",
+    "body": "Ferry Agent also works from an AI assistant (Claude, ChatGPT…) via MCP — search, add, and send your books from the conversation.",
+    "cta": "See the guide"
+  },
   "faq": {
     "title": "Questions. Answered.",
     "items": {
@@ -174,7 +180,6 @@
     "emptyTitle": "Your library is empty",
     "emptyDescription": "Search for a book above to add it.",
     "emptyUnavailable": "Your library couldn't be loaded right now. Please try again later.",
-    "toastNoResults": "No results for this search.",
     "toastSearchFailed": "Search didn't work. Please try again.",
     "toastFetchStarted": "Download started on your personal access.",
     "toastAdded": "“{title}” was added to your library.",
@@ -190,8 +195,14 @@
     "filterSourceAll": "All sources",
     "sourceLinked": "Personal access",
     "sourceManual": "Manually added",
+    "sourceGutenberg": "Gutenberg",
+    "sourceStandardEbooks": "Standard Ebooks",
     "gridView": "Grid view",
-    "listView": "List view"
+    "listView": "List view",
+    "searchHelp": "Type a title or author. Search covers all your access points and partner libraries (Project Gutenberg, Standard Ebooks).",
+    "searchHelpMatch": "Search matches on title and author, with no guaranteed approximate matching.",
+    "searching": "Searching…",
+    "noResultsHint": "No results. Check your spelling or try a different term."
   },
   "deliverDialog": {
     "title": "Send “{title}”",
@@ -267,12 +278,26 @@
     "description": "Choose the brand and how books will arrive on your e-reader.",
     "brand": "Brand",
     "modelOptional": "Model (optional)",
+    "modelPlaceholder": "Choose a model",
     "deliveryMode": "How it arrives",
     "tierOptions": {
       "A": "Arrives by email (Kindle)",
       "B": "Arrives via the cloud (Dropbox/Drive)",
       "C": "Code in the browser",
       "D": "USB transfer"
+    },
+    "brands": {
+      "kindle": "Kindle",
+      "kobo": "Kobo",
+      "tolino": "Tolino",
+      "pocketbook": "PocketBook",
+      "other": "Other"
+    },
+    "models": {
+      "kindle": ["Paperwhite", "Oasis", "Scribe", "Basic", "Basic Kids", "Keyboard", "Voyage", "Fire", "Kids"],
+      "kobo": ["Clara", "Libra", "Forma", "Sage", "Elipsa", "Nia", "Aura", "Sage Colour"],
+      "tolino": ["Shine", "Vision", "Page", "Epos", "Tab"],
+      "pocketbook": ["Touch", "InkPad", "Basic Lux", "Verse", "Era"]
     },
     "toastCreated": "Device added.",
     "toastFailed": "Couldn't add the device right now. Please try again."
@@ -319,12 +344,33 @@
     "toastFailed": "Couldn't create the access. Please try again."
   },
   "sources": {
-    "emptyTitle": "No sources listed",
-    "emptyUnavailable": "The list couldn't be loaded right now. Gutenberg and Standard Ebooks still work from search.",
-    "emptyNone": "No sources configured yet.",
-    "colType": "Type",
-    "colConfig": "Configuration",
-    "colAdded": "Added"
+    "intro": "Your open-access book sources: turn the ones used during search on or off.",
+    "providers": {
+      "gutenberg": {
+        "name": "Gutenberg",
+        "description": "Tens of thousands of public-domain books, in several languages."
+      },
+      "standardEbooks": {
+        "name": "Standard Ebooks",
+        "description": "Public-domain classics, carefully proofread and formatted."
+      },
+      "upload": {
+        "name": "Manual upload",
+        "description": "The books you import yourself from your own files."
+      },
+      "torrentGateway": {
+        "name": "Torrent access",
+        "description": "Results found through your personal access, installed at home."
+      }
+    },
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "enabledByDefault": "Enabled by default",
+    "alwaysActive": "Always active",
+    "toastEnabled": "Source enabled.",
+    "toastDisabled": "Source disabled.",
+    "toastUpdateFailed": "Couldn't update this source. Please try again.",
+    "unavailableNote": "Couldn't load the state of your sources right now. Gutenberg and Standard Ebooks still work from search."
   },
   "deliveries": {
     "emptyTitle": "No deliveries",
@@ -354,14 +400,20 @@
   },
   "settings": {
     "unavailable": "These settings aren't available yet. Default values are shown.",
-    "deliveryTitle": "Delivery",
-    "deliveryDescription": "Used as the default destination and format when you send a book.",
+    "accountTitle": "My account",
+    "accountDescription": "Your information and delivery preferences.",
+    "email": "Email",
+    "emailHint": "Managed by Clerk, your sign-in provider.",
     "kindleEmail": "Your Kindle email",
     "kindleEmailPlaceholder": "your-name@kindle.com",
+    "kindleEmailHint": "Used as the destination when sending to Kindle by email.",
     "defaultFormat": "Default format",
-    "smtpTitle": "Email delivery",
-    "smtpDescription": "So books can arrive on your Kindle by email.",
-    "smtpHint": "Configured by the administrator in the server settings.",
+    "defaultFormatHint": "Format used by default when sending a book.",
+    "sourcesTitle": "Your sources",
+    "sourcesDescription": "Turn the sources used during search on or off.",
+    "devicesTitle": "Devices",
+    "devicesDescription": "Manage your e-readers and how books arrive on them.",
+    "devicesCta": "Open Devices",
     "toastSaved": "Settings saved.",
     "toastFailed": "Couldn't save right now. Please try again."
   },
@@ -375,14 +427,18 @@
     "checklistTitle": "What you need",
     "checklistItem1": "Docker Desktop installed (or OrbStack on Mac)",
     "checklistItem2": "An access created in the Ferry Agent dashboard",
-    "stepsTitle": "The 4 steps",
+    "stepsTitle": "The 5 steps",
     "stepSuccessLabel": "You'll know it worked when:",
     "step1Title": "Create your access",
     "step1Action": "Open the Access page and click Create an access.",
     "step1Cta": "Open Access",
     "step1Success": "A connection code appears. Copy it now: it will never be shown again.",
-    "step2Title": "Download the image",
-    "step2Action": "In a terminal, run this command to download the gateway's Docker image.",
+    "step2Title": "Get the image",
+    "step2Action": "Two ways to get the gateway's Docker image.",
+    "step2Method1Title": "Recommended: direct download",
+    "step2Method1Body": "Works without Docker Hub or GHCR. Download the image, then load it into Docker.",
+    "step2Method1Cta": "Download the image (tar.gz)",
+    "step2Method2Title": "Alternative: from a registry",
     "step2Success": "The download finishes with no error.",
     "step3Title": "Launch the container",
     "step3Action": "Paste this command in the terminal, replacing CODE with the connection code you copied in step 1.",
@@ -391,6 +447,9 @@
     "step4Title": "Add an indexer",
     "step4Action": "Open this address in your browser, then add an indexer.",
     "step4Success": "The Prowlarr page shows your indexer in the list.",
+    "step5Title": "Connect your AI assistant",
+    "step5Action": "Add this MCP URL to Claude, ChatGPT, or your favorite assistant to search, add, and send your books from the conversation:",
+    "step5Cta": "Open the dashboard",
     "closingLine": "Your books arrive on their own in your library.",
     "glossaryTitle": "Glossary",
     "glossaryProwlarrTerm": "Prowlarr",
@@ -407,10 +466,6 @@
     "scriptAltBody": "Unzip the downloaded bundle, open a terminal in that folder, then run:",
     "scriptAltCta": "Download the bundle (tar.gz)",
     "scriptAltHint": "The assistant will ask for your connection code, then install everything automatically.",
-    "mcpTitle": "Connect via the MCP API",
-    "mcpDescription": "No token to copy. The agent runs the OAuth flow.",
-    "mcpBody": "An agent (for example Claude Code) can connect to the MCP URL",
-    "mcpBodyAfter": "via OAuth 2.1. You do not copy any token: the agent handles the authorization flow.",
     "byoTitle": "Runs on your computer",
     "byoDescription": "Your personal access runs on your machine, not on our servers.",
     "byoBody1": "Your computer must stay on and connected to the internet for searches and downloads to work.",

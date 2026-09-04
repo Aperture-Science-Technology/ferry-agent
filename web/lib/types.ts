@@ -21,6 +21,8 @@ export interface SearchResult {
   indexer_id?: number | string | null;
   guid?: string | null;
   seeders?: number | null;
+  cover_url?: string | null;
+  language?: string | null;
 }
 
 export interface LibraryItem {
@@ -77,6 +79,6 @@ export interface DeliveryJob {
 export interface Source {
   id: string;
   type: SourceType;
-  config: Record<string, unknown>;
   created_at: string;
+  enabled: boolean;
 }

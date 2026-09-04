@@ -11,7 +11,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
-from ferry_agent.models import DeliveryJob, Gateway, GatewayJobStatus, GatewayJobType, LibraryItem, PairingStatus
+from ferry_agent.models import (
+    DeliveryJob,
+    Gateway,
+    GatewayJobStatus,
+    GatewayJobType,
+    LibraryItem,
+    PairingStatus,
+    Source,
+    SourceType,
+)
 from ferry_agent.schemas import (
     DeliveryOut,
     GatewayFetchQueued,
@@ -47,7 +56,15 @@ async def search_books(
     scope = payload.scope or ["legal", "gateways"]
     results = []
     if "legal" in scope:
-        results.extend(await library.search_all(payload.query))
+        disabled_result = await db.execute(
+            select(Source.type).where(
+                Source.user_id == user.id,
+                Source.type.in_((SourceType.gutenberg, SourceType.standard_ebooks)),
+                Source.enabled.is_(False),
+            )
+        )
+        exclude = {source_type.value for source_type in disabled_result.scalars().all()}
+        results.extend(await library.search_all(payload.query, exclude=exclude))
 
     gateways = []
     if "gateways" in scope or any(value.startswith("gateway:") for value in scope):
@@ -171,8 +188,17 @@ async def add_book(
         return GatewayFetchQueued(gateway_job_id=job.id, status=job.status)
 
     if source and result_id:
+        raw_metadata = data.get("result")
+        if isinstance(raw_metadata, str):
+            try:
+                raw_metadata = json.loads(raw_metadata)
+            except json.JSONDecodeError as exc:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="result JSON invalide") from exc
+        metadata = raw_metadata if isinstance(raw_metadata, dict) else None
         try:
-            item = await library.import_from_connector(db, user.id, source, result_id)
+            item = await library.import_from_connector(
+                db, user.id, source, result_id, metadata=metadata
+            )
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         return LibraryItemOut.model_validate(item)
