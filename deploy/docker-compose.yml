@@ -132,7 +132,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=infrastructure_infra-network"
-      - "traefik.http.routers.ferry-agent-mcp.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/mcp`) || PathPrefix(`/oauth`) || PathPrefix(`/authorize`) || PathPrefix(`/token`) || PathPrefix(`/register`) || PathPrefix(`/auth/callback`) || Path(`/.well-known/oauth-authorization-server`))"
+      - "traefik.http.routers.ferry-agent-mcp.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/mcp`) || PathPrefix(`/oauth`) || PathPrefix(`/authorize`) || PathPrefix(`/token`) || PathPrefix(`/register`) || PathPrefix(`/auth/callback`) || PathPrefix(`/.well-known/oauth-`))"
       - "traefik.http.routers.ferry-agent-mcp.priority=500"
       - "traefik.http.routers.ferry-agent-mcp.entrypoints=websecure"
       - "traefik.http.routers.ferry-agent-mcp.tls=true"
