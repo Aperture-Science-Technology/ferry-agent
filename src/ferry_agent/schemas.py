@@ -32,6 +32,7 @@ class Result(BaseModel):
     indexer_id: int | str | None = None
     guid: str | None = None
     seeders: int | None = None
+    isbn: str | None = None
 
 
 class ResultOut(Result):
@@ -125,6 +126,7 @@ class LibraryItemOut(BaseModel):
     isbn: str | None = None
     publisher: str | None = None
     published_year: int | None = None
+    source_ref: str | None = None
 
 
 class LibraryItemUpdate(BaseModel):

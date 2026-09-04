@@ -21,6 +21,7 @@ class Result:
     language: str | None = None
     description: str | None = None
     page_count: int | None = None
+    isbn: str | None = None
 
 
 class Connector(Protocol):

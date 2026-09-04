@@ -139,6 +139,7 @@ class LibraryItem(Base):
     isbn: Mapped[str | None] = mapped_column(String, nullable=True)
     publisher: Mapped[str | None] = mapped_column(String, nullable=True)
     published_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_ref: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class DeliveryJob(Base):

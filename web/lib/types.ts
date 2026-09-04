@@ -23,6 +23,7 @@ export interface SearchResult {
   seeders?: number | null;
   cover_url?: string | null;
   language?: string | null;
+  isbn?: string | null;
   owned?: boolean;
 }
 

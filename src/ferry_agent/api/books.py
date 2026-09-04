@@ -36,9 +36,9 @@ from ferry_agent.services import library
 router = APIRouter(prefix="/api/v1/books", tags=["books"])
 
 
-def _normalize(value: str) -> str:
-    """Normalise pour comparaison (lowercase, espaces internes reduits, trim)."""
-    return " ".join(value.strip().lower().split())
+def _normalize_isbn(value: str) -> str:
+    """Normalise un ISBN pour comparaison (lowercase, espaces/tirets retires)."""
+    return value.strip().lower().replace("-", "").replace(" ", "")
 
 
 @router.get("", response_model=list[LibraryItemOut])
@@ -108,24 +108,18 @@ async def search_books(
     owned_result = await db.execute(
         select(LibraryItem).where(LibraryItem.user_id == user.id)
     )
-    # Aucun `result_id`/ref externe n'est stocke sur LibraryItem aujourd'hui
-    # (Source represente un connecteur, pas un livre precis) : le seul
-    # croisement possible est titre (+auteur si les deux cotes en ont un).
-    owned_pairs = {
-        (_normalize(owned.title), _normalize(owned.author or ""))
-        for owned in owned_result.scalars().all()
-    }
+    owned_items = owned_result.scalars().all()
+    # Identite stricte : un resultat n'est marque `owned` que sur une
+    # correspondance exacte d'isbn ou de reference source (source+result_id).
+    # Aucun fallback titre/auteur (faux positifs sur des contenus differents).
+    owned_isbns = {_normalize_isbn(owned.isbn) for owned in owned_items if owned.isbn}
+    owned_refs = {owned.source_ref for owned in owned_items if owned.source_ref}
 
     def _is_owned(result: Result) -> bool:
-        title_norm = _normalize(result.title)
-        author_norm = _normalize(result.author)
-        for owned_title, owned_author in owned_pairs:
-            if owned_title != title_norm:
-                continue
-            if author_norm and owned_author and author_norm != owned_author:
-                continue
+        isbn = getattr(result, "isbn", None)
+        if isbn and _normalize_isbn(isbn) in owned_isbns:
             return True
-        return False
+        return f"{result.source}:{result.result_id}" in owned_refs
 
     outs = []
     for result in results:
