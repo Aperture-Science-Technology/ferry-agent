@@ -34,8 +34,15 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
+const IMAGE_BUNDLE_URL =
+  "https://ferry-agent.aperture-agency.org/bundle/ferry-agent-gateway.tar.gz";
+
+const DOCKER_LOAD_COMMAND = "docker load -i ferry-agent-gateway.tar.gz";
+
 const DOCKER_PULL_COMMAND =
   "docker pull ghcr.io/aperture-science-technology/ferry-agent/gateway:latest";
+
+const MCP_URL = "https://ferry-agent.aperture-agency.org/mcp";
 
 const DOCKER_RUN_COMMAND = `docker run -d \\
   --name ferry-gateway \\
@@ -75,8 +82,24 @@ export function ByoInstallGuide() {
       number: "02",
       title: t("step2Title"),
       action: t("step2Action"),
-      code: DOCKER_PULL_COMMAND,
       success: t("step2Success"),
+      extra: (
+        <div className="space-y-4">
+          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-4">
+            <p className="text-sm font-medium">{t("step2Method1Title")}</p>
+            <p className="text-sm text-muted-foreground">{t("step2Method1Body")}</p>
+            <Button
+              variant="outline"
+              render={<a href={IMAGE_BUNDLE_URL}>{t("step2Method1Cta")}</a>}
+            />
+            <CodeBlock>{DOCKER_LOAD_COMMAND}</CodeBlock>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{t("step2Method2Title")}</p>
+            <CodeBlock>{DOCKER_PULL_COMMAND}</CodeBlock>
+          </div>
+        </div>
+      ),
     },
     {
       number: "03",
@@ -95,6 +118,21 @@ export function ByoInstallGuide() {
         </>
       ),
       success: t("step4Success"),
+    },
+    {
+      number: "05",
+      title: t("step5Title"),
+      action: (
+        <>
+          {t("step5Action")} <Code>{MCP_URL}</Code>
+        </>
+      ),
+      extra: (
+        <Button
+          variant="outline"
+          render={<Link href="/app/gateways">{t("step5Cta")}</Link>}
+        />
+      ),
     },
   ];
 
@@ -145,10 +183,13 @@ export function ByoInstallGuide() {
                   {"hint" in step && step.hint ? (
                     <p className="text-sm text-muted-foreground">{step.hint}</p>
                   ) : null}
-                  <p className="text-sm text-foreground">
-                    <span aria-hidden="true">✅</span> {t("stepSuccessLabel")}{" "}
-                    <span className="text-muted-foreground">{step.success}</span>
-                  </p>
+                  {"extra" in step && step.extra ? <div>{step.extra}</div> : null}
+                  {"success" in step && step.success ? (
+                    <p className="text-sm text-foreground">
+                      <span aria-hidden="true">✅</span> {t("stepSuccessLabel")}{" "}
+                      <span className="text-muted-foreground">{step.success}</span>
+                    </p>
+                  ) : null}
                 </CardContent>
               </Card>
             </li>
@@ -199,18 +240,6 @@ export function ByoInstallGuide() {
                 />
                 <CodeBlock>./install.sh</CodeBlock>
                 <p className="text-sm text-muted-foreground">{t("scriptAltHint")}</p>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="mcp">
-              <AccordionTrigger>{t("mcpTitle")}</AccordionTrigger>
-              <AccordionContent className="space-y-3">
-                <p className="text-muted-foreground">{t("mcpDescription")}</p>
-                <p className="text-muted-foreground">
-                  {t("mcpBody")}{" "}
-                  <Code>https://ferry-agent.aperture-agency.org/mcp</Code>{" "}
-                  {t("mcpBodyAfter")}
-                </p>
               </AccordionContent>
             </AccordionItem>
 

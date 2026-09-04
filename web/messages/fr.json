@@ -99,6 +99,12 @@
       }
     }
   },
+  "mcpSpotlight": {
+    "eyebrow": "Pour les assistants IA aussi",
+    "title": "Votre bibliothèque accessible par IA",
+    "body": "Ferry Agent s'utilise aussi depuis un assistant IA (Claude, ChatGPT…) via MCP — chercher, ajouter, envoyer vos livres, dans la conversation.",
+    "cta": "Voir le guide"
+  },
   "faq": {
     "title": "Questions. Réponses.",
     "items": {
@@ -338,12 +344,33 @@
     "toastFailed": "Impossible de créer l'accès. Réessayez."
   },
   "sources": {
-    "emptyTitle": "Aucune source listée",
-    "emptyUnavailable": "Impossible de charger la liste pour le moment. Gutenberg et Standard Ebooks restent utilisables depuis la recherche.",
-    "emptyNone": "Aucune source configurée pour le moment.",
-    "colType": "Type",
-    "colConfig": "Configuration",
-    "colAdded": "Ajoutée"
+    "intro": "Vos sources de livres en accès libre : activez ou désactivez celles utilisées lors d'une recherche.",
+    "providers": {
+      "gutenberg": {
+        "name": "Gutenberg",
+        "description": "Des dizaines de milliers de livres du domaine public, en plusieurs langues."
+      },
+      "standardEbooks": {
+        "name": "Standard Ebooks",
+        "description": "Des classiques du domaine public, relus et mis en forme avec soin."
+      },
+      "upload": {
+        "name": "Ajout manuel",
+        "description": "Les livres que vous importez vous-même depuis vos fichiers."
+      },
+      "torrentGateway": {
+        "name": "Accès torrent",
+        "description": "Les résultats trouvés via votre accès personnel, installé chez vous."
+      }
+    },
+    "enabled": "Activée",
+    "disabled": "Désactivée",
+    "enabledByDefault": "Activée par défaut",
+    "alwaysActive": "Toujours active",
+    "toastEnabled": "Source activée.",
+    "toastDisabled": "Source désactivée.",
+    "toastUpdateFailed": "Impossible de mettre à jour cette source. Réessayez.",
+    "unavailableNote": "Impossible de charger l'état de vos sources pour le moment. Gutenberg et Standard Ebooks restent utilisables depuis la recherche."
   },
   "deliveries": {
     "emptyTitle": "Aucun envoi",
@@ -373,14 +400,20 @@
   },
   "settings": {
     "unavailable": "Ces réglages ne sont pas encore disponibles. Les valeurs par défaut sont affichées.",
-    "deliveryTitle": "Envoi",
-    "deliveryDescription": "Utilisés comme destination et format par défaut lors d'un envoi.",
+    "accountTitle": "Mon compte",
+    "accountDescription": "Vos informations et vos préférences d'envoi.",
+    "email": "Email",
+    "emailHint": "Géré par Clerk, votre fournisseur de connexion.",
     "kindleEmail": "Votre email Kindle",
     "kindleEmailPlaceholder": "votre-nom@kindle.com",
+    "kindleEmailHint": "Utilisée comme destination lors d'un envoi vers Kindle par email.",
     "defaultFormat": "Format par défaut",
-    "smtpTitle": "Envoi par email",
-    "smtpDescription": "Pour faire arriver les livres sur votre Kindle par email.",
-    "smtpHint": "Configuré par l'administrateur via les réglages du serveur.",
+    "defaultFormatHint": "Format utilisé par défaut lors d'un envoi.",
+    "sourcesTitle": "Vos sources",
+    "sourcesDescription": "Activez ou désactivez les sources utilisées lors d'une recherche.",
+    "devicesTitle": "Appareils",
+    "devicesDescription": "Gérez vos liseuses et la façon dont les livres y arrivent.",
+    "devicesCta": "Ouvrir Appareils",
     "toastSaved": "Réglages enregistrés.",
     "toastFailed": "Impossible d'enregistrer pour le moment. Réessayez."
   },
@@ -394,14 +427,18 @@
     "checklistTitle": "Ce dont vous avez besoin",
     "checklistItem1": "Docker Desktop installé (ou OrbStack sur Mac)",
     "checklistItem2": "Un accès créé dans le tableau de bord Ferry Agent",
-    "stepsTitle": "Les 4 étapes",
+    "stepsTitle": "Les 5 étapes",
     "stepSuccessLabel": "Vous savez que c'est bon quand :",
     "step1Title": "Créez votre accès",
     "step1Action": "Ouvrez la page Accès et cliquez sur Créer un accès.",
     "step1Cta": "Ouvrir Accès",
     "step1Success": "Un code de connexion s'affiche. Copiez-le tout de suite : il ne sera plus jamais réaffiché.",
-    "step2Title": "Téléchargez l'image",
-    "step2Action": "Dans un terminal, lancez la commande suivante pour télécharger l'image Docker de la passerelle.",
+    "step2Title": "Récupérez l'image",
+    "step2Action": "Deux façons de récupérer l'image Docker de la passerelle.",
+    "step2Method1Title": "Recommandé : téléchargement direct",
+    "step2Method1Body": "Marche sans Docker Hub ni GHCR. Téléchargez l'image, puis chargez-la dans Docker.",
+    "step2Method1Cta": "Télécharger l'image (tar.gz)",
+    "step2Method2Title": "Alternative : depuis un registre",
     "step2Success": "Le téléchargement se termine sans erreur.",
     "step3Title": "Lancez le conteneur",
     "step3Action": "Collez cette commande dans le terminal, en remplaçant CODE par le code de connexion copié à l'étape 1.",
@@ -410,6 +447,9 @@
     "step4Title": "Ajoutez un indexeur",
     "step4Action": "Ouvrez cette adresse dans votre navigateur, puis ajoutez un indexeur.",
     "step4Success": "La page Prowlarr affiche votre indexeur dans la liste.",
+    "step5Title": "Connectez votre assistant IA",
+    "step5Action": "Ajoutez cette URL MCP à Claude, ChatGPT ou votre assistant préféré pour chercher, ajouter et envoyer vos livres depuis la conversation :",
+    "step5Cta": "Ouvrir le tableau de bord",
     "closingLine": "Vos livres arrivent tout seuls dans votre bibliothèque.",
     "glossaryTitle": "Glossaire",
     "glossaryProwlarrTerm": "Prowlarr",
@@ -426,10 +466,6 @@
     "scriptAltBody": "Décompressez le bundle téléchargé, ouvrez un terminal dans ce dossier, puis lancez :",
     "scriptAltCta": "Télécharger le bundle (tar.gz)",
     "scriptAltHint": "L'assistant vous demandera votre code de connexion, puis installera tout automatiquement.",
-    "mcpTitle": "Se connecter via l’API MCP",
-    "mcpDescription": "Aucun jeton à copier. L’agent exécute le flux OAuth.",
-    "mcpBody": "Un agent (par exemple Claude Code) peut se connecter à l’URL MCP",
-    "mcpBodyAfter": "via OAuth 2.1. Vous n’avez aucun jeton à copier : l’agent mène le flux d’autorisation.",
     "byoTitle": "Fonctionnement chez vous",
     "byoDescription": "Votre accès personnel tourne sur votre machine, pas sur nos serveurs.",
     "byoBody1": "Votre ordinateur doit rester allumé et connecté à Internet pour que les recherches et téléchargements fonctionnent.",

@@ -79,6 +79,6 @@ export interface DeliveryJob {
 export interface Source {
   id: string;
   type: SourceType;
-  config: Record<string, unknown>;
   created_at: string;
+  enabled: boolean;
 }
