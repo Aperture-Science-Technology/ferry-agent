@@ -43,9 +43,20 @@ def _library_storage_path(filename: str) -> Path:
 
 
 async def import_from_connector(
-    db: AsyncSession, user_id: uuid.UUID, source_name: str, result_id: str
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    source_name: str,
+    result_id: str,
+    *,
+    metadata: dict | None = None,
 ) -> LibraryItem:
-    """Recupere un resultat de recherche via son connecteur et l'ajoute a la bibliotheque."""
+    """Recupere un resultat de recherche via son connecteur et l'ajoute a la bibliotheque.
+
+    `metadata` est le resultat de recherche (tel que renvoye par le connecteur
+    a l'appelant, ex. `Result.model_dump()` cote API) : quand ses champs sont
+    presents et non vides, ils completent l'item persiste (auteur, couverture,
+    description, langue, nombre de pages).
+    """
     connector = get_connector(source_name)
     if connector is None:
         raise ValueError(f"connecteur inconnu: {source_name}")
@@ -59,13 +70,19 @@ async def import_from_connector(
     source_type = SourceType(source_name)
     source = await _get_or_create_source(db, user_id, source_type)
 
+    metadata = metadata or {}
     item = LibraryItem(
         user_id=user_id,
-        title=fetched.stem,
-        author="",
+        title=metadata.get("title") or fetched.stem,
+        author=metadata.get("author") or "",
+        cover_url=metadata.get("cover_url") or None,
+        description=metadata.get("description") or None,
+        language=metadata.get("language") or None,
+        page_count=metadata.get("page_count") or None,
         source_id=source.id,
         original_format=dest.suffix.lstrip(".") or "epub",
         storage_path=str(dest),
+        size_bytes=dest.stat().st_size,
     )
     db.add(item)
     await db.commit()
@@ -129,6 +146,10 @@ async def import_from_gateway(
         user_id=user_id,
         title=metadata.get("title") or Path(safe_name).stem,
         author=metadata.get("author") or "",
+        cover_url=metadata.get("cover_url") or None,
+        description=metadata.get("description") or None,
+        language=metadata.get("language") or None,
+        page_count=metadata.get("page_count") or None,
         source_id=source.id,
         original_format=detected_format,
         storage_path=str(dest),

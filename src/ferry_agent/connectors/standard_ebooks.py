@@ -74,6 +74,18 @@ class StandardEbooksConnector:
             author_el = item.select_one("p.author a, [property='schema:author']")
             author = author_el.get_text(strip=True) if author_el else ""
 
+            # La couverture est servie par la page de resultats (schema:image sur
+            # l'<img> de la vignette) ; la description n'y figure pas (uniquement
+            # sur la page detail du livre), donc elle reste a None ici.
+            cover_el = item.select_one("[property='schema:image']")
+            cover_src = cover_el.get("src") if cover_el else None
+            if not cover_src:
+                cover_url = None
+            elif cover_src.startswith("http"):
+                cover_url = cover_src
+            else:
+                cover_url = f"{BASE_URL}{cover_src}"
+
             results.append(
                 Result(
                     source=self.name,
@@ -81,6 +93,7 @@ class StandardEbooksConnector:
                     result_id=slug,
                     author=author,
                     format="epub",
+                    cover_url=cover_url,
                 )
             )
         return results

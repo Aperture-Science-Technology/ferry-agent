@@ -72,6 +72,8 @@ class GutenbergConnector:
         results = []
         for book in data.get("results", []):
             authors = ", ".join(a.get("name", "") for a in book.get("authors", []))
+            formats = book.get("formats", {})
+            languages = book.get("languages") or []
             results.append(
                 Result(
                     source=self.name,
@@ -79,6 +81,8 @@ class GutenbergConnector:
                     result_id=str(book["id"]),
                     author=authors,
                     format="epub",
+                    cover_url=formats.get("image/jpeg"),
+                    language=languages[0] if languages else None,
                 )
             )
         return results

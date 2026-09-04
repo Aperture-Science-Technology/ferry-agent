@@ -171,8 +171,17 @@ async def add_book(
         return GatewayFetchQueued(gateway_job_id=job.id, status=job.status)
 
     if source and result_id:
+        raw_metadata = data.get("result")
+        if isinstance(raw_metadata, str):
+            try:
+                raw_metadata = json.loads(raw_metadata)
+            except json.JSONDecodeError as exc:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="result JSON invalide") from exc
+        metadata = raw_metadata if isinstance(raw_metadata, dict) else None
         try:
-            item = await library.import_from_connector(db, user.id, source, result_id)
+            item = await library.import_from_connector(
+                db, user.id, source, result_id, metadata=metadata
+            )
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         return LibraryItemOut.model_validate(item)

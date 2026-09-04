@@ -35,7 +35,10 @@ class Result(BaseModel):
 
 
 class ResultOut(Result):
-    pass
+    cover_url: str | None = None
+    language: str | None = None
+    description: str | None = None
+    page_count: int | None = None
 
 
 class SearchResults(RootModel[list[Result]]):
