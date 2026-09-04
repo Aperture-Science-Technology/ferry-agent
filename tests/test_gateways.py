@@ -42,6 +42,9 @@ class ScalarResult:
     def scalars(self):
         return _Scalars(self.value if isinstance(self.value, list) else [])
 
+    def all(self):
+        return self.value if isinstance(self.value, list) else []
+
 
 class FakeSession:
     def __init__(self, execute_values=()):

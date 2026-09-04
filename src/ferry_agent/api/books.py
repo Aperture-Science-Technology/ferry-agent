@@ -41,6 +41,31 @@ def _normalize_isbn(value: str) -> str:
     return value.strip().lower().replace("-", "").replace(" ", "")
 
 
+def _normalize_text(value: str | None) -> str:
+    """Normalise un titre/auteur pour comparaison (lowercase, espaces, ponctuation finale)."""
+    if not value:
+        return ""
+    text = " ".join(value.strip().lower().split())
+    return text.rstrip(".,;:!?")
+
+
+def _normalize_provider(value: SourceType | str | None) -> str | None:
+    """Normalise un provider (source de resultat ou `Source.type` possede).
+
+    Les gateways (`gateway:<uuid>` cote resultat, `torrent_gateway` cote
+    `Source.type`) sont ramenes au meme provider `gateway` : l'utilisateur
+    possede deja un livre depuis *son* gateway, peu importe lequel a servi la
+    recherche.
+    """
+    if value is None:
+        return None
+    raw = value.value if isinstance(value, SourceType) else str(value)
+    raw = raw.strip().lower()
+    if raw.startswith("gateway:") or raw == SourceType.torrent_gateway.value:
+        return "gateway"
+    return raw
+
+
 @router.get("", response_model=list[LibraryItemOut])
 async def list_books(
     user: CurrentUser = Depends(get_current_user),
@@ -106,20 +131,35 @@ async def search_books(
                 results.extend(Result.model_validate(item) for item in job.payload.get("results", []))
 
     owned_result = await db.execute(
-        select(LibraryItem).where(LibraryItem.user_id == user.id)
+        select(LibraryItem, Source.type)
+        .outerjoin(Source, LibraryItem.source_id == Source.id)
+        .where(LibraryItem.user_id == user.id)
     )
-    owned_items = owned_result.scalars().all()
-    # Identite stricte : un resultat n'est marque `owned` que sur une
-    # correspondance exacte d'isbn ou de reference source (source+result_id).
-    # Aucun fallback titre/auteur (faux positifs sur des contenus differents).
-    owned_isbns = {_normalize_isbn(owned.isbn) for owned in owned_items if owned.isbn}
-    owned_refs = {owned.source_ref for owned in owned_items if owned.source_ref}
+    owned_rows = owned_result.all()
+    # Identite titre + auteur + provider : deux resultats du meme provider
+    # (gutenberg, standard_ebooks, gateway...) partageant titre et auteur
+    # normalises sont consideres comme le meme livre. Un isbn identique
+    # renforce le match (bonus), mais n'est plus le seul critere possible :
+    # la plupart des resultats n'ont ni isbn ni reference source exacte, ce
+    # qui rendait le badge quasi invisible.
+    owned_index: set[tuple[str | None, str, str]] = set()
+    owned_isbns: set[str] = set()
+    for owned, source_type in owned_rows:
+        provider = _normalize_provider(source_type)
+        title = _normalize_text(owned.title)
+        if title:
+            owned_index.add((provider, title, _normalize_text(owned.author)))
+        if owned.isbn:
+            owned_isbns.add(_normalize_isbn(owned.isbn))
 
     def _is_owned(result: Result) -> bool:
         isbn = getattr(result, "isbn", None)
         if isbn and _normalize_isbn(isbn) in owned_isbns:
             return True
-        return f"{result.source}:{result.result_id}" in owned_refs
+        provider = _normalize_provider(result.source)
+        title = _normalize_text(result.title)
+        author = _normalize_text(result.author)
+        return (provider, title, author) in owned_index
 
     outs = []
     for result in results:
