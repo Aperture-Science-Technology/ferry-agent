@@ -304,6 +304,8 @@
   "title": "Nouvel appareil",
   "description": "Indiquez la marque et le modèle : le mode d'arrivée des livres est déterminé automatiquement.",
   "brand": "Marque",
+  "nameOptional": "Nom (optionnel)",
+  "namePlaceholder": "Ex. Ma liseuse salon",
   "modelOptional": "Modèle (optionnel)",
   "modelPlaceholder": "Choisir un modèle",
   "brands": {

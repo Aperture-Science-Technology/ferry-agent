@@ -304,6 +304,8 @@
   "title": "New device",
   "description": "Choose the brand and model: how books arrive is figured out automatically.",
   "brand": "Brand",
+  "nameOptional": "Name (optional)",
+  "namePlaceholder": "E.g. My salon reader",
   "modelOptional": "Model (optional)",
   "modelPlaceholder": "Choose a model",
   "brands": {
