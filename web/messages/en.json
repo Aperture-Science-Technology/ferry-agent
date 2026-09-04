@@ -134,7 +134,7 @@
     "dashboard": "Dashboard",
     "library": "Library",
     "devices": "Devices",
-    "access": "Access",
+    "access": "Gateway",
     "sources": "Sources",
     "deliveries": "Deliveries",
     "settings": "Settings"
@@ -149,8 +149,8 @@
       "description": "Your e-readers and how books arrive on them (email, cloud, browser code, USB)."
     },
     "access": {
-      "title": "Access",
-      "description": "Your personal access, installed at home and linked to your account."
+      "title": "Gateway",
+      "description": "The program installed at home, linked to your account for downloads."
     },
     "sources": {
       "title": "Sources",
@@ -190,6 +190,7 @@
     "language": "Language",
     "details": "Details",
     "noMatch": "No book matches these filters.",
+    "resetFilters": "Reset filters",
     "sortAdded": "Recently added",
     "sortTitle": "Title",
     "sortAuthor": "Author",
@@ -334,33 +335,33 @@
     "toastCodeFailed": "That code couldn't be used. Please try again."
   },
   "access": {
-    "createLink": "Create / link",
-    "emptyTitle": "No personal access",
-    "emptyDescription": "Create an access to link the program installed on your machine.",
-    "emptyUnavailable": "Your access list couldn't be loaded right now. Please try again later.",
+    "createLink": "Add a gateway",
+    "emptyTitle": "No gateway",
+    "emptyDescription": "Create a gateway to link the program installed on your machine.",
+    "emptyUnavailable": "Your gateways couldn't be loaded right now. Please try again later.",
     "colName": "Name",
     "colStatus": "Status",
     "colLastSeen": "Last seen",
     "colAction": "Action",
     "revoke": "Revoke",
-    "toastRevoked": "Access revoked.",
-    "toastRevokeFailed": "Couldn't revoke this access. Please try again.",
+    "toastRevoked": "Gateway revoked.",
+    "toastRevokeFailed": "Couldn't revoke this gateway. Please try again.",
     "delete": "Delete",
-    "deleteConfirmTitle": "Delete this access?",
-    "deleteConfirmDescription": "After deletion, downloads for this access will stop.",
-    "toastDeleted": "Access deleted.",
-    "toastDeleteFailed": "Couldn't delete this access. Please try again."
+    "deleteConfirmTitle": "Delete this gateway?",
+    "deleteConfirmDescription": "After deletion, downloads for this gateway will stop.",
+    "toastDeleted": "Gateway deleted.",
+    "toastDeleteFailed": "Couldn't delete this gateway. Please try again."
   },
   "createAccess": {
-    "title": "Create / link an access",
-    "description": "The connection code lets the program on your machine link to this account.",
+    "title": "Create a gateway",
+    "description": "This connection code lets your gateway, installed on your machine, link to this account.",
     "name": "Name",
-    "defaultName": "My access",
-    "createdTitle": "Access created",
+    "defaultName": "My gateway",
+    "createdTitle": "Gateway created",
     "createdDescription": "This connection code and key will never be shown again. Copy them now into the program's configuration on your machine.",
     "pairingToken": "Connection code",
     "gatewayKey": "Access key",
-    "toastFailed": "Couldn't create the access. Please try again."
+    "toastFailed": "Couldn't create the gateway. Please try again."
   },
   "sources": {
     "intro": "Your open-access book sources: turn the ones used during search on or off.",
@@ -411,6 +412,7 @@
   },
   "deliveryDetail": {
     "title": "Delivery tracking",
+    "description": "Status and details for this delivery.",
     "status": "Status",
     "method": "Method",
     "created": "Created",

@@ -12,13 +12,11 @@ export default async function SourcesPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("pages.sources");
-  const tSources = await getTranslations("sources");
   const sources = await safeApiFetch<Source[]>("/api/v1/sources");
 
   return (
     <div>
       <PageHeader title={t("title")} description={t("description")} />
-      <p className="mb-6 text-sm text-muted-foreground">{tSources("intro")}</p>
       <SourcesManager initialSources={sources ?? []} sourcesUnavailable={sources === null} />
     </div>
   );

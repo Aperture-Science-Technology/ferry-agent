@@ -13,7 +13,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useApiClient } from "@/lib/api-client";
-import type { DeliveryJob } from "@/lib/types";
+import type { DeliveryJob, DeliveryStatus } from "@/lib/types";
+
+const STATUS_VARIANT: Record<DeliveryStatus, "default" | "secondary" | "destructive" | "outline"> = {
+  queued: "secondary",
+  sent: "outline",
+  delivered: "default",
+  failed: "destructive",
+};
 
 export function DeliveryDetailDialog({
   jobId,
@@ -54,7 +61,7 @@ export function DeliveryDetailDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription>{jobId}</DialogDescription>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         {loading || !displayJob ? (
           <div className="flex justify-center py-8">
@@ -64,7 +71,9 @@ export function DeliveryDetailDialog({
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("status")}</span>
-              <Badge>{tDeliveries(`statuses.${displayJob.status}`)}</Badge>
+              <Badge variant={STATUS_VARIANT[displayJob.status]}>
+                {tDeliveries(`statuses.${displayJob.status}`)}
+              </Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("method")}</span>

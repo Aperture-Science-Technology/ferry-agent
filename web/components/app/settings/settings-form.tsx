@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -137,7 +137,15 @@ export function SettingsForm({
           <CardDescription>{t("devicesDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="outline" render={<Link href="/app/appareils">{t("devicesCta")}</Link>} />
+          <Button
+            variant="outline"
+            render={
+              <Link href="/app/appareils">
+                {t("devicesCta")}
+                <ArrowRight />
+              </Link>
+            }
+          />
         </CardContent>
       </Card>
     </div>

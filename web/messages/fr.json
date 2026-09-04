@@ -134,7 +134,7 @@
     "dashboard": "Espace",
     "library": "Bibliothèque",
     "devices": "Appareils",
-    "access": "Accès",
+    "access": "Passerelle",
     "sources": "Sources",
     "deliveries": "Envois",
     "settings": "Réglages"
@@ -149,8 +149,8 @@
       "description": "Vos liseuses et la façon dont les livres y arrivent (email, cloud, code navigateur, USB)."
     },
     "access": {
-      "title": "Accès",
-      "description": "Votre accès personnel, installé chez vous et relié à votre compte."
+      "title": "Passerelle",
+      "description": "Le programme installé chez vous, relié à votre compte pour les téléchargements."
     },
     "sources": {
       "title": "Sources",
@@ -190,6 +190,7 @@
     "language": "Langue",
     "details": "Détails",
     "noMatch": "Aucun livre ne correspond à ces filtres.",
+    "resetFilters": "Réinitialiser les filtres",
     "sortAdded": "Ajouté récemment",
     "sortTitle": "Titre",
     "sortAuthor": "Auteur",
@@ -334,33 +335,33 @@
     "toastCodeFailed": "Ce code n'a pas pu être utilisé. Réessayez."
   },
   "access": {
-    "createLink": "Créer / relier",
-    "emptyTitle": "Aucun accès personnel",
-    "emptyDescription": "Créez un accès pour le relier au programme installé chez vous.",
-    "emptyUnavailable": "Impossible de charger vos accès pour le moment. Réessayez un peu plus tard.",
+    "createLink": "Ajouter une passerelle",
+    "emptyTitle": "Aucune passerelle",
+    "emptyDescription": "Créez une passerelle pour relier le programme installé chez vous.",
+    "emptyUnavailable": "Impossible de charger vos passerelles pour le moment. Réessayez un peu plus tard.",
     "colName": "Nom",
     "colStatus": "Statut",
     "colLastSeen": "Dernière activité",
     "colAction": "Action",
     "revoke": "Révoquer",
-    "toastRevoked": "Accès révoqué.",
-    "toastRevokeFailed": "Impossible de révoquer cet accès. Réessayez.",
+    "toastRevoked": "Passerelle révoquée.",
+    "toastRevokeFailed": "Impossible de révoquer cette passerelle. Réessayez.",
     "delete": "Supprimer",
-    "deleteConfirmTitle": "Supprimer cet accès ?",
-    "deleteConfirmDescription": "Après suppression, les téléchargements de cet accès s'arrêtent.",
-    "toastDeleted": "Accès supprimé.",
-    "toastDeleteFailed": "Impossible de supprimer cet accès. Réessayez."
+    "deleteConfirmTitle": "Supprimer cette passerelle ?",
+    "deleteConfirmDescription": "Après suppression, les téléchargements de cette passerelle s'arrêtent.",
+    "toastDeleted": "Passerelle supprimée.",
+    "toastDeleteFailed": "Impossible de supprimer cette passerelle. Réessayez."
   },
   "createAccess": {
-    "title": "Créer / relier un accès",
-    "description": "Le code de connexion généré permet au programme installé chez vous de se relier à ce compte.",
+    "title": "Créer une passerelle",
+    "description": "Ce code de connexion permet à votre passerelle, installée chez vous, de se relier à ce compte.",
     "name": "Nom",
-    "defaultName": "Mon accès",
-    "createdTitle": "Accès créé",
+    "defaultName": "Ma passerelle",
+    "createdTitle": "Passerelle créée",
     "createdDescription": "Ce code de connexion et cette clé ne seront plus jamais affichés. Copiez-les maintenant dans la configuration du programme chez vous.",
     "pairingToken": "Code de connexion",
     "gatewayKey": "Clé d'accès",
-    "toastFailed": "Impossible de créer l'accès. Réessayez."
+    "toastFailed": "Impossible de créer la passerelle. Réessayez."
   },
   "sources": {
     "intro": "Vos sources de livres en accès libre : activez ou désactivez celles utilisées lors d'une recherche.",
@@ -411,6 +412,7 @@
   },
   "deliveryDetail": {
     "title": "Suivi de l'envoi",
+    "description": "Statut et détails de cet envoi.",
     "status": "Statut",
     "method": "Méthode",
     "created": "Créé",

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { motion } from "motion/react";
-import { BookOpen, LayoutGrid, List, Loader2, Search } from "lucide-react";
+import { BookOpen, LayoutGrid, List, Loader2, Search, SearchX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,14 +149,21 @@ export function LibraryView({
     return source;
   }
 
-  return (
-    <div className="space-y-10">
-      <div>
-        <h2 className="font-heading text-lg font-medium">{t("addBooksTitle")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("searchHelp")}</p>
-        <p className="text-sm text-muted-foreground">{t("searchHelpMatch")}</p>
+  function resetFilters() {
+    setLanguageFilter("all");
+    setFormatFilter("all");
+    setSourceFilter("all");
+  }
 
-        <div className="mt-3 flex flex-wrap gap-2">
+  return (
+    <div className="space-y-8">
+      <div>
+        <div className="mb-4">
+          <h2 className="font-heading text-lg font-medium">{t("addBooksTitle")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("searchHelp")}</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
           <div className="relative flex-1 min-w-64">
             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -355,7 +362,15 @@ export function LibraryView({
             description={itemsUnavailable ? t("emptyUnavailable") : t("emptyDescription")}
           />
         ) : displayedItems.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noMatch")}</p>
+          <EmptyState
+            icon={SearchX}
+            title={t("noMatch")}
+            action={
+              <Button variant="outline" size="sm" onClick={resetFilters}>
+                {t("resetFilters")}
+              </Button>
+            }
+          />
         ) : viewMode === "grid" ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {displayedItems.map((item) => (
