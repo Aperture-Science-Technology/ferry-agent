@@ -114,6 +114,24 @@ class LibraryItemOut(BaseModel):
     source_id: uuid.UUID | None
     original_format: str
     added_at: datetime
+    description: str | None = None
+    language: str | None = None
+    page_count: int | None = None
+    size_bytes: int | None = None
+    isbn: str | None = None
+    publisher: str | None = None
+    published_year: int | None = None
+
+
+class LibraryItemUpdate(BaseModel):
+    title: str | None = None
+    author: str | None = None
+    description: str | None = None
+    language: str | None = None
+    page_count: int | None = None
+    publisher: str | None = None
+    published_year: int | None = None
+    isbn: str | None = None
 
 
 class DeviceCreate(BaseModel):
