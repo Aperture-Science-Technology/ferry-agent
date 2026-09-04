@@ -15,6 +15,7 @@ from ferry_agent.db import get_db
 from ferry_agent.models import Device, DeviceBrand, DeliveryTier
 from ferry_agent.schemas import DeviceCreate, DeviceLinkCallback, DeviceLinkUrlOut, DeviceOut
 from ferry_agent.services import cloud_links
+from ferry_agent.services import devices as device_service
 
 # Mapping brand → tier par défaut (peut être affiné par modèle)
 _KOBO_HIGH_END = {"forma", "sage", "elipsa", "libra colour", "libra color"}
@@ -73,6 +74,16 @@ async def _get_owned_device(db: AsyncSession, device_id: uuid.UUID, user: Curren
     if device is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device introuvable")
     return device
+
+
+@router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_device(
+    device_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    device = await _get_owned_device(db, device_id, user)
+    await device_service.delete_device(db, device)
 
 
 def _check_provider(provider: str) -> None:

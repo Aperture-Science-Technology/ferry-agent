@@ -84,6 +84,21 @@ async def revoke_gateway(
     return GatewayId(gateway_id=gateway.id)
 
 
+@router.delete("/{gateway_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_gateway(
+    gateway_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    result = await db.execute(
+        select(Gateway).where(Gateway.id == gateway_id, Gateway.user_id == user.id)
+    )
+    gateway = result.scalar_one_or_none()
+    if gateway is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="gateway introuvable")
+    await gateway_service.delete_gateway(db, gateway)
+
+
 @router.post("/poll", response_model=GatewayJobOut | None)
 async def poll_gateway(
     gateway: Gateway = Depends(get_gateway),
