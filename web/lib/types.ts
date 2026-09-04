@@ -44,6 +44,7 @@ export interface LibraryItem {
 
 export interface Device {
   id: string;
+  name: string | null;
   brand: DeviceBrand;
   model: string | null;
   delivery_tier: DeliveryTier;

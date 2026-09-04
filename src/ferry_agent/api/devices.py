@@ -13,7 +13,7 @@ from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
 from ferry_agent.models import Device, DeviceBrand, DeliveryTier
-from ferry_agent.schemas import DeviceCreate, DeviceLinkCallback, DeviceLinkUrlOut, DeviceOut
+from ferry_agent.schemas import DeviceCreate, DeviceLinkCallback, DeviceLinkUrlOut, DeviceOut, DevicePatch
 from ferry_agent.services import cloud_links
 from ferry_agent.services import devices as device_service
 
@@ -48,6 +48,7 @@ async def create_device(
     tier = _compute_tier(payload.brand, payload.model)
     device = Device(
         user_id=user.id,
+        name=payload.name,
         brand=payload.brand,
         model=payload.model,
         delivery_tier=tier,
@@ -74,6 +75,30 @@ async def _get_owned_device(db: AsyncSession, device_id: uuid.UUID, user: Curren
     if device is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device introuvable")
     return device
+
+
+@router.patch("/{device_id}", response_model=DeviceOut)
+async def update_device(
+    device_id: uuid.UUID,
+    payload: DevicePatch,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DeviceOut:
+    """Met a jour le nom/marque/modele d'un device ; recalcule delivery_tier
+    si la marque ou le modele changent (jamais choisi a la main)."""
+    device = await _get_owned_device(db, device_id, user)
+    updates = payload.model_dump(exclude_unset=True, exclude_defaults=True)
+
+    brand_or_model_changed = "brand" in updates or "model" in updates
+    for field, value in updates.items():
+        setattr(device, field, value)
+
+    if brand_or_model_changed:
+        device.delivery_tier = _compute_tier(device.brand, device.model)
+
+    await db.commit()
+    await db.refresh(device)
+    return DeviceOut.model_validate(device)
 
 
 @router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)

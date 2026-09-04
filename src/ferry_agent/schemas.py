@@ -138,7 +138,14 @@ class LibraryItemUpdate(BaseModel):
 
 
 class DeviceCreate(BaseModel):
+    name: str | None = None
     brand: DeviceBrand
+    model: str | None = None
+
+
+class DevicePatch(BaseModel):
+    name: str | None = None
+    brand: DeviceBrand | None = None
     model: str | None = None
 
 
@@ -173,6 +180,7 @@ class DeviceOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    name: str | None
     brand: DeviceBrand
     model: str | None
     delivery_tier: DeliveryTier

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -27,30 +27,37 @@ import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
 const BRANDS: Device["brand"][] = ["kindle", "kobo", "tolino", "pocketbook", "other"];
-const TIER_VALUES: Device["delivery_tier"][] = ["A", "B", "C", "D"];
 const MODEL_BRANDS = ["kindle", "kobo", "tolino", "pocketbook"] as const;
 
-export function NewDeviceDialog({
-  open,
+export function EditDeviceDialog({
+  device,
   onOpenChange,
-  onCreated,
+  onUpdated,
 }: {
-  open: boolean;
+  device: Device | null;
   onOpenChange: (open: boolean) => void;
-  onCreated: (device: Device) => void;
+  onUpdated: (device: Device) => void;
 }) {
-  const t = useTranslations("newDevice");
+  const t = useTranslations("editDevice");
+  const tNewDevice = useTranslations("newDevice");
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [name, setName] = useState("");
   const [brand, setBrand] = useState<Device["brand"]>("kindle");
   const [model, setModel] = useState("");
-  const [tier, setTier] = useState<Device["delivery_tier"]>("A");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (device) {
+      setName(device.name ?? "");
+      setBrand(device.brand);
+      setModel(device.model ?? "");
+    }
+  }, [device]);
 
   const modelOptions =
     brand !== "other" && (MODEL_BRANDS as readonly string[]).includes(brand)
-      ? (t.raw(`models.${brand}`) as string[])
+      ? (tNewDevice.raw(`models.${brand}`) as string[])
       : null;
 
   function handleBrandChange(value: Device["brand"]) {
@@ -59,17 +66,16 @@ export function NewDeviceDialog({
   }
 
   async function submit() {
+    if (!device) return;
     setSubmitting(true);
     try {
-      const device = await call<Device>("/api/v1/devices", {
-        method: "POST",
-        body: JSON.stringify({ name: name || null, brand, model: model || null, delivery_tier: tier }),
+      const updated = await call<Device>(`/api/v1/devices/${device.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: name || null, brand, model: model || null }),
       });
-      onCreated(device);
-      toast.success(t("toastCreated"));
+      onUpdated(updated);
+      toast.success(t("toastUpdated"));
       onOpenChange(false);
-      setName("");
-      setModel("");
     } catch {
       toast.error(t("toastFailed"));
     } finally {
@@ -78,7 +84,7 @@ export function NewDeviceDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={device !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
@@ -86,11 +92,11 @@ export function NewDeviceDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>{t("nameOptional")}</Label>
-            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("namePlaceholder")} />
+            <Label>{tNewDevice("nameOptional")}</Label>
+            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={tNewDevice("namePlaceholder")} />
           </div>
           <div className="space-y-2">
-            <Label>{t("brand")}</Label>
+            <Label>{tNewDevice("brand")}</Label>
             <Select
               value={brand}
               onValueChange={(value) => value && handleBrandChange(value as Device["brand"])}
@@ -108,11 +114,11 @@ export function NewDeviceDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>{t("modelOptional")}</Label>
+            <Label>{tNewDevice("modelOptional")}</Label>
             {modelOptions ? (
               <Select value={model} onValueChange={(value) => setModel(value ?? "")}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t("modelPlaceholder")} />
+                  <SelectValue placeholder={tNewDevice("modelPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {modelOptions.map((value) => (
@@ -126,24 +132,6 @@ export function NewDeviceDialog({
               <Input value={model} onChange={(event) => setModel(event.target.value)} />
             )}
           </div>
-          <div className="space-y-2">
-            <Label>{t("deliveryMode")}</Label>
-            <Select
-              value={tier}
-              onValueChange={(value) => value && setTier(value as Device["delivery_tier"])}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TIER_VALUES.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(`tierOptions.${value}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -151,7 +139,7 @@ export function NewDeviceDialog({
           </Button>
           <Button onClick={submit} disabled={submitting}>
             {submitting && <Loader2 className="animate-spin" />}
-            {tCommon("create")}
+            {tCommon("save")}
           </Button>
         </DialogFooter>
       </DialogContent>

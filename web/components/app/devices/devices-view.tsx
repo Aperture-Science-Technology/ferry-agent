@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Tablet, Plus, Link2, Check, Trash2 } from "lucide-react";
+import { Tablet, Plus, Link2, Check, Trash2, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/app/empty-state";
 import { NewDeviceDialog } from "@/components/app/devices/new-device-dialog";
+import { EditDeviceDialog } from "@/components/app/devices/edit-device-dialog";
 import { CloudLinkDialog } from "@/components/app/devices/cloud-link-dialog";
 import { BrandBadge } from "@/components/app/devices/brand-badge";
 import { useApiClient } from "@/lib/api-client";
@@ -41,6 +42,7 @@ export function DevicesView({
   const { call } = useApiClient();
   const [devices, setDevices] = useState(initialDevices);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Device | null>(null);
   const [linkTarget, setLinkTarget] = useState<Device | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -90,10 +92,22 @@ export function DevicesView({
             <TableBody>
               {devices.map((device) => (
                 <TableRow key={device.id}>
-                  <TableCell className="font-medium">
-                    <BrandBadge brand={device.brand} />
-                    {device.model && (
-                      <span className="text-muted-foreground"> — {device.model}</span>
+                  <TableCell>
+                    {device.name ? (
+                      <div className="space-y-0.5">
+                        <div className="font-medium">{device.name}</div>
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <BrandBadge brand={device.brand} />
+                          {device.model && <span> — {device.model}</span>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="font-medium">
+                        <BrandBadge brand={device.brand} />
+                        {device.model && (
+                          <span className="text-muted-foreground"> — {device.model}</span>
+                        )}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
@@ -115,6 +129,10 @@ export function DevicesView({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setEditTarget(device)}>
+                        <Pencil />
+                        {t("edit")}
+                      </Button>
                       {device.delivery_tier === "B" && (
                         <Button size="sm" variant="outline" onClick={() => setLinkTarget(device)}>
                           <Link2 />
@@ -142,6 +160,13 @@ export function DevicesView({
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreated={(device) => setDevices((prev) => [device, ...prev])}
+      />
+      <EditDeviceDialog
+        device={editTarget}
+        onOpenChange={(open) => !open && setEditTarget(null)}
+        onUpdated={(device) =>
+          setDevices((prev) => prev.map((d) => (d.id === device.id ? device : d)))
+        }
       />
       <CloudLinkDialog
         device={linkTarget}
