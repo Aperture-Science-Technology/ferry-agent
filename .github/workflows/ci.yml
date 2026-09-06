@@ -10,6 +10,16 @@ jobs:
   python-tests:
     name: Python tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ferry
+          POSTGRES_PASSWORD: ferry
+          POSTGRES_DB: ferry_test
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,10 +30,17 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run pytest
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://ferry:ferry@localhost:5432/ferry_test
         run: pytest -q
+
+      - name: Run integration tests
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://ferry:ferry@localhost:5432/ferry_test
+        run: pytest tests/integration -q
 
   web-build:
     name: Web build

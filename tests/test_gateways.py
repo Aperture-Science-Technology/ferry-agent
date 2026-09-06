@@ -23,48 +23,7 @@ from ferry_agent.schemas import SearchRequest
 from ferry_agent.services import gateways
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 
-
-class _Scalars:
-    def __init__(self, values):
-        self.values = values
-
-    def all(self):
-        return self.values
-
-
-class ScalarResult:
-    def __init__(self, value):
-        self.value = value
-
-    def scalar_one_or_none(self):
-        return self.value
-
-    def scalars(self):
-        return _Scalars(self.value if isinstance(self.value, list) else [])
-
-    def all(self):
-        return self.value if isinstance(self.value, list) else []
-
-
-class FakeSession:
-    def __init__(self, execute_values=()):
-        self.execute_values = list(execute_values)
-        self.commits = 0
-        self.statements = []
-
-    async def execute(self, statement):
-        self.statements.append(statement)
-        value = self.execute_values.pop(0) if self.execute_values else None
-        return ScalarResult(value)
-
-    async def commit(self):
-        self.commits += 1
-
-    async def refresh(self, _value):
-        return None
-
-    def add(self, _value):
-        return None
+from tests.fakes import FakeSession
 
 
 def make_gateway(**overrides) -> Gateway:

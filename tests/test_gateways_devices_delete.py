@@ -13,12 +13,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 
-from ferry_agent.api.deps import CurrentUser as CU, get_current_user
-from ferry_agent.db import get_db
 from ferry_agent.main import app
 from ferry_agent.models import DeviceBrand, DeliveryTier, PairingStatus
 from ferry_agent.services import devices as device_service
 from ferry_agent.services import gateways as gateway_service
+
+from tests.fakes import FakeSession, override_app_deps
 
 _NOW = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 _USER_ID = uuid.uuid4()
@@ -54,38 +54,7 @@ def _fake_device(**overrides):
 
 
 def _override(fake_db):
-    app.dependency_overrides[get_db] = fake_db
-    app.dependency_overrides[get_current_user] = lambda: CU(id=_USER_ID, email=_USER_EMAIL)
-
-
-class ScalarResult:
-    def __init__(self, value):
-        self.value = value
-
-    def scalar_one_or_none(self):
-        return self.value
-
-
-class FakeSession:
-    """Session minimale qui enregistre les statements executes, pour
-    verifier que la purge des enfants precede bien le delete du parent."""
-
-    def __init__(self, execute_values=()):
-        self.execute_values = list(execute_values)
-        self.commits = 0
-        self.statements = []
-        self.deleted = []
-
-    async def execute(self, statement):
-        self.statements.append(statement)
-        value = self.execute_values.pop(0) if self.execute_values else None
-        return ScalarResult(value)
-
-    async def commit(self):
-        self.commits += 1
-
-    async def delete(self, value):
-        self.deleted.append(value)
+    override_app_deps(fake_db, user_id=_USER_ID, email=_USER_EMAIL)
 
 
 class TestDeleteGatewayService:

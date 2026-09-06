@@ -15,10 +15,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 
-from ferry_agent.api.deps import CurrentUser as CU, get_current_user
-from ferry_agent.db import get_db
 from ferry_agent.main import app
 from ferry_agent.models import DeliveryMethod, DeliveryStatus
+
+from tests.fakes import clear_app_deps, override_app_deps
 
 _NOW = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 _USER_ID = uuid.uuid4()
@@ -67,8 +67,7 @@ def _fake_delivery(library_item_id, **overrides):
 
 
 def _override(fake_db):
-    app.dependency_overrides[get_db] = fake_db
-    app.dependency_overrides[get_current_user] = lambda: CU(id=_USER_ID, email=_USER_EMAIL)
+    override_app_deps(fake_db, user_id=_USER_ID, email=_USER_EMAIL)
 
 
 class TestUpdateBook:
@@ -97,7 +96,7 @@ class TestUpdateBook:
             # Champ non fourni : inchange
             assert data["author"] == "Herbert"
         finally:
-            app.dependency_overrides.clear()
+            clear_app_deps()
 
     def test_404_for_other_users_book(self):
         async def fake_db():
@@ -115,7 +114,7 @@ class TestUpdateBook:
                 )
             assert resp.status_code == 404
         finally:
-            app.dependency_overrides.clear()
+            clear_app_deps()
 
 
 class TestDeleteBook:
@@ -137,7 +136,7 @@ class TestDeleteBook:
             assert resp.status_code == 204
             assert resp.content == b""
         finally:
-            app.dependency_overrides.clear()
+            clear_app_deps()
 
     def test_delete_removed_item_not_listable(self):
         item = _fake_item()
@@ -168,7 +167,7 @@ class TestDeleteBook:
                 assert list_resp.status_code == 200
                 assert list_resp.json() == []
         finally:
-            app.dependency_overrides.clear()
+            clear_app_deps()
 
     def test_404_for_other_users_book(self):
         async def fake_db():
@@ -183,7 +182,7 @@ class TestDeleteBook:
                 resp = client.delete(f"/api/v1/books/{uuid.uuid4()}")
             assert resp.status_code == 404
         finally:
-            app.dependency_overrides.clear()
+            clear_app_deps()
 
 
 class TestBookDeliveries:
@@ -212,7 +211,7 @@ class TestBookDeliveries:
             assert len(data) == 2
             assert all(d["library_item_id"] == str(item.id) for d in data)
         finally:
-            app.dependency_overrides.clear()
+            clear_app_deps()
 
     def test_404_for_other_users_book(self):
         async def fake_db():
@@ -227,4 +226,4 @@ class TestBookDeliveries:
                 resp = client.get(f"/api/v1/books/{uuid.uuid4()}/deliveries")
             assert resp.status_code == 404
         finally:
-            app.dependency_overrides.clear()
+            clear_app_deps()

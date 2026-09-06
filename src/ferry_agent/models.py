@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String, Text, text
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -88,9 +88,13 @@ class GatewayJobStatus(str, enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
+    # unique=True + index=True fusionnerait en un UNIQUE INDEX `ix_users_email`,
+    # alors que 0001 cree une UniqueConstraint (`users_email_key`) ET un index
+    # non unique `ix_users_email`. On declare les deux pour coller aux migrations.
+    __table_args__ = (Index("ix_users_email", "email"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
     kindle_email: Mapped[str | None] = mapped_column(String, nullable=True)
     default_format: Mapped[str] = mapped_column(String, default="epub", nullable=False)
@@ -101,7 +105,7 @@ class Device(Base):
 
     id: Mapped[uuid.UUID] = _uuid_pk()
     user_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
-    name: Mapped[str | None] = mapped_column(String, nullable=True)
+    name: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     brand: Mapped[DeviceBrand] = mapped_column(SAEnum(DeviceBrand, name="device_brand"), nullable=False)
     model: Mapped[str | None] = mapped_column(String, nullable=True)
     delivery_tier: Mapped[DeliveryTier] = mapped_column(SAEnum(DeliveryTier, name="delivery_tier"), nullable=False)
@@ -139,7 +143,7 @@ class LibraryItem(Base):
     isbn: Mapped[str | None] = mapped_column(String, nullable=True)
     publisher: Mapped[str | None] = mapped_column(String, nullable=True)
     published_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    source_ref: Mapped[str | None] = mapped_column(String, nullable=True)
+    source_ref: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
 
 
 class DeliveryJob(Base):
@@ -163,9 +167,12 @@ class ShortCode(Base):
     """Code court de telechargement pour le mini-catalogue HTTP tier C."""
 
     __tablename__ = "short_codes"
+    # Meme ecart unique+index que User.email : 0003 cree UniqueConstraint("code")
+    # et l'index non unique `ix_short_codes_code`.
+    __table_args__ = (Index("ix_short_codes_code", "code"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    code: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    code: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     delivery_job_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("delivery_jobs.id"), nullable=False, index=True
     )
