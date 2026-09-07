@@ -355,16 +355,29 @@ PY
 }
 
 require_pairing_env() {
-  if [ -n "${PAIRING_TOKEN:-}" ]; then
+  if has_saved_pairing; then
     return
   fi
   if [ -n "${GATEWAY_ID:-}" ] && [ -n "${GATEWAY_KEY:-}" ]; then
     return
   fi
-  if has_saved_pairing; then
+  if [ -n "${PAIRING_TOKEN:-}" ] && [ -n "${GATEWAY_KEY:-}" ]; then
     return
   fi
-  printf '%s\n' "PAIRING_TOKEN is required for the first start (or restore /state from a previous pairing). See: docker run --rm gateway:test --help" >&2
+
+  # PAIRING_TOKEN alone (missing GATEWAY_KEY) — refuse before supervisord starts.
+  if [ -n "${PAIRING_TOKEN:-}" ] && [ -z "${GATEWAY_KEY:-}" ]; then
+    printf '%s\n' "GATEWAY_KEY must accompany PAIRING_TOKEN on first start (PAIRING_TOKEN alone is not enough). Or restore /state from a previous pairing. See: docker run --rm gateway:test --help" >&2
+    exit 1
+  fi
+
+  # GATEWAY_KEY alone (missing PAIRING_TOKEN / GATEWAY_ID).
+  if [ -n "${GATEWAY_KEY:-}" ] && [ -z "${PAIRING_TOKEN:-}" ]; then
+    printf '%s\n' "PAIRING_TOKEN must accompany GATEWAY_KEY on first start (GATEWAY_KEY alone is not enough; or set both GATEWAY_ID and GATEWAY_KEY, or restore /state). See: docker run --rm gateway:test --help" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "PAIRING_TOKEN and GATEWAY_KEY are required for the first start (or set GATEWAY_ID and GATEWAY_KEY, or restore /state from a previous pairing). See: docker run --rm gateway:test --help" >&2
   exit 1
 }
 

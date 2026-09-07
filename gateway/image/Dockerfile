@@ -59,11 +59,12 @@ COPY agent/ferry_gateway_agent ./ferry_gateway_agent
 RUN pip install --no-cache-dir . \
     && python -c "from ferry_gateway_agent import __version__; print(__version__)"
 
-COPY image/entrypoint.sh image/run-gateway-agent.sh image/ensure_prowlarr_user.py /usr/local/bin/
+COPY image/entrypoint.sh image/run-gateway-agent.sh image/ensure_prowlarr_user.py \
+    image/healthcheck.sh /usr/local/bin/
 COPY image/supervisord.conf /etc/supervisor/supervisord.conf
 
 RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/run-gateway-agent.sh \
-        /usr/local/bin/ensure_prowlarr_user.py \
+        /usr/local/bin/ensure_prowlarr_user.py /usr/local/bin/healthcheck.sh \
     && chown -R abc:abc /config /downloads /state
 
 VOLUME ["/config", "/downloads", "/state"]
@@ -72,8 +73,9 @@ VOLUME ["/config", "/downloads", "/state"]
 # Forms auth is required (credentials in /config/prowlarr-credentials).
 EXPOSE 9696 51413/tcp 51413/udp
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=5 \
-    CMD curl -sf http://127.0.0.1:9696/ping >/dev/null
+# start-period covers Prowlarr boot + gateway pairing/startup before honest checks.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=180s --retries=5 \
+    CMD ["/usr/local/bin/healthcheck.sh"]
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["run"]

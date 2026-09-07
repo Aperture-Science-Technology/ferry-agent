@@ -66,6 +66,12 @@ async def test_successful_pairing_writes_state_atomically_with_mode_600(
         "gateway_id": "gw-42",
         "gateway_key": "rotated-key",
     }
+    heartbeat = state_path.parent / "heartbeat"
+    assert heartbeat.is_file()
+    assert heartbeat.stat().st_mode & 0o777 == 0o600
+    assert not Path(str(heartbeat) + ".tmp").exists()
+    stamp = float(heartbeat.read_text(encoding="utf-8").strip())
+    assert stamp > 0
 
 
 @pytest.mark.asyncio
@@ -178,3 +184,36 @@ async def test_already_paired_gateway_persists_state_without_platform_call(
         "gateway_id": "gw-existing",
         "gateway_key": "key-existing",
     }
+    heartbeat = state_path.parent / "heartbeat"
+    assert heartbeat.is_file()
+    assert float(heartbeat.read_text(encoding="utf-8").strip()) > 0
+
+
+@pytest.mark.asyncio
+async def test_run_once_writes_heartbeat_when_no_job(
+    state_path: Path,
+    download_root: Path,
+) -> None:
+    """Idle poll (HTTP 204) still records liveness for the image HEALTHCHECK."""
+    settings = make_settings(
+        state_path=state_path,
+        download_path=download_root,
+        gateway_id="gw-1",
+        gateway_key="gw-key",
+    )
+    agent = make_agent(settings=settings)
+    heartbeat = state_path.parent / "heartbeat"
+    assert not heartbeat.exists()
+
+    handled = await agent.run_once()
+
+    assert handled is False
+    assert heartbeat.is_file()
+    assert heartbeat.stat().st_mode & 0o777 == 0o600
+    first = float(heartbeat.read_text(encoding="utf-8").strip())
+    assert first > 0
+
+    handled = await agent.run_once()
+    assert handled is False
+    second = float(heartbeat.read_text(encoding="utf-8").strip())
+    assert second >= first
