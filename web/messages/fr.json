@@ -344,15 +344,14 @@
   },
   "cloudLink": {
     "title": "Lier un compte cloud",
-    "description": "Ouvrez la page d'autorisation, puis collez le code affiché.",
+    "description": "Une fenêtre s'ouvre pour autoriser Ferry. Revenez ici ensuite.",
+    "waiting": "Une fenêtre s'ouvre pour autoriser Ferry. Revenez ici ensuite.",
+    "waitingShort": "En attente de la liaison…",
     "provider": "Fournisseur",
-    "openAuth": "Ouvrir la page d'autorisation",
-    "authCode": "Code d'autorisation",
-    "codePlaceholder": "Collez le code ici",
-    "link": "Lier",
+    "openAuth": "Autoriser avec le fournisseur",
     "toastNotConfigured": "{provider} n'est pas encore configuré.",
-    "toastLinked": "Compte cloud lié.",
-    "toastCodeFailed": "Ce code n'a pas pu être utilisé. Réessayez."
+    "toastLinked": "La liaison a réussi.",
+    "toastFailed": "La liaison n'a pas abouti. Réessayez."
   },
   "access": {
     "createLink": "Ajouter une passerelle",

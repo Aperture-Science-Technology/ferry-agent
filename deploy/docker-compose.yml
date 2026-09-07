@@ -33,6 +33,7 @@ services:
     environment:
       PYTHONPATH: /app/src
       DATABASE_URL: ${DATABASE_URL:?required}
+      FERNET_KEY: ${FERNET_KEY:?required}
     networks:
       - ferry-net
     labels:
@@ -73,6 +74,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:?required}
+      FERNET_KEY: ${FERNET_KEY:?required}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else 1)"]
       interval: 30s

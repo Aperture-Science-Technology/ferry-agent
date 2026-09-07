@@ -43,13 +43,25 @@ class Settings(BaseSettings):
     # config runtime (env) : jamais commits. Laisser client_id/secret vides
     # desactive le provider correspondant (l'endpoint /link renvoie 503
     # plutot que de planter). `{id}` dans les redirect_uri est remplace par
-    # l'UUID du device au moment de la requete.
+    # l'UUID du device au moment de la requete. Les redirect_uri pointent
+    # vers la route **GET** publique `/link/callback` (echange code + state,
+    # puis redirection dashboard) — plus de POST navigateur.
     dropbox_client_id: str | None = None
     dropbox_client_secret: str | None = None
     dropbox_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/{id}/link/callback"
     google_client_id: str | None = None
     google_client_secret: str | None = None
     google_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/{id}/link/callback"
+
+    # Chiffrement au repos des tokens cloud (`Device.link_ref`). Une ou
+    # plusieurs cles Fernet separees par des virgules (la premiere chiffre ;
+    # les suivantes restent valides en lecture pour la rotation).
+    # Generer : python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # Perdre toutes les cles rend les tokens illisibles (cloud_linked=false).
+    fernet_key: str | None = None
+
+    # TTL du parametre OAuth `state` (nonce signe + store serveur, usage unique).
+    oauth_state_ttl_seconds: int = 600
 
     app_env: str = "development"
 
