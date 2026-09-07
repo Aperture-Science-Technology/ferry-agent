@@ -35,6 +35,7 @@ from ferry_agent.schemas import (
 )
 from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services import library
+from ferry_agent.services.covers import validate_cover_url
 from ferry_agent.services.errors import FileTooLargeError, UnknownFormatError
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 from ferry_agent.services.virustotal import is_known_malicious
@@ -171,6 +172,7 @@ async def search_books(
     for result in results:
         out = ResultOut.model_validate(result)
         out.owned = _is_owned(result)
+        out.cover_url = validate_cover_url(out.cover_url)
         outs.append(out)
     return outs
 

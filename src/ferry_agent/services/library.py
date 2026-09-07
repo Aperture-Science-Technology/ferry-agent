@@ -19,6 +19,7 @@ from ferry_agent.config import get_settings
 from ferry_agent.connectors import Result
 from ferry_agent.connectors.registry import get_connector
 from ferry_agent.models import LibraryItem, Source, SourceType
+from ferry_agent.services.covers import validate_cover_url
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ async def import_from_connector(
         user_id=user_id,
         title=metadata.get("title") or fetched.stem,
         author=metadata.get("author") or "",
-        cover_url=metadata.get("cover_url") or None,
+        cover_url=validate_cover_url(metadata.get("cover_url")),
         description=metadata.get("description") or None,
         language=metadata.get("language") or None,
         page_count=metadata.get("page_count") or None,
@@ -163,7 +164,7 @@ async def import_from_gateway(
         user_id=user_id,
         title=metadata.get("title") or Path(safe_name).stem,
         author=metadata.get("author") or "",
-        cover_url=metadata.get("cover_url") or None,
+        cover_url=validate_cover_url(metadata.get("cover_url")),
         description=metadata.get("description") or None,
         language=metadata.get("language") or None,
         page_count=metadata.get("page_count") or None,

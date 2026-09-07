@@ -18,6 +18,7 @@ from ferry_agent.models import (
     PairingStatus,
 )
 from ferry_agent.schemas import Result
+from ferry_agent.services.covers import validate_cover_url
 
 
 def utcnow() -> datetime:
@@ -179,9 +180,13 @@ async def save_search_results(
         return job
     if job.status not in (GatewayJobStatus.pending, GatewayJobStatus.running):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="gateway job non actif")
+    sanitized = [
+        result.model_copy(update={"cover_url": validate_cover_url(result.cover_url)})
+        for result in results
+    ]
     job.payload = {
         **job.payload,
-        "results": [result.model_dump(mode="json") for result in results],
+        "results": [result.model_dump(mode="json") for result in sanitized],
     }
     job.status = GatewayJobStatus.done
     await db.commit()

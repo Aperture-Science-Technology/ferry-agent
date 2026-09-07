@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BookOpen, Loader2, Pencil, Send, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Send, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { DeliverDialog } from "@/components/app/library/deliver-dialog";
 import { BookEditDialog } from "@/components/app/library/book-edit-dialog";
+import { LibraryCoverImage } from "@/components/app/library/cover-image";
 import { useApiClient } from "@/lib/api-client";
 import type { Device, DeliveryJob, DeliveryStatus, LibraryItem } from "@/lib/types";
 
@@ -116,19 +117,12 @@ export function BookDetailDialog({
 
           {item && (
             <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
-              <div className="aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
-                {item.cover_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.cover_url}
-                    alt={item.title}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <BookOpen className="size-10 text-muted-foreground" />
-                  </div>
-                )}
+              <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
+                <LibraryCoverImage
+                  itemId={item.id}
+                  hasCover={Boolean(item.cover_url)}
+                  alt={item.title}
+                />
               </div>
 
               <div className="space-y-3 text-sm">
