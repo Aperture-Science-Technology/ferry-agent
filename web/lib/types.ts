@@ -69,6 +69,18 @@ export interface GatewayCredentials {
   gateway_key: string;
 }
 
+export type GatewayJobType = "search" | "fetch";
+export type GatewayJobStatus = "pending" | "queued" | "running" | "done" | "failed";
+
+export interface GatewayJobStatusOut {
+  job_id: string;
+  type: GatewayJobType;
+  status: GatewayJobStatus;
+  attempts: number;
+  library_item_id: string | null;
+  error: string | null;
+}
+
 export interface DeliveryJob {
   id: string;
   library_item_id: string | null;

@@ -221,3 +221,96 @@ async def test_search_orchestration_merges_gateway_results(
         "gutenberg",
         f"gateway:{gateway.id}",
     ]
+
+
+class TestListGatewayJobsApi:
+    def test_lists_recent_jobs_for_owner(self):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from fastapi.testclient import TestClient
+
+        from ferry_agent.main import app
+        from ferry_agent.models import GatewayJobStatus, GatewayJobType
+        from tests.fakes import override_app_deps
+
+        user_id = uuid.uuid4()
+        gateway = make_gateway(user_id=user_id, pairing_status=PairingStatus.paired)
+        item_id = uuid.uuid4()
+        done_job = GatewayJob(
+            id=uuid.uuid4(),
+            gateway_id=gateway.id,
+            type=GatewayJobType.fetch,
+            payload={},
+            status=GatewayJobStatus.done,
+            result_ref=str(item_id),
+            created_at=datetime.now(timezone.utc),
+        )
+        failed_job = GatewayJob(
+            id=uuid.uuid4(),
+            gateway_id=gateway.id,
+            type=GatewayJobType.search,
+            payload={"query": "Dune"},
+            status=GatewayJobStatus.failed,
+            result_ref="abandonné après 5 tentatives",
+            created_at=datetime.now(timezone.utc),
+        )
+
+        async def fake_db():
+            db = AsyncMock()
+            calls = {"n": 0}
+
+            async def fake_execute(_query):
+                calls["n"] += 1
+                result = MagicMock()
+                if calls["n"] == 1:
+                    result.scalar_one_or_none = MagicMock(return_value=gateway)
+                else:
+                    result.scalars = MagicMock(
+                        return_value=MagicMock(all=MagicMock(return_value=[failed_job, done_job]))
+                    )
+                return result
+
+            db.execute = AsyncMock(side_effect=fake_execute)
+            yield db
+
+        override_app_deps(fake_db, user_id=user_id)
+        try:
+            with TestClient(app) as client:
+                resp = client.get(f"/api/v1/gateways/{gateway.id}/jobs?limit=20")
+            assert resp.status_code == 200
+            body = resp.json()
+            assert len(body) == 2
+            assert body[0]["type"] == "search"
+            assert body[0]["status"] == "failed"
+            assert body[0]["error"] == "abandonné après 5 tentatives"
+            assert body[0]["library_item_id"] is None
+            assert body[0]["attempts"] == 0
+            assert body[1]["type"] == "fetch"
+            assert body[1]["status"] == "done"
+            assert body[1]["library_item_id"] == str(item_id)
+            assert body[1]["error"] is None
+            assert "job_id" in body[0]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_404_for_other_users_gateway(self):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from fastapi.testclient import TestClient
+
+        from ferry_agent.main import app
+        from tests.fakes import override_app_deps
+
+        async def fake_db():
+            db = AsyncMock()
+            result = MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+            db.execute = AsyncMock(return_value=result)
+            yield db
+
+        override_app_deps(fake_db, user_id=uuid.uuid4())
+        try:
+            with TestClient(app) as client:
+                resp = client.get(f"/api/v1/gateways/{uuid.uuid4()}/jobs")
+            assert resp.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
