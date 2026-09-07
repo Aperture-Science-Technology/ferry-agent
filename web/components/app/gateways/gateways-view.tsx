@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Radio, Plus, Ban, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -26,7 +26,74 @@ import {
 import { EmptyState } from "@/components/app/empty-state";
 import { CreateGatewayDialog } from "@/components/app/gateways/create-gateway-dialog";
 import { useApiClient } from "@/lib/api-client";
-import type { Gateway } from "@/lib/types";
+import type { Gateway, GatewayJobStatus, GatewayJobStatusOut, GatewayJobType } from "@/lib/types";
+
+const MAX_ATTEMPTS_DISPLAY = 5;
+
+function GatewayRecentActivity({ gatewayId }: { gatewayId: string }) {
+  const t = useTranslations("access");
+  const { call } = useApiClient();
+  const [jobs, setJobs] = useState<GatewayJobStatusOut[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    call<GatewayJobStatusOut[]>(`/api/v1/gateways/${gatewayId}/jobs?limit=20`)
+      .then((data) => {
+        if (!cancelled) setJobs(data);
+      })
+      .catch(() => {
+        if (!cancelled) setJobs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gatewayId, call]);
+
+  function typeLabel(type: GatewayJobType) {
+    return type === "search" ? t("jobTypeSearch") : t("jobTypeFetch");
+  }
+
+  function statusLabel(status: GatewayJobStatus) {
+    if (status === "done") return t("jobStatusDone");
+    if (status === "failed") return t("jobStatusFailed");
+    return t("jobStatusActive");
+  }
+
+  if (jobs === null) return null;
+
+  return (
+    <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+      <p className="text-sm font-medium">{t("recentActivity")}</p>
+      {jobs.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{t("activityEmpty")}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {jobs.map((job) => {
+            const inProgress =
+              job.status === "pending" || job.status === "queued" || job.status === "running";
+            return (
+              <li
+                key={job.job_id}
+                className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+              >
+                <span className="text-foreground">{typeLabel(job.type)}</span>
+                <Badge variant="secondary">{statusLabel(job.status)}</Badge>
+                {inProgress && job.attempts > 0 && (
+                  <span className="text-xs">
+                    {t("attemptOf", {
+                      current: job.attempts,
+                      max: MAX_ATTEMPTS_DISPLAY,
+                    })}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function GatewaysView({
   initialGateways,
@@ -108,8 +175,11 @@ export function GatewaysView({
             <TableBody>
               {gateways.map((gateway) => (
                 <TableRow key={gateway.gateway_id}>
-                  <TableCell className="font-medium">{gateway.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="align-top font-medium">
+                    <div>{gateway.name}</div>
+                    <GatewayRecentActivity gatewayId={gateway.gateway_id} />
+                  </TableCell>
+                  <TableCell className="align-top">
                     <div className="flex items-center gap-2">
                       <StatusDot online={gateway.status === "paired"} />
                       <Badge variant="secondary" className="capitalize">
@@ -117,12 +187,12 @@ export function GatewaysView({
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="align-top text-muted-foreground">
                     {gateway.last_seen_at
                       ? new Date(gateway.last_seen_at).toLocaleString()
                       : tCommon("never")}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="align-top text-right">
                     <div className="flex justify-end gap-2">
                       {gateway.status === "paired" && (
                         <Button
