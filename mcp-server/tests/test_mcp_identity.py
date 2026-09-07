@@ -1,14 +1,8 @@
 """Tests de la propagation d'identité utilisateur MCP → core.
 
 Vérifie que, lorsqu'un utilisateur Clerk authentifié (OAuth) appelle un
-tool MCP, le core reçoit `Authorization: Bearer <token Clerk>` — et non
-plus le `X-API-Key` du compte service `mcp-service` — de sorte que
-l'action (recherche/ajout/livraison) soit rattachée au bon compte.
-
-Le token exposé par `fastmcp.server.dependencies.get_access_token()` est
-celui du `AccessToken` résolu par `ClerkProvider` (un `OAuthProxy`) pour
-la session OAuth courante ; il est disponible sans avoir à injecter
-`ctx: Context` dans le tool.
+tool MCP, le core reçoit `Authorization: Bearer <token Clerk>` — et qu'aucun
+fallback compte-service n'existe plus si l'identité manque.
 """
 
 import sys
@@ -28,8 +22,8 @@ from ferry_mcp.config import MCPSettings
 def patch_settings(monkeypatch):
     settings = MCPSettings(
         ferry_core_url="http://test-core:8000",
-        mcp_api_key="test-key-abc",
         port=8001,
+        mcp_auth_enabled=False,
     )
     _cfg_module.get_settings.cache_clear()
     monkeypatch.setattr(_cfg_module, "get_settings", lambda: settings)
@@ -52,7 +46,6 @@ def _enable_auth(monkeypatch) -> MCPSettings:
     """
     settings = MCPSettings(
         ferry_core_url="http://test-core:8000",
-        mcp_api_key="test-key-abc",
         port=8001,
         mcp_auth_enabled=True,
     )
@@ -67,13 +60,14 @@ def _enable_auth(monkeypatch) -> MCPSettings:
 # _resolve_user_token — unité
 # ---------------------------------------------------------------------------
 
-def test_resolve_user_token_returns_none_when_auth_disabled(monkeypatch) -> None:
+def test_resolve_user_token_raises_when_auth_disabled(monkeypatch) -> None:
+    """Sans identité Clerk, même auth désactivée : pas de fallback, RuntimeError."""
     from ferry_mcp import server
 
-    # patch_settings (autouse) laisse mcp_auth_enabled=False par défaut
-    monkeypatch.setattr(server, "get_access_token", lambda: SimpleNamespace(token="should-not-be-used"))
+    monkeypatch.setattr(server, "get_access_token", lambda: None)
 
-    assert server._resolve_user_token() is None
+    with pytest.raises(RuntimeError, match="Clerk"):
+        server._resolve_user_token()
 
 
 def test_resolve_user_token_returns_clerk_token_when_authenticated(monkeypatch) -> None:
@@ -86,7 +80,7 @@ def test_resolve_user_token_returns_clerk_token_when_authenticated(monkeypatch) 
 
 
 def test_resolve_user_token_raises_explicitly_when_identity_missing(monkeypatch) -> None:
-    """Auth activée mais aucune identité résolue : échec explicite, pas de fallback silencieux vers le compte service."""
+    """Auth activée mais aucune identité résolue : échec explicite, pas de fallback."""
     from ferry_mcp import server
 
     _enable_auth(monkeypatch)
@@ -123,15 +117,11 @@ async def test_client_uses_bearer_header_when_token_given() -> None:
 
 
 @pytest.mark.asyncio
-async def test_client_uses_service_api_key_when_no_token() -> None:
+async def test_client_without_token_raises() -> None:
     from ferry_mcp import server
 
-    client = server._client(None)
-    try:
-        assert client.headers.get("x-api-key") == "test-key-abc"
-        assert "authorization" not in client.headers
-    finally:
-        await client.aclose()
+    with pytest.raises(RuntimeError, match="Token utilisateur Clerk requis"):
+        server._client(None)
 
 
 # ---------------------------------------------------------------------------
@@ -179,9 +169,7 @@ async def test_search_library_sends_bearer_token_when_authenticated(monkeypatch)
 
 @pytest.mark.asyncio
 async def test_add_to_library_raises_instead_of_falling_back_to_service_account(monkeypatch) -> None:
-    """Reproduit le bug corrigé : sans identité résolue (auth activée), on ne
-    doit PLUS silencieusement retomber sur le compte service `mcp-service`.
-    """
+    """Sans identité résolue, on ne doit plus retomber sur un compte service."""
     from ferry_mcp import server
 
     _enable_auth(monkeypatch)

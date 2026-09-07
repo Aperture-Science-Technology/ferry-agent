@@ -56,15 +56,9 @@ async def get_current_user(
     request: Request,
     authorization: str | None = Header(default=None),
     x_dev_user: str | None = Header(default=None, alias="X-Dev-User"),
-    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> CurrentUser:
     settings = get_settings()
-
-    # Mode clé API serveur (MCP → core). Inactif si MCP_API_KEY non renseigné.
-    if settings.mcp_api_key and x_api_key and x_api_key == settings.mcp_api_key:
-        user = await _get_or_create_user(db, settings.mcp_service_user_email)
-        return CurrentUser(id=user.id, email=user.email)
 
     if not settings.clerk_issuer:
         # Mode dev : pas de Clerk configure.

@@ -49,11 +49,6 @@ class Settings(BaseSettings):
 
     app_env: str = "development"
 
-    # Cle API serveur pour le MCP (acces machine-to-machine).
-    # Laisser vide desactive ce mode (seul Clerk fonctionne).
-    mcp_api_key: str | None = None
-    mcp_service_user_email: str = "mcp-service@ferry-agent.internal"
-
 
 @lru_cache
 def get_settings() -> Settings:

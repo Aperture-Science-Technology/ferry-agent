@@ -76,8 +76,6 @@ def _settings(*, issuer: str = CLERK_ISSUER, audience: str | None = None) -> Sim
     return SimpleNamespace(
         clerk_issuer=issuer,
         clerk_audience=audience,
-        mcp_api_key=None,
-        mcp_service_user_email="mcp@test",
     )
 
 
@@ -95,7 +93,6 @@ async def _call_get_current_user(
         request=_FakeRequest(_FakeJwksClient(public_pem)),
         authorization=f"Bearer {token}",
         x_dev_user=None,
-        x_api_key=None,
         db=FakeSession(always=user),
     )
 

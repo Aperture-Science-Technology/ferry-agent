@@ -73,7 +73,6 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:?required}
-      MCP_API_KEY: ${MCP_API_KEY:?required}
     networks:
       - ferry-net
     labels:
@@ -123,8 +122,6 @@ services:
       - ferry-agent-core
     environment:
       FERRY_CORE_URL: ${FERRY_CORE_URL:?required}
-      MCP_API_KEY: ${MCP_API_KEY:?required}
-      MCP_AUTH_ENABLED: ${MCP_AUTH_ENABLED:-}
       CLERK_DOMAIN: ${CLERK_DOMAIN:-}
       CLERK_OAUTH_CLIENT_ID: ${CLERK_OAUTH_CLIENT_ID:-}
       CLERK_OAUTH_CLIENT_SECRET: ${CLERK_OAUTH_CLIENT_SECRET:-}
