@@ -53,10 +53,13 @@ class FakeSession:
 
     async def execute(self, statement):
         self.statements.append(statement)
+        # File prioritaire : permet d'injecter un SUM(quota) puis de
+        # retomber sur `always` (ex. Source upload) pour le reste.
+        if self.execute_values:
+            return ScalarResult(self.execute_values.pop(0))
         if self.always is not None:
             return ScalarResult(self.always)
-        value = self.execute_values.pop(0) if self.execute_values else None
-        return ScalarResult(value)
+        return ScalarResult(None)
 
     async def commit(self):
         self.commits += 1
@@ -90,13 +93,15 @@ class FakeSession:
 
 
 def override_app_deps(fake_db, *, user_id: uuid.UUID, email: str = "test@example.com") -> None:
-    """Branche `get_db` + `get_current_user` sur l'app FastAPI de test."""
-    from ferry_agent.api.deps import CurrentUser, get_current_user
+    """Branche `get_db` + `get_current_user` / `get_library_user` sur l'app de test."""
+    from ferry_agent.api.deps import CurrentUser, get_current_user, get_library_user
     from ferry_agent.db import get_db
     from ferry_agent.main import app
 
+    current = CurrentUser(id=user_id, email=email)
     app.dependency_overrides[get_db] = fake_db
-    app.dependency_overrides[get_current_user] = lambda: CurrentUser(id=user_id, email=email)
+    app.dependency_overrides[get_current_user] = lambda: current
+    app.dependency_overrides[get_library_user] = lambda: current
 
 
 def clear_app_deps() -> None:

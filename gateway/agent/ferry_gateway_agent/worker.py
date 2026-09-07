@@ -261,9 +261,25 @@ class GatewayAgent:
                 logger.exception("Pairing request failed; pairing will be retried")
             if not self.gateway_id:
                 await asyncio.sleep(self.settings.poll_interval_seconds)
-        while True:
-            await self.run_once()
-            await asyncio.sleep(self.settings.poll_interval_seconds)
+
+        from .watcher import WatchFolderImporter
+
+        watcher = WatchFolderImporter(
+            self.settings,
+            platform=self.platform,
+            gateway_headers=self._gateway_headers(),
+        )
+        watch_task = asyncio.create_task(watcher.run(), name="watch-folder")
+        try:
+            while True:
+                await self.run_once()
+                await asyncio.sleep(self.settings.poll_interval_seconds)
+        finally:
+            watch_task.cancel()
+            try:
+                await watch_task
+            except asyncio.CancelledError:
+                pass
 
     async def aclose(self) -> None:
         await self.prowlarr.aclose()

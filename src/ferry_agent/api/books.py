@@ -2,14 +2,15 @@
 
 import asyncio
 import json
+import logging
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ferry_agent.api.deps import CurrentUser, get_current_user
+from ferry_agent.api.deps import CurrentUser, get_current_user, get_library_user
 from ferry_agent.api.deliveries import _DELIVERY_LIST_COLS, build_delivery_out
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
@@ -35,9 +36,11 @@ from ferry_agent.schemas import (
 )
 from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services import library
-from ferry_agent.services.errors import FileTooLargeError, UnknownFormatError
+from ferry_agent.services.errors import FileTooLargeError, QuotaExceededError, UnknownFormatError
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 from ferry_agent.services.virustotal import is_known_malicious
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/books", tags=["books"])
 
@@ -72,6 +75,45 @@ def _normalize_provider(value: SourceType | str | None) -> str | None:
     return raw
 
 
+async def _import_uploaded_file(
+    db: AsyncSession,
+    user: CurrentUser,
+    file: UploadFile,
+) -> LibraryItemOut:
+    """Valide, borne, controle le quota, puis persiste un ebook uploade."""
+    settings = get_settings()
+    try:
+        content = await read_limited(file, settings.max_fetch_bytes)
+        detected_format = sniff_ebook_format(content)
+    except FileTooLargeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc)
+        ) from exc
+    except UnknownFormatError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    try:
+        await library.ensure_storage_quota(db, user.id, len(content))
+    except QuotaExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_507_INSUFFICIENT_STORAGE, detail=str(exc)
+        ) from exc
+
+    if await is_known_malicious(content, settings.virustotal_api_key):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="fichier signale comme malveillant par VirusTotal",
+        )
+
+    safe_name = Path(file.filename or "book").name  # neutralise ../ et les chemins absolus
+    item = await library.import_from_upload(
+        db, user.id, safe_name, content, detected_format=detected_format
+    )
+    return LibraryItemOut.model_validate(item)
+
+
 @router.get("", response_model=list[LibraryItemOut])
 async def list_books(
     user: CurrentUser = Depends(get_current_user),
@@ -81,6 +123,25 @@ async def list_books(
     result = await db.execute(select(LibraryItem).where(LibraryItem.user_id == user.id))
     items = result.scalars().all()
     return [LibraryItemOut.model_validate(item) for item in items]
+
+
+@router.post(
+    "/upload",
+    response_model=LibraryItemOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload d'un ebook",
+)
+async def upload_book(
+    file: UploadFile = File(...),
+    user: CurrentUser = Depends(get_library_user),
+    db: AsyncSession = Depends(get_db),
+) -> LibraryItemOut:
+    """Importe un fichier ebook (multipart `file`) dans la bibliotheque.
+
+    Accepte l'auth utilisateur (Bearer Clerk / `X-Dev-User`) ou la cle
+    gateway (`X-Gateway-Key`) pour un import au nom du proprio.
+    """
+    return await _import_uploaded_file(db, user, file)
 
 
 @router.post("/search", response_model=list[ResultOut])
@@ -189,6 +250,9 @@ async def add_book(
     """Ajoute un livre a la bibliotheque, soit via un connecteur (`source` +
     `result_id`), soit via un fichier deja possede par l'utilisateur
     (`file`, multipart). Exactement l'un des deux doit etre fourni.
+
+    La branche multipart est **deprecated** : preferer `POST /api/v1/books/upload`
+    (conservee 1–2 releases pour compatibilite).
     """
     content_type = request.headers.get("content-type", "")
     data: dict = {}
@@ -203,30 +267,12 @@ async def add_book(
             file = candidate  # type: ignore[assignment]
 
     if file is not None:
-        settings = get_settings()
-        try:
-            content = await read_limited(file, settings.max_fetch_bytes)
-            detected_format = sniff_ebook_format(content)
-        except FileTooLargeError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc)
-            ) from exc
-        except UnknownFormatError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
-            ) from exc
-
-        if await is_known_malicious(content, settings.virustotal_api_key):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="fichier signale comme malveillant par VirusTotal",
-            )
-
-        safe_name = Path(file.filename or "book").name  # neutralise ../ et les chemins absolus
-        item = await library.import_from_upload(
-            db, user.id, safe_name, content, detected_format=detected_format
+        logger.warning(
+            "POST /api/v1/books multipart is deprecated; use POST /api/v1/books/upload"
         )
-        return LibraryItemOut.model_validate(item)
+        response.headers["Deprecation"] = "true"
+        response.headers["Link"] = '</api/v1/books/upload>; rel="successor-version"'
+        return await _import_uploaded_file(db, user, file)
 
     source = data.get("source")
     result_id = data.get("result_id")

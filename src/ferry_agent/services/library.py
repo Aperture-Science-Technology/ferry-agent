@@ -12,15 +12,44 @@ import shutil
 import uuid
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.config import get_settings
 from ferry_agent.connectors import Result
 from ferry_agent.connectors.registry import get_connector
 from ferry_agent.models import LibraryItem, Source, SourceType
+from ferry_agent.services.errors import QUOTA_EXCEEDED_MESSAGE, QuotaExceededError
 
 logger = logging.getLogger(__name__)
+
+
+async def used_storage_bytes(db: AsyncSession, user_id: uuid.UUID) -> int:
+    """Somme des `size_bytes` deja comptes pour l'utilisateur (NULL = 0)."""
+    result = await db.execute(
+        select(func.coalesce(func.sum(LibraryItem.size_bytes), 0)).where(
+            LibraryItem.user_id == user_id
+        )
+    )
+    return int(result.scalar_one_or_none() or 0)
+
+
+async def ensure_storage_quota(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    incoming_bytes: int,
+    *,
+    quota_bytes: int | None = None,
+) -> None:
+    """Refuse l'ajout si `used + incoming` depasse le plafond utilisateur."""
+    quota = (
+        quota_bytes
+        if quota_bytes is not None
+        else get_settings().user_storage_quota_bytes
+    )
+    used = await used_storage_bytes(db, user_id)
+    if used + incoming_bytes > quota:
+        raise QuotaExceededError(QUOTA_EXCEEDED_MESSAGE)
 
 
 async def _get_or_create_source(db: AsyncSession, user_id: uuid.UUID, source_type: SourceType) -> Source:

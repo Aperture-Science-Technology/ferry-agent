@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/app/empty-state";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
+import { UploadDropzone } from "@/components/app/library/upload-dropzone";
 import { Reveal } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
 import { useGatewayJob } from "@/lib/use-gateway-job";
@@ -261,6 +262,16 @@ export function LibraryView({
           onTimeout={handleFetchTimeout}
         />
       ))}
+
+      <div>
+        <div className="mb-4">
+          <h2 className="font-heading text-lg font-medium">{t("uploadTitle")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("uploadHelp")}</p>
+        </div>
+        <UploadDropzone
+          onUploaded={(item) => setItems((prev) => [item, ...prev])}
+        />
+      </div>
 
       <div>
         <div className="mb-4">
