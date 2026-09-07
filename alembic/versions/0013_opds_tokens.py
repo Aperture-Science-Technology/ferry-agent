@@ -18,7 +18,7 @@ from sqlalchemy.dialects import postgresql as pg
 from alembic import op
 
 revision: str = "0013_opds_tokens"
-down_revision: Union[str, None] = "0011_sources_user_type_unique"
+down_revision: Union[str, None] = "0012_device_conversion_profile"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

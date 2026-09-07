@@ -21,13 +21,24 @@ _spec.loader.exec_module(migration)  # type: ignore[union-attr]
 
 def test_revision_chain() -> None:
     assert migration.revision == "0014_encrypt_link_ref"
-    assert migration.down_revision == "0011_sources_user_type_unique"
+    assert migration.down_revision == "0013_opds_tokens"
 
 
 def test_upgrade_requires_fernet_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("FERNET_KEY", raising=False)
-    with pytest.raises(RuntimeError, match="FERNET_KEY"):
+
+    # Base vierge (0 link_ref) : no-op, pas d'erreur
+    mock_conn_empty = MagicMock()
+    mock_conn_empty.execute.return_value.scalar.return_value = 0
+    with patch.object(migration.op, "get_bind", return_value=mock_conn_empty):
         migration.upgrade()
+
+    # Des lignes a rechiffrer : FERNET_KEY requis
+    mock_conn_rows = MagicMock()
+    mock_conn_rows.execute.return_value.scalar.return_value = 1
+    with patch.object(migration.op, "get_bind", return_value=mock_conn_rows):
+        with pytest.raises(RuntimeError, match="FERNET_KEY"):
+            migration.upgrade()
 
 
 def test_upgrade_encrypts_plaintext_rows(monkeypatch: pytest.MonkeyPatch) -> None:
