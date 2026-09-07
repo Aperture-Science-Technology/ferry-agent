@@ -26,6 +26,10 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/app/empty-state";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
+import {
+  LibraryCoverImage,
+  SearchCoverImage,
+} from "@/components/app/library/cover-image";
 import { UploadDropzone } from "@/components/app/library/upload-dropzone";
 import { Reveal } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
@@ -338,17 +342,11 @@ export function LibraryView({
                       return (
                         <TableRow key={resultKey}>
                           <TableCell>
-                            <div className="flex size-10 items-center justify-center overflow-hidden rounded bg-muted">
-                              {result.cover_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={result.cover_url}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <BookOpen className="size-4 text-muted-foreground" />
-                              )}
+                            <div className="relative flex size-10 items-center justify-center overflow-hidden rounded bg-muted">
+                              <SearchCoverImage
+                                coverUrl={result.cover_url}
+                                iconClassName="size-4"
+                              />
                             </div>
                           </TableCell>
                           <TableCell className="font-medium">
@@ -510,19 +508,12 @@ export function LibraryView({
             {displayedItems.map((item) => (
               <Card key={item.id}>
                 <CardContent className="flex flex-1 flex-col gap-3">
-                  <div className="aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
-                    {item.cover_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.cover_url}
-                        alt={item.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <BookOpen className="size-10 text-muted-foreground" />
-                      </div>
-                    )}
+                  <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
+                    <LibraryCoverImage
+                      itemId={item.id}
+                      hasCover={Boolean(item.cover_url)}
+                      alt={item.title}
+                    />
                   </div>
                   <div>
                     <p className="line-clamp-2 font-medium">{item.title}</p>

@@ -37,13 +37,13 @@ class Result(BaseModel):
     guid: str | None = None
     seeders: int | None = None
     isbn: str | None = None
-
-
-class ResultOut(Result):
     cover_url: str | None = None
     language: str | None = None
     description: str | None = None
     page_count: int | None = None
+
+
+class ResultOut(Result):
     owned: bool = False
 
 
