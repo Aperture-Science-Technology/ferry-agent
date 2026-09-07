@@ -363,15 +363,14 @@
   },
   "cloudLink": {
     "title": "Link a cloud account",
-    "description": "Open the authorization page, then paste the code shown.",
+    "description": "A window opens so you can authorize Ferry. Come back here afterwards.",
+    "waiting": "A window opens so you can authorize Ferry. Come back here afterwards.",
+    "waitingShort": "Waiting for the link…",
     "provider": "Provider",
-    "openAuth": "Open authorization page",
-    "authCode": "Authorization code",
-    "codePlaceholder": "Paste the code here",
-    "link": "Link",
+    "openAuth": "Authorize with provider",
     "toastNotConfigured": "{provider} isn't set up yet.",
-    "toastLinked": "Cloud account linked.",
-    "toastCodeFailed": "That code couldn't be used. Please try again."
+    "toastLinked": "Linking succeeded.",
+    "toastFailed": "Linking did not complete. Please try again."
   },
   "access": {
     "createLink": "Add access",

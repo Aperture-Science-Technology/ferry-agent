@@ -4,7 +4,8 @@ son cloud sur sa liseuse (Kobo haut de gamme), puis tape "Sync".
 
 Les credentials OAuth (client_id/secret) sont de la config runtime (env,
 cf. config.py) ; ce module ne stocke jamais de secret en dur. `Device.link_ref`
-contient le JSON produit par le linking OAuth (voir api/devices.py) :
+contient le JSON produit par le linking OAuth (voir api/devices.py),
+**chiffre au repos** via Fernet (`services.crypto`) :
 - Dropbox : `{"provider": "dropbox", "token": "<access_token>"}`
 - Drive   : `{"provider": "drive", "refresh_token": "<refresh_token>"}`
   (l'access_token Drive expire vite ; on repart toujours du refresh_token).
@@ -18,6 +19,7 @@ from urllib.parse import urlencode
 import httpx
 
 from ferry_agent.config import get_settings
+from ferry_agent.services import crypto
 
 logger = logging.getLogger(__name__)
 
@@ -38,17 +40,18 @@ class CloudLinkError(Exception):
 # --- URLs d'autorisation --------------------------------------------------
 
 
-def dropbox_authorize_url(client_id: str, redirect_uri: str) -> str:
+def dropbox_authorize_url(client_id: str, redirect_uri: str, state: str) -> str:
     params = {
         "client_id": client_id,
         "token_access_type": "offline",
         "response_type": "code",
         "redirect_uri": redirect_uri,
+        "state": state,
     }
     return f"{DROPBOX_AUTHORIZE_URL}?{urlencode(params)}"
 
 
-def drive_authorize_url(client_id: str, redirect_uri: str) -> str:
+def drive_authorize_url(client_id: str, redirect_uri: str, state: str) -> str:
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -56,6 +59,7 @@ def drive_authorize_url(client_id: str, redirect_uri: str) -> str:
         "response_type": "code",
         "access_type": "offline",
         "prompt": "consent",
+        "state": state,
     }
     return f"{GOOGLE_AUTHORIZE_URL}?{urlencode(params)}"
 
@@ -188,11 +192,33 @@ async def upload_to_drive(
 # --- Selection par provider -----------------------------------------------
 
 
-def parse_link_ref(link_ref_json: str) -> dict[str, str]:
+def serialize_link_ref(link_ref: dict[str, str]) -> str:
+    """Serialise et chiffre le JSON link_ref pour stockage en base."""
+    plaintext = json.dumps(link_ref, separators=(",", ":"))
     try:
-        data = json.loads(link_ref_json)
+        return crypto.encrypt(plaintext)
+    except crypto.CryptoError as exc:
+        raise CloudLinkError("chiffrement link_ref impossible (FERNET_KEY manquante)") from exc
+
+
+def parse_link_ref(link_ref_json: str) -> dict[str, str]:
+    """Dechiffre (si besoin) et parse `Device.link_ref`.
+
+    Accepte encore un JSON en clair (lignes pre-migration). Un jeton
+    indechiffrable ou un JSON corrompu leve `CloudLinkError` — l'API
+    degrade en `cloud_linked=false`, jamais en 500.
+    """
+    raw = link_ref_json
+    try:
+        raw = crypto.decrypt(link_ref_json)
+    except crypto.CryptoError:
+        # Pas de cle, cle incorrecte, ou valeur legacy en clair.
+        pass
+
+    try:
+        data = json.loads(raw)
     except (TypeError, json.JSONDecodeError) as exc:
-        raise CloudLinkError("link_ref invalide (JSON illisible)") from exc
+        raise CloudLinkError("link_ref invalide (JSON illisible ou chiffre illisible)") from exc
     if data.get("provider") not in ("dropbox", "drive"):
         raise CloudLinkError(f"provider cloud inconnu: {data.get('provider')!r}")
     return data
