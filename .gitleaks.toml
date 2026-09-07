@@ -1,0 +1,18 @@
+# W-07: secrets scan config for CI (see .github/workflows/secrets.yml).
+# Extends the built-in rule set; only adds a narrow allowlist for a known
+# historical leak that has been (or is being) revoked in Clerk.
+
+title = "ferry-agent"
+
+[extend]
+useDefault = true
+
+# Temporary allowlist for the Clerk keyless claimToken that was committed in
+# web/.clerk/keyless.json (commit 3bc0676). True mitigation is Clerk-side
+# revocation (GLaDOS / ops). After revocation is confirmed, delete this
+# [[allowlists]] block entirely.
+[[allowlists]]
+description = "W-07 temporary: revoked Clerk keyless claimToken (historical leak in web/.clerk/keyless.json)"
+regexes = [
+  '''v3udjqh96vdq3kbqi6jhfo2ny4aekoy1pqv4geqj''',
+]
