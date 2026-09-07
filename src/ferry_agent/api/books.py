@@ -10,10 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import CurrentUser, get_current_user
+from ferry_agent.api.deliveries import _DELIVERY_LIST_COLS, build_delivery_out
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
 from ferry_agent.models import (
     DeliveryJob,
+    Device,
     Gateway,
     GatewayJobStatus,
     GatewayJobType,
@@ -344,9 +346,19 @@ async def list_book_deliveries(
 ) -> list[DeliveryOut]:
     await _get_owned_item(db, item_id, user)
     result = await db.execute(
-        select(DeliveryJob)
-        .join(LibraryItem, DeliveryJob.library_item_id == LibraryItem.id)
-        .where(DeliveryJob.library_item_id == item_id, LibraryItem.user_id == user.id)
+        select(*_DELIVERY_LIST_COLS)
+        .join(Device, DeliveryJob.device_id == Device.id)
+        .outerjoin(LibraryItem, DeliveryJob.library_item_id == LibraryItem.id)
+        .where(DeliveryJob.library_item_id == item_id)
     )
-    jobs = result.scalars().all()
-    return [DeliveryOut.model_validate(job) for job in jobs]
+    return [
+        build_delivery_out(
+            job,
+            item_title=title,
+            item_author=author,
+            device_name=name,
+            device_brand=brand,
+            device_model=model,
+        )
+        for job, title, author, name, brand, model in result.all()
+    ]

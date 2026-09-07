@@ -401,18 +401,20 @@
     "emptyTitle": "Aucun envoi",
     "emptyDescription": "Envoyez un livre depuis votre bibliothèque pour suivre vos envois ici.",
     "emptyUnavailable": "Impossible de charger vos envois pour le moment. Réessayez un peu plus tard.",
+    "colBook": "Livre",
+    "colDevice": "Appareil",
     "colStatus": "Statut",
     "colMethod": "Méthode",
-    "colCreated": "Créé",
+    "colCreated": "Envoyé",
     "colDelivered": "Arrivé",
-    "colError": "Erreur",
+    "colError": "Échec",
     "colAction": "Action",
     "track": "Suivre",
     "statuses": {
       "queued": "en file",
       "sent": "envoyé",
       "delivered": "arrivé",
-      "failed": "échoué"
+      "failed": "échec"
     }
   },
   "deliveryDetail": {
