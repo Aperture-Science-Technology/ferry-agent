@@ -57,7 +57,7 @@ function minutesUntil(expiresAt: string | null | undefined, now: number): number
 
 function mapJobError(
   type: GatewayJobType,
-  error: string | null,
+  error: string | null | undefined,
   t: AccessTranslations
 ): string {
   if (error) {

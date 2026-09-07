@@ -42,8 +42,8 @@ export function useGatewayJob(jobId: string | null) {
 
     const apply = (data: GatewayJobStatusOut) => {
       setStatus(data.status);
-      setLibraryItemId(data.library_item_id);
-      setError(data.error);
+      setLibraryItemId(data.library_item_id ?? null);
+      setError(data.error ?? null);
       setAttempts(data.attempts ?? 0);
       return data.status === "done" || data.status === "failed";
     };

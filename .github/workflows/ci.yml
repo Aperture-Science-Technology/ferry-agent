@@ -128,6 +128,44 @@ jobs:
         continue-on-error: true
         run: ruff format --check .
 
+  # W-34 — OpenAPI→TS freshness + i18n key symmetry (fr/en).
+  types-freshness:
+    name: Types freshness + i18n
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Regenerate API types
+        working-directory: web
+        run: npm run gen:types
+
+      - name: Fail if generated types drifted
+        run: git diff --exit-code -- openapi.json web/lib/api-types.generated.ts
+
+      - name: Check i18n key symmetry (fr/en)
+        working-directory: web
+        run: npm run check:i18n
+
   secrets-scan:
     name: Secrets scan (gitleaks)
     runs-on: ubuntu-latest
