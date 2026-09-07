@@ -49,9 +49,11 @@ docker compose -f compose.yaml up -d
 
 | Fichier | Rôle |
 | --- | --- |
-| `compose.yaml` | Stack all-in-one |
+| `compose.yaml` | Stack all-in-one (`./downloads` + `./watch` montés) |
 | `install.sh` | Assistant d’install (load local / pull / compose) |
 | `ferry-gateway.command.tmpl` | Gabarit lanceur macOS (C2b) |
 | `ferry-gateway.bat.tmpl` | Gabarit lanceur Windows (C3) |
+
+Le dossier `./watch` (monté sur `/watch`) reçoit les fichiers à importer : posez un fichier dedans, il arrive tout seul dans votre bibliothèque.
 
 Les **tarballs d’image** ne sont **jamais** servis sous `/bundle` (trop volumineux) : les télécharger depuis GitHub Releases. Aucun `ferry-agent-bundle.tar.gz` n’est publié.

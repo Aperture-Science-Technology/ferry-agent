@@ -215,7 +215,18 @@
     "searchHelp": "Type a title or author. Search covers all your access points and partner libraries (Project Gutenberg, Standard Ebooks).",
     "searchHelpMatch": "Search matches on title and author, with no guaranteed approximate matching.",
     "searching": "Searching…",
-    "noResultsHint": "No results. Check your spelling or try a different term."
+    "noResultsHint": "No results. Check your spelling or try a different term.",
+    "uploadTitle": "Add a book from your files",
+    "uploadHelp": "Drop a book here to add it to your library.",
+    "uploadDropHint": "Drop a book here, or click to choose one.",
+    "uploadFormatsHint": "Accepted formats: EPUB, PDF, MOBI, AZW3 (200 MB max).",
+    "uploadDone": "Done",
+    "uploadFailed": "Failed",
+    "uploadErrorTooLarge": "This file is too large (maximum 200 MB).",
+    "uploadErrorBadFormat": "This file is not a recognized book. Accepted formats: EPUB, PDF, MOBI, AZW3.",
+    "uploadErrorQuota": "Your storage is full. Delete some books or choose a smaller file.",
+    "uploadErrorGeneric": "Couldn't add this file. Please try again.",
+    "toastUploaded": "“{title}” was added to your library."
   },
   "deliverDialog": {
     "title": "Send “{title}”",
@@ -386,7 +397,8 @@
     "jobStatusActive": "In progress",
     "jobStatusDone": "Done",
     "jobStatusFailed": "Failed",
-    "attemptOf": "try {current} of {max}"
+    "attemptOf": "try {current} of {max}",
+    "watchFolderHint": "Drop a file in this folder and it will appear in your library on its own."
   },
   "createAccess": {
     "title": "Create a gateway",

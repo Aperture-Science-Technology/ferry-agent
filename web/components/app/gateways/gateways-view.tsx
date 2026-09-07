@@ -148,6 +148,7 @@ export function GatewaysView({
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">{t("watchFolderHint")}</p>
       <div className="flex justify-end">
         <Button onClick={() => setCreateOpen(true)}>
           <Plus />

@@ -215,7 +215,18 @@
     "searchHelp": "Tapez un titre ou un auteur. La recherche s'applique à tous vos accès et aux bibliothèques partenaires (Project Gutenberg, Standard Ebooks).",
     "searchHelpMatch": "La recherche porte sur le titre et l'auteur, sans correspondance approximative garantie.",
     "searching": "Recherche en cours…",
-    "noResultsHint": "Aucun résultat. Vérifiez l'orthographe ou changez de terme."
+    "noResultsHint": "Aucun résultat. Vérifiez l'orthographe ou changez de terme.",
+    "uploadTitle": "Ajouter un livre depuis vos fichiers",
+    "uploadHelp": "Déposez un livre ici pour l'ajouter à votre bibliothèque.",
+    "uploadDropHint": "Déposez un livre ici, ou cliquez pour le choisir.",
+    "uploadFormatsHint": "Formats acceptés : EPUB, PDF, MOBI, AZW3 (200 Mo max).",
+    "uploadDone": "Terminé",
+    "uploadFailed": "Échec",
+    "uploadErrorTooLarge": "Ce fichier est trop volumineux (maximum 200 Mo).",
+    "uploadErrorBadFormat": "Ce fichier n'est pas un livre reconnu. Formats acceptés : EPUB, PDF, MOBI, AZW3.",
+    "uploadErrorQuota": "Votre espace est plein. Supprimez des livres ou choisissez un fichier plus léger.",
+    "uploadErrorGeneric": "Impossible d'ajouter ce fichier. Réessayez.",
+    "toastUploaded": "« {title} » a été ajouté à votre bibliothèque."
   },
   "deliverDialog": {
     "title": "Envoyer « {title} »",
@@ -386,7 +397,8 @@
     "jobStatusActive": "En cours",
     "jobStatusDone": "Terminé",
     "jobStatusFailed": "Échec",
-    "attemptOf": "essai {current} sur {max}"
+    "attemptOf": "essai {current} sur {max}",
+    "watchFolderHint": "Posez un fichier dans ce dossier, il arrive tout seul dans votre bibliothèque."
   },
   "createAccess": {
     "title": "Créer une passerelle",

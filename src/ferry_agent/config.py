@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     temp_dir: str = "./data/tmp"
 
     max_fetch_bytes: int = 200 * 1024 * 1024
+    # Plafond de stockage bibliotheque par utilisateur (defaut 5 Go).
+    user_storage_quota_bytes: int = 5 * 1024 * 1024 * 1024
     pairing_token_ttl_minutes: int = 15
     gateway_online_seconds: int = 60
     gateway_search_wait_seconds: float = 15.0
