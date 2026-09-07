@@ -187,7 +187,16 @@ async def list_devices() -> str:
         return "Aucune liseuse enregistrée."
     lines = []
     for d in devices:
-        linked = "✓ cloud lié" if d.get("link_ref") else "✗ cloud non lié"
+        provider = d.get("cloud_provider")
+        if d.get("cloud_linked"):
+            if provider == "dropbox":
+                linked = "✓ Lié à Dropbox"
+            elif provider == "drive":
+                linked = "✓ Lié à Google Drive"
+            else:
+                linked = "✓ Lié"
+        else:
+            linked = "✗ Non lié"
         lines.append(
             f"**{d.get('brand', '?')} {d.get('model') or ''}** — "
             f"tier: {d.get('delivery_tier')} | {linked} | id: {d['id']}"

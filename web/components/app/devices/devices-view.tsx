@@ -114,12 +114,17 @@ export function DevicesView({
                     <Badge variant="secondary">{t(`tiers.${device.delivery_tier}`)}</Badge>
                   </TableCell>
                   <TableCell>
-                    {device.link_ref ? (
+                    {device.cloud_linked ? (
                       <Badge variant="outline" className="gap-1">
-                        <Check className="size-3" /> {t("linked")}
+                        <Check className="size-3" />
+                        {device.cloud_provider === "dropbox"
+                          ? t("linkedDropbox")
+                          : device.cloud_provider === "drive"
+                            ? t("linkedDrive")
+                            : t("linked")}
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground">{tCommon("dash")}</span>
+                      <span className="text-muted-foreground">{t("notLinked")}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">

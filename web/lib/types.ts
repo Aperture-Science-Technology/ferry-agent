@@ -50,7 +50,8 @@ export interface Device {
   brand: DeviceBrand;
   model: string | null;
   delivery_tier: DeliveryTier;
-  link_ref: string | null;
+  cloud_provider: "dropbox" | "drive" | null;
+  cloud_linked: boolean;
   last_synced_at: string | null;
 }
 

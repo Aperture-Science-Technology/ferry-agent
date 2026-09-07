@@ -132,7 +132,7 @@ async def test_list_devices_sends_correct_request(monkeypatch) -> None:
         return httpx.Response(
             200,
             json=[{"id": "aaa-111", "brand": "kindle", "model": "Paperwhite",
-                   "delivery_tier": "A", "link_ref": None}],
+                   "delivery_tier": "A", "cloud_provider": None, "cloud_linked": False}],
         )
 
     monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))

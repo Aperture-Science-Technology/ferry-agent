@@ -119,7 +119,9 @@ async def test_link_callback_stores_dropbox_token(monkeypatch: pytest.MonkeyPatc
     )
 
     assert json.loads(device.link_ref) == {"provider": "dropbox", "token": "dbx-access-tok"}
-    assert out.link_ref == device.link_ref
+    assert out.cloud_linked is True
+    assert out.cloud_provider == "dropbox"
+    assert "dbx-access-tok" not in out.model_dump_json()
 
 
 async def test_link_callback_stores_drive_refresh_token(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -140,7 +142,60 @@ async def test_link_callback_stores_drive_refresh_token(monkeypatch: pytest.Monk
     )
 
     assert json.loads(device.link_ref) == {"provider": "drive", "refresh_token": "goog-refresh"}
-    assert out.link_ref == device.link_ref
+    assert out.cloud_linked is True
+    assert out.cloud_provider == "drive"
+    assert "goog-refresh" not in out.model_dump_json()
+
+
+def test_get_devices_http_does_not_leak_dropbox_token() -> None:
+    """GET /api/v1/devices : le corps brut ne doit contenir nulle part le token."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from fastapi.testclient import TestClient
+
+    from ferry_agent.main import app
+    from tests.fakes import clear_app_deps, override_app_deps
+
+    token_value = "sl.BxxxxxxxxSECRETTOK"
+    device = make_device(
+        name="Ma Kobo",
+        link_ref=json.dumps({"provider": "dropbox", "token": token_value}),
+    )
+
+    async def fake_db():
+        db = AsyncMock()
+
+        class FakeResult:
+            def scalars(self):
+                return MagicMock(all=MagicMock(return_value=[device]))
+
+        db.execute = AsyncMock(return_value=FakeResult())
+        yield db
+
+    override_app_deps(fake_db, user_id=device.user_id, email="reader@example.test")
+    try:
+        with TestClient(app) as client:
+            response = client.get("/api/v1/devices")
+        assert response.status_code == 200
+        assert token_value not in response.text
+        assert "sl.B" not in response.text
+        assert "link_ref" not in response.text
+        data = response.json()
+        assert data[0]["cloud_linked"] is True
+        assert data[0]["cloud_provider"] == "dropbox"
+    finally:
+        clear_app_deps()
+
+
+async def test_list_devices_unlinked_reports_not_linked() -> None:
+    device = make_device(link_ref=None)
+    user = CurrentUser(id=device.user_id, email="reader@example.test")
+    db = FakeSession([[device]])
+
+    out = await devices.list_devices(user, db)
+
+    assert out[0].cloud_linked is False
+    assert out[0].cloud_provider is None
 
 
 async def test_link_callback_502_on_exchange_error(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, RootModel
 
@@ -191,7 +192,8 @@ class DeviceOut(BaseModel):
     brand: DeviceBrand
     model: str | None
     delivery_tier: DeliveryTier
-    link_ref: str | None
+    cloud_provider: Literal["dropbox", "drive"] | None = None
+    cloud_linked: bool = False
     last_synced_at: datetime | None
 
 

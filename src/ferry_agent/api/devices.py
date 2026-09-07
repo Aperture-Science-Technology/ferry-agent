@@ -4,6 +4,7 @@ cloud (tier B : Dropbox / Google Drive, voir services/cloud_links.py).
 
 import json
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -40,6 +41,31 @@ router = APIRouter(prefix="/api/v1/devices", tags=["devices"])
 _PROVIDERS = ("dropbox", "drive")
 
 
+def _device_out(device: Device) -> DeviceOut:
+    """Expose l'état de liaison cloud sans jamais renvoyer le JSON link_ref (tokens)."""
+    cloud_provider: Literal["dropbox", "drive"] | None = None
+    cloud_linked = False
+    if device.link_ref:
+        try:
+            parsed = cloud_links.parse_link_ref(device.link_ref)
+            provider = parsed["provider"]
+            if provider in ("dropbox", "drive"):
+                cloud_provider = provider
+                cloud_linked = True
+        except cloud_links.CloudLinkError:
+            pass
+    return DeviceOut(
+        id=device.id,
+        name=device.name,
+        brand=device.brand,
+        model=device.model,
+        delivery_tier=device.delivery_tier,
+        cloud_provider=cloud_provider,
+        cloud_linked=cloud_linked,
+        last_synced_at=device.last_synced_at,
+    )
+
+
 @router.post("", response_model=DeviceOut, status_code=status.HTTP_201_CREATED)
 async def create_device(
     payload: DeviceCreate,
@@ -58,7 +84,7 @@ async def create_device(
     db.add(device)
     await db.commit()
     await db.refresh(device)
-    return DeviceOut.model_validate(device)
+    return _device_out(device)
 
 
 @router.get("", response_model=list[DeviceOut])
@@ -68,7 +94,7 @@ async def list_devices(
 ) -> list[DeviceOut]:
     result = await db.execute(select(Device).where(Device.user_id == user.id))
     devices = result.scalars().all()
-    return [DeviceOut.model_validate(d) for d in devices]
+    return [_device_out(d) for d in devices]
 
 
 async def _get_owned_device(db: AsyncSession, device_id: uuid.UUID, user: CurrentUser) -> Device:
@@ -103,7 +129,7 @@ async def update_device(
 
     await db.commit()
     await db.refresh(device)
-    return DeviceOut.model_validate(device)
+    return _device_out(device)
 
 
 @router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -221,4 +247,4 @@ async def link_callback(
     device.link_ref = json.dumps(link_ref)
     await db.commit()
     await db.refresh(device)
-    return DeviceOut.model_validate(device)
+    return _device_out(device)
