@@ -10,6 +10,7 @@ from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.db import get_db
 from ferry_agent.models import Source
 from ferry_agent.schemas import SourceOut, SourceUpdate
+from ferry_agent.services.sources import ensure_default_sources
 
 router = APIRouter(prefix="/api/v1/sources", tags=["sources"])
 
@@ -19,6 +20,7 @@ async def list_sources(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[SourceOut]:
+    await ensure_default_sources(db, user.id)
     result = await db.execute(select(Source).where(Source.user_id == user.id))
     sources = result.scalars().all()
     return [SourceOut.model_validate(s) for s in sources]

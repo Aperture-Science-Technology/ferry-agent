@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -117,6 +117,7 @@ class Device(Base):
 
 class Source(Base):
     __tablename__ = "sources"
+    __table_args__ = (UniqueConstraint("user_id", "type", name="uq_sources_user_id_type"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
     user_id: Mapped[uuid.UUID | None] = mapped_column(
