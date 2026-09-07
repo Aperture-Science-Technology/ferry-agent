@@ -103,7 +103,7 @@ async def test_fetch_cap_and_magic_bytes() -> None:
     assert sniff_ebook_format(b"%PDF-1.7") == "pdf"
     assert sniff_ebook_format(b"PK\x03\x04epub") == "epub"
     assert sniff_ebook_format(bytes(60) + b"BOOKMOBI") == "mobi"
-    with pytest.raises(ValueError, match="non reconnu"):
+    with pytest.raises(ValueError, match="livre reconnu"):
         sniff_ebook_format(b"not-an-ebook")
 
 

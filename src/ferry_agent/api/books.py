@@ -3,6 +3,7 @@
 import asyncio
 import json
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import select
@@ -32,6 +33,9 @@ from ferry_agent.schemas import (
 )
 from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services import library
+from ferry_agent.services.errors import FileTooLargeError, UnknownFormatError
+from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
+from ferry_agent.services.virustotal import is_known_malicious
 
 router = APIRouter(prefix="/api/v1/books", tags=["books"])
 
@@ -197,8 +201,29 @@ async def add_book(
             file = candidate  # type: ignore[assignment]
 
     if file is not None:
-        content = await file.read()
-        item = await library.import_from_upload(db, user.id, file.filename or "book.epub", content)
+        settings = get_settings()
+        try:
+            content = await read_limited(file, settings.max_fetch_bytes)
+            detected_format = sniff_ebook_format(content)
+        except FileTooLargeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc)
+            ) from exc
+        except UnknownFormatError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+            ) from exc
+
+        if await is_known_malicious(content, settings.virustotal_api_key):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="fichier signale comme malveillant par VirusTotal",
+            )
+
+        safe_name = Path(file.filename or "book").name  # neutralise ../ et les chemins absolus
+        item = await library.import_from_upload(
+            db, user.id, safe_name, content, detected_format=detected_format
+        )
         return LibraryItemOut.model_validate(item)
 
     source = data.get("source")

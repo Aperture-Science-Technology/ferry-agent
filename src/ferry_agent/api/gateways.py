@@ -26,8 +26,10 @@ from ferry_agent.schemas import (
 )
 from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services import library
+from ferry_agent.services.errors import FileTooLargeError, UnknownFormatError
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 from ferry_agent.services.virustotal import is_known_malicious
+
 
 router = APIRouter(prefix="/api/v1/gateways", tags=["gateways"])
 
@@ -147,16 +149,20 @@ async def submit_fetch_result(
     try:
         content = await read_limited(file, settings.max_fetch_bytes)
         detected_format = sniff_ebook_format(content)
-    except ValueError as exc:
+    except FileTooLargeError as exc:
         job.status = GatewayJobStatus.failed
         job.result_ref = str(exc)
         await db.commit()
-        code = (
-            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
-            if "volumineux" in str(exc)
-            else status.HTTP_422_UNPROCESSABLE_ENTITY
-        )
-        raise HTTPException(status_code=code, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc)
+        ) from exc
+    except UnknownFormatError as exc:
+        job.status = GatewayJobStatus.failed
+        job.result_ref = str(exc)
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
 
     if await is_known_malicious(content, settings.virustotal_api_key):
         job.status = GatewayJobStatus.failed

@@ -93,7 +93,12 @@ async def import_from_connector(
 
 
 async def import_from_upload(
-    db: AsyncSession, user_id: uuid.UUID, filename: str, content: bytes, title: str | None = None
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    filename: str,
+    content: bytes,
+    title: str | None = None,
+    detected_format: str | None = None,
 ) -> LibraryItem:
     """Persiste un fichier deja fourni par l'utilisateur (upload) dans la bibliotheque."""
     dest = _library_storage_path(filename)
@@ -102,12 +107,17 @@ async def import_from_upload(
     source_type = SourceType.upload
     source = await _get_or_create_source(db, user_id, source_type)
 
+    fmt = detected_format
+    if fmt == "mobi" and Path(filename).suffix.lower() == ".azw3":
+        fmt = "azw3"
+    original_format = fmt if fmt else (Path(filename).suffix.lstrip(".") or "epub")
+
     item = LibraryItem(
         user_id=user_id,
         title=title or Path(filename).stem,
         author="",
         source_id=source.id,
-        original_format=Path(filename).suffix.lstrip(".") or "epub",
+        original_format=original_format,
         storage_path=str(dest),
         size_bytes=len(content),
     )
