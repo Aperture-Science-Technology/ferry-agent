@@ -1,0 +1,27 @@
+#!/bin/bash
+# macOS double-click launcher template (canal C2b).
+# install.sh / l'opérateur remplacent les placeholders avant usage.
+cd "$(dirname "$0")" || exit 1
+
+export PAIRING_TOKEN="__PAIRING_TOKEN__"
+export GATEWAY_KEY="__GATEWAY_KEY__"
+export GATEWAY_IMAGE_TAG="__GATEWAY_IMAGE_TAG__"
+export PLATFORM_URL="${PLATFORM_URL:-https://ferry-agent.aperture-agency.org}"
+
+if ! command -v docker >/dev/null 2>&1; then
+  osascript -e 'display alert "Ferry Gateway" message "Docker est introuvable. Installez Docker Desktop ou OrbStack."' 2>/dev/null || \
+    echo "Docker introuvable." >&2
+  read -r -p "Appuyez sur Entrée pour fermer…" _
+  exit 1
+fi
+
+docker compose -f "$(dirname "$0")/compose.yaml" up -d
+status=$?
+if [[ "${status}" -ne 0 ]]; then
+  echo "Échec docker compose (code ${status})." >&2
+  read -r -p "Appuyez sur Entrée pour fermer…" _
+  exit "${status}"
+fi
+
+echo "Ferry Gateway démarré. Prowlarr : http://127.0.0.1:9696"
+read -r -p "Appuyez sur Entrée pour fermer…" _
