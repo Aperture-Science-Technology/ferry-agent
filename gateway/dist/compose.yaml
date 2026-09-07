@@ -1,0 +1,31 @@
+# Ferry Agent gateway — all-in-one (Prowlarr + Transmission + agent).
+# Prefer an image already loaded via `docker load` from a GitHub Release
+# tarball (canal C2). Image tags must match the release version.
+name: ferry-gateway
+
+services:
+  gateway:
+    image: ghcr.io/aperture-science-technology/ferry-agent/gateway:${GATEWAY_IMAGE_TAG:-latest}
+    container_name: ferry-gateway
+    restart: unless-stopped
+    environment:
+      PAIRING_TOKEN: ${PAIRING_TOKEN:-}
+      GATEWAY_KEY: ${GATEWAY_KEY:-}
+      GATEWAY_ID: ${GATEWAY_ID:-}
+      PLATFORM_URL: ${PLATFORM_URL:-https://ferry-agent.aperture-agency.org}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+    ports:
+      - "${PROWLARR_HOST_PORT:-9696}:9696"
+      - "${PEER_HOST_PORT:-51413}:51413"
+      - "${PEER_HOST_PORT:-51413}:51413/udp"
+    volumes:
+      - "${DOWNLOAD_PATH:-./downloads}:/downloads"
+      - ferry-gw-config:/config
+      - ferry-gw-state:/state
+
+volumes:
+  ferry-gw-config:
+  ferry-gw-state:

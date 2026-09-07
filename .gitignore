@@ -7,3 +7,5 @@ data/
 *.egg-info/
 build/
 dist/
+!gateway/dist/
+!gateway/dist/**
