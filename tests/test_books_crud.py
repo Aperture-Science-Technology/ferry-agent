@@ -243,7 +243,12 @@ class TestBookDeliveries:
             async def fake_execute(query):
                 result = MagicMock()
                 result.scalar_one_or_none = MagicMock(return_value=item)
-                result.scalars = MagicMock(return_value=MagicMock(all=MagicMock(return_value=jobs)))
+                # list_book_deliveries lit result.all() (tuples job + enrichissements)
+                result.all = MagicMock(
+                    return_value=[
+                        (job, item.title, item.author, "Kindle test", None, None) for job in jobs
+                    ]
+                )
                 return result
 
             db.execute = AsyncMock(side_effect=fake_execute)
@@ -257,6 +262,8 @@ class TestBookDeliveries:
             data = resp.json()
             assert len(data) == 2
             assert all(d["library_item_id"] == str(item.id) for d in data)
+            assert all(d["item_title"] == item.title for d in data)
+            assert all(d["device_label"] == "Kindle test" for d in data)
         finally:
             clear_app_deps()
 

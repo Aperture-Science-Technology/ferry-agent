@@ -224,7 +224,7 @@ class DeliveryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    library_item_id: uuid.UUID
+    library_item_id: uuid.UUID | None = None
     device_id: uuid.UUID
     status: DeliveryStatus
     method: DeliveryMethod
@@ -232,3 +232,8 @@ class DeliveryOut(BaseModel):
     delivered_at: datetime | None
     error: str | None
     download_url: str | None = None
+    # Enrichis pour l'UI (jointure LibraryItem / Device, avec repli sur les
+    # colonnes denormalisees de DeliveryJob si le livre a ete supprime).
+    item_title: str | None = None
+    item_author: str | None = None
+    device_label: str | None = None

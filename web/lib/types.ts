@@ -70,7 +70,7 @@ export interface GatewayCredentials {
 
 export interface DeliveryJob {
   id: string;
-  library_item_id: string;
+  library_item_id: string | null;
   device_id: string;
   status: DeliveryStatus;
   method: DeliveryMethod;
@@ -78,6 +78,9 @@ export interface DeliveryJob {
   delivered_at: string | null;
   error: string | null;
   download_url?: string | null;
+  item_title?: string | null;
+  item_author?: string | null;
+  device_label?: string | null;
 }
 
 /** Mode de livraison candidat pour un device donne, avec sa disponibilite
