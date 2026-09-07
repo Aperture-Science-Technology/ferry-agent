@@ -1,6 +1,6 @@
 """Tests pour la suppression definitive des accès gateway et des devices :
-- DELETE /api/v1/gateways/{gateway_id}  (purge les GatewayJob lies)
-- DELETE /api/v1/devices/{device_id}    (purge les DeliveryJob lies)
+- DELETE /api/v1/gateways/{gateway_id}  (GatewayJob en CASCADE DB)
+- DELETE /api/v1/devices/{device_id}    (DeliveryJob / ShortCode en CASCADE DB)
 
 Toutes les routes sont scopees par user_id (404 si la ressource appartient a
 un autre utilisateur), suivant le pattern deja utilise par api/books.py.
@@ -58,15 +58,13 @@ def _override(fake_db):
 
 
 class TestDeleteGatewayService:
-    async def test_purges_jobs_then_gateway(self) -> None:
+    async def test_deletes_gateway(self) -> None:
         gateway = _fake_gateway()
         db = FakeSession()
 
         await gateway_service.delete_gateway(db, gateway)
 
-        assert len(db.statements) == 1
-        compiled = str(db.statements[0])
-        assert "gateway_jobs" in compiled
+        assert db.statements == []
         assert db.deleted == [gateway]
         assert db.commits == 1
 
@@ -140,15 +138,13 @@ class TestDeleteGatewayApi:
 
 
 class TestDeleteDeviceService:
-    async def test_purges_delivery_jobs_then_device(self) -> None:
+    async def test_deletes_device(self) -> None:
         device = _fake_device()
         db = FakeSession()
 
         await device_service.delete_device(db, device)
 
-        assert len(db.statements) == 1
-        compiled = str(db.statements[0])
-        assert "delivery_jobs" in compiled
+        assert db.statements == []
         assert db.deleted == [device]
         assert db.commits == 1
 

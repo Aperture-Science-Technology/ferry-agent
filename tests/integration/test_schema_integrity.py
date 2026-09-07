@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from sqlalchemy import create_engine, inspect
@@ -20,11 +19,10 @@ IRREVERSIBLE_ENUM_ADD_VALUE_REVISIONS = (
 )
 
 # Allowlist nominative des FK autorisees a omettre ON DELETE, avec la
-# raison metier. Vide aujourd'hui : aucune des FK des 8 migrations
-# (0001–0008) ne declare `ondelete`. W-02 posera CASCADE/SET NULL et
-# de-xfailera ce test. Format : (table, colonne_contrainte) -> raison.
+# raison metier. Vide : toutes les FK declarees en 0009 ont un ondelete.
+# Format : (table, colonne_contrainte) -> raison.
 ONDELETE_ALLOWLIST: dict[tuple[str, str], str] = {
-    # Exemple futur : ("sources", "user_id"): "source globale, user optionnel",
+    # Exemple : ("sources", "user_id"): "source globale, user optionnel",
 }
 
 
@@ -63,10 +61,6 @@ def test_models_match_migrations(migrated_db: str, to_sync_url) -> None:
     assert diff == [], f"models.py diverge des migrations Alembic: {diff!r}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="W-02: aucune FK des migrations 0001-0008 ne declare ON DELETE",
-)
 def test_all_foreign_keys_declare_ondelete(migrated_db: str, to_sync_url) -> None:
     """Chaque FK doit avoir un `ondelete` explicite, hors allowlist nommee."""
     engine = create_engine(to_sync_url(migrated_db))

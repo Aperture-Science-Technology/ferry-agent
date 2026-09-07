@@ -43,7 +43,8 @@ async def create_delivery(
             LibraryItem.id == payload.library_item_id, LibraryItem.user_id == user.id
         )
     )
-    if item_result.scalar_one_or_none() is None:
+    item = item_result.scalar_one_or_none()
+    if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="library_item introuvable")
 
     device_result = await db.execute(
@@ -60,9 +61,11 @@ async def create_delivery(
         )
 
     job = DeliveryJob(
-        library_item_id=payload.library_item_id,
+        library_item_id=item.id,
         device_id=payload.device_id,
         method=payload.method,
+        item_title=item.title,
+        item_author=item.author,
     )
     db.add(job)
     await db.commit()

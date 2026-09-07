@@ -104,7 +104,9 @@ class Device(Base):
     __tablename__ = "devices"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    user_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     brand: Mapped[DeviceBrand] = mapped_column(SAEnum(DeviceBrand, name="device_brand"), nullable=False)
     model: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -117,7 +119,9 @@ class Source(Base):
     __tablename__ = "sources"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    user_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     type: Mapped[SourceType] = mapped_column(SAEnum(SourceType, name="source_type"), nullable=False)
     config: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
@@ -128,11 +132,15 @@ class LibraryItem(Base):
     __tablename__ = "library_items"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    user_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     title: Mapped[str] = mapped_column(String, nullable=False)
     author: Mapped[str] = mapped_column(String, default="", nullable=False)
     cover_url: Mapped[str | None] = mapped_column(String, nullable=True)
-    source_id: Mapped[uuid.UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("sources.id"), nullable=True)
+    source_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("sources.id", ondelete="SET NULL"), nullable=True
+    )
     original_format: Mapped[str] = mapped_column(String, nullable=False)
     storage_path: Mapped[str] = mapped_column(String, nullable=False)
     added_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
@@ -150,10 +158,16 @@ class DeliveryJob(Base):
     __tablename__ = "delivery_jobs"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    library_item_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("library_items.id"), nullable=False, index=True
+    library_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("library_items.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    device_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("devices.id"), nullable=False, index=True)
+    device_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("devices.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # Denormalisees pour que l'historique reste lisible apres SET NULL sur
+    # library_item_id (suppression du livre).
+    item_title: Mapped[str | None] = mapped_column(String, nullable=True)
+    item_author: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[DeliveryStatus] = mapped_column(
         SAEnum(DeliveryStatus, name="delivery_status"), default=DeliveryStatus.queued, nullable=False
     )
@@ -174,7 +188,7 @@ class ShortCode(Base):
     id: Mapped[uuid.UUID] = _uuid_pk()
     code: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     delivery_job_id: Mapped[uuid.UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("delivery_jobs.id"), nullable=False, index=True
+        PGUUID(as_uuid=True), ForeignKey("delivery_jobs.id", ondelete="CASCADE"), nullable=False, index=True
     )
     expires_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     downloads_left: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -185,7 +199,9 @@ class Gateway(Base):
     __tablename__ = "gateways"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    user_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String, nullable=False)
     pairing_status: Mapped[PairingStatus] = mapped_column(
         SAEnum(PairingStatus, name="pairing_status"), default=PairingStatus.pending, nullable=False
@@ -202,7 +218,9 @@ class GatewayJob(Base):
     __tablename__ = "gateway_jobs"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    gateway_id: Mapped[uuid.UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("gateways.id"), nullable=False, index=True)
+    gateway_id: Mapped[uuid.UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("gateways.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     type: Mapped[GatewayJobType] = mapped_column(SAEnum(GatewayJobType, name="gateway_job_type"), nullable=False)
     payload: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     status: Mapped[GatewayJobStatus] = mapped_column(

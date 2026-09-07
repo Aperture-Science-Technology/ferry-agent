@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, delete, select, update
+from sqlalchemy import case, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import hash_secret
@@ -92,9 +92,8 @@ async def revoke_gateway(db: AsyncSession, gateway: Gateway) -> None:
 
 
 async def delete_gateway(db: AsyncSession, gateway: Gateway) -> None:
-    """Purge les `GatewayJob` du gateway puis le gateway lui-meme (les FK
-    n'ont pas d'ondelete, donc les enfants doivent partir avant le parent)."""
-    await db.execute(delete(GatewayJob).where(GatewayJob.gateway_id == gateway.id))
+    """Supprime le gateway ; les `GatewayJob` partent via ON DELETE CASCADE
+    (la purge manuelle est devenue redondante depuis 0009)."""
     await db.delete(gateway)
     await db.commit()
 
