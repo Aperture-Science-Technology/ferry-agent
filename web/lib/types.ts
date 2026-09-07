@@ -3,6 +3,7 @@ export type DeliveryTier = "A" | "B" | "C" | "D";
 export type DeliveryStatus = "queued" | "sent" | "delivered" | "failed";
 export type DeliveryMethod = "email" | "dropbox" | "drive" | "browser_code" | "usb";
 export type PairingStatus = "pending" | "paired" | "revoked";
+export type ConversionPreset = "reader_6in" | "reader_7in_plus" | "tablet";
 export type SourceType =
   | "upload"
   | "gutenberg"
@@ -51,9 +52,24 @@ export interface Device {
   brand: DeviceBrand;
   model: string | null;
   delivery_tier: DeliveryTier;
+  conversion_profile: ConversionPreset | null;
   cloud_provider: "dropbox" | "drive" | null;
   cloud_linked: boolean;
   last_synced_at: string | null;
+}
+
+export interface DeviceCreate {
+  name?: string | null;
+  brand: DeviceBrand;
+  model?: string | null;
+  conversion_profile?: ConversionPreset | null;
+}
+
+export interface DevicePatch {
+  name?: string | null;
+  brand?: DeviceBrand;
+  model?: string | null;
+  conversion_profile?: ConversionPreset | null;
 }
 
 export interface Gateway {

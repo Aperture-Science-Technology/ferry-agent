@@ -314,9 +314,17 @@
   },
   "editDevice": {
     "title": "Modifier l'appareil",
-    "description": "Changez le nom, la marque ou le modèle de cet appareil.",
+    "description": "Changez le nom, la marque, le modèle ou le profil de conversion de cet appareil.",
     "toastUpdated": "Appareil mis à jour.",
-    "toastFailed": "Impossible de mettre à jour cet appareil. Réessayez."
+    "toastFailed": "Impossible de mettre à jour cet appareil. Réessayez.",
+    "conversionProfile": "Profil de conversion",
+    "conversionProfileAuto": "Automatique",
+    "conversionProfileAutoHint": "Laisse Ferry Agent choisir selon le livre.",
+    "conversionProfiles": {
+      "reader_6in": "Petite liseuse (environ 6 pouces)",
+      "reader_7in_plus": "Grande liseuse (7 pouces et plus)",
+      "tablet": "Tablette"
+    }
   },
   "newDevice": {
   "title": "Nouvel appareil",

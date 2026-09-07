@@ -111,6 +111,8 @@ class Device(Base):
     brand: Mapped[DeviceBrand] = mapped_column(SAEnum(DeviceBrand, name="device_brand"), nullable=False)
     model: Mapped[str | None] = mapped_column(String, nullable=True)
     delivery_tier: Mapped[DeliveryTier] = mapped_column(SAEnum(DeliveryTier, name="delivery_tier"), nullable=False)
+    # W-27 : {"preset": "reader_6in"|"reader_7in_plus"|"tablet"} ou null.
+    conversion_profile: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     link_ref: Mapped[str | None] = mapped_column(String, nullable=True)
     last_synced_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
 
