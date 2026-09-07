@@ -5,10 +5,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, delete, select, update
+from sqlalchemy import case, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import hash_secret
+from ferry_agent.config import get_settings
 from ferry_agent.models import (
     Gateway,
     GatewayJob,
@@ -99,25 +100,54 @@ async def delete_gateway(db: AsyncSession, gateway: Gateway) -> None:
 
 
 async def poll_job(db: AsyncSession, gateway_id: uuid.UUID) -> GatewayJob | None:
-    """Retourne d'abord le job running (reprise idempotente), sinon prend un pending."""
-    result = await db.execute(
-        select(GatewayJob)
-        .where(
-            GatewayJob.gateway_id == gateway_id,
-            GatewayJob.status.in_([GatewayJobStatus.running, GatewayJobStatus.pending]),
+    """Retourne d'abord le job running (reprise idempotente), sinon prend un pending.
+
+    Incremente ``attempts`` a chaque poll. Au-dela de
+    ``gateway_job_max_attempts``, le job part en dead-letter (``failed``) et on
+    re-selectionne le suivant. Sinon pose un backoff exponentiel plafonne a
+    ~15 min via ``next_attempt_at``.
+    """
+    settings = get_settings()
+    max_attempts = settings.gateway_job_max_attempts
+    base_seconds = settings.gateway_job_backoff_base_seconds
+    # Borne : abandonner au plus une file de jobs poison sans boucler a l'infini.
+    for _ in range(max_attempts + 2):
+        now = utcnow()
+        result = await db.execute(
+            select(GatewayJob)
+            .where(
+                GatewayJob.gateway_id == gateway_id,
+                GatewayJob.status.in_([GatewayJobStatus.running, GatewayJobStatus.pending]),
+                or_(
+                    GatewayJob.next_attempt_at.is_(None),
+                    GatewayJob.next_attempt_at <= now,
+                ),
+            )
+            .order_by(
+                case((GatewayJob.status == GatewayJobStatus.running, 0), else_=1),
+                GatewayJob.created_at,
+            )
+            .limit(1)
+            .with_for_update(skip_locked=True)
         )
-        .order_by(
-            case((GatewayJob.status == GatewayJobStatus.running, 0), else_=1),
-            GatewayJob.created_at,
-        )
-        .limit(1)
-        .with_for_update(skip_locked=True)
-    )
-    job = result.scalar_one_or_none()
-    if job is not None and job.status == GatewayJobStatus.pending:
-        job.status = GatewayJobStatus.running
+        job = result.scalar_one_or_none()
+        if job is None:
+            return None
+
+        job.attempts += 1
+        if job.attempts > max_attempts:
+            job.status = GatewayJobStatus.failed
+            job.result_ref = f"abandonné après {job.attempts} tentatives"
+            await db.commit()
+            continue
+
+        delay = min(base_seconds * (2 ** (job.attempts - 1)), 15 * 60)
+        job.next_attempt_at = now + timedelta(seconds=delay)
+        if job.status == GatewayJobStatus.pending:
+            job.status = GatewayJobStatus.running
         await db.commit()
-    return job
+        return job
+    return None
 
 
 async def get_gateway_job(

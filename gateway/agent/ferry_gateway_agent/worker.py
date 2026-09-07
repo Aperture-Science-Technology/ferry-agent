@@ -242,6 +242,7 @@ class GatewayAgent:
                     logger.exception("Could not clean up torrent %s", torrent_id)
 
     async def run_once(self) -> bool:
+        job: dict[str, Any] | None = None
         try:
             job = await self.poll_once()
             if not job:
@@ -251,7 +252,13 @@ class GatewayAgent:
         except PlatformConflict as error:
             logger.warning("%s; polling will continue", error)
         except (httpx.HTTPError, OSError, TimeoutError, ValueError, RuntimeError):
-            logger.exception("Gateway cycle failed; polling will continue")
+            job_id = (job or {}).get("id") or (job or {}).get("job_id")
+            job_type = (job or {}).get("type")
+            logger.exception(
+                "Gateway cycle failed for job type=%s id=%s; polling will continue",
+                job_type,
+                job_id,
+            )
         return False
 
     async def run(self) -> None:
