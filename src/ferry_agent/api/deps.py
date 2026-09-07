@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
 from ferry_agent.models import Gateway, PairingStatus, User
+from ferry_agent.services.sources import ensure_default_sources
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,8 @@ async def _get_or_create_user(db: AsyncSession, email: str) -> User:
     if user is None:
         user = User(email=email)
         db.add(user)
-        await db.commit()
+        await db.flush()
+        await ensure_default_sources(db, user.id)
         await db.refresh(user)
     return user
 

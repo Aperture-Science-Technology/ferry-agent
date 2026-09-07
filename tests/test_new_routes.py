@@ -221,8 +221,12 @@ class TestListSources:
         app.dependency_overrides[get_db] = fake_db
         app.dependency_overrides[get_current_user] = lambda: CU(id=_USER_ID, email=_USER_EMAIL)
         try:
-            with TestClient(app) as client:
-                resp = client.get("/api/v1/sources")
+            with patch(
+                "ferry_agent.api.sources.ensure_default_sources",
+                new_callable=AsyncMock,
+            ):
+                with TestClient(app) as client:
+                    resp = client.get("/api/v1/sources")
             assert resp.status_code == 200
             data = resp.json()
             assert len(data) == 1
