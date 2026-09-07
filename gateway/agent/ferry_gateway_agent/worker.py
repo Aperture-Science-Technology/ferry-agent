@@ -129,6 +129,7 @@ class GatewayAgent:
         return {"X-Gateway-Key": self.gateway_key}
 
     async def poll_once(self) -> dict[str, Any] | None:
+        """Poll for one job. Platform returns GatewayJobOut JSON or HTTP 204."""
         response = await self.platform.post(
             f"{self.settings.platform_url}/api/v1/gateways/poll",
             headers=self._gateway_headers(),
@@ -136,18 +137,7 @@ class GatewayAgent:
         self._raise_platform_status(response, "poll jobs")
         if response.status_code == 204 or not response.content:
             return None
-
         body = response.json()
-        if body is None:
-            return None
-        if isinstance(body, list):
-            return body[0] if body else None
-        if isinstance(body, dict) and "job" in body:
-            job = body["job"]
-            return job if isinstance(job, dict) else None
-        if isinstance(body, dict) and "jobs" in body:
-            jobs = body["jobs"]
-            return jobs[0] if isinstance(jobs, list) and jobs else None
         return body if isinstance(body, dict) else None
 
     async def handle_job(self, job: dict[str, Any]) -> None:
