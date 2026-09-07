@@ -6,10 +6,15 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 FROM python:3.13-slim
 WORKDIR /app
 
-# Calibre (ebook-convert) est optionnel : detecte au demarrage par
-# services/converters.py, avec fallback PyMuPDF si absent. Non installe
-# dans cette image de base pour la garder legere ; ajouter un paquet
-# calibre ici si le fallback PyMuPDF ne suffit pas pour MOBI/AZW3.
+# W-26 — Calibre en image core (pas gateway) :
+# ebook-convert est requis pour EPUB→MOBI/AZW3 et PDF/MOBI→EPUB. Sans lui,
+# les livraisons cloud / Kindle échouent ou mentaient via un fallback PDF.
+# Coût assumé : ~150–300 Mo d'image en plus (calibre-bin + dépendances).
+# Installé ici (root) avant USER appuser pour que le binaire soit exécutable
+# par le même utilisateur non-root que le runtime uvicorn.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends calibre-bin \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /install /usr/local
 COPY src ./src

@@ -65,7 +65,12 @@ async def _deliver_tier_a(
         and item.original_format.lower() == "epub"
     ):
         convert = converters.epub_to_mobi if target_format == "mobi" else converters.epub_to_azw3
-        file_path = await convert(item.storage_path)
+        try:
+            file_path = await convert(item.storage_path)
+        except Exception:
+            logger.exception("conversion Kindle echouee pour le job %s", job.id)
+            await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
+            return
 
     try:
         filename = Path(file_path).name
@@ -110,8 +115,9 @@ async def _deliver_tier_b(
     if item.original_format.lower() != "epub":
         try:
             file_path = await converters.convert_to_epub(item.storage_path)
-        except Exception as exc:
-            await _fail(db, job, f"conversion EPUB echouee: {exc}")
+        except Exception:
+            logger.exception("conversion EPUB echouee pour le job %s", job.id)
+            await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
             return
 
     try:
