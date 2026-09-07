@@ -44,7 +44,7 @@ const DOCKER_RUN_COMMAND = `docker run -d \\
   --restart unless-stopped \\
   -e PAIRING_TOKEN=CODE \\
   -e PUID=$(id -u) -e PGID=$(id -g) \\
-  -p 9696:9696 \\
+  -p 127.0.0.1:9696:9696 \\
   -p 51413:51413 -p 51413:51413/udp \\
   -v "$PWD/downloads:/downloads" \\
   -v ferry-gw-config:/config \\
