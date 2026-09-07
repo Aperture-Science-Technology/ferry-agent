@@ -238,6 +238,36 @@ async def test_deliver_tier_a_marks_failed_on_send_error(monkeypatch: pytest.Mon
     assert job.error == "smtp boom"
 
 
+async def test_deliver_tier_a_fails_when_calibre_unavailable_no_pdf_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sans Calibre : failed + message actionnable, aucun envoi (pas de PDF)."""
+    sent = {}
+
+    async def raising_azw3(*_args, **_kwargs):
+        raise RuntimeError("ebook-convert indisponible: conversion vers AZW3 impossible")
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(file_path=file_path, filename=filename)
+
+    monkeypatch.setattr(delivery.converters, "epub_to_azw3", raising_azw3)
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(default_format="azw3")
+    device = make_device(brand=DeviceBrand.kindle)
+    item = make_item(original_format="epub")
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.failed
+    assert job.error == delivery.converters.CONVERSION_FAILED_USER_MESSAGE
+    assert sent == {}
+    assert job.delivered_at is None
+
+
 async def test_deliver_routes_tier_a_via_full_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     sent = {}
 

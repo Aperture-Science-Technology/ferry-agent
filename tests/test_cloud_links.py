@@ -342,6 +342,37 @@ async def test_deliver_tier_b_converts_non_epub_before_upload(
     assert job.status == DeliveryStatus.delivered
 
 
+async def test_deliver_tier_b_fails_when_calibre_unavailable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Sans Calibre : failed + message actionnable, aucun upload PDF/autre format."""
+    pdf = tmp_path / "book.pdf"
+    pdf.write_bytes(b"pdf-bytes")
+    uploaded = {}
+
+    async def raising_convert(*_args, **_kwargs):
+        raise RuntimeError("ebook-convert indisponible: conversion vers EPUB impossible")
+
+    async def fake_upload_job_file(link_ref_json, filename, file_bytes):
+        uploaded.update(filename=filename, file_bytes=file_bytes)
+        return "/book.pdf"
+
+    monkeypatch.setattr(delivery.converters, "convert_to_epub", raising_convert)
+    monkeypatch.setattr(delivery.cloud_links, "upload_job_file", fake_upload_job_file)
+
+    user = make_user()
+    device = make_device()
+    item = make_item(original_format="pdf", storage_path=str(pdf))
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_b(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.failed
+    assert job.error == delivery.converters.CONVERSION_FAILED_USER_MESSAGE
+    assert uploaded == {}
+
+
 async def test_deliver_tier_b_marks_failed_on_upload_error(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

@@ -4,14 +4,11 @@
   est testee inconditionnellement : elle ne necessite pas Calibre installe,
   seulement `shutil.which`.
 - La conversion EPUB->PDF reelle (PyMuPDF) est testee si le fixture
-  `tests/fixtures/minimal.epub` est present ; sinon ce test est skip et
-  seule la detection Calibre est verifiee.
-- Les conversions EPUB->MOBI/AZW3 retombent sur PyMuPDF (export PDF) quand
-  Calibre est indisponible, ce qui est le cas attendu dans cet
-  environnement de test (pas de Calibre externe installe).
+  `tests/fixtures/minimal.epub` est present ; sinon ce test est skip.
+- EPUB->MOBI/AZW3 exige Calibre : sans binaire, les helpers levent
+  RuntimeError (plus de fallback PDF silencieux, W-26).
 """
 
-import shutil
 from pathlib import Path
 
 import pytest
@@ -20,6 +17,7 @@ from ferry_agent.services import converters
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 MINIMAL_EPUB = FIXTURES_DIR / "minimal.epub"
+AZW3_MAGIC = b"PK\x03\x04"
 
 
 def test_ebook_convert_available_returns_bool() -> None:
@@ -29,9 +27,17 @@ def test_ebook_convert_available_returns_bool() -> None:
 def test_calibre_status_line_matches_detection() -> None:
     line = converters.calibre_status_line()
     if converters.ebook_convert_available():
-        assert line == "Calibre : OK"
+        assert line.startswith("Calibre : OK")
     else:
-        assert line == "Calibre : indisponible (fallback PyMuPDF)"
+        assert line == "Calibre : indisponible"
+
+
+def test_conversion_capacity_shape() -> None:
+    capacity = converters.conversion_capacity()
+    assert set(capacity) == {"ebook_convert_available", "ebook_convert_version"}
+    assert capacity["ebook_convert_available"] is converters.ebook_convert_available()
+    if not capacity["ebook_convert_available"]:
+        assert capacity["ebook_convert_version"] is None
 
 
 @pytest.mark.skipif(not MINIMAL_EPUB.exists(), reason="pas de fixture epub disponible")
@@ -46,30 +52,58 @@ async def test_epub_to_pdf_real_conversion(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(not MINIMAL_EPUB.exists(), reason="pas de fixture epub disponible")
-async def test_epub_to_mobi_falls_back_without_calibre(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_epub_to_mobi_raises_without_calibre(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(converters.shutil, "which", lambda _name: None)
     dest = tmp_path / "out.mobi"
 
-    out_path = await converters.epub_to_mobi(str(MINIMAL_EPUB), str(dest))
+    with pytest.raises(RuntimeError, match="ebook-convert indisponible"):
+        await converters.epub_to_mobi(str(MINIMAL_EPUB), str(dest))
 
-    out = Path(out_path)
-    assert out.exists()
-    assert out.stat().st_size >= 1024
-    # Sans Calibre, le fallback produit un PDF (pas un vrai .mobi).
-    assert out.suffix == ".pdf"
+    assert not dest.exists()
+    assert list(tmp_path.glob("*.pdf")) == []
 
 
 @pytest.mark.skipif(not MINIMAL_EPUB.exists(), reason="pas de fixture epub disponible")
-async def test_epub_to_azw3_falls_back_without_calibre(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_epub_to_azw3_raises_without_calibre(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(converters.shutil, "which", lambda _name: None)
     dest = tmp_path / "out.azw3"
 
-    out_path = await converters.epub_to_azw3(str(MINIMAL_EPUB), str(dest))
+    with pytest.raises(RuntimeError, match="ebook-convert indisponible"):
+        await converters.epub_to_azw3(str(MINIMAL_EPUB), str(dest))
+
+    assert not dest.exists()
+    assert list(tmp_path.glob("*.pdf")) == []
+
+
+async def test_epub_to_azw3_mocked_ebook_convert_writes_azw3_magic(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tier A azw3 : chemin de code correct + magic bytes AZW3 (mock Calibre)."""
+    epub = tmp_path / "book.epub"
+    epub.write_bytes(b"PK\x03\x04fake-epub-content-padded" + b"\x00" * 1024)
+    dest = tmp_path / "out.azw3"
+
+    monkeypatch.setattr(converters, "ebook_convert_available", lambda: True)
+
+    async def fake_run_ebook_convert(src: str, dst: str) -> None:
+        assert src == str(epub)
+        # Contenu factice >= MIN_OUTPUT_BYTES avec magic AZW3 (PK\\x03\\x04).
+        Path(dst).write_bytes(AZW3_MAGIC + b"\x00" * converters.MIN_OUTPUT_BYTES)
+
+    monkeypatch.setattr(converters, "_run_ebook_convert", fake_run_ebook_convert)
+
+    out_path = await converters.epub_to_azw3(str(epub), str(dest))
 
     out = Path(out_path)
+    assert out == dest
     assert out.exists()
-    assert out.stat().st_size >= 1024
-    assert out.suffix == ".pdf"
+    assert out.read_bytes()[:4] == AZW3_MAGIC
+    assert out.suffix == ".azw3"
+    assert list(tmp_path.glob("*.pdf")) == []
 
 
 def test_check_output_raises_on_missing_file(tmp_path: Path) -> None:

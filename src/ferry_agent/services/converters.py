@@ -1,14 +1,16 @@
 """Conversion de formats ebook.
 
-EPUB->PDF utilise toujours PyMuPDF (fitz). EPUB->MOBI/AZW3 utilise
-`ebook-convert` (Calibre) quand disponible, sinon retombe sur un export PDF
-via PyMuPDF (Calibre est optionnel et detecte au demarrage, cf. main.py).
+EPUB->PDF utilise toujours PyMuPDF (fitz). EPUB->MOBI/AZW3 et toute
+conversion vers EPUB utilisent `ebook-convert` (Calibre). Pas de fallback
+silencieux vers un autre format : si Calibre est absent ou échoue, l'appelant
+doit marquer la livraison en échec (cf. `services/delivery.py`).
 """
 
 import asyncio
 import logging
 import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -18,6 +20,13 @@ logger = logging.getLogger(__name__)
 
 MIN_OUTPUT_BYTES = 1024
 EBOOK_CONVERT_TIMEOUT_SECONDS = 120
+EBOOK_CONVERT_VERSION_TIMEOUT_SECONDS = 10
+
+# Message actionnable exposé dans DeliveryJob.error (pas de jargon technique).
+CONVERSION_FAILED_USER_MESSAGE = (
+    "Impossible de convertir ce livre vers le format demandé. "
+    "Réessayez plus tard ou choisissez un autre format."
+)
 
 
 def _default_temp_output(suffix: str) -> Path:
@@ -34,8 +43,42 @@ def ebook_convert_available() -> bool:
     return shutil.which("ebook-convert") is not None
 
 
+def ebook_convert_version() -> str | None:
+    """Retourne la premiere ligne de `ebook-convert --version`, ou None."""
+    if not ebook_convert_available():
+        return None
+    try:
+        proc = subprocess.run(
+            ["ebook-convert", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=EBOOK_CONVERT_VERSION_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    line = (proc.stdout or proc.stderr or "").strip().splitlines()
+    return line[0].strip() if line else None
+
+
 def calibre_status_line() -> str:
-    return "Calibre : OK" if ebook_convert_available() else "Calibre : indisponible (fallback PyMuPDF)"
+    version = ebook_convert_version()
+    if version:
+        return f"Calibre : OK ({version})"
+    if ebook_convert_available():
+        return "Calibre : OK"
+    return "Calibre : indisponible"
+
+
+def conversion_capacity() -> dict[str, bool | str | None]:
+    """Etat verifiable (healthz) de la capacite de conversion Calibre."""
+    available = ebook_convert_available()
+    return {
+        "ebook_convert_available": available,
+        "ebook_convert_version": ebook_convert_version() if available else None,
+    }
 
 
 def _check_output(path: Path) -> None:
@@ -90,36 +133,27 @@ async def _run_ebook_convert(src: str, dst: str) -> None:
 
 
 async def epub_to_mobi(epub_path: str, mobi_path: str | None = None) -> str:
-    if ebook_convert_available():
-        out = Path(mobi_path) if mobi_path else _default_temp_output(".mobi")
-        await _run_ebook_convert(epub_path, str(out))
-        _check_output(out)
-        return str(out)
+    if not ebook_convert_available():
+        raise RuntimeError("ebook-convert indisponible: conversion vers MOBI impossible")
 
-    logger.warning("ebook-convert indisponible: fallback PyMuPDF (export PDF a la place du MOBI demande)")
-    pdf_out = Path(mobi_path).with_suffix(".pdf") if mobi_path else _default_temp_output(".pdf")
-    return await epub_to_pdf(epub_path, str(pdf_out))
+    out = Path(mobi_path) if mobi_path else _default_temp_output(".mobi")
+    await _run_ebook_convert(epub_path, str(out))
+    _check_output(out)
+    return str(out)
 
 
 async def epub_to_azw3(epub_path: str, azw3_path: str | None = None) -> str:
-    if ebook_convert_available():
-        out = Path(azw3_path) if azw3_path else _default_temp_output(".azw3")
-        await _run_ebook_convert(epub_path, str(out))
-        _check_output(out)
-        return str(out)
+    if not ebook_convert_available():
+        raise RuntimeError("ebook-convert indisponible: conversion vers AZW3 impossible")
 
-    logger.warning("ebook-convert indisponible: fallback PyMuPDF (export PDF a la place de l'AZW3 demande)")
-    pdf_out = Path(azw3_path).with_suffix(".pdf") if azw3_path else _default_temp_output(".pdf")
-    return await epub_to_pdf(epub_path, str(pdf_out))
+    out = Path(azw3_path) if azw3_path else _default_temp_output(".azw3")
+    await _run_ebook_convert(epub_path, str(out))
+    _check_output(out)
+    return str(out)
 
 
 async def convert_to_epub(src_path: str, epub_path: str | None = None) -> str:
-    """Convertit un ebook (pdf/mobi/azw3...) en EPUB via `ebook-convert`.
-
-    Pas de fallback PyMuPDF ici : `fitz` sait lire/exporter en PDF mais pas
-    ecrire d'EPUB, contrairement a `epub_to_mobi`/`epub_to_azw3` qui partent
-    toujours d'un EPUB source.
-    """
+    """Convertit un ebook (pdf/mobi/azw3...) en EPUB via `ebook-convert`."""
     out = Path(epub_path) if epub_path else _default_temp_output(".epub")
 
     if not ebook_convert_available():
