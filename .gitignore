@@ -7,5 +7,6 @@ data/
 *.egg-info/
 build/
 dist/
+# gateway/dist/ contient les artefacts de distribution VERSIONNES (compose, install, lanceurs)
 !gateway/dist/
 !gateway/dist/**
