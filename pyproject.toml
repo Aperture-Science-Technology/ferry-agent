@@ -25,4 +25,6 @@ testpaths = ["tests"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+# TD002/TD003 (flake8-todos) : tout TODO doit citer un ticket FA-XXX
+# (ex. `# TODO(FA-W31): #31 <quoi> — <pourquoi différé>`).
+select = ["E", "F", "I", "UP", "B", "TD002", "TD003"]
