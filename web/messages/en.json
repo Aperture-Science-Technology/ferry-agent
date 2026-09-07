@@ -231,7 +231,13 @@
     "cloud_not_linked": "Cloud not linked: link Dropbox or Google Drive from Devices to enable delivery."
   },
   "formatOptional": "Format (optional)",
-    "formatPlaceholder": "epub, mobi, azw3, pdf…",
+    "formatPlaceholder": "Choose a format",
+    "formats": {
+      "epub": "EPUB",
+      "mobi": "MOBI",
+      "azw3": "AZW3",
+      "pdf": "PDF"
+    },
     "submit": "Send",
     "toastReady": "Ready to download.",
     "toastStarted": "Delivery started ({status}).",

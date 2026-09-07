@@ -42,6 +42,7 @@ export interface LibraryItem {
   isbn: string | null;
   publisher: string | null;
   published_year: number | null;
+  source_ref: string | null;
 }
 
 export interface Device {
@@ -78,6 +79,9 @@ export interface DeliveryJob {
   delivered_at: string | null;
   error: string | null;
   download_url?: string | null;
+  item_title: string | null;
+  item_author: string | null;
+  device_label: string | null;
 }
 
 /** Mode de livraison candidat pour un device donne, avec sa disponibilite

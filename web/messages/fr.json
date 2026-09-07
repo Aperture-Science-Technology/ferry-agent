@@ -231,7 +231,13 @@
     "cloud_not_linked": "Cloud non relié : reliez Dropbox ou Google Drive depuis Appareils pour activer l'envoi."
   },
   "formatOptional": "Format (optionnel)",
-    "formatPlaceholder": "epub, mobi, azw3, pdf…",
+    "formatPlaceholder": "Choisir un format",
+    "formats": {
+      "epub": "EPUB",
+      "mobi": "MOBI",
+      "azw3": "AZW3",
+      "pdf": "PDF"
+    },
     "submit": "Envoyer",
     "toastReady": "Prêt à télécharger.",
     "toastStarted": "Envoi lancé ({status}).",
