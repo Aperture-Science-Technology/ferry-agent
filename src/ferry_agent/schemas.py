@@ -59,6 +59,9 @@ class GatewayCredentials(BaseModel):
     gateway_id: uuid.UUID
     pairing_token: str
     gateway_key: str
+    pairing_expires_at: datetime | None = None
+    pairing_token_ttl_minutes: int = 15
+    gateway_online_seconds: int = 60
 
 
 class GatewayPair(BaseModel):
@@ -83,6 +86,9 @@ class GatewayOut(BaseModel):
     name: str
     status: PairingStatus = Field(validation_alias="pairing_status")
     last_seen_at: datetime | None
+    pairing_expires_at: datetime | None = None
+    pairing_token_ttl_minutes: int = 15
+    gateway_online_seconds: int = 60
 
 
 class GatewayJobOut(BaseModel):

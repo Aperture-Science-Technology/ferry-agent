@@ -49,6 +49,9 @@ async def create_gateway(
         gateway_id=gateway.id,
         pairing_token=pairing_token,
         gateway_key=gateway_key,
+        pairing_expires_at=gateway.pairing_expires_at,
+        pairing_token_ttl_minutes=settings.pairing_token_ttl_minutes,
+        gateway_online_seconds=settings.gateway_online_seconds,
     )
 
 
@@ -66,8 +69,17 @@ async def list_gateways(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[GatewayOut]:
+    settings = get_settings()
     result = await db.execute(select(Gateway).where(Gateway.user_id == user.id))
-    return [GatewayOut.model_validate(gateway) for gateway in result.scalars().all()]
+    return [
+        GatewayOut.model_validate(gateway).model_copy(
+            update={
+                "pairing_token_ttl_minutes": settings.pairing_token_ttl_minutes,
+                "gateway_online_seconds": settings.gateway_online_seconds,
+            }
+        )
+        for gateway in result.scalars().all()
+    ]
 
 
 @router.post("/revoke", response_model=GatewayId)
