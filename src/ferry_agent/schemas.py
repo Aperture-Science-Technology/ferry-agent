@@ -92,6 +92,7 @@ class GatewayJobOut(BaseModel):
 
 
 class GatewayJobStatusOut(GatewayJobOut):
+    attempts: int = 0
     library_item_id: uuid.UUID | None = None
     error: str | None = None
 

@@ -228,6 +228,8 @@ class GatewayJob(Base):
         SAEnum(GatewayJobStatus, name="gateway_job_status"), default=GatewayJobStatus.pending, nullable=False
     )
     result_ref: Mapped[str | None] = mapped_column(String, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    next_attempt_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False

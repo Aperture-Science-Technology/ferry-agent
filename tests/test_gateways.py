@@ -86,13 +86,19 @@ async def test_poll_moves_pending_job_to_running_and_reposts_running() -> None:
         type=GatewayJobType.search,
         payload={"query": "Dune"},
         status=GatewayJobStatus.pending,
+        attempts=0,
     )
     db = FakeSession([job, job])
 
     assert await gateways.poll_job(db, gateway_id) is job
     assert job.status == GatewayJobStatus.running
+    assert job.attempts == 1
+    assert job.next_attempt_at is not None
+    # FakeSession n'evalue pas le WHERE : on simule l'echeance du backoff.
+    job.next_attempt_at = datetime.now(timezone.utc) - timedelta(seconds=1)
     assert await gateways.poll_job(db, gateway_id) is job
-    assert db.commits == 1
+    assert job.attempts == 2
+    assert db.commits == 2
 
 
 async def test_fetch_cap_and_magic_bytes() -> None:

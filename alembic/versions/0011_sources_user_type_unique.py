@@ -1,7 +1,7 @@
 """unicite (user_id, type) sur sources
 
 Revision ID: 0011_sources_user_type_unique
-Revises: 0009_fk_ondelete
+Revises: 0010_gateway_job_attempts
 Create Date: 2026-09-07
 
 Phase W-12 : les Source par defaut sont matérialisees a la creation du
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0011_sources_user_type_unique"
-down_revision: Union[str, None] = "0009_fk_ondelete"
+down_revision: Union[str, None] = "0010_gateway_job_attempts"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
