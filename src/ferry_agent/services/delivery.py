@@ -67,20 +67,24 @@ async def _deliver_tier_a(
         convert = converters.epub_to_mobi if target_format == "mobi" else converters.epub_to_azw3
         file_path = await convert(item.storage_path)
 
-    filename = Path(file_path).name
-
-    job.status = DeliveryStatus.sent
-    await db.commit()
-
     try:
-        await mailer.send_file(file_path, filename, user.kindle_email, kindle=True)
-    except Exception as exc:
-        await _fail(db, job, str(exc))
-        return
+        filename = Path(file_path).name
 
-    job.status = DeliveryStatus.delivered
-    job.delivered_at = _utcnow()
-    await db.commit()
+        job.status = DeliveryStatus.sent
+        await db.commit()
+
+        try:
+            await mailer.send_file(file_path, filename, user.kindle_email, kindle=True)
+        except Exception as exc:
+            await _fail(db, job, str(exc))
+            return
+
+        job.status = DeliveryStatus.delivered
+        job.delivered_at = _utcnow()
+        await db.commit()
+    finally:
+        if file_path != item.storage_path:
+            Path(file_path).unlink(missing_ok=True)
 
 
 async def _deliver_tier_b(
@@ -110,22 +114,26 @@ async def _deliver_tier_b(
             await _fail(db, job, f"conversion EPUB echouee: {exc}")
             return
 
-    filename = Path(file_path).name
-    file_bytes = Path(file_path).read_bytes()
-
-    job.status = DeliveryStatus.sent
-    job.method = DeliveryMethod.dropbox if link_ref["provider"] == "dropbox" else DeliveryMethod.drive
-    await db.commit()
-
     try:
-        await cloud_links.upload_job_file(device.link_ref, filename, file_bytes)
-    except Exception as exc:
-        await _fail(db, job, str(exc))
-        return
+        filename = Path(file_path).name
+        file_bytes = Path(file_path).read_bytes()
 
-    job.status = DeliveryStatus.delivered
-    job.delivered_at = _utcnow()
-    await db.commit()
+        job.status = DeliveryStatus.sent
+        job.method = DeliveryMethod.dropbox if link_ref["provider"] == "dropbox" else DeliveryMethod.drive
+        await db.commit()
+
+        try:
+            await cloud_links.upload_job_file(device.link_ref, filename, file_bytes)
+        except Exception as exc:
+            await _fail(db, job, str(exc))
+            return
+
+        job.status = DeliveryStatus.delivered
+        job.delivered_at = _utcnow()
+        await db.commit()
+    finally:
+        if file_path != item.storage_path:
+            Path(file_path).unlink(missing_ok=True)
 
 
 async def _deliver_tier_c(db: AsyncSession, job: DeliveryJob, item: LibraryItem) -> str:

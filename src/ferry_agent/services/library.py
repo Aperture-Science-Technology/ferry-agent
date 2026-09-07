@@ -56,6 +56,11 @@ async def import_from_connector(
     a l'appelant, ex. `Result.model_dump()` cote API) : quand ses champs sont
     presents et non vides, ils completent l'item persiste (auteur, couverture,
     description, langue, nombre de pages).
+
+    Note : en production `temp_dir` et `library_storage_dir` sont des volumes
+    distincts (`ferry_tmp` / `ferry_library`). Le `shutil.move` ci-dessous
+    devient alors une copie inter-filesystem (quelques Mo), plus lente et non
+    atomique — acceptable pour la taille des ebooks.
     """
     connector = get_connector(source_name)
     if connector is None:

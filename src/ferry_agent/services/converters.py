@@ -7,13 +7,27 @@ via PyMuPDF (Calibre est optionnel et detecte au demarrage, cf. main.py).
 
 import asyncio
 import logging
+import os
 import shutil
+import tempfile
 from pathlib import Path
+
+from ferry_agent.config import get_settings
 
 logger = logging.getLogger(__name__)
 
 MIN_OUTPUT_BYTES = 1024
 EBOOK_CONVERT_TIMEOUT_SECONDS = 120
+
+
+def _default_temp_output(suffix: str) -> Path:
+    """Chemin unique sous `settings.temp_dir` (cree si absent)."""
+    settings = get_settings()
+    temp_dir = Path(settings.temp_dir)
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(dir=str(temp_dir), suffix=suffix)
+    os.close(fd)
+    return Path(name)
 
 
 def ebook_convert_available() -> bool:
@@ -76,27 +90,27 @@ async def _run_ebook_convert(src: str, dst: str) -> None:
 
 
 async def epub_to_mobi(epub_path: str, mobi_path: str | None = None) -> str:
-    out = Path(mobi_path) if mobi_path else Path(epub_path).with_suffix(".mobi")
-
     if ebook_convert_available():
+        out = Path(mobi_path) if mobi_path else _default_temp_output(".mobi")
         await _run_ebook_convert(epub_path, str(out))
         _check_output(out)
         return str(out)
 
     logger.warning("ebook-convert indisponible: fallback PyMuPDF (export PDF a la place du MOBI demande)")
-    return await epub_to_pdf(epub_path, str(out.with_suffix(".pdf")))
+    pdf_out = Path(mobi_path).with_suffix(".pdf") if mobi_path else _default_temp_output(".pdf")
+    return await epub_to_pdf(epub_path, str(pdf_out))
 
 
 async def epub_to_azw3(epub_path: str, azw3_path: str | None = None) -> str:
-    out = Path(azw3_path) if azw3_path else Path(epub_path).with_suffix(".azw3")
-
     if ebook_convert_available():
+        out = Path(azw3_path) if azw3_path else _default_temp_output(".azw3")
         await _run_ebook_convert(epub_path, str(out))
         _check_output(out)
         return str(out)
 
     logger.warning("ebook-convert indisponible: fallback PyMuPDF (export PDF a la place de l'AZW3 demande)")
-    return await epub_to_pdf(epub_path, str(out.with_suffix(".pdf")))
+    pdf_out = Path(azw3_path).with_suffix(".pdf") if azw3_path else _default_temp_output(".pdf")
+    return await epub_to_pdf(epub_path, str(pdf_out))
 
 
 async def convert_to_epub(src_path: str, epub_path: str | None = None) -> str:
@@ -106,7 +120,7 @@ async def convert_to_epub(src_path: str, epub_path: str | None = None) -> str:
     ecrire d'EPUB, contrairement a `epub_to_mobi`/`epub_to_azw3` qui partent
     toujours d'un EPUB source.
     """
-    out = Path(epub_path) if epub_path else Path(src_path).with_suffix(".epub")
+    out = Path(epub_path) if epub_path else _default_temp_output(".epub")
 
     if not ebook_convert_available():
         raise RuntimeError("ebook-convert indisponible: conversion vers EPUB impossible")

@@ -127,6 +127,43 @@ async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
     assert job.status == DeliveryStatus.delivered
 
 
+async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Apres livraison Kindle MOBI, aucun .mobi ne subsiste dans LIBRARY_STORAGE_DIR."""
+    library_dir = tmp_path / "library"
+    library_dir.mkdir()
+
+    epub_path = library_dir / "book.epub"
+    epub_path.write_bytes(b"PK\x03\x04fake-epub")
+
+    async def fake_epub_to_mobi(src, mobi_path=None):
+        # Simule l'ancien comportement (derive a cote de l'EPUB en library) :
+        # le finally doit quand meme supprimer le derive.
+        out = library_dir / "book.mobi"
+        out.write_bytes(b"fake-mobi-content")
+        return str(out)
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        assert Path(file_path).exists()
+
+    monkeypatch.setattr(delivery.converters, "epub_to_mobi", fake_epub_to_mobi)
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(default_format="mobi")
+    device = make_device(brand=DeviceBrand.kindle)
+    item = make_item(storage_path=str(epub_path), original_format="epub")
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.delivered
+    assert epub_path.exists()
+    assert list(library_dir.glob("*.mobi")) == []
+
+
 async def test_deliver_tier_a_skips_conversion_for_non_kindle_device(monkeypatch: pytest.MonkeyPatch) -> None:
     sent = {}
 
