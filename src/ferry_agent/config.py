@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     pairing_token_ttl_minutes: int = 15
     gateway_online_seconds: int = 60
     gateway_search_wait_seconds: float = 15.0
+    gateway_job_retention_days: int = 7
+    gateway_job_purge_interval_seconds: int = 3600
     virustotal_api_key: str | None = None
 
     # Send-to-Kindle / envoi email (tier A). Laisser smtp_user/smtp_password

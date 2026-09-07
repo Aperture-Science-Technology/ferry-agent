@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, select, update
+from sqlalchemy import case, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import hash_secret
@@ -191,3 +191,19 @@ async def create_job(
     await db.commit()
     await db.refresh(job)
     return job
+
+
+async def purge_finished_jobs(db: AsyncSession, retention_days: int) -> int:
+    """Supprime les ``GatewayJob`` termines (``done``/``failed``) trop anciens.
+
+    Les jobs ``running``/``pending`` sont conserves (reprise potentielle).
+    """
+    cutoff = utcnow() - timedelta(days=retention_days)
+    result = await db.execute(
+        delete(GatewayJob).where(
+            GatewayJob.status.in_([GatewayJobStatus.done, GatewayJobStatus.failed]),
+            GatewayJob.updated_at < cutoff,
+        )
+    )
+    await db.commit()
+    return int(result.rowcount or 0)
