@@ -25,7 +25,7 @@ from ferry_agent.models import (
     LibraryItem,
     User,
 )
-from ferry_agent.services import cloud_links, converters, mailer, tierc
+from ferry_agent.services import cloud_links, conversion_profiles, converters, mailer, tierc
 
 logger = logging.getLogger(__name__)
 
@@ -58,14 +58,22 @@ async def _deliver_tier_a(
 
     file_path = item.storage_path
     target_format = (requested_format or user.default_format or item.original_format).lower()
+    preset = conversion_profiles.resolve_preset_id(device.conversion_profile)
+    cached_derivative = False
 
     if (
         device.brand == DeviceBrand.kindle
         and target_format in ("mobi", "azw3")
         and item.original_format.lower() == "epub"
     ):
-        convert = converters.epub_to_mobi if target_format == "mobi" else converters.epub_to_azw3
-        file_path = await convert(item.storage_path)
+        convert_kind = "epub_to_mobi" if target_format == "mobi" else "epub_to_azw3"
+        file_path, cached_derivative = await converters.convert_with_profile_cache(
+            library_item_id=item.id,
+            src_path=item.storage_path,
+            target_format=target_format,
+            preset=preset,
+            convert_kind=convert_kind,
+        )
 
     try:
         filename = Path(file_path).name
@@ -83,7 +91,9 @@ async def _deliver_tier_a(
         job.delivered_at = _utcnow()
         await db.commit()
     finally:
-        if file_path != item.storage_path:
+        if file_path != item.storage_path and not cached_derivative and not conversion_profiles.is_cached_derivative(
+            file_path
+        ):
             Path(file_path).unlink(missing_ok=True)
 
 
@@ -107,9 +117,17 @@ async def _deliver_tier_b(
         return
 
     file_path = item.storage_path
+    preset = conversion_profiles.resolve_preset_id(device.conversion_profile)
+    cached_derivative = False
     if item.original_format.lower() != "epub":
         try:
-            file_path = await converters.convert_to_epub(item.storage_path)
+            file_path, cached_derivative = await converters.convert_with_profile_cache(
+                library_item_id=item.id,
+                src_path=item.storage_path,
+                target_format="epub",
+                preset=preset,
+                convert_kind="to_epub",
+            )
         except Exception as exc:
             await _fail(db, job, f"conversion EPUB echouee: {exc}")
             return
@@ -132,7 +150,9 @@ async def _deliver_tier_b(
         job.delivered_at = _utcnow()
         await db.commit()
     finally:
-        if file_path != item.storage_path:
+        if file_path != item.storage_path and not cached_derivative and not conversion_profiles.is_cached_derivative(
+            file_path
+        ):
             Path(file_path).unlink(missing_ok=True)
 
 

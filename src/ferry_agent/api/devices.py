@@ -16,6 +16,7 @@ from ferry_agent.db import get_db
 from ferry_agent.models import Device, DeviceBrand, DeliveryTier
 from ferry_agent.schemas import DeviceCreate, DeviceLinkCallback, DeviceLinkUrlOut, DeviceOut, DevicePatch
 from ferry_agent.services import cloud_links
+from ferry_agent.services import conversion_profiles
 from ferry_agent.services import devices as device_service
 from ferry_agent.services import mailer
 from ferry_agent.services.delivery_methods import MethodAvailability, available_delivery_methods
@@ -60,6 +61,7 @@ def _device_out(device: Device) -> DeviceOut:
         brand=device.brand,
         model=device.model,
         delivery_tier=device.delivery_tier,
+        conversion_profile=conversion_profiles.resolve_preset_id(device.conversion_profile),
         cloud_provider=cloud_provider,
         cloud_linked=cloud_linked,
         last_synced_at=device.last_synced_at,
@@ -80,6 +82,7 @@ async def create_device(
         brand=payload.brand,
         model=payload.model,
         delivery_tier=tier,
+        conversion_profile=conversion_profiles.to_storage(payload.conversion_profile),
     )
     db.add(device)
     await db.commit()
@@ -112,7 +115,7 @@ async def update_device(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> DeviceOut:
-    """Met a jour le nom/marque/modele d'un device ; recalcule delivery_tier
+    """Met a jour le nom/marque/modele/profil d'un device ; recalcule delivery_tier
     si la marque ou le modele changent (jamais choisi a la main)."""
     device = await _get_owned_device(db, device_id, user)
     # exclude_unset seul : un champ explicitement envoye a `null` (ex. pour
@@ -121,6 +124,8 @@ async def update_device(
     updates = payload.model_dump(exclude_unset=True)
 
     brand_or_model_changed = "brand" in updates or "model" in updates
+    if "conversion_profile" in updates:
+        updates["conversion_profile"] = conversion_profiles.to_storage(updates["conversion_profile"])
     for field, value in updates.items():
         setattr(device, field, value)
 

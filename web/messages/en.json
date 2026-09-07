@@ -314,9 +314,17 @@
   },
   "editDevice": {
     "title": "Edit device",
-    "description": "Change this device's name, brand, or model.",
+    "description": "Change this device's name, brand, model, or conversion profile.",
     "toastUpdated": "Device updated.",
-    "toastFailed": "Couldn't update this device. Please try again."
+    "toastFailed": "Couldn't update this device. Please try again.",
+    "conversionProfile": "Conversion profile",
+    "conversionProfileAuto": "Automatic",
+    "conversionProfileAutoHint": "Let Ferry Agent choose based on the book.",
+    "conversionProfiles": {
+      "reader_6in": "Small e-reader (about 6 inches)",
+      "reader_7in_plus": "Large e-reader (7 inches and up)",
+      "tablet": "Tablet"
+    }
   },
   "newDevice": {
   "title": "New device",

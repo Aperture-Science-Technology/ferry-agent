@@ -103,7 +103,7 @@ async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
     converted = {}
     sent = {}
 
-    async def fake_epub_to_mobi(epub_path, mobi_path=None):
+    async def fake_epub_to_mobi(epub_path, mobi_path=None, extra_args=None):
         converted["called_with"] = epub_path
         return str(Path(epub_path).with_suffix(".mobi"))
 
@@ -137,7 +137,7 @@ async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
     epub_path = library_dir / "book.epub"
     epub_path.write_bytes(b"PK\x03\x04fake-epub")
 
-    async def fake_epub_to_mobi(src, mobi_path=None):
+    async def fake_epub_to_mobi(src, mobi_path=None, extra_args=None):
         # Simule l'ancien comportement (derive a cote de l'EPUB en library) :
         # le finally doit quand meme supprimer le derive.
         out = library_dir / "book.mobi"

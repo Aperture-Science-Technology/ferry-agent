@@ -14,6 +14,9 @@ from ferry_agent.models import (
     PairingStatus,
 )
 
+# W-27 : presets de conversion (pas de reglage fin en v1).
+ConversionPreset = Literal["reader_6in", "reader_7in_plus", "tablet"]
+
 
 class SearchRequest(BaseModel):
     query: str
@@ -150,12 +153,14 @@ class DeviceCreate(BaseModel):
     name: str | None = None
     brand: DeviceBrand
     model: str | None = None
+    conversion_profile: ConversionPreset | None = None
 
 
 class DevicePatch(BaseModel):
     name: str | None = None
     brand: DeviceBrand | None = None
     model: str | None = None
+    conversion_profile: ConversionPreset | None = None
 
 
 class UserOut(BaseModel):
@@ -193,6 +198,7 @@ class DeviceOut(BaseModel):
     brand: DeviceBrand
     model: str | None
     delivery_tier: DeliveryTier
+    conversion_profile: ConversionPreset | None = None
     cloud_provider: Literal["dropbox", "drive"] | None = None
     cloud_linked: bool = False
     last_synced_at: datetime | None

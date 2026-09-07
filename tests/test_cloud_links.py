@@ -315,7 +315,7 @@ async def test_deliver_tier_b_converts_non_epub_before_upload(
 
     converted = {}
 
-    async def fake_convert_to_epub(src_path, epub_path=None):
+    async def fake_convert_to_epub(src_path, epub_path=None, extra_args=None):
         converted["called_with"] = src_path
         return str(epub)
 

@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     google_client_secret: str | None = None
     google_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/{id}/link/callback"
 
-    app_env: str = "development"
+    conversion_cache_ttl_seconds: int = 7 * 24 * 3600
 
 
 @lru_cache
