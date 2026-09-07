@@ -38,7 +38,9 @@ Required at first start:
 Optional:
   PLATFORM_URL      default https://ferry-agent.aperture-agency.org
   PROWLARR_API_KEY  generated and persisted in /config if omitted
-  TRANSMISSION_USER / TRANSMISSION_PASSWORD  (set both or neither)
+  TRANSMISSION_USER / TRANSMISSION_PASSWORD
+                    optional; if omitted, user=ferry + random password
+                    persisted in /config/transmission-rpc-password
   DOWNLOAD_PATH     in-container path, default /downloads
   PUID / PGID / TZ  default 1000 / 1000 / UTC
   GATEWAY_ID        reused after pairing via /state/state.json
@@ -46,8 +48,11 @@ Optional:
 Ports:
   9696              Prowlarr UI
   51413/tcp+udp     Transmission peer
-  9091              Transmission RPC (127.0.0.1 inside; publish with
-                    -p 127.0.0.1:9091:9091 if you want the WebUI)
+  9091              Transmission RPC is local to the process only
+                    (bound to 127.0.0.1). Do not publish unless you
+                    need the WebUI, then use:
+                      -p 127.0.0.1:9091:9091
+                    Credentials: /config/transmission-rpc-password
 
 Volumes:
   /config           Prowlarr + Transmission settings
@@ -215,10 +220,49 @@ ensure_prowlarr_api_key() {
   export PROWLARR_API_KEY="${key}"
 }
 
+generate_transmission_password() {
+  python - <<'PY'
+import secrets
+print(secrets.token_urlsafe(24), end="")
+PY
+}
+
+ensure_transmission_credentials() {
+  user="${TRANSMISSION_USER:-}"
+  password="${TRANSMISSION_PASSWORD:-}"
+  pass_file="${CONFIG_ROOT}/transmission-rpc-password"
+
+  if [ -n "${user}" ] && [ -z "${password}" ]; then
+    printf '%s\n' "TRANSMISSION_USER and TRANSMISSION_PASSWORD must be set together" >&2
+    exit 1
+  fi
+  if [ -z "${user}" ] && [ -n "${password}" ]; then
+    printf '%s\n' "TRANSMISSION_USER and TRANSMISSION_PASSWORD must be set together" >&2
+    exit 1
+  fi
+
+  if [ -z "${user}" ] && [ -z "${password}" ] && [ -f "${pass_file}" ]; then
+    password="$(tr -d '\r\n' < "${pass_file}")"
+    user="ferry"
+  fi
+
+  if [ -z "${user}" ] || [ -z "${password}" ]; then
+    user="ferry"
+    password="$(generate_transmission_password)"
+    printf 'Transmission RPC credentials generated (user=ferry). Stored in /config/transmission-rpc-password.\n'
+  fi
+
+  printf '%s\n' "${password}" > "${pass_file}"
+  chmod 600 "${pass_file}"
+  export TRANSMISSION_USER="${user}"
+  export TRANSMISSION_PASSWORD="${password}"
+}
+
 write_transmission_settings() {
   python - <<'PY'
 import json
 import os
+import sys
 from pathlib import Path
 
 path = Path("/config/transmission/settings.json")
@@ -235,16 +279,26 @@ if path.is_file():
 download = os.environ.get("DOWNLOAD_PATH", "/downloads")
 user = os.environ.get("TRANSMISSION_USER") or ""
 password = os.environ.get("TRANSMISSION_PASSWORD") or ""
+if not user or not password:
+    print(
+        "TRANSMISSION_USER and TRANSMISSION_PASSWORD must be set before writing settings",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 settings["download-dir"] = download
 settings["incomplete-dir"] = str(Path(download) / "incomplete")
 settings["incomplete-dir-enabled"] = False
 settings["rpc-enabled"] = True
-settings["rpc-bind-address"] = "0.0.0.0"
+settings["rpc-bind-address"] = "127.0.0.1"
 settings["rpc-port"] = 9091
 settings["rpc-url"] = "/transmission/"
-settings["rpc-whitelist-enabled"] = False
+settings["rpc-whitelist-enabled"] = True
+settings["rpc-whitelist"] = "127.0.0.1"
 settings["rpc-host-whitelist-enabled"] = False
+settings["rpc-authentication-required"] = True
+settings["rpc-username"] = user
+settings["rpc-password"] = password
 settings["peer-port"] = 51413
 settings["peer-port-random-on-start"] = False
 settings["port-forwarding-enabled"] = True
@@ -252,13 +306,6 @@ settings["umask"] = 18
 settings["rename-partial-files"] = True
 settings["start-added-torrents"] = True
 settings["trash-original-torrent-files"] = False
-
-if user and password:
-    settings["rpc-authentication-required"] = True
-    settings["rpc-username"] = user
-    settings["rpc-password"] = password
-else:
-    settings["rpc-authentication-required"] = False
 
 path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 PY
@@ -312,12 +359,14 @@ apply_user
 ensure_dirs
 require_pairing_env
 ensure_prowlarr_api_key
+ensure_transmission_credentials
 write_transmission_settings
 chown -R "${APP_USER}:${APP_USER}" "${CONFIG_ROOT}" "${DOWNLOAD_PATH}" "$(dirname "${STATE_PATH}")"
 
 printf 'Starting Ferry Agent gateway (Prowlarr UI :9696, peer :51413).\n'
 
 # supervisord stays root so child logs can attach to stdout; programs run as APP_USER.
+# TRANSMISSION_USER / TRANSMISSION_PASSWORD are already exported for the agent.
 if [ "${1:-run}" = "run" ]; then
   exec supervisord -c /etc/supervisor/supervisord.conf
 fi
