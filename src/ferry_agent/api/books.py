@@ -5,8 +5,8 @@ import json
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import CurrentUser, get_current_user
@@ -29,6 +29,7 @@ from ferry_agent.schemas import (
     GatewayFetchQueued,
     LibraryItemOut,
     LibraryItemUpdate,
+    PaginatedLibraryItems,
     Result,
     ResultOut,
     SearchRequest,
@@ -72,15 +73,33 @@ def _normalize_provider(value: SourceType | str | None) -> str | None:
     return raw
 
 
-@router.get("", response_model=list[LibraryItemOut])
+@router.get("", response_model=PaginatedLibraryItems)
 async def list_books(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> list[LibraryItemOut]:
-    """Liste les LibraryItem de l'utilisateur courant."""
-    result = await db.execute(select(LibraryItem).where(LibraryItem.user_id == user.id))
+) -> PaginatedLibraryItems:
+    """Liste paginee des LibraryItem de l'utilisateur courant (SQL limit/offset)."""
+    total_result = await db.execute(
+        select(func.count()).select_from(LibraryItem).where(LibraryItem.user_id == user.id)
+    )
+    total = int(total_result.scalar_one() or 0)
+    offset = (page - 1) * limit
+    result = await db.execute(
+        select(LibraryItem)
+        .where(LibraryItem.user_id == user.id)
+        .order_by(LibraryItem.added_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
     items = result.scalars().all()
-    return [LibraryItemOut.model_validate(item) for item in items]
+    return PaginatedLibraryItems(
+        items=[LibraryItemOut.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.post("/search", response_model=list[ResultOut])

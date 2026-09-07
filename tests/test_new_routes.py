@@ -83,13 +83,17 @@ class TestListBooks:
     def test_returns_items(self):
         items = [_fake_item("Dune"), _fake_item("Foundation")]
 
-        class FakeResult:
+        class CountResult:
+            def scalar_one(self):
+                return 2
+
+        class ItemsResult:
             def scalars(self):
                 return MagicMock(all=MagicMock(return_value=items))
 
         async def fake_db():
             db = AsyncMock()
-            db.execute = AsyncMock(return_value=FakeResult())
+            db.execute = AsyncMock(side_effect=[CountResult(), ItemsResult()])
             yield db
 
         from ferry_agent.api.deps import CurrentUser as CU, get_current_user
@@ -102,21 +106,27 @@ class TestListBooks:
                 resp = client.get("/api/v1/books")
             assert resp.status_code == 200
             data = resp.json()
-            assert len(data) == 2
-            titles = {d["title"] for d in data}
+            assert data["total"] == 2
+            assert data["page"] == 1
+            assert len(data["items"]) == 2
+            titles = {d["title"] for d in data["items"]}
             assert "Dune" in titles
             assert "Foundation" in titles
         finally:
             app.dependency_overrides.clear()
 
     def test_empty_list(self):
-        class FakeResult:
+        class CountResult:
+            def scalar_one(self):
+                return 0
+
+        class ItemsResult:
             def scalars(self):
                 return MagicMock(all=MagicMock(return_value=[]))
 
         async def fake_db():
             db = AsyncMock()
-            db.execute = AsyncMock(return_value=FakeResult())
+            db.execute = AsyncMock(side_effect=[CountResult(), ItemsResult()])
             yield db
 
         from ferry_agent.api.deps import CurrentUser as CU, get_current_user
@@ -128,7 +138,7 @@ class TestListBooks:
             with TestClient(app) as client:
                 resp = client.get("/api/v1/books")
             assert resp.status_code == 200
-            assert resp.json() == []
+            assert resp.json() == {"items": [], "total": 0, "page": 1, "limit": 50}
         finally:
             app.dependency_overrides.clear()
 
