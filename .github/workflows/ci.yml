@@ -115,6 +115,10 @@ jobs:
       - name: Install ruff
         run: pip install ruff
 
+      # TD002/TD003 (flake8-todos) : bloquant — TODO sans ticket FA-XXX refusé (W-31).
+      - name: Ruff TODOs must reference FA-XXX
+        run: ruff check . --select TD002,TD003
+
       # Non-blocking map (W-10). Blocking enforcement deferred to a follow-up
       # compliance PR (ruff E/F/I/UP/B + format) — do not flip --exit-zero yet.
       - name: Ruff check
