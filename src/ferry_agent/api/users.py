@@ -27,10 +27,8 @@ async def patch_me(
     db: AsyncSession = Depends(get_db),
 ) -> UserOut:
     db_user = await db.get(User, user.id)
-    if payload.kindle_email is not None:
-        db_user.kindle_email = payload.kindle_email
-    if payload.default_format is not None:
-        db_user.default_format = payload.default_format
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(db_user, key, value)
     await db.commit()
     await db.refresh(db_user)
     return UserOut.model_validate(db_user)

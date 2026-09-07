@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, RootModel
+from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, RootModel
 
 from ferry_agent.models import (
     DeliveryMethod,
@@ -167,8 +167,8 @@ class UserOut(BaseModel):
 
 
 class UserPatch(BaseModel):
-    kindle_email: str | None = None
-    default_format: str | None = None
+    kindle_email: EmailStr | None = None
+    default_format: Literal["epub", "mobi", "azw3", "pdf"] | None = None
 
 
 class SourceOut(BaseModel):

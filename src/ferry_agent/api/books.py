@@ -318,7 +318,10 @@ async def update_book(
     db: AsyncSession = Depends(get_db),
 ) -> LibraryItemOut:
     item = await _get_owned_item(db, item_id, user)
-    update_payload = payload.model_dump(exclude_unset=True, exclude_defaults=True)
+    # exclude_unset seul : un champ explicitement envoye a `null` (ex. pour
+    # effacer l'ISBN, la description ou l'annee) doit etre applique. `exclude_defaults`
+    # casserait ce cas car `None` est aussi la valeur par defaut du champ.
+    update_payload = payload.model_dump(exclude_unset=True)
     for key, value in update_payload.items():
         setattr(item, key, value)
     await db.commit()

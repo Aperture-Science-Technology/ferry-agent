@@ -116,6 +116,53 @@ class TestUpdateBook:
         finally:
             clear_app_deps()
 
+    def test_clears_isbn_when_explicitly_null(self):
+        item = _fake_item(isbn="978-0-123456-78-9")
+
+        async def fake_db():
+            db = AsyncMock()
+            result = MagicMock(scalar_one_or_none=MagicMock(return_value=item))
+            db.execute = AsyncMock(return_value=result)
+            db.commit = AsyncMock()
+            db.refresh = AsyncMock()
+            yield db
+
+        _override(fake_db)
+        try:
+            with TestClient(app) as client:
+                resp = client.patch(f"/api/v1/books/{item.id}", json={"isbn": None})
+            assert resp.status_code == 200
+            assert resp.json()["isbn"] is None
+            assert item.isbn is None
+        finally:
+            clear_app_deps()
+
+    def test_empty_payload_leaves_fields_unchanged(self):
+        item = _fake_item(title="Dune", author="Herbert", isbn="978-0-123456-78-9")
+
+        async def fake_db():
+            db = AsyncMock()
+            result = MagicMock(scalar_one_or_none=MagicMock(return_value=item))
+            db.execute = AsyncMock(return_value=result)
+            db.commit = AsyncMock()
+            db.refresh = AsyncMock()
+            yield db
+
+        _override(fake_db)
+        try:
+            with TestClient(app) as client:
+                resp = client.patch(f"/api/v1/books/{item.id}", json={})
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["title"] == "Dune"
+            assert data["author"] == "Herbert"
+            assert data["isbn"] == "978-0-123456-78-9"
+            assert item.title == "Dune"
+            assert item.author == "Herbert"
+            assert item.isbn == "978-0-123456-78-9"
+        finally:
+            clear_app_deps()
+
 
 class TestDeleteBook:
     def test_delete_returns_204(self):
