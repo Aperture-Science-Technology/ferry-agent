@@ -42,6 +42,7 @@ export interface LibraryItem {
   isbn: string | null;
   publisher: string | null;
   published_year: number | null;
+  source_ref: string | null;
 }
 
 export interface Device {

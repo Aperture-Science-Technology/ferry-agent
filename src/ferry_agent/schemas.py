@@ -209,7 +209,7 @@ class DeviceLinkCallback(BaseModel):
 class DeliveryCreate(BaseModel):
     library_item_id: uuid.UUID
     device_id: uuid.UUID
-    format: str | None = None
+    format: Literal["epub", "mobi", "azw3", "pdf"] | None = None
     # Le frontend envoie desormais `method` explicitement (voir
     # `GET /api/v1/devices/{id}/methods` pour les modes reellement
     # disponibles pour le device cible). Le defaut `email` n'est qu'un
