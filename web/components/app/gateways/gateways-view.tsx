@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Radio, Plus, Ban, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusDot } from "@/components/status-dot";
@@ -29,6 +30,49 @@ import { useApiClient } from "@/lib/api-client";
 import type { Gateway, GatewayJobStatus, GatewayJobStatusOut, GatewayJobType } from "@/lib/types";
 
 const MAX_ATTEMPTS_DISPLAY = 5;
+const PENDING_POLL_MS = 5_000;
+const NOW_TICK_MS = 15_000;
+const DEFAULT_ONLINE_SECONDS = 60;
+
+type AccessTranslations = ReturnType<typeof useTranslations<"access">>;
+
+function formatDuration(ms: number, t: AccessTranslations): string {
+  const minutes = Math.max(1, Math.round(ms / 60_000));
+  if (minutes < 60) return t("durationMinutes", { count: minutes });
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return t("durationHours", { count: hours });
+  return t("durationDays", { count: Math.round(hours / 24) });
+}
+
+function isGatewayOnline(gateway: Gateway, now: number): boolean {
+  if (!gateway.last_seen_at) return false;
+  const windowMs = (gateway.gateway_online_seconds ?? DEFAULT_ONLINE_SECONDS) * 1000;
+  return now - new Date(gateway.last_seen_at).getTime() <= windowMs;
+}
+
+function minutesUntil(expiresAt: string | null | undefined, now: number): number | null {
+  if (!expiresAt) return null;
+  return Math.ceil((new Date(expiresAt).getTime() - now) / 60_000);
+}
+
+function mapJobError(
+  type: GatewayJobType,
+  error: string | null,
+  t: AccessTranslations
+): string {
+  if (error) {
+    if (/abandonn[ée] après \d+ tentatives/i.test(error) || /abandoned after \d+ attempts/i.test(error)) {
+      return t("jobFailedAbandoned");
+    }
+    if (/malveillant|VirusTotal/i.test(error)) return t("jobFailedMalicious");
+    if (/volumineux|too large/i.test(error)) return t("jobFailedTooLarge");
+    if (/livre reconnu|Formats acceptés|not a recognized/i.test(error)) {
+      return t("jobFailedBadFormat");
+    }
+    if (/revoked/i.test(error)) return t("jobFailedRevoked");
+  }
+  return type === "search" ? t("jobFailedSearch") : t("jobFailedGeneric");
+}
 
 function GatewayRecentActivity({ gatewayId }: { gatewayId: string }) {
   const t = useTranslations("access");
@@ -74,16 +118,23 @@ function GatewayRecentActivity({ gatewayId }: { gatewayId: string }) {
             return (
               <li
                 key={job.job_id}
-                className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+                className="flex flex-col gap-0.5 text-sm text-muted-foreground"
               >
-                <span className="text-foreground">{typeLabel(job.type)}</span>
-                <Badge variant="secondary">{statusLabel(job.status)}</Badge>
-                {inProgress && job.attempts > 0 && (
-                  <span className="text-xs">
-                    {t("attemptOf", {
-                      current: job.attempts,
-                      max: MAX_ATTEMPTS_DISPLAY,
-                    })}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-foreground">{typeLabel(job.type)}</span>
+                  <Badge variant="secondary">{statusLabel(job.status)}</Badge>
+                  {inProgress && job.attempts > 0 && (
+                    <span className="text-xs">
+                      {t("attemptOf", {
+                        current: job.attempts,
+                        max: MAX_ATTEMPTS_DISPLAY,
+                      })}
+                    </span>
+                  )}
+                </div>
+                {job.status === "failed" && (
+                  <span className="text-xs text-destructive/90">
+                    {mapJobError(job.type, job.error, t)}
                   </span>
                 )}
               </li>
@@ -91,6 +142,88 @@ function GatewayRecentActivity({ gatewayId }: { gatewayId: string }) {
           })}
         </ul>
       )}
+    </div>
+  );
+}
+
+function PendingWaitState({
+  gateway,
+  now,
+}: {
+  gateway: Gateway;
+  now: number;
+}) {
+  const t = useTranslations("access");
+  const minutesLeft = minutesUntil(gateway.pairing_expires_at, now);
+
+  let expiryMessage: string;
+  if (minutesLeft === null) {
+    expiryMessage = t("codeExpiresIn", {
+      minutes: gateway.pairing_token_ttl_minutes ?? 15,
+    });
+  } else if (minutesLeft <= 0) {
+    expiryMessage = t("codeExpired");
+  } else if (minutesLeft === 1) {
+    expiryMessage = t("codeExpiresSoon");
+  } else {
+    expiryMessage = t("codeExpiresIn", { minutes: minutesLeft });
+  }
+
+  return (
+    <div className="mt-3 max-w-sm space-y-2 border-t border-border/40 pt-3">
+      <p className="text-sm font-medium text-foreground">{t("statusWaiting")}</p>
+      <p className="text-sm text-muted-foreground">{expiryMessage}</p>
+      <Link
+        href="/docs#depannage"
+        className="inline-block text-sm text-foreground underline-offset-4 hover:underline"
+      >
+        {t("troubleshootLink")}
+      </Link>
+    </div>
+  );
+}
+
+function AccessStatusCell({ gateway, now }: { gateway: Gateway; now: number }) {
+  const t = useTranslations("access");
+
+  if (gateway.status === "pending") {
+    return (
+      <div className="flex items-center gap-2">
+        <StatusDot online={false} />
+        <Badge variant="secondary">{t("statusPending")}</Badge>
+      </div>
+    );
+  }
+
+  if (gateway.status === "revoked") {
+    return (
+      <div className="flex items-center gap-2">
+        <StatusDot online={false} />
+        <Badge variant="secondary">{t("statusRevoked")}</Badge>
+      </div>
+    );
+  }
+
+  const online = isGatewayOnline(gateway, now);
+  if (online) {
+    return (
+      <div className="flex items-center gap-2">
+        <StatusDot online />
+        <Badge variant="secondary">{t("statusConnected")}</Badge>
+      </div>
+    );
+  }
+
+  const offlineLabel = gateway.last_seen_at
+    ? t("statusOfflineSince", {
+        duration: formatDuration(now - new Date(gateway.last_seen_at).getTime(), t),
+      })
+    : t("statusOffline");
+
+  return (
+    <div className="flex items-center gap-2">
+      <StatusDot online={false} />
+      <Badge variant="secondary">{offlineLabel}</Badge>
     </div>
   );
 }
@@ -110,6 +243,43 @@ export function GatewaysView({
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Gateway | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  const hasPending = gateways.some((gateway) => gateway.status === "pending");
+  const needsClock =
+    hasPending || gateways.some((gateway) => gateway.status === "paired");
+
+  useEffect(() => {
+    if (!needsClock) return;
+    const tickId = setInterval(() => setNow(Date.now()), NOW_TICK_MS);
+    return () => clearInterval(tickId);
+  }, [needsClock]);
+
+  useEffect(() => {
+    if (!hasPending) return;
+    let cancelled = false;
+
+    const refresh = async () => {
+      try {
+        const data = await call<Gateway[]>("/api/v1/gateways");
+        if (!cancelled) {
+          setGateways(data);
+          setNow(Date.now());
+        }
+      } catch {
+        // Keep showing the last known list; the next tick retries.
+      }
+    };
+
+    const pollId = setInterval(() => {
+      void refresh();
+    }, PENDING_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollId);
+    };
+  }, [hasPending, call]);
 
   async function revoke(gateway: Gateway) {
     setRevokingId(gateway.gateway_id);
@@ -177,15 +347,14 @@ export function GatewaysView({
                 <TableRow key={gateway.gateway_id}>
                   <TableCell className="align-top font-medium">
                     <div>{gateway.name}</div>
-                    <GatewayRecentActivity gatewayId={gateway.gateway_id} />
+                    {gateway.status === "pending" ? (
+                      <PendingWaitState gateway={gateway} now={now} />
+                    ) : (
+                      <GatewayRecentActivity gatewayId={gateway.gateway_id} />
+                    )}
                   </TableCell>
                   <TableCell className="align-top">
-                    <div className="flex items-center gap-2">
-                      <StatusDot online={gateway.status === "paired"} />
-                      <Badge variant="secondary" className="capitalize">
-                        {gateway.status}
-                      </Badge>
-                    </div>
+                    <AccessStatusCell gateway={gateway} now={now} />
                   </TableCell>
                   <TableCell className="align-top text-muted-foreground">
                     {gateway.last_seen_at

@@ -222,14 +222,16 @@ export function ByoInstallGuide() {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="byo">
-              <AccordionTrigger>{t("byoTitle")}</AccordionTrigger>
-              <AccordionContent className="space-y-3">
-                <p className="text-muted-foreground">{t("byoDescription")}</p>
-                <p className="text-muted-foreground">{t("byoBody1")}</p>
-                <p className="text-muted-foreground">{t("byoBody2")}</p>
-              </AccordionContent>
-            </AccordionItem>
+            <div id="depannage">
+              <AccordionItem value="byo">
+                <AccordionTrigger>{t("byoTitle")}</AccordionTrigger>
+                <AccordionContent className="space-y-3">
+                  <p className="text-muted-foreground">{t("byoDescription")}</p>
+                  <p className="text-muted-foreground">{t("byoBody1")}</p>
+                  <p className="text-muted-foreground">{t("byoBody2")}</p>
+                </AccordionContent>
+              </AccordionItem>
+            </div>
           </Accordion>
         </CardContent>
       </Card>

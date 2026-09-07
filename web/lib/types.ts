@@ -61,12 +61,18 @@ export interface Gateway {
   name: string;
   status: PairingStatus;
   last_seen_at: string | null;
+  pairing_expires_at?: string | null;
+  pairing_token_ttl_minutes?: number;
+  gateway_online_seconds?: number;
 }
 
 export interface GatewayCredentials {
   gateway_id: string;
   pairing_token: string;
   gateway_key: string;
+  pairing_expires_at?: string | null;
+  pairing_token_ttl_minutes?: number;
+  gateway_online_seconds?: number;
 }
 
 export type GatewayJobType = "search" | "fetch";
