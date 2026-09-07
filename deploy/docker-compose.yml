@@ -84,7 +84,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=infrastructure_infra-network"
-      - "traefik.http.routers.ferry-agent-core.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/api/v1`) || PathPrefix(`/c/`))"
+      - "traefik.http.routers.ferry-agent-core.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/api/v1`) || PathPrefix(`/c/`) || PathPrefix(`/opds`))"
       - "traefik.http.routers.ferry-agent-core.priority=100"
       - "traefik.http.routers.ferry-agent-core.entrypoints=websecure"
       - "traefik.http.routers.ferry-agent-core.tls=true"

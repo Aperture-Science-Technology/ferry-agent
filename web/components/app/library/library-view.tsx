@@ -29,7 +29,7 @@ import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
 import { Reveal } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
 import { useGatewayJob } from "@/lib/use-gateway-job";
-import type { Device, LibraryItem, SearchResult } from "@/lib/types";
+import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@/lib/types";
 
 type ViewMode = "grid" | "list";
 type SortBy = "title" | "author" | "added";
@@ -165,8 +165,14 @@ export function LibraryView({
     clearPending(resultKey);
     markOwned(resultKey);
     try {
-      const refreshed = await call<LibraryItem[]>("/api/v1/books");
-      setItems(refreshed);
+      const refreshed = await call<PaginatedLibraryItems>("/api/v1/books?page=1&limit=200");
+      const itemsAcc = [...refreshed.items];
+      const totalPages = Math.max(1, Math.ceil(refreshed.total / refreshed.limit));
+      for (let page = 2; page <= totalPages; page += 1) {
+        const next = await call<PaginatedLibraryItems>(`/api/v1/books?page=${page}&limit=200`);
+        itemsAcc.push(...next.items);
+      }
+      setItems(itemsAcc);
     } catch {
       // Owned badge + toast still apply even if library refresh fails.
     }

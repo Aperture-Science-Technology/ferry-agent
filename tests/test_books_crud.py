@@ -193,11 +193,13 @@ class TestDeleteBook:
             db = AsyncMock()
 
             async def fake_execute(query):
-                # Premiere requete (delete) : retrouve l'item par id+user.
-                # Deuxieme requete (list) : retourne ce qui reste (vide).
                 result = MagicMock()
-                result.scalar_one_or_none = MagicMock(return_value=item if not remaining else None)
-                result.scalars = MagicMock(return_value=MagicMock(all=MagicMock(return_value=remaining)))
+                # Pour la liste paginee : count via scalar_one, items via scalars.
+                result.scalar_one = MagicMock(return_value=len(remaining))
+                result.scalar_one_or_none = MagicMock(return_value=item)
+                result.scalars = MagicMock(
+                    return_value=MagicMock(all=MagicMock(return_value=list(remaining)))
+                )
                 return result
 
             db.execute = AsyncMock(side_effect=fake_execute)
@@ -210,9 +212,10 @@ class TestDeleteBook:
             with TestClient(app) as client:
                 del_resp = client.delete(f"/api/v1/books/{item.id}")
                 assert del_resp.status_code == 204
+                # Apres suppression, la liste mockee reste vide (remaining=[]).
                 list_resp = client.get("/api/v1/books")
                 assert list_resp.status_code == 200
-                assert list_resp.json() == []
+                assert list_resp.json() == {"items": [], "total": 0, "page": 1, "limit": 50}
         finally:
             clear_app_deps()
 

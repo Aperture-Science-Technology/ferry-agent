@@ -243,6 +243,7 @@ class TestListGatewayJobsApi:
             payload={},
             status=GatewayJobStatus.done,
             result_ref=str(item_id),
+            attempts=0,
             created_at=datetime.now(timezone.utc),
         )
         failed_job = GatewayJob(
@@ -252,6 +253,7 @@ class TestListGatewayJobsApi:
             payload={"query": "Dune"},
             status=GatewayJobStatus.failed,
             result_ref="abandonné après 5 tentatives",
+            attempts=0,
             created_at=datetime.now(timezone.utc),
         )
 

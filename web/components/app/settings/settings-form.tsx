@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/select";
 import { Link } from "@/i18n/navigation";
 import { SourcesManager } from "@/components/app/sources/sources-manager";
+import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
 import { useApiClient } from "@/lib/api-client";
-import type { Source } from "@/lib/types";
+import type { OpdsToken, Source } from "@/lib/types";
 
 const FORMATS = ["epub", "mobi", "azw3", "pdf"];
 
@@ -29,6 +30,8 @@ export function SettingsForm({
   settingsUnavailable,
   initialSources,
   sourcesUnavailable,
+  initialOpdsTokens,
+  opdsTokensUnavailable,
 }: {
   initialEmail: string;
   initialKindleEmail: string;
@@ -36,6 +39,8 @@ export function SettingsForm({
   settingsUnavailable: boolean;
   initialSources: Source[];
   sourcesUnavailable: boolean;
+  initialOpdsTokens: OpdsToken[];
+  opdsTokensUnavailable: boolean;
 }) {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
@@ -126,6 +131,21 @@ export function SettingsForm({
         </CardHeader>
         <CardContent>
           <SourcesManager initialSources={initialSources} sourcesUnavailable={sourcesUnavailable} />
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/60 bg-card/40">
+        <CardHeader>
+          <CardTitle className="font-heading text-lg font-medium">
+            {t("readerCatalogTitle")}
+          </CardTitle>
+          <CardDescription>{t("readerCatalogDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ReaderCatalogSection
+            initialTokens={initialOpdsTokens}
+            tokensUnavailable={opdsTokensUnavailable}
+          />
         </CardContent>
       </Card>
 

@@ -46,6 +46,28 @@ export interface LibraryItem {
   source_ref: string | null;
 }
 
+export interface PaginatedLibraryItems {
+  items: LibraryItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface OpdsToken {
+  id: string;
+  label: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface OpdsTokenCreated {
+  id: string;
+  label: string;
+  token: string;
+  url: string;
+  created_at: string;
+}
+
 export interface Device {
   id: string;
   name: string | null;

@@ -145,6 +145,38 @@ class LibraryItemUpdate(BaseModel):
     isbn: str | None = None
 
 
+class PaginatedLibraryItems(BaseModel):
+    items: list[LibraryItemOut]
+    total: int
+    page: int
+    limit: int
+
+
+class OpdsTokenCreate(BaseModel):
+    label: str = Field(default="Liseuse", min_length=1, max_length=120)
+
+
+class OpdsTokenCreated(BaseModel):
+    id: uuid.UUID
+    label: str
+    token: str
+    url: str
+    created_at: datetime
+
+
+class OpdsTokenOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    label: str
+    created_at: datetime
+    last_used_at: datetime | None
+
+
+class OpdsTokenRevoke(BaseModel):
+    token_id: uuid.UUID
+
+
 class DeviceCreate(BaseModel):
     """Pas de `delivery_tier` ici : le tier est toujours calcule cote serveur
     depuis `brand`/`model` (voir `api.devices._compute_tier`), jamais choisi

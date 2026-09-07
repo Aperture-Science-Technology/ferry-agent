@@ -9,7 +9,7 @@ import jwt
 from fastapi import FastAPI
 from sqlalchemy import delete
 
-from ferry_agent.api import books, deliveries, devices, gateways, health, sources, tierc, users
+from ferry_agent.api import books, deliveries, devices, gateways, health, opds, sources, tierc, users
 from ferry_agent.config import Settings, get_settings
 from ferry_agent.connectors.registry import log_startup
 from ferry_agent.db import async_session_factory
@@ -92,3 +92,5 @@ app.include_router(gateways.router)
 app.include_router(sources.router)
 app.include_router(users.router)
 app.include_router(tierc.router)
+app.include_router(opds.catalog_router)
+app.include_router(opds.tokens_router)

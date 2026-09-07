@@ -2,7 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/app/page-header";
 import { SettingsForm } from "@/components/app/settings/settings-form";
 import { safeApiFetch } from "@/lib/api";
-import type { Source } from "@/lib/types";
+import type { OpdsToken, Source } from "@/lib/types";
 
 interface UserSettings {
   email: string;
@@ -18,9 +18,10 @@ export default async function ReglagesPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("pages.settings");
-  const [settings, sources] = await Promise.all([
+  const [settings, sources, opdsTokens] = await Promise.all([
     safeApiFetch<UserSettings>("/api/v1/users/me"),
     safeApiFetch<Source[]>("/api/v1/sources"),
+    safeApiFetch<OpdsToken[]>("/api/v1/opds/tokens"),
   ]);
 
   return (
@@ -33,6 +34,8 @@ export default async function ReglagesPage({
         settingsUnavailable={settings === null}
         initialSources={sources ?? []}
         sourcesUnavailable={sources === null}
+        initialOpdsTokens={opdsTokens ?? []}
+        opdsTokensUnavailable={opdsTokens === null}
       />
     </div>
   );
