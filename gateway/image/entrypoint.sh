@@ -29,7 +29,7 @@ Ferry Agent all-in-one gateway
 Usage:
   docker run --rm gateway:test --help
   docker run --rm gateway:test --version
-  docker run -d --name ferry-gateway --restart unless-stopped -e PAIRING_TOKEN=YOUR_TOKEN -e GATEWAY_KEY=YOUR_KEY -e PUID=$(id -u) -e PGID=$(id -g) -p 9696:9696 -p 51413:51413 -p 51413:51413/udp -v "$PWD/downloads:/downloads" -v ferry-gw-config:/config -v ferry-gw-state:/state gateway:test
+  docker run -d --name ferry-gateway --restart unless-stopped -e PAIRING_TOKEN=YOUR_TOKEN -e GATEWAY_KEY=YOUR_KEY -e PUID=$(id -u) -e PGID=$(id -g) -p 127.0.0.1:9696:9696 -p 51413:51413 -p 51413:51413/udp -v "$PWD/downloads:/downloads" -v ferry-gw-config:/config -v ferry-gw-state:/state gateway:test
 
 Required at first start:
   PAIRING_TOKEN     one-time token from the Ferry Agent dashboard
@@ -46,7 +46,11 @@ Optional:
   GATEWAY_ID        reused after pairing via /state/state.json
 
 Ports:
-  9696              Prowlarr UI
+  9696              Prowlarr UI (admin: indexer credentials). Default to
+                    localhost only: -p 127.0.0.1:9696:9696
+                    Publishing 9696 on 0.0.0.0 exposes that admin UI on
+                    your LAN — Forms auth is enabled; credentials are in
+                    /config/prowlarr-credentials (user=ferry).
   51413/tcp+udp     Transmission peer
   9091              Transmission RPC is local to the process only
                     (bound to 127.0.0.1). Do not publish unless you
@@ -167,8 +171,8 @@ template = """<?xml version="1.0" encoding="utf-8"?>
   <EnableSsl>False</EnableSsl>
   <LaunchBrowser>False</LaunchBrowser>
   <ApiKey>__API_KEY__</ApiKey>
-  <AuthenticationMethod>None</AuthenticationMethod>
-  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <AuthenticationMethod>Forms</AuthenticationMethod>
+  <AuthenticationRequired>Enabled</AuthenticationRequired>
   <Branch>master</Branch>
   <LogLevel>info</LogLevel>
   <SslCertPath></SslCertPath>
@@ -182,21 +186,21 @@ template = """<?xml version="1.0" encoding="utf-8"?>
   <Theme>auto</Theme>
 </Config>
 """
+
+
+def set_tag(text: str, tag: str, value: str) -> str:
+    pattern = rf"<{tag}>[^<]*</{tag}>"
+    replacement = f"<{tag}>{value}</{tag}>"
+    if re.search(pattern, text):
+        return re.sub(pattern, replacement, text, count=1)
+    return text.replace("</Config>", f"  {replacement}\n</Config>", 1)
+
+
 if path.is_file():
     text = path.read_text(encoding="utf-8")
-    if re.search(r"<ApiKey>[^<]*</ApiKey>", text):
-        text = re.sub(
-            r"<ApiKey>[^<]*</ApiKey>",
-            f"<ApiKey>{api_key}</ApiKey>",
-            text,
-            count=1,
-        )
-    else:
-        text = text.replace(
-            "</Config>",
-            f"  <ApiKey>{api_key}</ApiKey>\n</Config>",
-            1,
-        )
+    text = set_tag(text, "ApiKey", api_key)
+    text = set_tag(text, "AuthenticationMethod", "Forms")
+    text = set_tag(text, "AuthenticationRequired", "Enabled")
     path.write_text(text, encoding="utf-8")
 else:
     path.write_text(template.replace("__API_KEY__", api_key), encoding="utf-8")
@@ -256,6 +260,25 @@ ensure_transmission_credentials() {
   chmod 600 "${pass_file}"
   export TRANSMISSION_USER="${user}"
   export TRANSMISSION_PASSWORD="${password}"
+}
+
+ensure_prowlarr_credentials() {
+  creds_file="${CONFIG_ROOT}/prowlarr-credentials"
+  if [ -f "${creds_file}" ]; then
+    chmod 600 "${creds_file}" || true
+    return
+  fi
+  password="$(
+    python - <<'PY'
+import secrets
+print(secrets.token_urlsafe(24), end="")
+PY
+  )"
+  umask 077
+  printf 'username=ferry\npassword=%s\n' "${password}" > "${creds_file}"
+  chmod 600 "${creds_file}"
+  printf 'Generated Prowlarr UI credentials and stored them under /config.\n'
+  printf 'Prowlarr UI: http://127.0.0.1:9696 — user=ferry, password stored in /config/prowlarr-credentials\n'
 }
 
 write_transmission_settings() {
@@ -360,10 +383,11 @@ ensure_dirs
 require_pairing_env
 ensure_prowlarr_api_key
 ensure_transmission_credentials
+ensure_prowlarr_credentials
 write_transmission_settings
 chown -R "${APP_USER}:${APP_USER}" "${CONFIG_ROOT}" "${DOWNLOAD_PATH}" "$(dirname "${STATE_PATH}")"
 
-printf 'Starting Ferry Agent gateway (Prowlarr UI :9696, peer :51413).\n'
+printf 'Starting Ferry Agent gateway (Prowlarr UI :9696 localhost-bound recommended, peer :51413).\n'
 
 # supervisord stays root so child logs can attach to stdout; programs run as APP_USER.
 # TRANSMISSION_USER / TRANSMISSION_PASSWORD are already exported for the agent.
