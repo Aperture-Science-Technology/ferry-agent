@@ -138,13 +138,13 @@ export function BookDetailDialog({
                 </div>
 
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                  {item.page_count !== null && (
+                  {item.page_count != null && (
                     <>
                       <dt className="text-muted-foreground">{t("pages")}</dt>
                       <dd>{t("pagesValue", { count: item.page_count })}</dd>
                     </>
                   )}
-                  {item.size_bytes !== null && (
+                  {item.size_bytes != null && (
                     <>
                       <dt className="text-muted-foreground">{t("size")}</dt>
                       <dd>{formatBytes(item.size_bytes)}</dd>
@@ -156,7 +156,7 @@ export function BookDetailDialog({
                       <dd>{item.publisher}</dd>
                     </>
                   )}
-                  {item.published_year !== null && (
+                  {item.published_year != null && (
                     <>
                       <dt className="text-muted-foreground">{t("year")}</dt>
                       <dd>{item.published_year}</dd>
