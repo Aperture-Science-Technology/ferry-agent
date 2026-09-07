@@ -1,0 +1,28 @@
+@echo off
+REM Windows double-click launcher template (canal C3).
+REM install.sh / operator replace placeholders before use.
+setlocal
+cd /d "%~dp0"
+
+set "PAIRING_TOKEN=__PAIRING_TOKEN__"
+set "GATEWAY_KEY=__GATEWAY_KEY__"
+set "GATEWAY_IMAGE_TAG=__GATEWAY_IMAGE_TAG__"
+if not defined PLATFORM_URL set "PLATFORM_URL=https://ferry-agent.aperture-agency.org"
+
+where docker >nul 2>&1
+if errorlevel 1 (
+  echo Docker introuvable. Installez Docker Desktop, puis relancez.
+  pause
+  exit /b 1
+)
+
+docker compose -f "%~dp0compose.yaml" up -d
+if errorlevel 1 (
+  echo Echec docker compose.
+  pause
+  exit /b 1
+)
+
+echo Ferry Gateway demarre. Prowlarr : http://127.0.0.1:9696
+pause
+endlocal

@@ -23,48 +23,7 @@ from ferry_agent.schemas import SearchRequest
 from ferry_agent.services import gateways
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 
-
-class _Scalars:
-    def __init__(self, values):
-        self.values = values
-
-    def all(self):
-        return self.values
-
-
-class ScalarResult:
-    def __init__(self, value):
-        self.value = value
-
-    def scalar_one_or_none(self):
-        return self.value
-
-    def scalars(self):
-        return _Scalars(self.value if isinstance(self.value, list) else [])
-
-    def all(self):
-        return self.value if isinstance(self.value, list) else []
-
-
-class FakeSession:
-    def __init__(self, execute_values=()):
-        self.execute_values = list(execute_values)
-        self.commits = 0
-        self.statements = []
-
-    async def execute(self, statement):
-        self.statements.append(statement)
-        value = self.execute_values.pop(0) if self.execute_values else None
-        return ScalarResult(value)
-
-    async def commit(self):
-        self.commits += 1
-
-    async def refresh(self, _value):
-        return None
-
-    def add(self, _value):
-        return None
+from tests.fakes import FakeSession
 
 
 def make_gateway(**overrides) -> Gateway:
@@ -127,13 +86,19 @@ async def test_poll_moves_pending_job_to_running_and_reposts_running() -> None:
         type=GatewayJobType.search,
         payload={"query": "Dune"},
         status=GatewayJobStatus.pending,
+        attempts=0,
     )
     db = FakeSession([job, job])
 
     assert await gateways.poll_job(db, gateway_id) is job
     assert job.status == GatewayJobStatus.running
+    assert job.attempts == 1
+    assert job.next_attempt_at is not None
+    # FakeSession n'evalue pas le WHERE : on simule l'echeance du backoff.
+    job.next_attempt_at = datetime.now(timezone.utc) - timedelta(seconds=1)
     assert await gateways.poll_job(db, gateway_id) is job
-    assert db.commits == 1
+    assert job.attempts == 2
+    assert db.commits == 2
 
 
 async def test_fetch_cap_and_magic_bytes() -> None:
@@ -144,7 +109,7 @@ async def test_fetch_cap_and_magic_bytes() -> None:
     assert sniff_ebook_format(b"%PDF-1.7") == "pdf"
     assert sniff_ebook_format(b"PK\x03\x04epub") == "epub"
     assert sniff_ebook_format(bytes(60) + b"BOOKMOBI") == "mobi"
-    with pytest.raises(ValueError, match="non reconnu"):
+    with pytest.raises(ValueError, match="livre reconnu"):
         sniff_ebook_format(b"not-an-ebook")
 
 
@@ -256,3 +221,98 @@ async def test_search_orchestration_merges_gateway_results(
         "gutenberg",
         f"gateway:{gateway.id}",
     ]
+
+
+class TestListGatewayJobsApi:
+    def test_lists_recent_jobs_for_owner(self):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from fastapi.testclient import TestClient
+
+        from ferry_agent.main import app
+        from ferry_agent.models import GatewayJobStatus, GatewayJobType
+        from tests.fakes import override_app_deps
+
+        user_id = uuid.uuid4()
+        gateway = make_gateway(user_id=user_id, pairing_status=PairingStatus.paired)
+        item_id = uuid.uuid4()
+        done_job = GatewayJob(
+            id=uuid.uuid4(),
+            gateway_id=gateway.id,
+            type=GatewayJobType.fetch,
+            payload={},
+            status=GatewayJobStatus.done,
+            result_ref=str(item_id),
+            attempts=0,
+            created_at=datetime.now(timezone.utc),
+        )
+        failed_job = GatewayJob(
+            id=uuid.uuid4(),
+            gateway_id=gateway.id,
+            type=GatewayJobType.search,
+            payload={"query": "Dune"},
+            status=GatewayJobStatus.failed,
+            result_ref="abandonné après 5 tentatives",
+            attempts=0,
+            created_at=datetime.now(timezone.utc),
+        )
+
+        async def fake_db():
+            db = AsyncMock()
+            calls = {"n": 0}
+
+            async def fake_execute(_query):
+                calls["n"] += 1
+                result = MagicMock()
+                if calls["n"] == 1:
+                    result.scalar_one_or_none = MagicMock(return_value=gateway)
+                else:
+                    result.scalars = MagicMock(
+                        return_value=MagicMock(all=MagicMock(return_value=[failed_job, done_job]))
+                    )
+                return result
+
+            db.execute = AsyncMock(side_effect=fake_execute)
+            yield db
+
+        override_app_deps(fake_db, user_id=user_id)
+        try:
+            with TestClient(app) as client:
+                resp = client.get(f"/api/v1/gateways/{gateway.id}/jobs?limit=20")
+            assert resp.status_code == 200
+            body = resp.json()
+            assert len(body) == 2
+            assert body[0]["type"] == "search"
+            assert body[0]["status"] == "failed"
+            assert body[0]["error"] == "abandonné après 5 tentatives"
+            assert body[0]["library_item_id"] is None
+            assert body[0]["attempts"] == 0
+            assert body[1]["type"] == "fetch"
+            assert body[1]["status"] == "done"
+            assert body[1]["library_item_id"] == str(item_id)
+            assert body[1]["error"] is None
+            assert "job_id" in body[0]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_404_for_other_users_gateway(self):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from fastapi.testclient import TestClient
+
+        from ferry_agent.main import app
+        from tests.fakes import override_app_deps
+
+        async def fake_db():
+            db = AsyncMock()
+            result = MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+            db.execute = AsyncMock(return_value=result)
+            yield db
+
+        override_app_deps(fake_db, user_id=uuid.uuid4())
+        try:
+            with TestClient(app) as client:
+                resp = client.get(f"/api/v1/gateways/{uuid.uuid4()}/jobs")
+            assert resp.status_code == 404
+        finally:
+            app.dependency_overrides.clear()

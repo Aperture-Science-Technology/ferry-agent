@@ -18,6 +18,8 @@ from fastapi import HTTPException
 from ferry_agent.api import deps
 from ferry_agent.models import User
 
+from tests.fakes import FakeSession
+
 CLERK_ISSUER = "https://clerk.example.test"
 FAKE_AUD = "https://frontend.example.test"
 
@@ -70,39 +72,10 @@ class _FakeRequest:
         self.app = SimpleNamespace(state=SimpleNamespace(jwks_client=jwks_client))
 
 
-class _ScalarResult:
-    def __init__(self, value) -> None:
-        self.value = value
-
-    def scalar_one_or_none(self):
-        return self.value
-
-
-class _FakeSession:
-    """Session minimale : utilisateur deja present, pas de create."""
-
-    def __init__(self, user: User) -> None:
-        self.user = user
-
-    async def execute(self, _statement):
-        return _ScalarResult(self.user)
-
-    async def commit(self):
-        return None
-
-    async def refresh(self, _value):
-        return None
-
-    def add(self, _value):
-        return None
-
-
 def _settings(*, issuer: str = CLERK_ISSUER, audience: str | None = None) -> SimpleNamespace:
     return SimpleNamespace(
         clerk_issuer=issuer,
         clerk_audience=audience,
-        mcp_api_key=None,
-        mcp_service_user_email="mcp@test",
     )
 
 
@@ -120,8 +93,7 @@ async def _call_get_current_user(
         request=_FakeRequest(_FakeJwksClient(public_pem)),
         authorization=f"Bearer {token}",
         x_dev_user=None,
-        x_api_key=None,
-        db=_FakeSession(user),
+        db=FakeSession(always=user),
     )
 
 

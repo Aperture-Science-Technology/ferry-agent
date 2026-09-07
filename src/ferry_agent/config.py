@@ -19,9 +19,15 @@ class Settings(BaseSettings):
     temp_dir: str = "./data/tmp"
 
     max_fetch_bytes: int = 200 * 1024 * 1024
+    # Plafond de stockage bibliotheque par utilisateur (defaut 5 Go).
+    user_storage_quota_bytes: int = 5 * 1024 * 1024 * 1024
     pairing_token_ttl_minutes: int = 15
     gateway_online_seconds: int = 60
     gateway_search_wait_seconds: float = 15.0
+    gateway_job_retention_days: int = 7
+    gateway_job_purge_interval_seconds: int = 3600
+    gateway_job_max_attempts: int = 5
+    gateway_job_backoff_base_seconds: int = 30
     virustotal_api_key: str | None = None
 
     # Send-to-Kindle / envoi email (tier A). Laisser smtp_user/smtp_password
@@ -39,7 +45,9 @@ class Settings(BaseSettings):
     # config runtime (env) : jamais commits. Laisser client_id/secret vides
     # desactive le provider correspondant (l'endpoint /link renvoie 503
     # plutot que de planter). `{id}` dans les redirect_uri est remplace par
-    # l'UUID du device au moment de la requete.
+    # l'UUID du device au moment de la requete. Les redirect_uri pointent
+    # vers la route **GET** publique `/link/callback` (echange code + state,
+    # puis redirection dashboard) — plus de POST navigateur.
     dropbox_client_id: str | None = None
     dropbox_client_secret: str | None = None
     dropbox_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/{id}/link/callback"
@@ -47,12 +55,19 @@ class Settings(BaseSettings):
     google_client_secret: str | None = None
     google_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/{id}/link/callback"
 
-    app_env: str = "development"
+    conversion_cache_ttl_seconds: int = 7 * 24 * 3600
 
-    # Cle API serveur pour le MCP (acces machine-to-machine).
-    # Laisser vide desactive ce mode (seul Clerk fonctionne).
-    mcp_api_key: str | None = None
-    mcp_service_user_email: str = "mcp-service@ferry-agent.internal"
+    # Chiffrement au repos des tokens cloud (`Device.link_ref`). Une ou
+    # plusieurs cles Fernet separees par des virgules (la premiere chiffre ;
+    # les suivantes restent valides en lecture pour la rotation).
+    # Generer : python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # Perdre toutes les cles rend les tokens illisibles (cloud_linked=false).
+    fernet_key: str | None = None
+
+    # TTL du parametre OAuth `state` (nonce signe + store serveur, usage unique).
+    oauth_state_ttl_seconds: int = 600
+
+    app_env: str = "development"
 
 
 @lru_cache

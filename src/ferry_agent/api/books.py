@@ -2,17 +2,21 @@
 
 import asyncio
 import json
+import logging
 import uuid
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ferry_agent.api.deps import CurrentUser, get_current_user
+from ferry_agent.api.deps import CurrentUser, get_current_user, get_library_user
+from ferry_agent.api.deliveries import _DELIVERY_LIST_COLS, build_delivery_out
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
 from ferry_agent.models import (
     DeliveryJob,
+    Device,
     Gateway,
     GatewayJobStatus,
     GatewayJobType,
@@ -26,12 +30,19 @@ from ferry_agent.schemas import (
     GatewayFetchQueued,
     LibraryItemOut,
     LibraryItemUpdate,
+    PaginatedLibraryItems,
     Result,
     ResultOut,
     SearchRequest,
 )
 from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services import library
+from ferry_agent.services.covers import validate_cover_url
+from ferry_agent.services.errors import FileTooLargeError, QuotaExceededError, UnknownFormatError
+from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
+from ferry_agent.services.virustotal import is_known_malicious
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/books", tags=["books"])
 
@@ -66,15 +77,91 @@ def _normalize_provider(value: SourceType | str | None) -> str | None:
     return raw
 
 
-@router.get("", response_model=list[LibraryItemOut])
+async def _import_uploaded_file(
+    db: AsyncSession,
+    user: CurrentUser,
+    file: UploadFile,
+) -> LibraryItemOut:
+    """Valide, borne, controle le quota, puis persiste un ebook uploade."""
+    settings = get_settings()
+    try:
+        content = await read_limited(file, settings.max_fetch_bytes)
+        detected_format = sniff_ebook_format(content)
+    except FileTooLargeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc)
+        ) from exc
+    except UnknownFormatError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    try:
+        await library.ensure_storage_quota(db, user.id, len(content))
+    except QuotaExceededError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_507_INSUFFICIENT_STORAGE, detail=str(exc)
+        ) from exc
+
+    if await is_known_malicious(content, settings.virustotal_api_key):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="fichier signale comme malveillant par VirusTotal",
+        )
+
+    safe_name = Path(file.filename or "book").name  # neutralise ../ et les chemins absolus
+    item = await library.import_from_upload(
+        db, user.id, safe_name, content, detected_format=detected_format
+    )
+    return LibraryItemOut.model_validate(item)
+
+
+@router.post(
+    "/upload",
+    response_model=LibraryItemOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload d'un ebook",
+)
+async def upload_book(
+    file: UploadFile = File(...),
+    user: CurrentUser = Depends(get_library_user),
+    db: AsyncSession = Depends(get_db),
+) -> LibraryItemOut:
+    """Importe un fichier ebook (multipart `file`) dans la bibliotheque.
+
+    Accepte l'auth utilisateur (Bearer Clerk / `X-Dev-User`) ou la cle
+    gateway (`X-Gateway-Key`) pour un import au nom du proprio.
+    """
+    return await _import_uploaded_file(db, user, file)
+
+
+@router.get("", response_model=PaginatedLibraryItems)
 async def list_books(
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> list[LibraryItemOut]:
-    """Liste les LibraryItem de l'utilisateur courant."""
-    result = await db.execute(select(LibraryItem).where(LibraryItem.user_id == user.id))
+) -> PaginatedLibraryItems:
+    """Liste paginee des LibraryItem de l'utilisateur courant (SQL limit/offset)."""
+    total_result = await db.execute(
+        select(func.count()).select_from(LibraryItem).where(LibraryItem.user_id == user.id)
+    )
+    total = int(total_result.scalar_one() or 0)
+    offset = (page - 1) * limit
+    result = await db.execute(
+        select(LibraryItem)
+        .where(LibraryItem.user_id == user.id)
+        .order_by(LibraryItem.added_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
     items = result.scalars().all()
-    return [LibraryItemOut.model_validate(item) for item in items]
+    return PaginatedLibraryItems(
+        items=[LibraryItemOut.model_validate(item) for item in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.post("/search", response_model=list[ResultOut])
@@ -165,6 +252,7 @@ async def search_books(
     for result in results:
         out = ResultOut.model_validate(result)
         out.owned = _is_owned(result)
+        out.cover_url = validate_cover_url(out.cover_url)
         outs.append(out)
     return outs
 
@@ -183,6 +271,9 @@ async def add_book(
     """Ajoute un livre a la bibliotheque, soit via un connecteur (`source` +
     `result_id`), soit via un fichier deja possede par l'utilisateur
     (`file`, multipart). Exactement l'un des deux doit etre fourni.
+
+    La branche multipart est **deprecated** : preferer `POST /api/v1/books/upload`
+    (conservee 1–2 releases pour compatibilite).
     """
     content_type = request.headers.get("content-type", "")
     data: dict = {}
@@ -197,9 +288,12 @@ async def add_book(
             file = candidate  # type: ignore[assignment]
 
     if file is not None:
-        content = await file.read()
-        item = await library.import_from_upload(db, user.id, file.filename or "book.epub", content)
-        return LibraryItemOut.model_validate(item)
+        logger.warning(
+            "POST /api/v1/books multipart is deprecated; use POST /api/v1/books/upload"
+        )
+        response.headers["Deprecation"] = "true"
+        response.headers["Link"] = '</api/v1/books/upload>; rel="successor-version"'
+        return await _import_uploaded_file(db, user, file)
 
     source = data.get("source")
     result_id = data.get("result_id")
@@ -293,7 +387,10 @@ async def update_book(
     db: AsyncSession = Depends(get_db),
 ) -> LibraryItemOut:
     item = await _get_owned_item(db, item_id, user)
-    update_payload = payload.model_dump(exclude_unset=True, exclude_defaults=True)
+    # exclude_unset seul : un champ explicitement envoye a `null` (ex. pour
+    # effacer l'ISBN, la description ou l'annee) doit etre applique. `exclude_defaults`
+    # casserait ce cas car `None` est aussi la valeur par defaut du champ.
+    update_payload = payload.model_dump(exclude_unset=True)
     for key, value in update_payload.items():
         setattr(item, key, value)
     await db.commit()
@@ -319,9 +416,19 @@ async def list_book_deliveries(
 ) -> list[DeliveryOut]:
     await _get_owned_item(db, item_id, user)
     result = await db.execute(
-        select(DeliveryJob)
-        .join(LibraryItem, DeliveryJob.library_item_id == LibraryItem.id)
-        .where(DeliveryJob.library_item_id == item_id, LibraryItem.user_id == user.id)
+        select(*_DELIVERY_LIST_COLS)
+        .join(Device, DeliveryJob.device_id == Device.id)
+        .outerjoin(LibraryItem, DeliveryJob.library_item_id == LibraryItem.id)
+        .where(DeliveryJob.library_item_id == item_id)
     )
-    jobs = result.scalars().all()
-    return [DeliveryOut.model_validate(job) for job in jobs]
+    return [
+        build_delivery_out(
+            job,
+            item_title=title,
+            item_author=author,
+            device_name=name,
+            device_brand=brand,
+            device_model=model,
+        )
+        for job, title, author, name, brand, model in result.all()
+    ]

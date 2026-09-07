@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -154,3 +155,72 @@ async def test_standard_ebooks_parses_html_search() -> None:
     args, kwargs = mock_client.get.await_args
     assert args[0] == "https://standardebooks.org/ebooks"
     assert kwargs["params"]["query"] == "pride"
+
+
+@pytest.mark.asyncio
+async def test_gutenberg_fetch_rejects_path_traversal_before_network(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`fetch("../../etc/passwd")` leve ValueError avant tout acces reseau/disque."""
+    client_ctor = MagicMock(side_effect=AssertionError("aucun acces reseau attendu"))
+    mkstemp = MagicMock(side_effect=AssertionError("aucun acces disque attendu"))
+    monkeypatch.setattr("ferry_agent.connectors.gutenberg.httpx.AsyncClient", client_ctor)
+    monkeypatch.setattr("ferry_agent.connectors.gutenberg.tempfile.mkstemp", mkstemp)
+
+    with pytest.raises(ValueError, match="result_id"):
+        await GutenbergConnector().fetch("../../etc/passwd")
+
+    client_ctor.assert_not_called()
+    mkstemp.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_gutenberg_concurrent_fetch_returns_distinct_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Deux fetch concurrents du meme livre n'ecrivent pas dans le meme fichier."""
+    import asyncio
+
+    from ferry_agent.config import Settings
+
+    temp_dir = tmp_path / "tmp"
+    settings = Settings(temp_dir=str(temp_dir))
+    monkeypatch.setattr("ferry_agent.connectors.gutenberg.get_settings", lambda: settings)
+
+    response = httpx.Response(
+        200,
+        content=b"PK\x03\x04fake-epub-bytes",
+        request=httpx.Request("GET", "https://www.gutenberg.org/ebooks/12345.epub3.images"),
+    )
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("ferry_agent.connectors.gutenberg.httpx.AsyncClient", return_value=mock_client):
+        connector = GutenbergConnector()
+        path_a, path_b = await asyncio.gather(connector.fetch("12345"), connector.fetch("12345"))
+
+    assert path_a != path_b
+    assert Path(path_a).exists()
+    assert Path(path_b).exists()
+    assert Path(path_a).parent == temp_dir
+    assert Path(path_b).parent == temp_dir
+
+
+@pytest.mark.asyncio
+async def test_standard_ebooks_fetch_rejects_invalid_result_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ferry_agent.connectors.standard_ebooks import StandardEbooksConnector
+
+    client_ctor = MagicMock(side_effect=AssertionError("aucun acces reseau attendu"))
+    monkeypatch.setattr(
+        "ferry_agent.connectors.standard_ebooks.httpx.AsyncClient", client_ctor
+    )
+
+    with pytest.raises(ValueError, match="result_id"):
+        await StandardEbooksConnector().fetch("../../etc/passwd")
+
+    client_ctor.assert_not_called()

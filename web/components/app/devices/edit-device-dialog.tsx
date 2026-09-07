@@ -23,8 +23,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BrandBadge } from "@/components/app/devices/brand-badge";
+import { ConversionProfileField } from "@/components/app/devices/conversion-profile-field";
 import { useApiClient } from "@/lib/api-client";
-import type { Device } from "@/lib/types";
+import type { ConversionPreset, Device, DevicePatch } from "@/lib/types";
 
 const BRANDS: Device["brand"][] = ["kindle", "kobo", "tolino", "pocketbook", "other"];
 const MODEL_BRANDS = ["kindle", "kobo", "tolino", "pocketbook"] as const;
@@ -45,6 +46,7 @@ export function EditDeviceDialog({
   const [name, setName] = useState("");
   const [brand, setBrand] = useState<Device["brand"]>("kindle");
   const [model, setModel] = useState("");
+  const [conversionProfile, setConversionProfile] = useState<ConversionPreset | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export function EditDeviceDialog({
       setName(device.name ?? "");
       setBrand(device.brand);
       setModel(device.model ?? "");
+      setConversionProfile(device.conversion_profile);
     }
   }, [device]);
 
@@ -69,9 +72,15 @@ export function EditDeviceDialog({
     if (!device) return;
     setSubmitting(true);
     try {
+      const payload: DevicePatch = {
+        name: name || null,
+        brand,
+        model: model || null,
+        conversion_profile: conversionProfile,
+      };
       const updated = await call<Device>(`/api/v1/devices/${device.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ name: name || null, brand, model: model || null }),
+        body: JSON.stringify(payload),
       });
       onUpdated(updated);
       toast.success(t("toastUpdated"));
@@ -132,6 +141,7 @@ export function EditDeviceDialog({
               <Input value={model} onChange={(event) => setModel(event.target.value)} />
             )}
           </div>
+          <ConversionProfileField value={conversionProfile} onChange={setConversionProfile} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

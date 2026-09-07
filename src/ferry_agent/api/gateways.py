@@ -3,7 +3,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,8 +26,10 @@ from ferry_agent.schemas import (
 )
 from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services import library
+from ferry_agent.services.errors import FileTooLargeError, UnknownFormatError
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 from ferry_agent.services.virustotal import is_known_malicious
+
 
 router = APIRouter(prefix="/api/v1/gateways", tags=["gateways"])
 
@@ -47,6 +49,9 @@ async def create_gateway(
         gateway_id=gateway.id,
         pairing_token=pairing_token,
         gateway_key=gateway_key,
+        pairing_expires_at=gateway.pairing_expires_at,
+        pairing_token_ttl_minutes=settings.pairing_token_ttl_minutes,
+        gateway_online_seconds=settings.gateway_online_seconds,
     )
 
 
@@ -64,8 +69,17 @@ async def list_gateways(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[GatewayOut]:
+    settings = get_settings()
     result = await db.execute(select(Gateway).where(Gateway.user_id == user.id))
-    return [GatewayOut.model_validate(gateway) for gateway in result.scalars().all()]
+    return [
+        GatewayOut.model_validate(gateway).model_copy(
+            update={
+                "pairing_token_ttl_minutes": settings.pairing_token_ttl_minutes,
+                "gateway_online_seconds": settings.gateway_online_seconds,
+            }
+        )
+        for gateway in result.scalars().all()
+    ]
 
 
 @router.post("/revoke", response_model=GatewayId)
@@ -147,16 +161,20 @@ async def submit_fetch_result(
     try:
         content = await read_limited(file, settings.max_fetch_bytes)
         detected_format = sniff_ebook_format(content)
-    except ValueError as exc:
+    except FileTooLargeError as exc:
         job.status = GatewayJobStatus.failed
         job.result_ref = str(exc)
         await db.commit()
-        code = (
-            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
-            if "volumineux" in str(exc)
-            else status.HTTP_422_UNPROCESSABLE_ENTITY
-        )
-        raise HTTPException(status_code=code, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(exc)
+        ) from exc
+    except UnknownFormatError as exc:
+        job.status = GatewayJobStatus.failed
+        job.result_ref = str(exc)
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
 
     if await is_known_malicious(content, settings.virustotal_api_key):
         job.status = GatewayJobStatus.failed
@@ -187,6 +205,18 @@ async def submit_fetch_result(
     return GatewayFetchResult(library_item_id=item.id)
 
 
+def _gateway_job_status_out(job: GatewayJob) -> GatewayJobStatusOut:
+    library_item_id = None
+    error = None
+    if job.type == GatewayJobType.fetch and job.status == GatewayJobStatus.done and job.result_ref:
+        library_item_id = uuid.UUID(job.result_ref)
+    elif job.status == GatewayJobStatus.failed:
+        error = job.result_ref
+    return GatewayJobStatusOut.model_validate(job).model_copy(
+        update={"library_item_id": library_item_id, "error": error}
+    )
+
+
 @router.get("/jobs/{job_id}", response_model=GatewayJobStatusOut)
 async def get_gateway_job_status(
     job_id: uuid.UUID,
@@ -201,13 +231,26 @@ async def get_gateway_job_status(
     job = result.scalar_one_or_none()
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="gateway job introuvable")
+    return _gateway_job_status_out(job)
 
-    library_item_id = None
-    error = None
-    if job.type == GatewayJobType.fetch and job.status == GatewayJobStatus.done and job.result_ref:
-        library_item_id = uuid.UUID(job.result_ref)
-    elif job.status == GatewayJobStatus.failed:
-        error = job.result_ref
-    return GatewayJobStatusOut.model_validate(job).model_copy(
-        update={"library_item_id": library_item_id, "error": error}
+
+@router.get("/{gateway_id}/jobs", response_model=list[GatewayJobStatusOut])
+async def list_gateway_jobs(
+    gateway_id: uuid.UUID,
+    limit: int = Query(20, ge=1, le=100),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[GatewayJobStatusOut]:
+    gateway_result = await db.execute(
+        select(Gateway).where(Gateway.id == gateway_id, Gateway.user_id == user.id)
     )
+    if gateway_result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="gateway introuvable")
+
+    result = await db.execute(
+        select(GatewayJob)
+        .where(GatewayJob.gateway_id == gateway_id)
+        .order_by(GatewayJob.created_at.desc())
+        .limit(limit)
+    )
+    return [_gateway_job_status_out(job) for job in result.scalars().all()]

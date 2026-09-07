@@ -17,8 +17,23 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-_settings = get_settings()
-config.set_main_option("sqlalchemy.url", _settings.database_url)
+
+def _resolve_database_url() -> str:
+    """URL de la cible Alembic.
+
+    Les tests d'integration injectent une base ephemere via
+    `Config.attributes["connection_url"]` (et `set_main_option("sqlalchemy.url")`).
+    Sans injection, on retombe sur `DATABASE_URL` applicatif. On ne doit pas
+    ecraser un URL deja pose sur le Config : alembic.ini a toujours une valeur
+    de repli, d'ou l'attribut dedie plutot qu'un test "url deja rempli".
+    """
+    injected = config.attributes.get("connection_url")
+    if injected:
+        return injected
+    return get_settings().database_url
+
+
+config.set_main_option("sqlalchemy.url", _resolve_database_url())
 
 
 def run_migrations_offline() -> None:

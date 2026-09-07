@@ -7,6 +7,14 @@ const backendInternalUrl = process.env.BACKEND_INTERNAL_URL ?? "http://localhost
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "www.gutenberg.org" },
+      { protocol: "https", hostname: "gutenberg.org" },
+      { protocol: "https", hostname: "standardebooks.org" },
+      { protocol: "https", hostname: "covers.openlibrary.org" },
+    ],
+  },
   async rewrites() {
     return [
       {

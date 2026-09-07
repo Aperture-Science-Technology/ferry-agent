@@ -22,13 +22,54 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.db import get_db
-from ferry_agent.models import DeliveryJob, DeliveryTier, Device, LibraryItem
+from ferry_agent.models import DeliveryJob, DeliveryTier, Device, DeviceBrand, LibraryItem
 from ferry_agent.schemas import DeliveryCreate, DeliveryOut
 from ferry_agent.services import delivery as delivery_service
 from ferry_agent.services import mailer
 from ferry_agent.services.delivery_methods import is_method_allowed
 
 router = APIRouter(prefix="/api/v1/deliveries", tags=["deliveries"])
+
+# Colonnes jointes pour enrichir DeliveryOut (titre / auteur / label appareil).
+_DELIVERY_LIST_COLS = (
+    DeliveryJob,
+    LibraryItem.title,
+    LibraryItem.author,
+    Device.name,
+    Device.brand,
+    Device.model,
+)
+
+
+def _device_label(
+    name: str | None,
+    brand: DeviceBrand | None,
+    model: str | None,
+) -> str | None:
+    if name:
+        return name
+    if brand is None:
+        return None
+    return f"{brand.value} {model or ''}".strip()
+
+
+def build_delivery_out(
+    job: DeliveryJob,
+    *,
+    item_title: str | None = None,
+    item_author: str | None = None,
+    device_name: str | None = None,
+    device_brand: DeviceBrand | None = None,
+    device_model: str | None = None,
+) -> DeliveryOut:
+    """Construit un DeliveryOut enrichi ; repli sur les colonnes denormalisees."""
+    return DeliveryOut.model_validate(job).model_copy(
+        update={
+            "item_title": item_title if item_title is not None else job.item_title,
+            "item_author": item_author if item_author is not None else job.item_author,
+            "device_label": _device_label(device_name, device_brand, device_model),
+        }
+    )
 
 
 @router.post("", response_model=DeliveryOut, status_code=status.HTTP_201_CREATED)
@@ -43,7 +84,8 @@ async def create_delivery(
             LibraryItem.id == payload.library_item_id, LibraryItem.user_id == user.id
         )
     )
-    if item_result.scalar_one_or_none() is None:
+    item = item_result.scalar_one_or_none()
+    if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="library_item introuvable")
 
     device_result = await db.execute(
@@ -60,9 +102,11 @@ async def create_delivery(
         )
 
     job = DeliveryJob(
-        library_item_id=payload.library_item_id,
+        library_item_id=item.id,
         device_id=payload.device_id,
         method=payload.method,
+        item_title=item.title,
+        item_author=item.author,
     )
     db.add(job)
     await db.commit()
@@ -74,7 +118,14 @@ async def create_delivery(
     elif device.delivery_tier == DeliveryTier.C:
         download_url = await delivery_service.deliver(db, job, payload.format)
 
-    out = DeliveryOut.model_validate(job)
+    out = build_delivery_out(
+        job,
+        item_title=item.title,
+        item_author=item.author,
+        device_name=device.name,
+        device_brand=device.brand,
+        device_model=device.model,
+    )
     out.download_url = download_url
     return out
 
@@ -84,13 +135,25 @@ async def list_deliveries(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[DeliveryOut]:
+    # outerjoin LibraryItem : apres W-02 le livre peut avoir ete supprime
+    # (library_item_id NULL) ; le scope user passe par Device (toujours present).
     result = await db.execute(
-        select(DeliveryJob)
-        .join(LibraryItem, DeliveryJob.library_item_id == LibraryItem.id)
-        .where(LibraryItem.user_id == user.id)
+        select(*_DELIVERY_LIST_COLS)
+        .join(Device, DeliveryJob.device_id == Device.id)
+        .outerjoin(LibraryItem, DeliveryJob.library_item_id == LibraryItem.id)
+        .where(Device.user_id == user.id)
     )
-    jobs = result.scalars().all()
-    return [DeliveryOut.model_validate(j) for j in jobs]
+    return [
+        build_delivery_out(
+            job,
+            item_title=title,
+            item_author=author,
+            device_name=name,
+            device_brand=brand,
+            device_model=model,
+        )
+        for job, title, author, name, brand, model in result.all()
+    ]
 
 
 @router.get("/{job_id}", response_model=DeliveryOut)
@@ -100,11 +163,20 @@ async def get_delivery(
     db: AsyncSession = Depends(get_db),
 ) -> DeliveryOut:
     result = await db.execute(
-        select(DeliveryJob)
-        .join(LibraryItem, DeliveryJob.library_item_id == LibraryItem.id)
-        .where(DeliveryJob.id == job_id, LibraryItem.user_id == user.id)
+        select(*_DELIVERY_LIST_COLS)
+        .join(Device, DeliveryJob.device_id == Device.id)
+        .outerjoin(LibraryItem, DeliveryJob.library_item_id == LibraryItem.id)
+        .where(DeliveryJob.id == job_id, Device.user_id == user.id)
     )
-    job = result.scalar_one_or_none()
-    if job is None:
+    row = result.one_or_none()
+    if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="delivery job introuvable")
-    return DeliveryOut.model_validate(job)
+    job, title, author, name, brand, model = row
+    return build_delivery_out(
+        job,
+        item_title=title,
+        item_author=author,
+        device_name=name,
+        device_brand=brand,
+        device_model=model,
+    )

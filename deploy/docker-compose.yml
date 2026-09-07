@@ -33,6 +33,7 @@ services:
     environment:
       PYTHONPATH: /app/src
       DATABASE_URL: ${DATABASE_URL:?required}
+      FERNET_KEY: ${FERNET_KEY:?required}
     networks:
       - ferry-net
     labels:
@@ -57,6 +58,7 @@ services:
       LIBRARY_STORAGE_DIR: ${LIBRARY_STORAGE_DIR:?required}
       TEMP_DIR: ${TEMP_DIR:?required}
       MAX_FETCH_BYTES: ${MAX_FETCH_BYTES:?required}
+      USER_STORAGE_QUOTA_BYTES: ${USER_STORAGE_QUOTA_BYTES:-5368709120}
       PAIRING_TOKEN_TTL_MINUTES: ${PAIRING_TOKEN_TTL_MINUTES:?required}
       GATEWAY_ONLINE_SECONDS: ${GATEWAY_ONLINE_SECONDS:?required}
       GATEWAY_SEARCH_WAIT_SECONDS: ${GATEWAY_SEARCH_WAIT_SECONDS:?required}
@@ -73,13 +75,19 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:?required}
-      MCP_API_KEY: ${MCP_API_KEY:?required}
+      FERNET_KEY: ${FERNET_KEY:?required}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
     networks:
       - ferry-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=infrastructure_infra-network"
-      - "traefik.http.routers.ferry-agent-core.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/api/v1`) || PathPrefix(`/c/`))"
+      - "traefik.http.routers.ferry-agent-core.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/api/v1`) || PathPrefix(`/c/`) || PathPrefix(`/opds`))"
       - "traefik.http.routers.ferry-agent-core.priority=100"
       - "traefik.http.routers.ferry-agent-core.entrypoints=websecure"
       - "traefik.http.routers.ferry-agent-core.tls=true"
@@ -92,7 +100,8 @@ services:
     pull_policy: always
     container_name: ferry-agent-web
     depends_on:
-      - ferry-agent-core
+      ferry-agent-core:
+        condition: service_healthy
     restart: unless-stopped
     environment:
       PORT: 3000
@@ -123,8 +132,6 @@ services:
       - ferry-agent-core
     environment:
       FERRY_CORE_URL: ${FERRY_CORE_URL:?required}
-      MCP_API_KEY: ${MCP_API_KEY:?required}
-      MCP_AUTH_ENABLED: ${MCP_AUTH_ENABLED:-}
       CLERK_DOMAIN: ${CLERK_DOMAIN:-}
       CLERK_OAUTH_CLIENT_ID: ${CLERK_OAUTH_CLIENT_ID:-}
       CLERK_OAUTH_CLIENT_SECRET: ${CLERK_OAUTH_CLIENT_SECRET:-}

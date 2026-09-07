@@ -13,22 +13,7 @@ from ferry_agent.api.deps import CurrentUser
 from ferry_agent.models import DeliveryMethod, DeliveryTier, Device, DeviceBrand
 from ferry_agent.services.delivery_methods import available_delivery_methods, is_method_allowed
 
-
-class ScalarResult:
-    def __init__(self, value):
-        self.value = value
-
-    def scalar_one_or_none(self):
-        return self.value
-
-
-class FakeSession:
-    def __init__(self, execute_values=()):
-        self.execute_values = list(execute_values)
-
-    async def execute(self, statement):
-        value = self.execute_values.pop(0) if self.execute_values else None
-        return ScalarResult(value)
+from tests.fakes import FakeSession
 
 
 def make_device(**overrides) -> Device:

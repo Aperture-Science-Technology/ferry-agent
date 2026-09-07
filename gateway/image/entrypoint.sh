@@ -29,7 +29,7 @@ Ferry Agent all-in-one gateway
 Usage:
   docker run --rm gateway:test --help
   docker run --rm gateway:test --version
-  docker run -d --name ferry-gateway --restart unless-stopped -e PAIRING_TOKEN=YOUR_TOKEN -e GATEWAY_KEY=YOUR_KEY -e PUID=$(id -u) -e PGID=$(id -g) -p 9696:9696 -p 51413:51413 -p 51413:51413/udp -v "$PWD/downloads:/downloads" -v ferry-gw-config:/config -v ferry-gw-state:/state gateway:test
+  docker run -d --name ferry-gateway --restart unless-stopped -e PAIRING_TOKEN=YOUR_TOKEN -e GATEWAY_KEY=YOUR_KEY -e PUID=$(id -u) -e PGID=$(id -g) -p 127.0.0.1:9696:9696 -p 51413:51413 -p 51413:51413/udp -v "$PWD/downloads:/downloads" -v ferry-gw-config:/config -v ferry-gw-state:/state gateway:test
 
 Required at first start:
   PAIRING_TOKEN     one-time token from the Ferry Agent dashboard
@@ -38,16 +38,25 @@ Required at first start:
 Optional:
   PLATFORM_URL      default https://ferry-agent.aperture-agency.org
   PROWLARR_API_KEY  generated and persisted in /config if omitted
-  TRANSMISSION_USER / TRANSMISSION_PASSWORD  (set both or neither)
+  TRANSMISSION_USER / TRANSMISSION_PASSWORD
+                    optional; if omitted, user=ferry + random password
+                    persisted in /config/transmission-rpc-password
   DOWNLOAD_PATH     in-container path, default /downloads
   PUID / PGID / TZ  default 1000 / 1000 / UTC
   GATEWAY_ID        reused after pairing via /state/state.json
 
 Ports:
-  9696              Prowlarr UI
+  9696              Prowlarr UI (admin: indexer credentials). Default to
+                    localhost only: -p 127.0.0.1:9696:9696
+                    Publishing 9696 on 0.0.0.0 exposes that admin UI on
+                    your LAN — Forms auth is enabled; credentials are in
+                    /config/prowlarr-credentials (user=ferry).
   51413/tcp+udp     Transmission peer
-  9091              Transmission RPC (127.0.0.1 inside; publish with
-                    -p 127.0.0.1:9091:9091 if you want the WebUI)
+  9091              Transmission RPC is local to the process only
+                    (bound to 127.0.0.1). Do not publish unless you
+                    need the WebUI, then use:
+                      -p 127.0.0.1:9091:9091
+                    Credentials: /config/transmission-rpc-password
 
 Volumes:
   /config           Prowlarr + Transmission settings
@@ -162,8 +171,8 @@ template = """<?xml version="1.0" encoding="utf-8"?>
   <EnableSsl>False</EnableSsl>
   <LaunchBrowser>False</LaunchBrowser>
   <ApiKey>__API_KEY__</ApiKey>
-  <AuthenticationMethod>None</AuthenticationMethod>
-  <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
+  <AuthenticationMethod>Forms</AuthenticationMethod>
+  <AuthenticationRequired>Enabled</AuthenticationRequired>
   <Branch>master</Branch>
   <LogLevel>info</LogLevel>
   <SslCertPath></SslCertPath>
@@ -177,21 +186,21 @@ template = """<?xml version="1.0" encoding="utf-8"?>
   <Theme>auto</Theme>
 </Config>
 """
+
+
+def set_tag(text: str, tag: str, value: str) -> str:
+    pattern = rf"<{tag}>[^<]*</{tag}>"
+    replacement = f"<{tag}>{value}</{tag}>"
+    if re.search(pattern, text):
+        return re.sub(pattern, replacement, text, count=1)
+    return text.replace("</Config>", f"  {replacement}\n</Config>", 1)
+
+
 if path.is_file():
     text = path.read_text(encoding="utf-8")
-    if re.search(r"<ApiKey>[^<]*</ApiKey>", text):
-        text = re.sub(
-            r"<ApiKey>[^<]*</ApiKey>",
-            f"<ApiKey>{api_key}</ApiKey>",
-            text,
-            count=1,
-        )
-    else:
-        text = text.replace(
-            "</Config>",
-            f"  <ApiKey>{api_key}</ApiKey>\n</Config>",
-            1,
-        )
+    text = set_tag(text, "ApiKey", api_key)
+    text = set_tag(text, "AuthenticationMethod", "Forms")
+    text = set_tag(text, "AuthenticationRequired", "Enabled")
     path.write_text(text, encoding="utf-8")
 else:
     path.write_text(template.replace("__API_KEY__", api_key), encoding="utf-8")
@@ -215,10 +224,68 @@ ensure_prowlarr_api_key() {
   export PROWLARR_API_KEY="${key}"
 }
 
+generate_transmission_password() {
+  python - <<'PY'
+import secrets
+print(secrets.token_urlsafe(24), end="")
+PY
+}
+
+ensure_transmission_credentials() {
+  user="${TRANSMISSION_USER:-}"
+  password="${TRANSMISSION_PASSWORD:-}"
+  pass_file="${CONFIG_ROOT}/transmission-rpc-password"
+
+  if [ -n "${user}" ] && [ -z "${password}" ]; then
+    printf '%s\n' "TRANSMISSION_USER and TRANSMISSION_PASSWORD must be set together" >&2
+    exit 1
+  fi
+  if [ -z "${user}" ] && [ -n "${password}" ]; then
+    printf '%s\n' "TRANSMISSION_USER and TRANSMISSION_PASSWORD must be set together" >&2
+    exit 1
+  fi
+
+  if [ -z "${user}" ] && [ -z "${password}" ] && [ -f "${pass_file}" ]; then
+    password="$(tr -d '\r\n' < "${pass_file}")"
+    user="ferry"
+  fi
+
+  if [ -z "${user}" ] || [ -z "${password}" ]; then
+    user="ferry"
+    password="$(generate_transmission_password)"
+    printf 'Transmission RPC credentials generated (user=ferry). Stored in /config/transmission-rpc-password.\n'
+  fi
+
+  printf '%s\n' "${password}" > "${pass_file}"
+  chmod 600 "${pass_file}"
+  export TRANSMISSION_USER="${user}"
+  export TRANSMISSION_PASSWORD="${password}"
+}
+
+ensure_prowlarr_credentials() {
+  creds_file="${CONFIG_ROOT}/prowlarr-credentials"
+  if [ -f "${creds_file}" ]; then
+    chmod 600 "${creds_file}" || true
+    return
+  fi
+  password="$(
+    python - <<'PY'
+import secrets
+print(secrets.token_urlsafe(24), end="")
+PY
+  )"
+  umask 077
+  printf 'username=ferry\npassword=%s\n' "${password}" > "${creds_file}"
+  chmod 600 "${creds_file}"
+  printf 'Generated Prowlarr UI credentials and stored them under /config.\n'
+  printf 'Prowlarr UI: http://127.0.0.1:9696 — user=ferry, password stored in /config/prowlarr-credentials\n'
+}
+
 write_transmission_settings() {
   python - <<'PY'
 import json
 import os
+import sys
 from pathlib import Path
 
 path = Path("/config/transmission/settings.json")
@@ -235,16 +302,26 @@ if path.is_file():
 download = os.environ.get("DOWNLOAD_PATH", "/downloads")
 user = os.environ.get("TRANSMISSION_USER") or ""
 password = os.environ.get("TRANSMISSION_PASSWORD") or ""
+if not user or not password:
+    print(
+        "TRANSMISSION_USER and TRANSMISSION_PASSWORD must be set before writing settings",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 settings["download-dir"] = download
 settings["incomplete-dir"] = str(Path(download) / "incomplete")
 settings["incomplete-dir-enabled"] = False
 settings["rpc-enabled"] = True
-settings["rpc-bind-address"] = "0.0.0.0"
+settings["rpc-bind-address"] = "127.0.0.1"
 settings["rpc-port"] = 9091
 settings["rpc-url"] = "/transmission/"
-settings["rpc-whitelist-enabled"] = False
+settings["rpc-whitelist-enabled"] = True
+settings["rpc-whitelist"] = "127.0.0.1"
 settings["rpc-host-whitelist-enabled"] = False
+settings["rpc-authentication-required"] = True
+settings["rpc-username"] = user
+settings["rpc-password"] = password
 settings["peer-port"] = 51413
 settings["peer-port-random-on-start"] = False
 settings["port-forwarding-enabled"] = True
@@ -252,13 +329,6 @@ settings["umask"] = 18
 settings["rename-partial-files"] = True
 settings["start-added-torrents"] = True
 settings["trash-original-torrent-files"] = False
-
-if user and password:
-    settings["rpc-authentication-required"] = True
-    settings["rpc-username"] = user
-    settings["rpc-password"] = password
-else:
-    settings["rpc-authentication-required"] = False
 
 path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
 PY
@@ -285,16 +355,29 @@ PY
 }
 
 require_pairing_env() {
-  if [ -n "${PAIRING_TOKEN:-}" ]; then
+  if has_saved_pairing; then
     return
   fi
   if [ -n "${GATEWAY_ID:-}" ] && [ -n "${GATEWAY_KEY:-}" ]; then
     return
   fi
-  if has_saved_pairing; then
+  if [ -n "${PAIRING_TOKEN:-}" ] && [ -n "${GATEWAY_KEY:-}" ]; then
     return
   fi
-  printf '%s\n' "PAIRING_TOKEN is required for the first start (or restore /state from a previous pairing). See: docker run --rm gateway:test --help" >&2
+
+  # PAIRING_TOKEN alone (missing GATEWAY_KEY) — refuse before supervisord starts.
+  if [ -n "${PAIRING_TOKEN:-}" ] && [ -z "${GATEWAY_KEY:-}" ]; then
+    printf '%s\n' "GATEWAY_KEY must accompany PAIRING_TOKEN on first start (PAIRING_TOKEN alone is not enough). Or restore /state from a previous pairing. See: docker run --rm gateway:test --help" >&2
+    exit 1
+  fi
+
+  # GATEWAY_KEY alone (missing PAIRING_TOKEN / GATEWAY_ID).
+  if [ -n "${GATEWAY_KEY:-}" ] && [ -z "${PAIRING_TOKEN:-}" ]; then
+    printf '%s\n' "PAIRING_TOKEN must accompany GATEWAY_KEY on first start (GATEWAY_KEY alone is not enough; or set both GATEWAY_ID and GATEWAY_KEY, or restore /state). See: docker run --rm gateway:test --help" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "PAIRING_TOKEN and GATEWAY_KEY are required for the first start (or set GATEWAY_ID and GATEWAY_KEY, or restore /state from a previous pairing). See: docker run --rm gateway:test --help" >&2
   exit 1
 }
 
@@ -312,12 +395,15 @@ apply_user
 ensure_dirs
 require_pairing_env
 ensure_prowlarr_api_key
+ensure_transmission_credentials
+ensure_prowlarr_credentials
 write_transmission_settings
 chown -R "${APP_USER}:${APP_USER}" "${CONFIG_ROOT}" "${DOWNLOAD_PATH}" "$(dirname "${STATE_PATH}")"
 
-printf 'Starting Ferry Agent gateway (Prowlarr UI :9696, peer :51413).\n'
+printf 'Starting Ferry Agent gateway (Prowlarr UI :9696 localhost-bound recommended, peer :51413).\n'
 
 # supervisord stays root so child logs can attach to stdout; programs run as APP_USER.
+# TRANSMISSION_USER / TRANSMISSION_PASSWORD are already exported for the agent.
 if [ "${1:-run}" = "run" ]; then
   exec supervisord -c /etc/supervisor/supervisord.conf
 fi

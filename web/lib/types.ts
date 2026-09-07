@@ -1,8 +1,49 @@
-export type DeviceBrand = "kindle" | "kobo" | "tolino" | "pocketbook" | "other";
-export type DeliveryTier = "A" | "B" | "C" | "D";
-export type DeliveryStatus = "queued" | "sent" | "delivered" | "failed";
-export type DeliveryMethod = "email" | "dropbox" | "drive" | "browser_code" | "usb";
-export type PairingStatus = "pending" | "paired" | "revoked";
+/**
+ * Types API lisibles + types purement UI.
+ *
+ * Les schemas API viennent de `api-types.generated.ts` (openapi-typescript).
+ * Regenerer : `cd web && npm run gen:types`.
+ */
+import type { components } from "./api-types.generated";
+
+type Schemas = components["schemas"];
+
+export type DeviceBrand = Schemas["DeviceBrand"];
+export type DeliveryTier = Schemas["DeliveryTier"];
+export type DeliveryStatus = Schemas["DeliveryStatus"];
+export type DeliveryMethod = Schemas["DeliveryMethod"];
+export type PairingStatus = Schemas["PairingStatus"];
+export type GatewayJobType = Schemas["GatewayJobType"];
+export type GatewayJobStatus = Schemas["GatewayJobStatus"];
+/** Derive du champ API (Literal inline OpenAPI, pas de schema nomme). */
+export type ConversionPreset = NonNullable<Schemas["DeviceOut"]["conversion_profile"]>;
+
+/** Alias ergonomiques (schemas OpenAPI verbeux). */
+export type SearchResult = Schemas["ResultOut"];
+export type LibraryItem = Schemas["LibraryItemOut"];
+export type PaginatedLibraryItems = Schemas["PaginatedLibraryItems"];
+/**
+ * OpenAPI marque `conversion_profile` optionnel (defaut pydantic) ;
+ * le runtime l'envoie toujours (nullable).
+ */
+export type Device = Omit<Schemas["DeviceOut"], "conversion_profile"> & {
+  conversion_profile: ConversionPreset | null;
+};
+export type DeviceCreate = Schemas["DeviceCreate"];
+export type DevicePatch = Schemas["DevicePatch"];
+export type Gateway = Schemas["GatewayOut"];
+export type GatewayCredentials = Schemas["GatewayCredentials"];
+export type GatewayJobStatusOut = Schemas["GatewayJobStatusOut"];
+export type DeliveryJob = Schemas["DeliveryOut"];
+export type MethodAvailability = Schemas["MethodAvailability"];
+export type Source = Schemas["SourceOut"];
+export type OpdsToken = Schemas["OpdsTokenOut"];
+export type OpdsTokenCreated = Schemas["OpdsTokenCreated"];
+
+/**
+ * UI-only : `SourceOut.type` est un `string` libre cote OpenAPI ;
+ * l'union borne les providers connus du frontend.
+ */
 export type SourceType =
   | "upload"
   | "gutenberg"
@@ -10,89 +51,8 @@ export type SourceType =
   | "opds"
   | "torrent_gateway";
 
-export interface SearchResult {
-  source: string;
-  title: string;
-  result_id: string;
-  author: string;
-  format: string;
-  size_bytes: number;
-  magnet_url?: string | null;
-  indexer_id?: number | string | null;
-  guid?: string | null;
-  seeders?: number | null;
-  cover_url?: string | null;
-  language?: string | null;
-  isbn?: string | null;
-  owned?: boolean;
-}
-
-export interface LibraryItem {
-  id: string;
-  title: string;
-  author: string;
-  cover_url: string | null;
-  source_id: string | null;
-  original_format: string;
-  added_at: string;
-  description: string | null;
-  language: string | null;
-  page_count: number | null;
-  size_bytes: number | null;
-  isbn: string | null;
-  publisher: string | null;
-  published_year: number | null;
-}
-
-export interface Device {
-  id: string;
-  name: string | null;
-  brand: DeviceBrand;
-  model: string | null;
-  delivery_tier: DeliveryTier;
-  link_ref: string | null;
-  last_synced_at: string | null;
-}
-
-export interface Gateway {
-  gateway_id: string;
-  name: string;
-  status: PairingStatus;
-  last_seen_at: string | null;
-}
-
-export interface GatewayCredentials {
-  gateway_id: string;
-  pairing_token: string;
-  gateway_key: string;
-}
-
-export interface DeliveryJob {
-  id: string;
-  library_item_id: string;
-  device_id: string;
-  status: DeliveryStatus;
-  method: DeliveryMethod;
-  created_at: string;
-  delivered_at: string | null;
-  error: string | null;
-  download_url?: string | null;
-}
-
-/** Mode de livraison candidat pour un device donne, avec sa disponibilite
- * reelle (voir GET /api/v1/devices/{id}/methods, services/delivery_methods.py
- * cote backend). `reason_code` est stable et traduit cote frontend. */
+/**
+ * UI-only : codes `reason_code` stables (voir GET /devices/{id}/methods
+ * et services/delivery_methods.py), traduits cote frontend.
+ */
 export type DeliveryMethodReasonCode = "smtp_not_configured" | "cloud_not_linked";
-
-export interface MethodAvailability {
-  method: DeliveryMethod;
-  available: boolean;
-  reason_code: DeliveryMethodReasonCode | null;
-}
-
-export interface Source {
-  id: string;
-  type: SourceType;
-  created_at: string;
-  enabled: boolean;
-}

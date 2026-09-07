@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
 from ferry_agent.models import Gateway, PairingStatus, User
+from ferry_agent.services.sources import ensure_default_sources
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,8 @@ async def _get_or_create_user(db: AsyncSession, email: str) -> User:
     if user is None:
         user = User(email=email)
         db.add(user)
-        await db.commit()
+        await db.flush()
+        await ensure_default_sources(db, user.id)
         await db.refresh(user)
     return user
 
@@ -56,15 +58,9 @@ async def get_current_user(
     request: Request,
     authorization: str | None = Header(default=None),
     x_dev_user: str | None = Header(default=None, alias="X-Dev-User"),
-    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> CurrentUser:
     settings = get_settings()
-
-    # Mode clé API serveur (MCP → core). Inactif si MCP_API_KEY non renseigné.
-    if settings.mcp_api_key and x_api_key and x_api_key == settings.mcp_api_key:
-        user = await _get_or_create_user(db, settings.mcp_service_user_email)
-        return CurrentUser(id=user.id, email=user.email)
 
     if not settings.clerk_issuer:
         # Mode dev : pas de Clerk configure.
@@ -117,7 +113,12 @@ async def get_gateway(
     x_gateway_key: str | None = Header(default=None, alias="X-Gateway-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> Gateway:
-    """Authentifie un agent avec sa cle dediee et actualise sa presence."""
+    """Authentifie un agent avec sa cle dediee et actualise sa presence.
+
+    Utilise par le canal gateway (`poll`, `search-results`, `fetch-result`)
+    et par l'import bibliotheque au nom de l'utilisateur proprio
+    (`POST /api/v1/books/upload` via `get_library_user`).
+    """
     if not x_gateway_key:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="en-tete X-Gateway-Key requis")
 
@@ -134,3 +135,30 @@ async def get_gateway(
     gateway.last_seen_at = datetime.now(timezone.utc)
     await db.commit()
     return gateway
+
+
+async def get_library_user(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    x_dev_user: str | None = Header(default=None, alias="X-Dev-User"),
+    x_gateway_key: str | None = Header(default=None, alias="X-Gateway-Key"),
+    db: AsyncSession = Depends(get_db),
+) -> CurrentUser:
+    """Utilisateur bibliotheque : session Clerk/dev, ou proprio via cle gateway.
+
+    Permet a l'agent (dossier surveille) d'importer au nom de l'utilisateur
+    sans JWT Clerk, tout en gardant l'upload navigateur via Bearer/dev.
+    """
+    if x_gateway_key:
+        gateway = await get_gateway(x_gateway_key=x_gateway_key, db=db)
+        result = await db.execute(select(User).where(User.id == gateway.user_id))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="utilisateur gateway introuvable",
+            )
+        return CurrentUser(id=user.id, email=user.email)
+    return await get_current_user(
+        request, authorization=authorization, x_dev_user=x_dev_user, db=db
+    )

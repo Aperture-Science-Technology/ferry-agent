@@ -27,6 +27,7 @@ import { NewDeviceDialog } from "@/components/app/devices/new-device-dialog";
 import { EditDeviceDialog } from "@/components/app/devices/edit-device-dialog";
 import { CloudLinkDialog } from "@/components/app/devices/cloud-link-dialog";
 import { BrandBadge } from "@/components/app/devices/brand-badge";
+import { conversionProfileLabel } from "@/components/app/devices/conversion-profile-field";
 import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
@@ -38,6 +39,7 @@ export function DevicesView({
   devicesUnavailable: boolean;
 }) {
   const t = useTranslations("devices");
+  const tEditDevice = useTranslations("editDevice");
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [devices, setDevices] = useState(initialDevices);
@@ -100,13 +102,21 @@ export function DevicesView({
                           <BrandBadge brand={device.brand} />
                           {device.model && <span> — {device.model}</span>}
                         </div>
+                        <div className="text-muted-foreground text-xs">
+                          {conversionProfileLabel(device.conversion_profile, tEditDevice)}
+                        </div>
                       </div>
                     ) : (
-                      <div className="font-medium">
-                        <BrandBadge brand={device.brand} />
-                        {device.model && (
-                          <span className="text-muted-foreground"> — {device.model}</span>
-                        )}
+                      <div className="space-y-0.5">
+                        <div className="font-medium">
+                          <BrandBadge brand={device.brand} />
+                          {device.model && (
+                            <span className="text-muted-foreground"> — {device.model}</span>
+                          )}
+                        </div>
+                        <div className="text-muted-foreground text-xs">
+                          {conversionProfileLabel(device.conversion_profile, tEditDevice)}
+                        </div>
                       </div>
                     )}
                   </TableCell>
@@ -114,12 +124,17 @@ export function DevicesView({
                     <Badge variant="secondary">{t(`tiers.${device.delivery_tier}`)}</Badge>
                   </TableCell>
                   <TableCell>
-                    {device.link_ref ? (
+                    {device.cloud_linked ? (
                       <Badge variant="outline" className="gap-1">
-                        <Check className="size-3" /> {t("linked")}
+                        <Check className="size-3" />
+                        {device.cloud_provider === "dropbox"
+                          ? t("linkedDropbox")
+                          : device.cloud_provider === "drive"
+                            ? t("linkedDrive")
+                            : t("linked")}
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground">{tCommon("dash")}</span>
+                      <span className="text-muted-foreground">{t("notLinked")}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">

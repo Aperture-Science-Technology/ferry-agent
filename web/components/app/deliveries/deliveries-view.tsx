@@ -53,6 +53,8 @@ export function DeliveriesView({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>{t("colBook")}</TableHead>
+            <TableHead>{t("colDevice")}</TableHead>
             <TableHead>{t("colStatus")}</TableHead>
             <TableHead>{t("colMethod")}</TableHead>
             <TableHead>{t("colCreated")}</TableHead>
@@ -64,6 +66,15 @@ export function DeliveriesView({
         <TableBody>
           {deliveries.map((job) => (
             <TableRow key={job.id}>
+              <TableCell>
+                <div>{job.item_title ?? tCommon("dash")}</div>
+                {job.item_author ? (
+                  <div className="text-muted-foreground text-xs">{job.item_author}</div>
+                ) : null}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {job.device_label ?? tCommon("dash")}
+              </TableCell>
               <TableCell>
                 <Badge variant={STATUS_VARIANT[job.status]}>
                   {t(`statuses.${job.status}`)}

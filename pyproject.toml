@@ -15,4 +15,16 @@ where = ["src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+# Option 2 : on laisse testpaths sur le core. L'execution des tests
+# mcp-server/tests est traitee dans W-10 (ne pas melanger les perimetres).
 testpaths = ["tests"]
+
+# line-length measured max Python line = 120 (cloud_links.py / 0009_fk_ondelete.py);
+# set to 120 to avoid mass reformatting in this PR.
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# TD002/TD003 (flake8-todos) : tout TODO doit citer un ticket FA-XXX
+# (ex. `# TODO(FA-W31): #31 <quoi> — <pourquoi différé>`).
+select = ["E", "F", "I", "UP", "B", "TD002", "TD003"]

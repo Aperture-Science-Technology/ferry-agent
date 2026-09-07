@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { motion } from "motion/react";
 import { BookOpen, LayoutGrid, List, Loader2, Search, SearchX } from "lucide-react";
@@ -26,13 +26,69 @@ import {
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/app/empty-state";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
+import {
+  LibraryCoverImage,
+  SearchCoverImage,
+} from "@/components/app/library/cover-image";
+import { UploadDropzone } from "@/components/app/library/upload-dropzone";
 import { Reveal } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
-import type { Device, LibraryItem, SearchResult } from "@/lib/types";
+import { useGatewayJob } from "@/lib/use-gateway-job";
+import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@/lib/types";
 
 type ViewMode = "grid" | "list";
 type SortBy = "title" | "author" | "added";
 type SourceFilter = "all" | "linked" | "manual";
+
+function mapFetchError(
+  error: string | null,
+  t: ReturnType<typeof useTranslations<"library">>
+): string {
+  if (!error) return t("toastFetchFailed");
+  if (/abandonn[ée] après \d+ tentatives/i.test(error) || /abandoned after \d+ attempts/i.test(error)) {
+    return t("toastFetchAbandoned");
+  }
+  if (/malveillant|VirusTotal/i.test(error)) return t("toastFetchMalicious");
+  if (/volumineux|too large/i.test(error)) return t("toastFetchTooLarge");
+  if (/livre reconnu|Formats acceptés|not a recognized/i.test(error)) {
+    return t("toastFetchBadFormat");
+  }
+  if (/revoked/i.test(error)) return t("toastFetchRevoked");
+  return t("toastFetchFailed");
+}
+
+function PendingFetchTracker({
+  resultKey,
+  jobId,
+  onDone,
+  onFailed,
+  onTimeout,
+}: {
+  resultKey: string;
+  jobId: string;
+  onDone: (resultKey: string, libraryItemId: string | null) => void;
+  onFailed: (resultKey: string, error: string | null) => void;
+  onTimeout: (resultKey: string) => void;
+}) {
+  const { status, libraryItemId, error } = useGatewayJob(jobId);
+  const settled = useRef(false);
+
+  useEffect(() => {
+    if (settled.current) return;
+    if (status === "done") {
+      settled.current = true;
+      onDone(resultKey, libraryItemId);
+    } else if (status === "failed") {
+      settled.current = true;
+      onFailed(resultKey, error);
+    } else if (status === "timeout") {
+      settled.current = true;
+      onTimeout(resultKey);
+    }
+  }, [status, libraryItemId, error, resultKey, onDone, onFailed, onTimeout]);
+
+  return null;
+}
 
 export function LibraryView({
   initialItems,
@@ -49,6 +105,7 @@ export function LibraryView({
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [pendingJobs, setPendingJobs] = useState<Record<string, string>>({});
   const [items, setItems] = useState(initialItems);
   const [detailItem, setDetailItem] = useState<LibraryItem | null>(null);
 
@@ -87,6 +144,62 @@ export function LibraryView({
     });
   }, [items, languageFilter, formatFilter, sourceFilter, sortBy]);
 
+  function markOwned(resultKey: string) {
+    const [source, ...rest] = resultKey.split(":");
+    const resultId = rest.join(":");
+    setResults((prev) =>
+      prev
+        ? prev.map((candidate) =>
+            candidate.source === source && candidate.result_id === resultId
+              ? { ...candidate, owned: true }
+              : candidate
+          )
+        : prev
+    );
+  }
+
+  function clearPending(resultKey: string) {
+    setPendingJobs((prev) => {
+      const next = { ...prev };
+      delete next[resultKey];
+      return next;
+    });
+  }
+
+  async function handleFetchDone(resultKey: string, _libraryItemId: string | null) {
+    clearPending(resultKey);
+    markOwned(resultKey);
+    try {
+      const refreshed = await call<PaginatedLibraryItems>("/api/v1/books?page=1&limit=200");
+      const itemsAcc = [...refreshed.items];
+      const totalPages = Math.max(1, Math.ceil(refreshed.total / refreshed.limit));
+      for (let page = 2; page <= totalPages; page += 1) {
+        const next = await call<PaginatedLibraryItems>(`/api/v1/books?page=${page}&limit=200`);
+        itemsAcc.push(...next.items);
+      }
+      setItems(itemsAcc);
+    } catch {
+      // Owned badge + toast still apply even if library refresh fails.
+    }
+    toast.success(t("toastFetchArrived"));
+  }
+
+  function handleFetchFailed(resultKey: string, error: string | null) {
+    clearPending(resultKey);
+    const cause = mapFetchError(error, t);
+    const generic = t("toastFetchFailed");
+    if (cause === generic) {
+      toast.error(generic);
+    } else {
+      toast.error(generic, { description: cause });
+    }
+  }
+
+  function handleFetchTimeout(resultKey: string) {
+    clearPending(resultKey);
+    toast.error(t("toastFetchFailed"), { description: t("toastFetchTimeout") });
+  }
+
   async function runSearch() {
     if (!query.trim()) return;
     setSearching(true);
@@ -116,20 +229,12 @@ export function LibraryView({
         }),
       });
       if ("gateway_job_id" in added) {
-        toast.success(t("toastFetchStarted"));
+        setPendingJobs((prev) => ({ ...prev, [resultKey]: added.gateway_job_id }));
       } else {
         setItems((prev) => [added, ...prev]);
         toast.success(t("toastAdded", { title: added.title }));
+        markOwned(resultKey);
       }
-      setResults((prev) =>
-        prev
-          ? prev.map((candidate) =>
-              candidate.source === result.source && candidate.result_id === result.result_id
-                ? { ...candidate, owned: true }
-                : candidate
-            )
-          : prev
-      );
     } catch {
       toast.error(t("toastAddFailed"));
     } finally {
@@ -157,6 +262,27 @@ export function LibraryView({
 
   return (
     <div className="space-y-8">
+      {Object.entries(pendingJobs).map(([resultKey, jobId]) => (
+        <PendingFetchTracker
+          key={jobId}
+          resultKey={resultKey}
+          jobId={jobId}
+          onDone={handleFetchDone}
+          onFailed={handleFetchFailed}
+          onTimeout={handleFetchTimeout}
+        />
+      ))}
+
+      <div>
+        <div className="mb-4">
+          <h2 className="font-heading text-lg font-medium">{t("uploadTitle")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("uploadHelp")}</p>
+        </div>
+        <UploadDropzone
+          onUploaded={(item) => setItems((prev) => [item, ...prev])}
+        />
+      </div>
+
       <div>
         <div className="mb-4">
           <h2 className="font-heading text-lg font-medium">{t("addBooksTitle")}</h2>
@@ -212,26 +338,27 @@ export function LibraryView({
                   <TableBody>
                     {results.map((result) => {
                       const resultKey = `${result.source}:${result.result_id}`;
+                      const isPending = resultKey in pendingJobs;
                       return (
                         <TableRow key={resultKey}>
                           <TableCell>
-                            <div className="flex size-10 items-center justify-center overflow-hidden rounded bg-muted">
-                              {result.cover_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={result.cover_url}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <BookOpen className="size-4 text-muted-foreground" />
-                              )}
+                            <div className="relative flex size-10 items-center justify-center overflow-hidden rounded bg-muted">
+                              <SearchCoverImage
+                                coverUrl={result.cover_url}
+                                iconClassName="size-4"
+                              />
                             </div>
                           </TableCell>
                           <TableCell className="font-medium">
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span>{result.title}</span>
                               {result.owned && <Badge variant="secondary">{t("owned")}</Badge>}
+                              {isPending && (
+                                <Badge variant="outline" className="gap-1">
+                                  <Loader2 className="size-3 animate-spin" />
+                                  {t("fetching")}
+                                </Badge>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{result.author}</TableCell>
@@ -245,6 +372,11 @@ export function LibraryView({
                             {result.owned ? (
                               <Button size="sm" variant="outline" disabled>
                                 {t("inLibrary")}
+                              </Button>
+                            ) : isPending ? (
+                              <Button size="sm" variant="outline" disabled>
+                                <Loader2 className="animate-spin" />
+                                {t("fetching")}
                               </Button>
                             ) : (
                               <Button
@@ -376,19 +508,12 @@ export function LibraryView({
             {displayedItems.map((item) => (
               <Card key={item.id}>
                 <CardContent className="flex flex-1 flex-col gap-3">
-                  <div className="aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
-                    {item.cover_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.cover_url}
-                        alt={item.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        <BookOpen className="size-10 text-muted-foreground" />
-                      </div>
-                    )}
+                  <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
+                    <LibraryCoverImage
+                      itemId={item.id}
+                      hasCover={Boolean(item.cover_url)}
+                      alt={item.title}
+                    />
                   </div>
                   <div>
                     <p className="line-clamp-2 font-medium">{item.title}</p>

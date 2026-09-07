@@ -8,12 +8,15 @@ La recherche publique valide est https://standardebooks.org/ebooks?query=...
 """
 
 import logging
+import os
+import re
 import tempfile
 from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup
 
+from ferry_agent.config import get_settings
 from ferry_agent.connectors import Result
 
 logger = logging.getLogger(__name__)
@@ -24,6 +27,21 @@ USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
+_RESULT_ID_RE = re.compile(r"^/ebooks/[\w\-/]+$")
+
+
+def _validate_result_id(result_id: str) -> None:
+    if not _RESULT_ID_RE.fullmatch(result_id):
+        raise ValueError(f"result_id standard_ebooks invalide: {result_id!r}")
+
+
+def _temp_epub_path() -> Path:
+    settings = get_settings()
+    temp_dir = Path(settings.temp_dir)
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(dir=str(temp_dir), suffix=".epub")
+    os.close(fd)
+    return Path(name)
 
 
 def _slug_from_path(path: str) -> str:
@@ -99,16 +117,20 @@ class StandardEbooksConnector:
         return results
 
     async def fetch(self, result_id: str) -> str:
+        _validate_result_id(result_id)
         slug = _slug_from_path(result_id)
         url = _epub_download_url(slug)
-        filename = slug.removeprefix("/ebooks/").replace("/", "_") + ".epub"
-        tmp_path = Path(tempfile.gettempdir()) / f"standardebooks_{filename}"
+        tmp_path = _temp_epub_path()
 
         headers = {"User-Agent": USER_AGENT, "Accept": "application/epub+zip,*/*"}
-        async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers=headers) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-            if not resp.content.startswith(b"PK"):
-                raise RuntimeError(f"reponse non-epub pour {slug}")
-            tmp_path.write_bytes(resp.content)
-        return str(tmp_path)
+        try:
+            async with httpx.AsyncClient(timeout=30, follow_redirects=True, headers=headers) as client:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                if not resp.content.startswith(b"PK"):
+                    raise RuntimeError(f"reponse non-epub pour {slug}")
+                tmp_path.write_bytes(resp.content)
+            return str(tmp_path)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise

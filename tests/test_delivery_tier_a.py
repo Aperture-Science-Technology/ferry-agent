@@ -23,50 +23,7 @@ from ferry_agent.models import (
 from ferry_agent.schemas import DeliveryCreate
 from ferry_agent.services import delivery
 
-
-class ScalarResult:
-    def __init__(self, value):
-        self.value = value
-
-    def scalar_one_or_none(self):
-        return self.value
-
-
-class FakeSession:
-    def __init__(self, execute_values=()):
-        self.execute_values = list(execute_values)
-        self.commits = 0
-        self.statements = []
-        self.added = []
-
-    async def execute(self, statement):
-        self.statements.append(statement)
-        value = self.execute_values.pop(0) if self.execute_values else None
-        return ScalarResult(value)
-
-    async def commit(self):
-        self.commits += 1
-
-    async def refresh(self, _value):
-        return None
-
-    def add(self, value):
-        self.added.append(value)
-        # Pas de flush reel : applique les defauts client-side de la
-        # colonne (id/created_at/status...) comme le ferait SQLAlchemy.
-        for column in value.__table__.columns:
-            if getattr(value, column.name, None) is not None:
-                continue
-            default = column.default
-            if default is None:
-                continue
-            if getattr(default, "is_callable", False):
-                try:
-                    setattr(value, column.name, default.arg())
-                except TypeError:
-                    setattr(value, column.name, default.arg(None))
-            elif getattr(default, "is_scalar", False):
-                setattr(value, column.name, default.arg)
+from tests.fakes import FakeSession
 
 
 def make_user(**overrides) -> User:
@@ -146,7 +103,7 @@ async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
     converted = {}
     sent = {}
 
-    async def fake_epub_to_mobi(epub_path, mobi_path=None):
+    async def fake_epub_to_mobi(epub_path, mobi_path=None, extra_args=None):
         converted["called_with"] = epub_path
         return str(Path(epub_path).with_suffix(".mobi"))
 
@@ -168,6 +125,43 @@ async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
     assert converted["called_with"] == item.storage_path
     assert sent["filename"] == "book.mobi"
     assert job.status == DeliveryStatus.delivered
+
+
+async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Apres livraison Kindle MOBI, aucun .mobi ne subsiste dans LIBRARY_STORAGE_DIR."""
+    library_dir = tmp_path / "library"
+    library_dir.mkdir()
+
+    epub_path = library_dir / "book.epub"
+    epub_path.write_bytes(b"PK\x03\x04fake-epub")
+
+    async def fake_epub_to_mobi(src, mobi_path=None, extra_args=None):
+        # Simule l'ancien comportement (derive a cote de l'EPUB en library) :
+        # le finally doit quand meme supprimer le derive.
+        out = library_dir / "book.mobi"
+        out.write_bytes(b"fake-mobi-content")
+        return str(out)
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        assert Path(file_path).exists()
+
+    monkeypatch.setattr(delivery.converters, "epub_to_mobi", fake_epub_to_mobi)
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(default_format="mobi")
+    device = make_device(brand=DeviceBrand.kindle)
+    item = make_item(storage_path=str(epub_path), original_format="epub")
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.delivered
+    assert epub_path.exists()
+    assert list(library_dir.glob("*.mobi")) == []
 
 
 async def test_deliver_tier_a_skips_conversion_for_non_kindle_device(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -242,6 +236,36 @@ async def test_deliver_tier_a_marks_failed_on_send_error(monkeypatch: pytest.Mon
 
     assert job.status == DeliveryStatus.failed
     assert job.error == "smtp boom"
+
+
+async def test_deliver_tier_a_fails_when_calibre_unavailable_no_pdf_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sans Calibre : failed + message actionnable, aucun envoi (pas de PDF)."""
+    sent = {}
+
+    async def raising_azw3(*_args, **_kwargs):
+        raise RuntimeError("ebook-convert indisponible: conversion vers AZW3 impossible")
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(file_path=file_path, filename=filename)
+
+    monkeypatch.setattr(delivery.converters, "epub_to_azw3", raising_azw3)
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(default_format="azw3")
+    device = make_device(brand=DeviceBrand.kindle)
+    item = make_item(original_format="epub")
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.failed
+    assert job.error == delivery.converters.CONVERSION_FAILED_USER_MESSAGE
+    assert sent == {}
+    assert job.delivered_at is None
 
 
 async def test_deliver_routes_tier_a_via_full_lookup(monkeypatch: pytest.MonkeyPatch) -> None:

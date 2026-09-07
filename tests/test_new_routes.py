@@ -4,7 +4,7 @@
 - GET /api/v1/sources       (liste des sources)
 - GET /api/v1/users/me      (profil)
 - PATCH /api/v1/users/me    (mise à jour partielle)
-- X-API-Key auth            (mode service MCP)
+- X-API-Key auth            (supprimé ; X-API-Key seul → 401)
 """
 
 import uuid
@@ -83,13 +83,17 @@ class TestListBooks:
     def test_returns_items(self):
         items = [_fake_item("Dune"), _fake_item("Foundation")]
 
-        class FakeResult:
+        class CountResult:
+            def scalar_one(self):
+                return 2
+
+        class ItemsResult:
             def scalars(self):
                 return MagicMock(all=MagicMock(return_value=items))
 
         async def fake_db():
             db = AsyncMock()
-            db.execute = AsyncMock(return_value=FakeResult())
+            db.execute = AsyncMock(side_effect=[CountResult(), ItemsResult()])
             yield db
 
         from ferry_agent.api.deps import CurrentUser as CU, get_current_user
@@ -102,21 +106,27 @@ class TestListBooks:
                 resp = client.get("/api/v1/books")
             assert resp.status_code == 200
             data = resp.json()
-            assert len(data) == 2
-            titles = {d["title"] for d in data}
+            assert data["total"] == 2
+            assert data["page"] == 1
+            assert len(data["items"]) == 2
+            titles = {d["title"] for d in data["items"]}
             assert "Dune" in titles
             assert "Foundation" in titles
         finally:
             app.dependency_overrides.clear()
 
     def test_empty_list(self):
-        class FakeResult:
+        class CountResult:
+            def scalar_one(self):
+                return 0
+
+        class ItemsResult:
             def scalars(self):
                 return MagicMock(all=MagicMock(return_value=[]))
 
         async def fake_db():
             db = AsyncMock()
-            db.execute = AsyncMock(return_value=FakeResult())
+            db.execute = AsyncMock(side_effect=[CountResult(), ItemsResult()])
             yield db
 
         from ferry_agent.api.deps import CurrentUser as CU, get_current_user
@@ -128,7 +138,7 @@ class TestListBooks:
             with TestClient(app) as client:
                 resp = client.get("/api/v1/books")
             assert resp.status_code == 200
-            assert resp.json() == []
+            assert resp.json() == {"items": [], "total": 0, "page": 1, "limit": 50}
         finally:
             app.dependency_overrides.clear()
 
@@ -221,8 +231,12 @@ class TestListSources:
         app.dependency_overrides[get_db] = fake_db
         app.dependency_overrides[get_current_user] = lambda: CU(id=_USER_ID, email=_USER_EMAIL)
         try:
-            with TestClient(app) as client:
-                resp = client.get("/api/v1/sources")
+            with patch(
+                "ferry_agent.api.sources.ensure_default_sources",
+                new_callable=AsyncMock,
+            ):
+                with TestClient(app) as client:
+                    resp = client.get("/api/v1/sources")
             assert resp.status_code == 200
             data = resp.json()
             assert len(data) == 1
@@ -284,53 +298,12 @@ class TestUsersMe:
 
 
 # ---------------------------------------------------------------------------
-# X-API-Key auth (mode MCP service)
+# X-API-Key — chemin compte-service supprimé (W-04)
 # ---------------------------------------------------------------------------
 
 class TestXApiKeyAuth:
-    def test_valid_api_key_resolves_service_user(self):
-        """Un X-API-Key valide doit permettre l'accès sans JWT Clerk."""
-        from ferry_agent.config import get_settings as _get_settings
-
-        settings = _get_settings()
-        # On force une clé pour ce test
-        original_key = settings.mcp_api_key
-        settings.__dict__["mcp_api_key"] = "test-secret-key"
-
-        class FakeResult:
-            def scalars(self):
-                return MagicMock(all=MagicMock(return_value=[]))
-
-            def scalar_one_or_none(self):
-                return None
-
-        async def fake_db():
-            db = AsyncMock()
-            db.execute = AsyncMock(return_value=FakeResult())
-            db.add = MagicMock()
-            db.commit = AsyncMock()
-            db.refresh = AsyncMock()
-            yield db
-
-        from ferry_agent.db import get_db
-
-        app.dependency_overrides[get_db] = fake_db
-        try:
-            with TestClient(app) as client:
-                resp = client.get("/api/v1/books", headers={"X-API-Key": "test-secret-key"})
-            assert resp.status_code == 200
-        finally:
-            app.dependency_overrides.clear()
-            settings.__dict__["mcp_api_key"] = original_key
-
-    def test_invalid_api_key_rejected(self):
-        """Un X-API-Key incorrect doit être rejeté (401) — pas de Clerk en dev sans X-Dev-User."""
-        from ferry_agent.config import get_settings as _get_settings
-
-        settings = _get_settings()
-        original_key = settings.mcp_api_key
-        settings.__dict__["mcp_api_key"] = "real-key"
-
+    def test_api_key_alone_returns_401(self):
+        """Un X-API-Key arbitraire sans Authorization doit renvoyer 401."""
         async def fake_db():
             db = AsyncMock()
             yield db
@@ -340,9 +313,7 @@ class TestXApiKeyAuth:
         app.dependency_overrides[get_db] = fake_db
         try:
             with TestClient(app) as client:
-                resp = client.get("/api/v1/books", headers={"X-API-Key": "wrong-key"})
-            # En mode dev (pas de CLERK_ISSUER), tombe sur X-Dev-User manquant → 401
+                resp = client.get("/api/v1/books", headers={"X-API-Key": "arbitrary-key"})
             assert resp.status_code == 401
         finally:
             app.dependency_overrides.clear()
-            settings.__dict__["mcp_api_key"] = original_key

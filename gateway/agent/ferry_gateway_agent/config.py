@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     )
 
     download_path: Path = Field(default=Path("/downloads"), alias="DOWNLOAD_PATH")
+    watch_path: Path = Field(default=Path("/watch"), alias="WATCH_PATH")
+    watch_poll_seconds: float = Field(
+        default=5,
+        gt=0,
+        alias="WATCH_POLL_SECONDS",
+    )
+    watch_stable_seconds: float = Field(
+        default=3,
+        gt=0,
+        alias="WATCH_STABLE_SECONDS",
+    )
     download_timeout_minutes: float = Field(
         default=15,
         gt=0,

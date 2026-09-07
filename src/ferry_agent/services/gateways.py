@@ -5,10 +5,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, delete, select, update
+from sqlalchemy import case, delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import hash_secret
+from ferry_agent.config import get_settings
 from ferry_agent.models import (
     Gateway,
     GatewayJob,
@@ -17,6 +18,7 @@ from ferry_agent.models import (
     PairingStatus,
 )
 from ferry_agent.schemas import Result
+from ferry_agent.services.covers import validate_cover_url
 
 
 def utcnow() -> datetime:
@@ -92,33 +94,61 @@ async def revoke_gateway(db: AsyncSession, gateway: Gateway) -> None:
 
 
 async def delete_gateway(db: AsyncSession, gateway: Gateway) -> None:
-    """Purge les `GatewayJob` du gateway puis le gateway lui-meme (les FK
-    n'ont pas d'ondelete, donc les enfants doivent partir avant le parent)."""
-    await db.execute(delete(GatewayJob).where(GatewayJob.gateway_id == gateway.id))
+    """Supprime le gateway ; les `GatewayJob` partent via ON DELETE CASCADE
+    (la purge manuelle est devenue redondante depuis 0009)."""
     await db.delete(gateway)
     await db.commit()
 
 
 async def poll_job(db: AsyncSession, gateway_id: uuid.UUID) -> GatewayJob | None:
-    """Retourne d'abord le job running (reprise idempotente), sinon prend un pending."""
-    result = await db.execute(
-        select(GatewayJob)
-        .where(
-            GatewayJob.gateway_id == gateway_id,
-            GatewayJob.status.in_([GatewayJobStatus.running, GatewayJobStatus.pending]),
+    """Retourne d'abord le job running (reprise idempotente), sinon prend un pending.
+
+    Incremente ``attempts`` a chaque poll. Au-dela de
+    ``gateway_job_max_attempts``, le job part en dead-letter (``failed``) et on
+    re-selectionne le suivant. Sinon pose un backoff exponentiel plafonne a
+    ~15 min via ``next_attempt_at``.
+    """
+    settings = get_settings()
+    max_attempts = settings.gateway_job_max_attempts
+    base_seconds = settings.gateway_job_backoff_base_seconds
+    # Borne : abandonner au plus une file de jobs poison sans boucler a l'infini.
+    for _ in range(max_attempts + 2):
+        now = utcnow()
+        result = await db.execute(
+            select(GatewayJob)
+            .where(
+                GatewayJob.gateway_id == gateway_id,
+                GatewayJob.status.in_([GatewayJobStatus.running, GatewayJobStatus.pending]),
+                or_(
+                    GatewayJob.next_attempt_at.is_(None),
+                    GatewayJob.next_attempt_at <= now,
+                ),
+            )
+            .order_by(
+                case((GatewayJob.status == GatewayJobStatus.running, 0), else_=1),
+                GatewayJob.created_at,
+            )
+            .limit(1)
+            .with_for_update(skip_locked=True)
         )
-        .order_by(
-            case((GatewayJob.status == GatewayJobStatus.running, 0), else_=1),
-            GatewayJob.created_at,
-        )
-        .limit(1)
-        .with_for_update(skip_locked=True)
-    )
-    job = result.scalar_one_or_none()
-    if job is not None and job.status == GatewayJobStatus.pending:
-        job.status = GatewayJobStatus.running
+        job = result.scalar_one_or_none()
+        if job is None:
+            return None
+
+        job.attempts += 1
+        if job.attempts > max_attempts:
+            job.status = GatewayJobStatus.failed
+            job.result_ref = f"abandonné après {job.attempts} tentatives"
+            await db.commit()
+            continue
+
+        delay = min(base_seconds * (2 ** (job.attempts - 1)), 15 * 60)
+        job.next_attempt_at = now + timedelta(seconds=delay)
+        if job.status == GatewayJobStatus.pending:
+            job.status = GatewayJobStatus.running
         await db.commit()
-    return job
+        return job
+    return None
 
 
 async def get_gateway_job(
@@ -150,9 +180,13 @@ async def save_search_results(
         return job
     if job.status not in (GatewayJobStatus.pending, GatewayJobStatus.running):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="gateway job non actif")
+    sanitized = [
+        result.model_copy(update={"cover_url": validate_cover_url(result.cover_url)})
+        for result in results
+    ]
     job.payload = {
         **job.payload,
-        "results": [result.model_dump(mode="json") for result in results],
+        "results": [result.model_dump(mode="json") for result in sanitized],
     }
     job.status = GatewayJobStatus.done
     await db.commit()
@@ -192,3 +226,19 @@ async def create_job(
     await db.commit()
     await db.refresh(job)
     return job
+
+
+async def purge_finished_jobs(db: AsyncSession, retention_days: int) -> int:
+    """Supprime les ``GatewayJob`` termines (``done``/``failed``) trop anciens.
+
+    Les jobs ``running``/``pending`` sont conserves (reprise potentielle).
+    """
+    cutoff = utcnow() - timedelta(days=retention_days)
+    result = await db.execute(
+        delete(GatewayJob).where(
+            GatewayJob.status.in_([GatewayJobStatus.done, GatewayJobStatus.failed]),
+            GatewayJob.updated_at < cutoff,
+        )
+    )
+    await db.commit()
+    return int(result.rowcount or 0)

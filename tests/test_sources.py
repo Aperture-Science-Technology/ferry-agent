@@ -9,10 +9,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
-from ferry_agent.api.deps import CurrentUser as CU, get_current_user
-from ferry_agent.db import get_db
 from ferry_agent.main import app
 from ferry_agent.models import SourceType
+
+from tests.fakes import override_app_deps
 
 _NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 _USER_ID = uuid.uuid4()
@@ -33,8 +33,7 @@ def _fake_source(**overrides):
 
 
 def _override(fake_db):
-    app.dependency_overrides[get_db] = fake_db
-    app.dependency_overrides[get_current_user] = lambda: CU(id=_USER_ID, email=_USER_EMAIL)
+    override_app_deps(fake_db, user_id=_USER_ID, email=_USER_EMAIL)
 
 
 class TestUpdateSource:

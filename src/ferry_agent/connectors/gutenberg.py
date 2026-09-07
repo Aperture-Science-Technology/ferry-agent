@@ -8,6 +8,7 @@ d'echec total, search() renvoie [] (jamais d'exception).
 """
 
 import logging
+import os
 import re
 import tempfile
 from pathlib import Path
@@ -15,6 +16,7 @@ from pathlib import Path
 import httpx
 from bs4 import BeautifulSoup
 
+from ferry_agent.config import get_settings
 from ferry_agent.connectors import Result
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,21 @@ USER_AGENT = (
 )
 _SEARCH_TIMEOUT = 5.0
 _BOOK_ID_RE = re.compile(r"/ebooks/(\d+)")
+_RESULT_ID_RE = re.compile(r"^\d+$")
+
+
+def _validate_result_id(result_id: str) -> None:
+    if not _RESULT_ID_RE.fullmatch(result_id):
+        raise ValueError(f"result_id gutenberg invalide: {result_id!r}")
+
+
+def _temp_epub_path() -> Path:
+    settings = get_settings()
+    temp_dir = Path(settings.temp_dir)
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(dir=str(temp_dir), suffix=".epub")
+    os.close(fd)
+    return Path(name)
 
 
 class GutenbergConnector:
@@ -123,15 +140,20 @@ class GutenbergConnector:
         return results
 
     async def fetch(self, result_id: str) -> str:
-        tmp_path = Path(tempfile.gettempdir()) / f"gutenberg_{result_id}.epub"
+        _validate_result_id(result_id)
+        tmp_path = _temp_epub_path()
         headers = {"User-Agent": USER_AGENT}
-        async with httpx.AsyncClient(
-            timeout=30, follow_redirects=True, headers=headers
-        ) as client:
-            for template in DOWNLOAD_URL_TEMPLATES:
-                url = template.format(id=result_id)
-                resp = await client.get(url)
-                if resp.status_code == 200 and resp.content:
-                    tmp_path.write_bytes(resp.content)
-                    return str(tmp_path)
-        raise RuntimeError(f"unable to download gutenberg book {result_id}")
+        try:
+            async with httpx.AsyncClient(
+                timeout=30, follow_redirects=True, headers=headers
+            ) as client:
+                for template in DOWNLOAD_URL_TEMPLATES:
+                    url = template.format(id=result_id)
+                    resp = await client.get(url)
+                    if resp.status_code == 200 and resp.content:
+                        tmp_path.write_bytes(resp.content)
+                        return str(tmp_path)
+            raise RuntimeError(f"unable to download gutenberg book {result_id}")
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise

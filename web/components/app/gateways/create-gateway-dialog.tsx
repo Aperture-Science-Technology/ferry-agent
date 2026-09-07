@@ -67,11 +67,17 @@ export function CreateGatewayDialog({
         body: JSON.stringify({ name: displayName }),
       });
       setCredentials(created);
+      const ttlMinutes = created.pairing_token_ttl_minutes ?? 15;
       onCreated({
         gateway_id: created.gateway_id,
         name: displayName,
         status: "pending",
         last_seen_at: null,
+        pairing_expires_at:
+          created.pairing_expires_at ??
+          new Date(Date.now() + ttlMinutes * 60_000).toISOString(),
+        pairing_token_ttl_minutes: ttlMinutes,
+        gateway_online_seconds: created.gateway_online_seconds ?? 60,
       });
     } catch {
       toast.error(t("toastFailed"));

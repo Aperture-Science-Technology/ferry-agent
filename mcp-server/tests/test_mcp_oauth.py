@@ -50,3 +50,8 @@ def test_auth_enabled_complete_returns_clerk_provider(monkeypatch) -> None:
     )
     provider = build_mcp_auth_provider()
     assert isinstance(provider, ClerkProvider)
+
+
+def test_auth_disabled_forbidden_in_production() -> None:
+    with pytest.raises(Exception, match="production"):
+        MCPSettings(app_env="production", mcp_auth_enabled=False)

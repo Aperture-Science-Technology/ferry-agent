@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, RootModel
+from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, RootModel
 
 from ferry_agent.models import (
     DeliveryMethod,
@@ -12,6 +13,9 @@ from ferry_agent.models import (
     GatewayJobType,
     PairingStatus,
 )
+
+# W-27 : presets de conversion (pas de reglage fin en v1).
+ConversionPreset = Literal["reader_6in", "reader_7in_plus", "tablet"]
 
 
 class SearchRequest(BaseModel):
@@ -33,13 +37,13 @@ class Result(BaseModel):
     guid: str | None = None
     seeders: int | None = None
     isbn: str | None = None
-
-
-class ResultOut(Result):
     cover_url: str | None = None
     language: str | None = None
     description: str | None = None
     page_count: int | None = None
+
+
+class ResultOut(Result):
     owned: bool = False
 
 
@@ -55,6 +59,9 @@ class GatewayCredentials(BaseModel):
     gateway_id: uuid.UUID
     pairing_token: str
     gateway_key: str
+    pairing_expires_at: datetime | None = None
+    pairing_token_ttl_minutes: int = 15
+    gateway_online_seconds: int = 60
 
 
 class GatewayPair(BaseModel):
@@ -79,6 +86,9 @@ class GatewayOut(BaseModel):
     name: str
     status: PairingStatus = Field(validation_alias="pairing_status")
     last_seen_at: datetime | None
+    pairing_expires_at: datetime | None = None
+    pairing_token_ttl_minutes: int = 15
+    gateway_online_seconds: int = 60
 
 
 class GatewayJobOut(BaseModel):
@@ -91,6 +101,7 @@ class GatewayJobOut(BaseModel):
 
 
 class GatewayJobStatusOut(GatewayJobOut):
+    attempts: int = 0
     library_item_id: uuid.UUID | None = None
     error: str | None = None
 
@@ -140,6 +151,38 @@ class LibraryItemUpdate(BaseModel):
     isbn: str | None = None
 
 
+class PaginatedLibraryItems(BaseModel):
+    items: list[LibraryItemOut]
+    total: int
+    page: int
+    limit: int
+
+
+class OpdsTokenCreate(BaseModel):
+    label: str = Field(default="Liseuse", min_length=1, max_length=120)
+
+
+class OpdsTokenCreated(BaseModel):
+    id: uuid.UUID
+    label: str
+    token: str
+    url: str
+    created_at: datetime
+
+
+class OpdsTokenOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    label: str
+    created_at: datetime
+    last_used_at: datetime | None
+
+
+class OpdsTokenRevoke(BaseModel):
+    token_id: uuid.UUID
+
+
 class DeviceCreate(BaseModel):
     """Pas de `delivery_tier` ici : le tier est toujours calcule cote serveur
     depuis `brand`/`model` (voir `api.devices._compute_tier`), jamais choisi
@@ -148,12 +191,14 @@ class DeviceCreate(BaseModel):
     name: str | None = None
     brand: DeviceBrand
     model: str | None = None
+    conversion_profile: ConversionPreset | None = None
 
 
 class DevicePatch(BaseModel):
     name: str | None = None
     brand: DeviceBrand | None = None
     model: str | None = None
+    conversion_profile: ConversionPreset | None = None
 
 
 class UserOut(BaseModel):
@@ -166,8 +211,8 @@ class UserOut(BaseModel):
 
 
 class UserPatch(BaseModel):
-    kindle_email: str | None = None
-    default_format: str | None = None
+    kindle_email: EmailStr | None = None
+    default_format: Literal["epub", "mobi", "azw3", "pdf"] | None = None
 
 
 class SourceOut(BaseModel):
@@ -191,7 +236,9 @@ class DeviceOut(BaseModel):
     brand: DeviceBrand
     model: str | None
     delivery_tier: DeliveryTier
-    link_ref: str | None
+    conversion_profile: ConversionPreset | None = None
+    cloud_provider: Literal["dropbox", "drive"] | None = None
+    cloud_linked: bool = False
     last_synced_at: datetime | None
 
 
@@ -207,7 +254,7 @@ class DeviceLinkCallback(BaseModel):
 class DeliveryCreate(BaseModel):
     library_item_id: uuid.UUID
     device_id: uuid.UUID
-    format: str | None = None
+    format: Literal["epub", "mobi", "azw3", "pdf"] | None = None
     # Le frontend envoie desormais `method` explicitement (voir
     # `GET /api/v1/devices/{id}/methods` pour les modes reellement
     # disponibles pour le device cible). Le defaut `email` n'est qu'un
@@ -222,7 +269,7 @@ class DeliveryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    library_item_id: uuid.UUID
+    library_item_id: uuid.UUID | None = None
     device_id: uuid.UUID
     status: DeliveryStatus
     method: DeliveryMethod
@@ -230,3 +277,8 @@ class DeliveryOut(BaseModel):
     delivered_at: datetime | None
     error: str | None
     download_url: str | None = None
+    # Enrichis pour l'UI (jointure LibraryItem / Device, avec repli sur les
+    # colonnes denormalisees de DeliveryJob si le livre a ete supprime).
+    item_title: str | None = None
+    item_author: str | None = None
+    device_label: str | None = None

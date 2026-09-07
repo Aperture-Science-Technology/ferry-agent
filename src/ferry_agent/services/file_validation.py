@@ -5,6 +5,8 @@ from pathlib import Path
 
 from fastapi import UploadFile
 
+from ferry_agent.services.errors import FileTooLargeError, UnknownFormatError
+
 _EBOOK_CONTENT_TYPES = {
     ".epub": "application/epub+zip",
     ".pdf": "application/pdf",
@@ -19,7 +21,7 @@ async def read_limited(upload: UploadFile, max_bytes: int) -> bytes:
     while chunk := await upload.read(1024 * 1024):
         content.extend(chunk)
         if len(content) > max_bytes:
-            raise ValueError(f"fichier trop volumineux (maximum {max_bytes} octets)")
+            raise FileTooLargeError("Ce fichier est trop volumineux (maximum 200 Mo).")
     return bytes(content)
 
 
@@ -32,7 +34,9 @@ def sniff_ebook_format(content: bytes) -> str:
     if len(content) >= 68 and content[60:68] == b"BOOKMOBI":
         # MOBI et AZW3 utilisent le meme conteneur PalmDB/BOOKMOBI.
         return "mobi"
-    raise ValueError("format de fichier non reconnu")
+    raise UnknownFormatError(
+        "Ce fichier n'est pas un livre reconnu. Formats acceptés : EPUB, PDF, MOBI, AZW3."
+    )
 
 
 def content_type_for_filename(filename: str) -> str:

@@ -2,14 +2,14 @@
 
 Vérifie :
 - que les 5 outils sont bien enregistrés (import + compileall)
-- que search_library transmet le bon path et le header X-API-Key au core
-- que list_devices transmet le bon path et le header X-API-Key au core
+- que search_library transmet le bon path et le Bearer token au core
+- que list_devices transmet le bon path et le Bearer token au core
 - que add_to_library transmet le bon payload
 - que get_delivery_status transmet le bon path
 - que deliver REFUSE sans confirm=True (garde-fou)
 - que deliver appelle bien le core avec confirm=True
 - qu'un utilisateur authentifié (OAuth Clerk) fait passer un Bearer token
-  au core au lieu du X-API-Key de service (voir test_mcp_identity.py)
+  au core (voir test_mcp_identity.py)
 """
 
 import sys
@@ -25,18 +25,24 @@ import pytest
 import ferry_mcp.config as _cfg_module
 from ferry_mcp.config import MCPSettings
 
+_TEST_BEARER = "test-bearer-token"
+
 
 @pytest.fixture(autouse=True)
 def patch_settings(monkeypatch):
-    """Injecte une config de test avec une clé API connue."""
+    """Injecte une config de test et une identité Clerk factice."""
     settings = MCPSettings(
         ferry_core_url="http://test-core:8000",
-        mcp_api_key="test-key-abc",
         port=8001,
+        mcp_auth_enabled=False,
     )
     # Vide le cache lru_cache AVANT de patcher
     _cfg_module.get_settings.cache_clear()
     monkeypatch.setattr(_cfg_module, "get_settings", lambda: settings)
+    from ferry_mcp import server
+
+    monkeypatch.setattr(server, "get_settings", lambda: settings)
+    monkeypatch.setattr(server, "_resolve_user_token", lambda: _TEST_BEARER)
     yield
     # Restaure et vide à nouveau pour isoler les tests suivants
     monkeypatch.undo()
@@ -86,7 +92,7 @@ def _mock_client(handler, base_url="http://test-core:8000"):
     return httpx.AsyncClient(
         base_url=base_url,
         transport=httpx.MockTransport(handler),
-        headers={"User-Agent": "ferry-agent-mcp", "X-API-Key": "test-key-abc"},
+        headers={"User-Agent": "ferry-agent-mcp", "Authorization": f"Bearer {_TEST_BEARER}"},
         timeout=30.0,
     )
 
@@ -112,7 +118,7 @@ async def test_search_library_sends_correct_request(monkeypatch) -> None:
     assert len(captured) == 1
     req = captured[0]
     assert req.url.path == "/api/v1/books/search"
-    assert req.headers.get("x-api-key") == "test-key-abc"
+    assert req.headers.get("authorization") == f"Bearer {_TEST_BEARER}"
     assert req.headers.get("user-agent") == "ferry-agent-mcp"
     assert "Dune" in result
 
@@ -132,7 +138,7 @@ async def test_list_devices_sends_correct_request(monkeypatch) -> None:
         return httpx.Response(
             200,
             json=[{"id": "aaa-111", "brand": "kindle", "model": "Paperwhite",
-                   "delivery_tier": "A", "link_ref": None}],
+                   "delivery_tier": "A", "cloud_provider": None, "cloud_linked": False}],
         )
 
     monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
@@ -141,7 +147,7 @@ async def test_list_devices_sends_correct_request(monkeypatch) -> None:
 
     req = captured[0]
     assert req.url.path == "/api/v1/devices"
-    assert req.headers.get("x-api-key") == "test-key-abc"
+    assert req.headers.get("authorization") == f"Bearer {_TEST_BEARER}"
     assert "kindle" in result.lower()
 
 
@@ -203,7 +209,7 @@ async def test_get_delivery_status_sends_correct_path(monkeypatch) -> None:
 
     req = captured[0]
     assert req.url.path == f"/api/v1/deliveries/{job_id}"
-    assert req.headers.get("x-api-key") == "test-key-abc"
+    assert req.headers.get("authorization") == f"Bearer {_TEST_BEARER}"
     assert "delivered" in result
 
 
@@ -261,7 +267,7 @@ async def test_deliver_with_confirm_calls_core(monkeypatch) -> None:
     assert len(post_calls) == 1
     req = post_calls[0]
     assert req.url.path == "/api/v1/deliveries"
-    assert req.headers.get("x-api-key") == "test-key-abc"
+    assert req.headers.get("authorization") == f"Bearer {_TEST_BEARER}"
     body = _json.loads(req.content)
     assert body["library_item_id"] == "item-1"
     assert body["device_id"] == "device-1"

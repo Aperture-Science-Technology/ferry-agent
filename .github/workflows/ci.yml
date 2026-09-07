@@ -4,12 +4,32 @@ on:
   push:
     branches:
       - "**"
+    tags:
+      - "v*"
   pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: aperture-science-technology/ferry-agent
 
 jobs:
   python-tests:
     name: Python tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ferry
+          POSTGRES_PASSWORD: ferry
+          POSTGRES_DB: ferry_test
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,10 +40,42 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run pytest
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://ferry:ferry@localhost:5432/ferry_test
         run: pytest -q
+
+      - name: Run integration tests
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://ferry:ferry@localhost:5432/ferry_test
+        run: pytest tests/integration -q
+
+      # mcp-server has no requirements.txt; mirror mcp-server/Dockerfile pins
+      - name: Install MCP server dependencies
+        run: pip install "fastmcp==3.4.7" httpx pydantic-settings
+
+      - name: Run MCP server tests
+        run: pytest mcp-server/tests -q
+
+  gateway-tests:
+    name: Gateway agent tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install gateway agent dependencies
+        run: pip install -r gateway/agent/requirements.txt pytest pytest-asyncio
+
+      - name: Run gateway agent tests
+        run: pytest gateway/agent/tests -q
 
   web-build:
     name: Web build
@@ -47,3 +99,419 @@ jobs:
 
       - name: Build web app
         run: npm run build
+
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      # TD002/TD003 (flake8-todos) : bloquant — TODO sans ticket FA-XXX refusé (W-31).
+      - name: Ruff TODOs must reference FA-XXX
+        run: ruff check . --select TD002,TD003
+
+      # Non-blocking map (W-10). Blocking enforcement deferred to a follow-up
+      # compliance PR (ruff E/F/I/UP/B + format) — do not flip --exit-zero yet.
+      - name: Ruff check
+        run: ruff check . --exit-zero
+
+      - name: Ruff format check
+        continue-on-error: true
+        run: ruff format --check .
+
+  # W-34 — OpenAPI→TS freshness + i18n key symmetry (fr/en).
+  types-freshness:
+    name: Types freshness + i18n
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      - name: Regenerate API types
+        working-directory: web
+        run: npm run gen:types
+
+      - name: Fail if generated types drifted
+        run: git diff --exit-code -- openapi.json web/lib/api-types.generated.ts
+
+      - name: Check i18n key symmetry (fr/en)
+        working-directory: web
+        run: npm run check:i18n
+
+  secrets-scan:
+    name: Secrets scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Install gitleaks
+        run: go install github.com/gitleaks/gitleaks/v8@latest
+
+      - name: Scan full git history for secrets
+        # --redact: never echo raw secrets in CI logs
+        # --log-opts="--all": every ref/commit, not just the PR tip
+        # Historical Clerk keyless claimToken is allowlisted in .gitleaks.toml
+        # (revoked out-of-band); remove that allowlist entry after Clerk revocation.
+        run: gitleaks detect --redact --source . --log-opts="--all"
+
+  # Non-blocking dependency audit (W-14 precursor). Not in build needs.
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Audit core requirements
+        run: pip-audit -r requirements.txt
+
+      - name: Audit MCP server dependencies
+        run: |
+          printf '%s\n' 'fastmcp==3.4.7' 'httpx' 'pydantic-settings' > /tmp/mcp-reqs.txt
+          pip-audit -r /tmp/mcp-reqs.txt
+
+  build-push-core:
+    name: Build & push core image
+    needs: [python-tests, web-build, lint, gateway-tests]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/core
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=sha,format=short
+
+      - name: Build & push core image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=core
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/core:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=core
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/core:buildcache,mode=max
+
+  build-push-web:
+    name: Build & push web image
+    needs: [python-tests, web-build, lint, gateway-tests]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=sha,format=short
+
+      - name: Build & push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: ./web/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_APP_URL=https://ferry-agent.aperture-agency.org
+            NEXT_PUBLIC_BACKEND_BASE=https://ferry-agent.aperture-agency.org/api/v1
+          cache-from: |
+            type=gha,scope=web
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=web
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web:buildcache,mode=max
+
+  build-push-mcp-server:
+    name: Build & push mcp-server image
+    needs: [python-tests, web-build, lint, gateway-tests]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/mcp-server
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=sha,format=short
+
+      - name: Build & push mcp-server image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./mcp-server
+          file: ./mcp-server/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=mcp-server
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/mcp-server:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=mcp-server
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/mcp-server:buildcache,mode=max
+
+  build-push-gateway:
+    name: Build & push gateway image
+    needs: [python-tests, web-build, lint, gateway-tests]
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/develop' ||
+      startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/gateway
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=semver,pattern={{version}}
+            type=sha,format=short
+
+      - name: Build & push gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./gateway
+          file: ./gateway/image/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=gha,scope=gateway
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/gateway:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=gateway
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/gateway:buildcache,mode=max
+
+  # W-20 — docker-format per-arch tarballs + integrity + GitHub Release.
+  # Does not publish until a v* tag is pushed (after GLaDOS validation).
+  release-gateway-artifacts:
+    name: Release gateway artifacts
+    needs: [build-push-gateway]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      packages: read
+    env:
+      IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/gateway
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if [[ ! "${TAG}" =~ ^v[0-9] ]]; then
+            echo "Refusable tag (expect v*): ${TAG}" >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Build docker-format amd64 tarball
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.ver.outputs.version }}"
+          OUT="ferry-gateway-${VERSION}-amd64.tar"
+          docker buildx build --platform linux/amd64 \
+            -t "${IMAGE}:${VERSION}" \
+            -t "${IMAGE}:latest" \
+            --output "type=docker,dest=${OUT}" \
+            -f gateway/image/Dockerfile gateway/
+          gzip -f "${OUT}"
+          ls -lh "${OUT}.gz"
+
+      - name: Build docker-format arm64 tarball
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.ver.outputs.version }}"
+          OUT="ferry-gateway-${VERSION}-arm64.tar"
+          docker buildx build --platform linux/arm64 \
+            -t "${IMAGE}:${VERSION}" \
+            -t "${IMAGE}:latest" \
+            --output "type=docker,dest=${OUT}" \
+            -f gateway/image/Dockerfile gateway/
+          gzip -f "${OUT}"
+          ls -lh "${OUT}.gz"
+
+      - name: Checksums and cosign sign-blob
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.ver.outputs.version }}"
+          # Use release asset basenames so `sha256sum -c` works after download.
+          cp -f gateway/dist/compose.yaml compose.yaml
+          cp -f gateway/dist/install.sh install.sh
+          sha256sum \
+            "ferry-gateway-${VERSION}-amd64.tar.gz" \
+            "ferry-gateway-${VERSION}-arm64.tar.gz" \
+            compose.yaml \
+            install.sh \
+            > SHA256SUMS
+          cosign sign-blob --yes --bundle SHA256SUMS.sig SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.ver.outputs.tag }}"
+          VERSION="${{ steps.ver.outputs.version }}"
+          # Explicit asset list — never ferry-agent-bundle.tar.gz, never OCI layout.
+          gh release create "${TAG}" \
+            "ferry-gateway-${VERSION}-amd64.tar.gz" \
+            "ferry-gateway-${VERSION}-arm64.tar.gz" \
+            SHA256SUMS \
+            SHA256SUMS.sig \
+            compose.yaml \
+            install.sh \
+            --title "Ferry Gateway ${VERSION}" \
+            --generate-notes

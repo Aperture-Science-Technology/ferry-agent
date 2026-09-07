@@ -12,15 +12,45 @@ import shutil
 import uuid
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.config import get_settings
 from ferry_agent.connectors import Result
 from ferry_agent.connectors.registry import get_connector
 from ferry_agent.models import LibraryItem, Source, SourceType
+from ferry_agent.services.covers import validate_cover_url
+from ferry_agent.services.errors import QUOTA_EXCEEDED_MESSAGE, QuotaExceededError
 
 logger = logging.getLogger(__name__)
+
+
+async def used_storage_bytes(db: AsyncSession, user_id: uuid.UUID) -> int:
+    """Somme des `size_bytes` deja comptes pour l'utilisateur (NULL = 0)."""
+    result = await db.execute(
+        select(func.coalesce(func.sum(LibraryItem.size_bytes), 0)).where(
+            LibraryItem.user_id == user_id
+        )
+    )
+    return int(result.scalar_one_or_none() or 0)
+
+
+async def ensure_storage_quota(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    incoming_bytes: int,
+    *,
+    quota_bytes: int | None = None,
+) -> None:
+    """Refuse l'ajout si `used + incoming` depasse le plafond utilisateur."""
+    quota = (
+        quota_bytes
+        if quota_bytes is not None
+        else get_settings().user_storage_quota_bytes
+    )
+    used = await used_storage_bytes(db, user_id)
+    if used + incoming_bytes > quota:
+        raise QuotaExceededError(QUOTA_EXCEEDED_MESSAGE)
 
 
 async def _get_or_create_source(db: AsyncSession, user_id: uuid.UUID, source_type: SourceType) -> Source:
@@ -56,6 +86,11 @@ async def import_from_connector(
     a l'appelant, ex. `Result.model_dump()` cote API) : quand ses champs sont
     presents et non vides, ils completent l'item persiste (auteur, couverture,
     description, langue, nombre de pages).
+
+    Note : en production `temp_dir` et `library_storage_dir` sont des volumes
+    distincts (`ferry_tmp` / `ferry_library`). Le `shutil.move` ci-dessous
+    devient alors une copie inter-filesystem (quelques Mo), plus lente et non
+    atomique — acceptable pour la taille des ebooks.
     """
     connector = get_connector(source_name)
     if connector is None:
@@ -75,7 +110,7 @@ async def import_from_connector(
         user_id=user_id,
         title=metadata.get("title") or fetched.stem,
         author=metadata.get("author") or "",
-        cover_url=metadata.get("cover_url") or None,
+        cover_url=validate_cover_url(metadata.get("cover_url")),
         description=metadata.get("description") or None,
         language=metadata.get("language") or None,
         page_count=metadata.get("page_count") or None,
@@ -93,7 +128,12 @@ async def import_from_connector(
 
 
 async def import_from_upload(
-    db: AsyncSession, user_id: uuid.UUID, filename: str, content: bytes, title: str | None = None
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    filename: str,
+    content: bytes,
+    title: str | None = None,
+    detected_format: str | None = None,
 ) -> LibraryItem:
     """Persiste un fichier deja fourni par l'utilisateur (upload) dans la bibliotheque."""
     dest = _library_storage_path(filename)
@@ -102,12 +142,17 @@ async def import_from_upload(
     source_type = SourceType.upload
     source = await _get_or_create_source(db, user_id, source_type)
 
+    fmt = detected_format
+    if fmt == "mobi" and Path(filename).suffix.lower() == ".azw3":
+        fmt = "azw3"
+    original_format = fmt if fmt else (Path(filename).suffix.lstrip(".") or "epub")
+
     item = LibraryItem(
         user_id=user_id,
         title=title or Path(filename).stem,
         author="",
         source_id=source.id,
-        original_format=Path(filename).suffix.lstrip(".") or "epub",
+        original_format=original_format,
         storage_path=str(dest),
         size_bytes=len(content),
     )
@@ -148,7 +193,7 @@ async def import_from_gateway(
         user_id=user_id,
         title=metadata.get("title") or Path(safe_name).stem,
         author=metadata.get("author") or "",
-        cover_url=metadata.get("cover_url") or None,
+        cover_url=validate_cover_url(metadata.get("cover_url")),
         description=metadata.get("description") or None,
         language=metadata.get("language") or None,
         page_count=metadata.get("page_count") or None,

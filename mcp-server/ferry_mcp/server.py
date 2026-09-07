@@ -65,8 +65,8 @@ mcp = FastMCP(
 _USER_AGENT = "ferry-agent-mcp"
 
 
-def _resolve_user_token() -> str | None:
-    """Retourne le token Clerk de l'utilisateur authentifié courant, si dispo.
+def _resolve_user_token() -> str:
+    """Retourne le token Clerk de l'utilisateur authentifié courant.
 
     FastMCP expose l'identité OAuth validée via `get_access_token()`
     (fastmcp.server.dependencies) : elle lit le ContextVar posé par le
@@ -74,36 +74,31 @@ def _resolve_user_token() -> str | None:
     besoin d'injecter `ctx: Context` dans les tools. `AccessToken.token`
     porte le jeton amont Clerk obtenu par `ClerkProvider` (un `OAuthProxy`)
     lors de l'échange OAuth — c'est ce jeton qu'on relaie au core en
-    `Authorization: Bearer`, à la place du `X-API-Key` de service.
+    `Authorization: Bearer`.
 
-    Si MCP_AUTH_ENABLED=false (dev local sans OAuth), retourne None : les
-    appels retombent sur le compte service `X-API-Key` (comportement dev
-    uniquement). Si MCP_AUTH_ENABLED=true et qu'aucune identité n'est
-    résolue, lève une erreur explicite plutôt que de retomber
-    silencieusement sur le compte service (c'était le bug de liaison
-    compte/DB : livres ajoutés au compte service, invisibles pour
-    l'utilisateur).
+    Aucun fallback compte-service : si aucune identité Clerk n'est résolue,
+    lève une RuntimeError explicite.
     """
-    settings = get_settings()
-    if not settings.mcp_auth_enabled:
-        return None
-
     access_token = get_access_token()
     if access_token is None or not access_token.token:
         raise RuntimeError(
             "Aucune identité utilisateur Clerk authentifiée n'a été trouvée pour "
-            "cet appel MCP alors que MCP_AUTH_ENABLED=true. Reconnectez-vous."
+            "cet appel MCP. Reconnectez-vous."
         )
     return access_token.token
 
 
 def _client(token: str | None = None) -> httpx.AsyncClient:
     settings = get_settings()
-    headers = {"User-Agent": _USER_AGENT}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    else:
-        headers["X-API-Key"] = settings.mcp_api_key
+    if not token:
+        raise RuntimeError(
+            "Token utilisateur Clerk requis : impossible d'appeler le core "
+            "sans identité authentifiée."
+        )
+    headers = {
+        "User-Agent": _USER_AGENT,
+        "Authorization": f"Bearer {token}",
+    }
     return httpx.AsyncClient(base_url=settings.ferry_core_url, headers=headers, timeout=30.0)
 
 
@@ -187,7 +182,16 @@ async def list_devices() -> str:
         return "Aucune liseuse enregistrée."
     lines = []
     for d in devices:
-        linked = "✓ cloud lié" if d.get("link_ref") else "✗ cloud non lié"
+        provider = d.get("cloud_provider")
+        if d.get("cloud_linked"):
+            if provider == "dropbox":
+                linked = "✓ Lié à Dropbox"
+            elif provider == "drive":
+                linked = "✓ Lié à Google Drive"
+            else:
+                linked = "✓ Lié"
+        else:
+            linked = "✗ Non lié"
         lines.append(
             f"**{d.get('brand', '?')} {d.get('model') or ''}** — "
             f"tier: {d.get('delivery_tier')} | {linked} | id: {d['id']}"

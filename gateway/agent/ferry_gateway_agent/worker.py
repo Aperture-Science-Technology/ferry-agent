@@ -3,6 +3,7 @@ import json
 import logging
 import mimetypes
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,10 @@ class GatewayAgent:
         self.gateway_id = settings.gateway_id or state.get("gateway_id")
         self.gateway_key = settings.gateway_key or state.get("gateway_key")
 
+    @property
+    def heartbeat_path(self) -> Path:
+        return self.settings.state_path.parent / "heartbeat"
+
     def _load_state(self) -> dict[str, str]:
         try:
             body = json.loads(self.settings.state_path.read_text(encoding="utf-8"))
@@ -65,12 +70,16 @@ class GatewayAgent:
             logger.warning("Could not read gateway state: %s", error)
         return {}
 
+    def _atomic_write_text(self, path: Path, contents: str, *, mode: int = 0o600) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = Path(str(path) + ".tmp")
+        temporary.write_text(contents, encoding="utf-8")
+        os.chmod(temporary, mode)
+        temporary.replace(path)
+
     def _save_state(self) -> None:
-        self.settings.state_path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.settings.state_path.with_suffix(
-            self.settings.state_path.suffix + ".tmp"
-        )
-        temporary.write_text(
+        self._atomic_write_text(
+            self.settings.state_path,
             json.dumps(
                 {
                     "gateway_id": self.gateway_id,
@@ -79,16 +88,18 @@ class GatewayAgent:
                 indent=2,
             )
             + "\n",
-            encoding="utf-8",
         )
-        os.chmod(temporary, 0o600)
-        temporary.replace(self.settings.state_path)
+
+    def _write_heartbeat(self) -> None:
+        """Record liveness for the image HEALTHCHECK (one unix timestamp line)."""
+        self._atomic_write_text(self.heartbeat_path, f"{time.time():.6f}\n")
 
     async def pair(self) -> None:
         if self.gateway_id:
             if not self.gateway_key:
                 raise RuntimeError("GATEWAY_KEY is required for a paired gateway")
             self._save_state()
+            self._write_heartbeat()
             return
         if not self.settings.pairing_token:
             raise RuntimeError(
@@ -111,6 +122,7 @@ class GatewayAgent:
         self.gateway_id = str(gateway_id)
         self.gateway_key = str(body.get("gateway_key") or self.gateway_key)
         self._save_state()
+        self._write_heartbeat()
         logger.info("Gateway %s paired", self.gateway_id)
 
     @staticmethod
@@ -129,6 +141,7 @@ class GatewayAgent:
         return {"X-Gateway-Key": self.gateway_key}
 
     async def poll_once(self) -> dict[str, Any] | None:
+        """Poll for one job. Platform returns GatewayJobOut JSON or HTTP 204."""
         response = await self.platform.post(
             f"{self.settings.platform_url}/api/v1/gateways/poll",
             headers=self._gateway_headers(),
@@ -136,18 +149,7 @@ class GatewayAgent:
         self._raise_platform_status(response, "poll jobs")
         if response.status_code == 204 or not response.content:
             return None
-
         body = response.json()
-        if body is None:
-            return None
-        if isinstance(body, list):
-            return body[0] if body else None
-        if isinstance(body, dict) and "job" in body:
-            job = body["job"]
-            return job if isinstance(job, dict) else None
-        if isinstance(body, dict) and "jobs" in body:
-            jobs = body["jobs"]
-            return jobs[0] if isinstance(jobs, list) and jobs else None
         return body if isinstance(body, dict) else None
 
     async def handle_job(self, job: dict[str, Any]) -> None:
@@ -242,17 +244,27 @@ class GatewayAgent:
                     logger.exception("Could not clean up torrent %s", torrent_id)
 
     async def run_once(self) -> bool:
+        job: dict[str, Any] | None = None
+        handled = False
         try:
             job = await self.poll_once()
-            if not job:
-                return False
-            await self.handle_job(job)
-            return True
+            if job:
+                await self.handle_job(job)
+                handled = True
         except PlatformConflict as error:
             logger.warning("%s; polling will continue", error)
         except (httpx.HTTPError, OSError, TimeoutError, ValueError, RuntimeError):
-            logger.exception("Gateway cycle failed; polling will continue")
-        return False
+            job_id = (job or {}).get("id") or (job or {}).get("job_id")
+            job_type = (job or {}).get("type")
+            logger.exception(
+                "Gateway cycle failed for job type=%s id=%s; polling will continue",
+                job_type,
+                job_id,
+            )
+        finally:
+            # Alive signal even when there is no job (False) or the cycle failed.
+            self._write_heartbeat()
+        return handled
 
     async def run(self) -> None:
         while not self.gateway_id:
@@ -264,9 +276,25 @@ class GatewayAgent:
                 logger.exception("Pairing request failed; pairing will be retried")
             if not self.gateway_id:
                 await asyncio.sleep(self.settings.poll_interval_seconds)
-        while True:
-            await self.run_once()
-            await asyncio.sleep(self.settings.poll_interval_seconds)
+
+        from .watcher import WatchFolderImporter
+
+        watcher = WatchFolderImporter(
+            self.settings,
+            platform=self.platform,
+            gateway_headers=self._gateway_headers(),
+        )
+        watch_task = asyncio.create_task(watcher.run(), name="watch-folder")
+        try:
+            while True:
+                await self.run_once()
+                await asyncio.sleep(self.settings.poll_interval_seconds)
+        finally:
+            watch_task.cancel()
+            try:
+                await watch_task
+            except asyncio.CancelledError:
+                pass
 
     async def aclose(self) -> None:
         await self.prowlarr.aclose()

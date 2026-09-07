@@ -23,8 +23,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BrandBadge } from "@/components/app/devices/brand-badge";
+import { ConversionProfileField } from "@/components/app/devices/conversion-profile-field";
 import { useApiClient } from "@/lib/api-client";
-import type { Device } from "@/lib/types";
+import type { ConversionPreset, Device, DeviceCreate } from "@/lib/types";
 
 const BRANDS: Device["brand"][] = ["kindle", "kobo", "tolino", "pocketbook", "other"];
 const MODEL_BRANDS = ["kindle", "kobo", "tolino", "pocketbook"] as const;
@@ -44,6 +45,7 @@ export function NewDeviceDialog({
   const [name, setName] = useState("");
   const [brand, setBrand] = useState<Device["brand"]>("kindle");
   const [model, setModel] = useState("");
+  const [conversionProfile, setConversionProfile] = useState<ConversionPreset | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const modelOptions =
@@ -59,15 +61,22 @@ export function NewDeviceDialog({
   async function submit() {
     setSubmitting(true);
     try {
+      const payload: DeviceCreate = {
+        name: name || null,
+        brand,
+        model: model || null,
+        conversion_profile: conversionProfile,
+      };
       const device = await call<Device>("/api/v1/devices", {
         method: "POST",
-        body: JSON.stringify({ name: name || null, brand, model: model || null }),
+        body: JSON.stringify(payload),
       });
       onCreated(device);
       toast.success(t("toastCreated"));
       onOpenChange(false);
       setName("");
       setModel("");
+      setConversionProfile(null);
     } catch {
       toast.error(t("toastFailed"));
     } finally {
@@ -124,6 +133,7 @@ export function NewDeviceDialog({
               <Input value={model} onChange={(event) => setModel(event.target.value)} />
             )}
           </div>
+          <ConversionProfileField value={conversionProfile} onChange={setConversionProfile} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

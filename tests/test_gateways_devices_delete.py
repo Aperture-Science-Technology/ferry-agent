@@ -1,6 +1,6 @@
 """Tests pour la suppression definitive des accès gateway et des devices :
-- DELETE /api/v1/gateways/{gateway_id}  (purge les GatewayJob lies)
-- DELETE /api/v1/devices/{device_id}    (purge les DeliveryJob lies)
+- DELETE /api/v1/gateways/{gateway_id}  (GatewayJob en CASCADE DB)
+- DELETE /api/v1/devices/{device_id}    (DeliveryJob / ShortCode en CASCADE DB)
 
 Toutes les routes sont scopees par user_id (404 si la ressource appartient a
 un autre utilisateur), suivant le pattern deja utilise par api/books.py.
@@ -13,12 +13,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 
-from ferry_agent.api.deps import CurrentUser as CU, get_current_user
-from ferry_agent.db import get_db
 from ferry_agent.main import app
 from ferry_agent.models import DeviceBrand, DeliveryTier, PairingStatus
 from ferry_agent.services import devices as device_service
 from ferry_agent.services import gateways as gateway_service
+
+from tests.fakes import FakeSession, override_app_deps
 
 _NOW = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
 _USER_ID = uuid.uuid4()
@@ -54,50 +54,17 @@ def _fake_device(**overrides):
 
 
 def _override(fake_db):
-    app.dependency_overrides[get_db] = fake_db
-    app.dependency_overrides[get_current_user] = lambda: CU(id=_USER_ID, email=_USER_EMAIL)
-
-
-class ScalarResult:
-    def __init__(self, value):
-        self.value = value
-
-    def scalar_one_or_none(self):
-        return self.value
-
-
-class FakeSession:
-    """Session minimale qui enregistre les statements executes, pour
-    verifier que la purge des enfants precede bien le delete du parent."""
-
-    def __init__(self, execute_values=()):
-        self.execute_values = list(execute_values)
-        self.commits = 0
-        self.statements = []
-        self.deleted = []
-
-    async def execute(self, statement):
-        self.statements.append(statement)
-        value = self.execute_values.pop(0) if self.execute_values else None
-        return ScalarResult(value)
-
-    async def commit(self):
-        self.commits += 1
-
-    async def delete(self, value):
-        self.deleted.append(value)
+    override_app_deps(fake_db, user_id=_USER_ID, email=_USER_EMAIL)
 
 
 class TestDeleteGatewayService:
-    async def test_purges_jobs_then_gateway(self) -> None:
+    async def test_deletes_gateway(self) -> None:
         gateway = _fake_gateway()
         db = FakeSession()
 
         await gateway_service.delete_gateway(db, gateway)
 
-        assert len(db.statements) == 1
-        compiled = str(db.statements[0])
-        assert "gateway_jobs" in compiled
+        assert db.statements == []
         assert db.deleted == [gateway]
         assert db.commits == 1
 
@@ -171,15 +138,13 @@ class TestDeleteGatewayApi:
 
 
 class TestDeleteDeviceService:
-    async def test_purges_delivery_jobs_then_device(self) -> None:
+    async def test_deletes_device(self) -> None:
         device = _fake_device()
         db = FakeSession()
 
         await device_service.delete_device(db, device)
 
-        assert len(db.statements) == 1
-        compiled = str(db.statements[0])
-        assert "delivery_jobs" in compiled
+        assert db.statements == []
         assert db.deleted == [device]
         assert db.commits == 1
 

@@ -25,50 +25,7 @@ from ferry_agent.schemas import DeliveryCreate
 from ferry_agent.services import delivery, tierc
 from fastapi import BackgroundTasks
 
-
-class ScalarResult:
-    def __init__(self, value):
-        self.value = value
-
-    def scalar_one_or_none(self):
-        return self.value
-
-
-class FakeSession:
-    def __init__(self, execute_values=()):
-        self.execute_values = list(execute_values)
-        self.commits = 0
-        self.statements = []
-        self.added = []
-
-    async def execute(self, statement):
-        self.statements.append(statement)
-        value = self.execute_values.pop(0) if self.execute_values else None
-        return ScalarResult(value)
-
-    async def commit(self):
-        self.commits += 1
-
-    async def refresh(self, _value):
-        return None
-
-    def add(self, value):
-        self.added.append(value)
-        # Pas de flush reel : applique les defauts client-side de la
-        # colonne (id/created_at/status...) comme le ferait SQLAlchemy.
-        for column in value.__table__.columns:
-            if getattr(value, column.name, None) is not None:
-                continue
-            default = column.default
-            if default is None:
-                continue
-            if getattr(default, "is_callable", False):
-                try:
-                    setattr(value, column.name, default.arg())
-                except TypeError:
-                    setattr(value, column.name, default.arg(None))
-            elif getattr(default, "is_scalar", False):
-                setattr(value, column.name, default.arg)
+from tests.fakes import FakeSession
 
 
 def override_db(sessions: list[FakeSession]):

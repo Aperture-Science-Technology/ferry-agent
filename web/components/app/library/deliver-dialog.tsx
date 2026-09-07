@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -25,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import { ApiError, useApiClient } from "@/lib/api-client";
 import type { Device, DeliveryJob, DeliveryMethod, LibraryItem, MethodAvailability } from "@/lib/types";
+
+const FORMATS = ["epub", "mobi", "azw3", "pdf"] as const;
 
 /** Modes de livraison disponibles pour `deviceId` (voir
  * GET /api/v1/devices/{id}/methods). Le parent doit la remonter avec
@@ -125,9 +126,26 @@ export function DeliverDialog({
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [deviceId, setDeviceId] = useState<string>("");
-  const [format, setFormat] = useState("");
+  const [format, setFormat] = useState<string>("epub");
   const [submitting, setSubmitting] = useState(false);
   const [method, setMethod] = useState<DeliveryMethod | "">("");
+
+  useEffect(() => {
+    if (!item) return;
+    let cancelled = false;
+    call<{ default_format: string }>("/api/v1/users/me")
+      .then((user) => {
+        if (cancelled) return;
+        const next = user.default_format;
+        setFormat(FORMATS.includes(next as (typeof FORMATS)[number]) ? next : "epub");
+      })
+      .catch(() => {
+        if (!cancelled) setFormat("epub");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [item, call]);
 
   function handleDeviceChange(value: string) {
     setDeviceId(value);
@@ -143,7 +161,7 @@ export function DeliverDialog({
         body: JSON.stringify({
           library_item_id: item.id,
           device_id: deviceId,
-          format: format || undefined,
+          format,
           method,
         }),
       });
@@ -188,7 +206,7 @@ export function DeliverDialog({
                 )}
                 {devices.map((device) => (
                   <SelectItem key={device.id} value={device.id}>
-                    {device.brand} {device.model ? `— ${device.model}` : ""}
+                    {device.name || `${device.brand} — ${device.model}`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -202,11 +220,18 @@ export function DeliverDialog({
           )}
           <div className="space-y-2">
             <Label>{t("formatOptional")}</Label>
-            <Input
-              value={format}
-              onChange={(event) => setFormat(event.target.value)}
-              placeholder={t("formatPlaceholder")}
-            />
+            <Select value={format} onValueChange={(value) => value && setFormat(value)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t("formatPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {FORMATS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`formats.${value}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>
