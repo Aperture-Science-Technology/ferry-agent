@@ -554,7 +554,7 @@
     "step2Title": "Récupérez l'image",
     "step2Action": "Téléchargez l'image Docker avec le bouton ci-dessous. C'est le seul moyen de la récupérer.",
     "step2Cta": "Téléchargement direct de l'image Docker",
-    "step2UseFile": "Une fois le fichier téléchargé, ouvrez-le avec Docker Desktop ou OrbStack, puis passez à l'étape suivante.",
+    "step2UseFile": "Le fichier .tar peut être importé directement dans Docker Desktop ou OrbStack. Une fois importé, passez à l'étape suivante.",
     "step2Success": "L'image apparaît dans Docker Desktop ou OrbStack.",
     "step3Title": "Lancez le conteneur",
     "step3Action": "Collez cette commande dans le terminal, en remplaçant CODE par le code de connexion copié à l'étape 1.",
