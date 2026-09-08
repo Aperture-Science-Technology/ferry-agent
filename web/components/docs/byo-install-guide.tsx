@@ -46,6 +46,7 @@ const DOCKER_RUN_COMMAND = `docker run -d \\
   --name ferry-gateway \\
   --restart unless-stopped \\
   -e PAIRING_TOKEN=CODE \\
+  -e GATEWAY_KEY=KEY \\
   -e PUID=$(id -u) -e PGID=$(id -g) \\
   -p 127.0.0.1:9696:9696 \\
   -p 51413:51413 -p 51413:51413/udp \\
