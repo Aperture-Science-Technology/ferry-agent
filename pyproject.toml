@@ -18,6 +18,7 @@ asyncio_default_fixture_loop_scope = "function"
 # Option 2 : on laisse testpaths sur le core. L'execution des tests
 # mcp-server/tests est traitee dans W-10 (ne pas melanger les perimetres).
 testpaths = ["tests"]
+pythonpath = ["."]
 
 # line-length measured max Python line = 120 (cloud_links.py / 0009_fk_ondelete.py);
 # set to 120 to avoid mass reformatting in this PR.
