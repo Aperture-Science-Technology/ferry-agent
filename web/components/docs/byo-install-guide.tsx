@@ -37,6 +37,15 @@ function CodeBlock({ children }: { children: string }) {
 const DOCKER_PULL_COMMAND =
   "docker pull ghcr.io/aperture-science-technology/ferry-agent/gateway:latest";
 
+const DOCKER_LOAD_COMMAND =
+  "docker load -i ferry-gateway-1.0.0-amd64.tar.gz";
+
+const RELEASES_URL =
+  "https://github.com/Aperture-Science-Technology/ferry-agent/releases";
+
+const INSTALL_SCRIPT_BUNDLE_URL =
+  "https://ferry-agent.aperture-agency.org/bundle/ferry-agent-bundle.tar.gz";
+
 const MCP_URL = "https://ferry-agent.aperture-agency.org/mcp";
 
 const DOCKER_RUN_COMMAND = `docker run -d \\
@@ -77,7 +86,34 @@ export function ByoInstallGuide() {
       number: "02",
       title: t("step2Title"),
       action: t("step2Action"),
-      code: DOCKER_PULL_COMMAND,
+      extra: (
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <h4 className="font-heading text-base font-medium">
+              {t("step2OnlineTitle")}
+            </h4>
+            <p className="text-muted-foreground">{t("step2OnlineAction")}</p>
+            <CodeBlock>{DOCKER_PULL_COMMAND}</CodeBlock>
+          </div>
+          <div className="space-y-3">
+            <h4 className="font-heading text-base font-medium">
+              {t("step2OfflineTitle")}
+            </h4>
+            <p className="text-muted-foreground">{t("step2OfflineAction")}</p>
+            <Button
+              variant="outline"
+              render={
+                <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer">
+                  {t("step2OfflineCta")}
+                </a>
+              }
+            />
+            <p className="text-muted-foreground">{t("step2OfflineLoad")}</p>
+            <CodeBlock>{DOCKER_LOAD_COMMAND}</CodeBlock>
+            <p className="text-sm text-muted-foreground">{t("step2OfflineHint")}</p>
+          </div>
+        </div>
+      ),
       success: t("step2Success"),
     },
     {
@@ -212,7 +248,7 @@ export function ByoInstallGuide() {
                 <Button
                   variant="outline"
                   render={
-                    <a href="https://ferry-agent.aperture-agency.org/bundle/ferry-agent-bundle.tar.gz">
+                    <a href={INSTALL_SCRIPT_BUNDLE_URL}>
                       {t("scriptAltCta")}
                     </a>
                   }
