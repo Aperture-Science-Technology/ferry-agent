@@ -51,7 +51,7 @@ class ProwlarrClient:
             params={
                 "query": query,
                 "type": "search",
-                "categories": ",".join(map(str, BOOK_CATEGORIES)),
+                "categories": list(BOOK_CATEGORIES),
             },
             headers={"X-Api-Key": self.api_key},
         )
