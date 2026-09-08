@@ -1,6 +1,7 @@
 import asyncio
+import base64
 import time
-from typing import Any
+from typing import Any, Mapping
 
 import httpx
 
@@ -57,11 +58,37 @@ class TransmissionClient:
             return body.get("arguments") or {}
         raise TransmissionError("Transmission session negotiation failed")
 
-    async def add(self, magnet_url: str, *, paused: bool = True) -> int:
-        arguments = await self._rpc(
-            "torrent-add",
-            {"filename": magnet_url, "paused": paused},
+    async def _fetch_torrent_metainfo(
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str] | None = None,
+    ) -> str:
+        response = await self._client.get(
+            url,
+            headers=dict(headers) if headers else None,
+            follow_redirects=True,
         )
+        if not response.is_success:
+            raise TransmissionError(
+                f"Could not fetch torrent from {url}: HTTP {response.status_code}"
+            )
+        return base64.b64encode(response.content).decode("ascii")
+
+    async def add(
+        self,
+        magnet_url: str,
+        *,
+        paused: bool = True,
+        headers: Mapping[str, str] | None = None,
+    ) -> int:
+        if magnet_url.startswith(("http://", "https://")):
+            metainfo = await self._fetch_torrent_metainfo(magnet_url, headers=headers)
+            add_arguments: dict[str, Any] = {"metainfo": metainfo, "paused": paused}
+        else:
+            # magnet: and any other non-HTTP reference stay on the filename path.
+            add_arguments = {"filename": magnet_url, "paused": paused}
+        arguments = await self._rpc("torrent-add", add_arguments)
         torrent = arguments.get("torrent-added") or arguments.get("torrent-duplicate")
         if not torrent or "id" not in torrent:
             raise TransmissionError("Transmission did not return a torrent id")
