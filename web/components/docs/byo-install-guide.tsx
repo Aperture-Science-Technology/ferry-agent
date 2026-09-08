@@ -34,8 +34,11 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
-const DOCKER_PULL_COMMAND =
-  "docker pull ghcr.io/aperture-science-technology/ferry-agent/gateway:latest";
+const GATEWAY_IMAGE_DOWNLOAD_URL =
+  "https://ferry-agent.aperture-agency.org/bundle/ferry-agent-gateway.tar.gz";
+
+const INSTALL_SCRIPT_BUNDLE_URL =
+  "https://ferry-agent.aperture-agency.org/bundle/ferry-agent-bundle.tar.gz";
 
 const MCP_URL = "https://ferry-agent.aperture-agency.org/mcp";
 
@@ -77,7 +80,18 @@ export function ByoInstallGuide() {
       number: "02",
       title: t("step2Title"),
       action: t("step2Action"),
-      code: DOCKER_PULL_COMMAND,
+      extra: (
+        <div className="space-y-3">
+          <Button
+            render={
+              <a href={GATEWAY_IMAGE_DOWNLOAD_URL}>
+                {t("step2Cta")}
+              </a>
+            }
+          />
+          <p className="text-muted-foreground">{t("step2UseFile")}</p>
+        </div>
+      ),
       success: t("step2Success"),
     },
     {
@@ -212,7 +226,7 @@ export function ByoInstallGuide() {
                 <Button
                   variant="outline"
                   render={
-                    <a href="https://ferry-agent.aperture-agency.org/bundle/ferry-agent-bundle.tar.gz">
+                    <a href={INSTALL_SCRIPT_BUNDLE_URL}>
                       {t("scriptAltCta")}
                     </a>
                   }
