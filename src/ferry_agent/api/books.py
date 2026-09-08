@@ -328,6 +328,14 @@ async def add_book(
             "result_id": raw_result.get("result_id") or result_id or "",
             "title": raw_result.get("title") or result_id or "Gateway book",
         }
+        # MCP add_to_library n'envoie que source + result_id : inferer la
+        # reference de telechargement sans ecraser magnet_url/guid fournis.
+        inferred_id = raw_result["result_id"]
+        if not raw_result.get("magnet_url") and not raw_result.get("guid"):
+            if inferred_id.startswith("magnet:"):
+                raw_result["magnet_url"] = inferred_id
+            elif inferred_id:
+                raw_result["guid"] = inferred_id
         try:
             selected_result = Result.model_validate(raw_result)
         except ValueError as exc:

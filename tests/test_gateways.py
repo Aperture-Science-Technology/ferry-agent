@@ -223,6 +223,84 @@ async def test_search_orchestration_merges_gateway_results(
     ]
 
 
+class TestAddBookGatewayApi:
+    """POST /api/v1/books avec source gateway: — inference magnet_url/guid (MCP)."""
+
+    def _post_gateway_add(self, *, result_id: str, gateway: Gateway, user_id: uuid.UUID):
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+
+        from ferry_agent.main import app
+        from tests.fakes import FakeSession, override_app_deps
+
+        captured: dict = {}
+
+        async def fake_create_job(db, gateway_id, job_type, payload):
+            captured["gateway_id"] = gateway_id
+            captured["job_type"] = job_type
+            captured["payload"] = payload
+            job = GatewayJob(
+                id=uuid.uuid4(),
+                gateway_id=gateway_id,
+                type=job_type,
+                payload=payload,
+                status=GatewayJobStatus.pending,
+            )
+            return job
+
+        async def fake_db():
+            yield FakeSession(always=gateway)
+
+        override_app_deps(fake_db, user_id=user_id)
+        try:
+            with patch("ferry_agent.api.books.gateway_service.create_job", side_effect=fake_create_job):
+                with TestClient(app) as client:
+                    resp = client.post(
+                        "/api/v1/books",
+                        json={"source": f"gateway:{gateway.id}", "result_id": result_id},
+                    )
+            return resp, captured
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_infers_magnet_url_from_result_id(self):
+        user_id = uuid.uuid4()
+        gateway = make_gateway(user_id=user_id, pairing_status=PairingStatus.paired)
+        magnet = "magnet:?xt=urn:btih:abcdef0123456789"
+
+        resp, captured = self._post_gateway_add(
+            result_id=magnet, gateway=gateway, user_id=user_id
+        )
+
+        assert resp.status_code == 202
+        body = resp.json()
+        assert "gateway_job_id" in body
+        assert body["status"] == "pending"
+        result = captured["payload"]["result"]
+        assert result["magnet_url"] == magnet
+        assert result["result_id"] == magnet
+        assert result.get("guid") in (None, "")
+
+    def test_infers_guid_from_result_id(self):
+        user_id = uuid.uuid4()
+        gateway = make_gateway(user_id=user_id, pairing_status=PairingStatus.paired)
+        guid = "indexer-guid-42"
+
+        resp, captured = self._post_gateway_add(
+            result_id=guid, gateway=gateway, user_id=user_id
+        )
+
+        assert resp.status_code == 202
+        body = resp.json()
+        assert "gateway_job_id" in body
+        assert body["status"] == "pending"
+        result = captured["payload"]["result"]
+        assert result["guid"] == guid
+        assert result["result_id"] == guid
+        assert result.get("magnet_url") in (None, "")
+
+
 class TestListGatewayJobsApi:
     def test_lists_recent_jobs_for_owner(self):
         from unittest.mock import AsyncMock, MagicMock
