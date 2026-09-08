@@ -554,7 +554,7 @@
     "step2Title": "Get the image",
     "step2Action": "Download the Docker image with the button below. This is the only way to get it.",
     "step2Cta": "Direct download of the Docker image",
-    "step2UseFile": "Once the file is downloaded, open it with Docker Desktop or OrbStack, then continue to the next step.",
+    "step2UseFile": "The .tar file can be imported directly into Docker Desktop or OrbStack. Once imported, continue to the next step.",
     "step2Success": "The image appears in Docker Desktop or OrbStack.",
     "step3Title": "Launch the container",
     "step3Action": "Paste this command in the terminal, replacing CODE with the connection code you copied in step 1.",

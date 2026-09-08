@@ -35,7 +35,7 @@ function CodeBlock({ children }: { children: string }) {
 }
 
 const GATEWAY_IMAGE_DOWNLOAD_URL =
-  "https://ferry-agent.aperture-agency.org/bundle/ferry-agent-gateway.tar.gz";
+  "https://ferry-agent.aperture-agency.org/bundle/ferry-agent-gateway.tar";
 
 const INSTALL_SCRIPT_BUNDLE_URL =
   "https://ferry-agent.aperture-agency.org/bundle/ferry-agent-bundle.tar.gz";
