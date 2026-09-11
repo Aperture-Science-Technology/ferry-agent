@@ -39,12 +39,37 @@ services:
     labels:
       - "traefik.enable=false"
 
+  # Named volumes are created root:root 0755. Core runs as UID/GID 10001
+  # (appuser) and would hit PermissionError on import_from_gateway / tmp.
+  # One-shot root job chowns in place — no volume wipe, core stays non-root.
+  volume-init:
+    image: alpine:3.20
+    container_name: ferry-agent-volume-init
+    restart: "no"
+    user: "0:0"
+    volumes:
+      - ferry_library:/data/library
+      - ferry_tmp:/data/tmp
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        chown -R 10001:10001 /data/library /data/tmp
+        chmod 0755 /data/library /data/tmp
+    networks:
+      - ferry-net
+    labels:
+      - "traefik.enable=false"
+
   ferry-agent-core:
     image: ghcr.io/aperture-science-technology/ferry-agent/core:latest
     pull_policy: always
     container_name: ferry-agent-core
     depends_on:
       migrate:
+        condition: service_completed_successfully
+      volume-init:
         condition: service_completed_successfully
     restart: unless-stopped
     volumes:
