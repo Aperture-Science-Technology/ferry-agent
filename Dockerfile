@@ -21,7 +21,12 @@ COPY src ./src
 COPY alembic.ini ./
 COPY alembic ./alembic
 
-RUN useradd --create-home --uid 10001 appuser
+# /data/{library,tmp} match prod volume mount points. Ownership helps empty
+# named-volume first populate; existing root-owned volumes are fixed by the
+# compose `volume-init` one-shot (see docs/adr/0008-volumes-uid-10001.md).
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /data/library /data/tmp \
+    && chown -R appuser:appuser /data/library /data/tmp
 USER appuser
 
 ENV PYTHONPATH=/app/src

@@ -88,4 +88,11 @@ rm -f "${DIST_DIR}"/ferry-gateway-*.tar \
       "${DIST_DIR}"/ferry-agent-gateway.tar \
       "${DIST_DIR}"/ferry-agent-gateway.tar.gz
 
-docker compose -f deploy/docker-compose.yml up -d
+COMPOSE=(docker compose -f deploy/docker-compose.yml)
+
+# Re-run volume ownership every deploy: compose will not recreate a completed
+# restart:no one-shot unless forced, and named volumes stay root:root until
+# chown. In-place fix for UID/GID 10001 — never wipe ferry_library/ferry_tmp.
+"${COMPOSE[@]}" run --rm --no-deps volume-init
+
+"${COMPOSE[@]}" up -d
