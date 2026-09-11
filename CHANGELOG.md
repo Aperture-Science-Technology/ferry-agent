@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Volumes library/tmp** — one-shot Compose `volume-init` (+ `deploy.sh`) passe `ferry_library` / `ferry_tmp` en UID/GID 10001 sans wipe ; évite `PermissionError` sous core non-root (ADR 0008).
+
 ### Added
 
 - **FA-W01** — Harnais de tests d'intégration Postgres réel + sync modèles / Alembic.
