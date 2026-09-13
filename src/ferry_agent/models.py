@@ -175,6 +175,9 @@ class DeliveryJob(Base):
         SAEnum(DeliveryStatus, name="delivery_status"), default=DeliveryStatus.queued, nullable=False
     )
     method: Mapped[DeliveryMethod] = mapped_column(SAEnum(DeliveryMethod, name="delivery_method"), nullable=False)
+    # Format exact demande (epub/mobi/azw3/pdf) ; sert surtout au telechargement
+    # tier C pour ne jamais servir un autre format que celui choisi.
+    target_format: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
     delivered_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(String, nullable=True)

@@ -230,7 +230,7 @@
   },
   "deliverDialog": {
     "title": "Envoyer « {title} »",
-    "description": "Choisissez l'appareil de destination. Le format habituel de l'appareil sera utilisé si vous laissez ce champ vide.",
+    "description": "Choisissez l'appareil de destination et le format du fichier à envoyer.",
   "device": "Appareil",
   "devicePlaceholder": "Choisir un appareil",
   "noDevices": "Aucun appareil. Ajoutez-en un dans Appareils.",
@@ -482,6 +482,9 @@
   "deliveryDetail": {
     "title": "Suivi de l'envoi",
     "description": "Statut et détails de cet envoi.",
+    "book": "Livre",
+    "author": "Auteur",
+    "device": "Appareil",
     "status": "Statut",
     "method": "Méthode",
     "created": "Créé",

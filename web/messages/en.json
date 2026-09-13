@@ -230,7 +230,7 @@
   },
   "deliverDialog": {
     "title": "Send “{title}”",
-    "description": "Choose a destination device. The device's usual format will be used if you leave this field empty.",
+    "description": "Choose a destination device and the file format to send.",
   "device": "Device",
   "devicePlaceholder": "Choose a device",
   "noDevices": "No devices yet. Add one under Devices.",
@@ -482,6 +482,9 @@
   "deliveryDetail": {
     "title": "Delivery tracking",
     "description": "Status and details for this delivery.",
+    "book": "Book",
+    "author": "Author",
+    "device": "Device",
     "status": "Status",
     "method": "Method",
     "created": "Created",

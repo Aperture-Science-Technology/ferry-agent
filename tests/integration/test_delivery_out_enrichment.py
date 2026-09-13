@@ -76,3 +76,13 @@ async def test_list_deliveries_keeps_historical_title_after_book_delete(
     assert rows_after[0]["item_author"] == historical_author
     assert rows_after[0]["device_label"] == "Kindle salon"
     assert rows_after[0]["item_title"]  # non vide
+
+    # GET detail : memes champs apres suppression + rafraichissement
+    detail = await client.get(f"/api/v1/deliveries/{rows_after[0]['id']}")
+    assert detail.status_code == 200
+    body = detail.json()
+    assert body["item_title"] == historical_title
+    assert body["item_author"] == historical_author
+    assert body["device_label"] == "Kindle salon"
+    assert body["status"] == "delivered"
+    assert body["library_item_id"] is None

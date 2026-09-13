@@ -10,6 +10,7 @@
 """
 
 from pathlib import Path
+import uuid
 
 import pytest
 
@@ -106,7 +107,76 @@ async def test_epub_to_azw3_mocked_ebook_convert_writes_azw3_magic(
     assert list(tmp_path.glob("*.pdf")) == []
 
 
-def test_check_output_raises_on_missing_file(tmp_path: Path) -> None:
+async def test_materialize_target_format_same_format_returns_source(tmp_path: Path) -> None:
+    src = tmp_path / "book.epub"
+    src.write_bytes(b"PK" + b"x" * 100)
+    path, from_cache = await converters.materialize_target_format(
+        library_item_id=uuid.uuid4(),
+        src_path=str(src),
+        original_format="epub",
+        target_format="epub",
+        preset=None,
+    )
+    assert path == str(src)
+    assert from_cache is False
+
+
+async def test_materialize_target_format_epub_to_pdf(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    src = tmp_path / "book.epub"
+    src.write_bytes(b"PK" + b"x" * 100)
+    item_id = uuid.uuid4()
+    seen: dict = {}
+
+    async def fake_convert_with_profile_cache(**kwargs):
+        seen.update(kwargs)
+        out = tmp_path / f"out.{kwargs['target_format']}"
+        out.write_bytes(b"%PDF" + b"\x00" * converters.MIN_OUTPUT_BYTES)
+        return str(out), False
+
+    monkeypatch.setattr(converters, "convert_with_profile_cache", fake_convert_with_profile_cache)
+
+    path, from_cache = await converters.materialize_target_format(
+        library_item_id=item_id,
+        src_path=str(src),
+        original_format="epub",
+        target_format="pdf",
+        preset=None,
+    )
+
+    assert seen["convert_kind"] == "epub_to_pdf"
+    assert seen["target_format"] == "pdf"
+    assert path.endswith(".pdf")
+    assert from_cache is False
+
+
+async def test_materialize_target_format_pdf_to_mobi_two_hop(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    src = tmp_path / "book.pdf"
+    src.write_bytes(b"%PDF" + b"x" * 100)
+    calls: list[str] = []
+
+    async def fake_convert_with_profile_cache(**kwargs):
+        calls.append(kwargs["convert_kind"])
+        out = tmp_path / f"out.{kwargs['target_format']}"
+        out.write_bytes(b"x" * converters.MIN_OUTPUT_BYTES)
+        return str(out), False
+
+    monkeypatch.setattr(converters, "convert_with_profile_cache", fake_convert_with_profile_cache)
+
+    path, _from_cache = await converters.materialize_target_format(
+        library_item_id=uuid.uuid4(),
+        src_path=str(src),
+        original_format="pdf",
+        target_format="mobi",
+        preset=None,
+    )
+
+    assert calls == ["to_epub", "epub_to_mobi"]
+    assert path.endswith(".mobi")
+
     with pytest.raises(RuntimeError):
         converters._check_output(tmp_path / "does_not_exist.pdf")
 

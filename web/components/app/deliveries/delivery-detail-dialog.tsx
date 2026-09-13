@@ -31,13 +31,19 @@ export function DeliveryDetailDialog({
 }) {
   const t = useTranslations("deliveryDetail");
   const tDeliveries = useTranslations("deliveries");
+  const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [job, setJob] = useState<DeliveryJob | null>(null);
   const [failedId, setFailedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId) {
+      setJob(null);
+      setFailedId(null);
+      return;
+    }
     let cancelled = false;
+    setFailedId(null);
     call<DeliveryJob>(`/api/v1/deliveries/${jobId}`)
       .then((result) => {
         if (cancelled) return;
@@ -45,6 +51,7 @@ export function DeliveryDetailDialog({
       })
       .catch(() => {
         if (cancelled) return;
+        setJob(null);
         setFailedId(jobId);
         toast.error(t("toastLoadFailed"));
       });
@@ -54,7 +61,8 @@ export function DeliveryDetailDialog({
   }, [jobId, call, t]);
 
   const displayJob = job?.id === jobId ? job : null;
-  const loading = jobId !== null && displayJob === null && failedId !== jobId;
+  const loadFailed = jobId !== null && failedId === jobId;
+  const loading = jobId !== null && displayJob === null && !loadFailed;
 
   return (
     <Dialog open={jobId !== null} onOpenChange={onOpenChange}>
@@ -63,12 +71,26 @@ export function DeliveryDetailDialog({
           <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
-        {loading || !displayJob ? (
+        {loading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="animate-spin text-muted-foreground" />
           </div>
+        ) : loadFailed || !displayJob ? (
+          <p className="text-sm text-muted-foreground">{t("toastLoadFailed")}</p>
         ) : (
           <div className="space-y-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">{t("book")}</span>
+              <span className="text-right">{displayJob.item_title ?? tCommon("dash")}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">{t("author")}</span>
+              <span className="text-right">{displayJob.item_author ?? tCommon("dash")}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">{t("device")}</span>
+              <span className="text-right">{displayJob.device_label ?? tCommon("dash")}</span>
+            </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t("status")}</span>
               <Badge variant={STATUS_VARIANT[displayJob.status]}>

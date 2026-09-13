@@ -273,6 +273,7 @@ class DeliveryOut(BaseModel):
     device_id: uuid.UUID
     status: DeliveryStatus
     method: DeliveryMethod
+    target_format: str | None = None
     created_at: datetime
     delivered_at: datetime | None
     error: str | None

@@ -204,15 +204,23 @@ export function BookDetailDialog({
                 {deliveries.map((job) => (
                   <li
                     key={job.id}
-                    className="flex items-center justify-between rounded-lg border border-border/60 px-2.5 py-1.5"
+                    className="flex flex-col gap-1 rounded-lg border border-border/60 px-2.5 py-1.5"
                   >
-                    <span className="capitalize">{job.method}</span>
-                    <Badge variant={STATUS_VARIANT[job.status]}>
-                      {tDeliveries(`statuses.${job.status}`)}
-                    </Badge>
-                    <span className="text-muted-foreground">
-                      {new Date(job.delivered_at ?? job.created_at).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="truncate">
+                        {job.device_label ?? tCommon("dash")}
+                        <span className="text-muted-foreground"> · {job.method}</span>
+                      </span>
+                      <Badge variant={STATUS_VARIANT[job.status]}>
+                        {tDeliveries(`statuses.${job.status}`)}
+                      </Badge>
+                      <span className="text-muted-foreground shrink-0">
+                        {new Date(job.delivered_at ?? job.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {job.error ? (
+                      <p className="truncate text-destructive text-xs">{job.error}</p>
+                    ) : null}
                   </li>
                 ))}
               </ul>

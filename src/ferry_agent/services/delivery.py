@@ -4,6 +4,10 @@
 l'implementation du tier du device. `run_delivery(job_id, ...)` est le point
 d'entree pour `fastapi.BackgroundTasks` : il ouvre sa propre session car la
 session de la requete HTTP est deja fermee quand une tache de fond s'execute.
+
+Le fichier envoye/servi est toujours au format exact demande (ou au format
+par defaut de l'utilisateur / d'origine si non precise). Aucun fallback
+silencieux vers un autre format : echec explicite si la conversion echoue.
 """
 
 import logging
@@ -21,7 +25,6 @@ from ferry_agent.models import (
     DeliveryStatus,
     DeliveryTier,
     Device,
-    DeviceBrand,
     LibraryItem,
     User,
 )
@@ -34,10 +37,52 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def resolve_target_format(
+    requested_format: str | None,
+    *,
+    default_format: str | None,
+    original_format: str,
+) -> str:
+    """Format exact a produire pour cette livraison."""
+    chosen = (requested_format or default_format or original_format).lower().lstrip(".")
+    return chosen
+
+
 async def _fail(db: AsyncSession, job: DeliveryJob, error: str) -> None:
     job.status = DeliveryStatus.failed
     job.error = error
     await db.commit()
+
+
+async def _materialize_or_fail(
+    db: AsyncSession,
+    job: DeliveryJob,
+    item: LibraryItem,
+    device: Device,
+    target_format: str,
+) -> tuple[str, bool] | None:
+    """Convertit vers `target_format` ou marque le job en echec. Retourne None si echec."""
+    job.target_format = target_format
+    preset = conversion_profiles.resolve_preset_id(device.conversion_profile)
+    try:
+        return await converters.materialize_target_format(
+            library_item_id=item.id,
+            src_path=item.storage_path,
+            original_format=item.original_format,
+            target_format=target_format,
+            preset=preset,
+        )
+    except Exception:
+        logger.exception("conversion vers %s echouee pour le job %s", target_format, job.id)
+        await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
+        return None
+
+
+def _cleanup_derivative(file_path: str, item: LibraryItem, cached_derivative: bool) -> None:
+    if file_path != item.storage_path and not cached_derivative and not conversion_profiles.is_cached_derivative(
+        file_path
+    ):
+        Path(file_path).unlink(missing_ok=True)
 
 
 async def _deliver_tier_a(
@@ -56,32 +101,21 @@ async def _deliver_tier_a(
         await _fail(db, job, "SMTP non configure (envoi email desactive)")
         return
 
-    file_path = item.storage_path
-    target_format = (requested_format or user.default_format or item.original_format).lower()
-    preset = conversion_profiles.resolve_preset_id(device.conversion_profile)
-    cached_derivative = False
-
-    if (
-        device.brand == DeviceBrand.kindle
-        and target_format in ("mobi", "azw3")
-        and item.original_format.lower() == "epub"
-    ):
-        convert_kind = "epub_to_mobi" if target_format == "mobi" else "epub_to_azw3"
-        try:
-            file_path, cached_derivative = await converters.convert_with_profile_cache(
-                library_item_id=item.id,
-                src_path=item.storage_path,
-                target_format=target_format,
-                preset=preset,
-                convert_kind=convert_kind,
-            )
-        except Exception:
-            logger.exception("conversion Kindle echouee pour le job %s", job.id)
-            await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
-            return
+    target_format = resolve_target_format(
+        requested_format,
+        default_format=user.default_format,
+        original_format=item.original_format,
+    )
+    materialized = await _materialize_or_fail(db, job, item, device, target_format)
+    if materialized is None:
+        return
+    file_path, cached_derivative = materialized
 
     try:
         filename = Path(file_path).name
+        if Path(filename).suffix.lstrip(".").lower() != target_format:
+            await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
+            return
 
         job.status = DeliveryStatus.sent
         await db.commit()
@@ -96,10 +130,7 @@ async def _deliver_tier_a(
         job.delivered_at = _utcnow()
         await db.commit()
     finally:
-        if file_path != item.storage_path and not cached_derivative and not conversion_profiles.is_cached_derivative(
-            file_path
-        ):
-            Path(file_path).unlink(missing_ok=True)
+        _cleanup_derivative(file_path, item, cached_derivative)
 
 
 async def _deliver_tier_b(
@@ -108,6 +139,7 @@ async def _deliver_tier_b(
     item: LibraryItem,
     device: Device,
     user: User,
+    requested_format: str | None = None,
 ) -> None:
     """Upload Dropbox/Google Drive : l'utilisateur recupere le fichier depuis
     l'app cloud sur sa liseuse (Kobo haut de gamme), puis tape "Sync"."""
@@ -121,25 +153,21 @@ async def _deliver_tier_b(
         await _fail(db, job, str(exc))
         return
 
-    file_path = item.storage_path
-    preset = conversion_profiles.resolve_preset_id(device.conversion_profile)
-    cached_derivative = False
-    if item.original_format.lower() != "epub":
-        try:
-            file_path, cached_derivative = await converters.convert_with_profile_cache(
-                library_item_id=item.id,
-                src_path=item.storage_path,
-                target_format="epub",
-                preset=preset,
-                convert_kind="to_epub",
-            )
-        except Exception:
-            logger.exception("conversion EPUB echouee pour le job %s", job.id)
-            await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
-            return
+    target_format = resolve_target_format(
+        requested_format,
+        default_format=user.default_format,
+        original_format=item.original_format,
+    )
+    materialized = await _materialize_or_fail(db, job, item, device, target_format)
+    if materialized is None:
+        return
+    file_path, cached_derivative = materialized
 
     try:
         filename = Path(file_path).name
+        if Path(filename).suffix.lstrip(".").lower() != target_format:
+            await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
+            return
         file_bytes = Path(file_path).read_bytes()
 
         job.status = DeliveryStatus.sent
@@ -156,17 +184,39 @@ async def _deliver_tier_b(
         job.delivered_at = _utcnow()
         await db.commit()
     finally:
-        if file_path != item.storage_path and not cached_derivative and not conversion_profiles.is_cached_derivative(
-            file_path
-        ):
-            Path(file_path).unlink(missing_ok=True)
+        _cleanup_derivative(file_path, item, cached_derivative)
 
 
-async def _deliver_tier_c(db: AsyncSession, job: DeliveryJob, item: LibraryItem) -> str:
-    """Mini-catalogue HTTP + code court : cree la session de telechargement."""
+async def _deliver_tier_c(
+    db: AsyncSession,
+    job: DeliveryJob,
+    item: LibraryItem,
+    device: Device,
+    user: User,
+    requested_format: str | None = None,
+) -> str | None:
+    """Mini-catalogue HTTP + code court : cree la session de telechargement.
+
+    La conversion vers le format demande est realisee maintenant (cache) pour
+    que le telechargement ulterieur serve exactement ce format.
+    """
+    target_format = resolve_target_format(
+        requested_format,
+        default_format=user.default_format,
+        original_format=item.original_format,
+    )
+    materialized = await _materialize_or_fail(db, job, item, device, target_format)
+    if materialized is None:
+        return None
+    file_path, _cached = materialized
+    if Path(file_path).suffix.lstrip(".").lower() != target_format:
+        await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
+        return None
+
     _short_code, url = await tierc.create_download_session(db, job.id)
     job.status = DeliveryStatus.sent
     job.method = DeliveryMethod.browser_code
+    job.target_format = target_format
     await db.commit()
     logger.info("livraison tier C prete pour le job %s: %s", job.id, url)
     return url
@@ -203,10 +253,15 @@ async def deliver(
             if user is None:
                 await _fail(db, job, "utilisateur introuvable")
                 return None
-            await _deliver_tier_b(db, job, item, device, user)
+            await _deliver_tier_b(db, job, item, device, user, requested_format)
             return None
         if device.delivery_tier == DeliveryTier.C:
-            return await _deliver_tier_c(db, job, item)
+            user_result = await db.execute(select(User).where(User.id == item.user_id))
+            user = user_result.scalar_one_or_none()
+            if user is None:
+                await _fail(db, job, "utilisateur introuvable")
+                return None
+            return await _deliver_tier_c(db, job, item, device, user, requested_format)
         await _fail(db, job, f"tier {device.delivery_tier.value} non implemente")
         return None
     except Exception as exc:  # pragma: no cover - filet de securite
