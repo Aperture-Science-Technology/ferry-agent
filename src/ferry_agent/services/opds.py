@@ -12,7 +12,7 @@ import secrets
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlparse
 from xml.dom import minidom
 
 from sqlalchemy import func, or_, select
@@ -209,6 +209,23 @@ def build_authors_navigation(token: str, authors: list[str]) -> bytes:
     return serialize_feed(feed)
 
 
+def _cover_media_type(cover_url: str) -> str:
+    """Devine le type image annonce dans le flux (le endpoint /cover sert le vrai MIME)."""
+    candidate = cover_url
+    if cover_url.startswith("http://") or cover_url.startswith("https://"):
+        candidate = urlparse(cover_url).path or cover_url
+    guessed = content_type_for_filename(candidate)
+    if guessed.startswith("image/"):
+        return guessed
+    return "image/jpeg"
+
+
+def _like_pattern(query: str) -> str:
+    """Escape %/_/\\ pour un ILIKE litteral (les jokers utilisateur restent du texte)."""
+    escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
 def _acquisition_entry(feed: ET.Element, item: LibraryItem, token: str) -> None:
     base = catalog_base_url(token)
     entry = _el("entry", feed)
@@ -237,17 +254,18 @@ def _acquisition_entry(feed: ET.Element, item: LibraryItem, token: str) -> None:
         title="Télécharger",
     )
     if item.cover_url:
+        image_type = _cover_media_type(item.cover_url)
         _link(
             entry,
             rel="http://opds-spec.org/image",
             href=f"{base}/cover/{item.id}",
-            type_="image/jpeg",
+            type_=image_type,
         )
         _link(
             entry,
             rel="http://opds-spec.org/image/thumbnail",
             href=f"{base}/cover/{item.id}",
-            type_="image/jpeg",
+            type_=image_type,
         )
 
 
@@ -341,11 +359,11 @@ async def count_items(
     if author is not None:
         stmt = stmt.where(LibraryItem.author == author)
     if query:
-        pattern = f"%{query}%"
+        pattern = _like_pattern(query)
         stmt = stmt.where(
             or_(
-                LibraryItem.title.ilike(pattern),
-                LibraryItem.author.ilike(pattern),
+                LibraryItem.title.ilike(pattern, escape="\\"),
+                LibraryItem.author.ilike(pattern, escape="\\"),
             )
         )
     result = await db.execute(stmt)
@@ -367,11 +385,11 @@ async def list_items_page(
     if author is not None:
         stmt = stmt.where(LibraryItem.author == author)
     if query:
-        pattern = f"%{query}%"
+        pattern = _like_pattern(query)
         stmt = stmt.where(
             or_(
-                LibraryItem.title.ilike(pattern),
-                LibraryItem.author.ilike(pattern),
+                LibraryItem.title.ilike(pattern, escape="\\"),
+                LibraryItem.author.ilike(pattern, escape="\\"),
             )
         )
     if order_by_added:
