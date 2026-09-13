@@ -74,11 +74,11 @@ def _device_out(device: Device) -> DeviceOut:
     )
 
 
-def _dashboard_redirect(status_value: str) -> RedirectResponse:
+def _dashboard_redirect(status_value: str, *, locale: str | None = None) -> RedirectResponse:
     settings = get_settings()
+    ui_locale = crypto.normalize_oauth_locale(locale)
     query = urlencode({"cloud_link": status_value})
-    # Locale par defaut du front (next-intl) : /fr/...
-    target = f"{settings.public_base_url.rstrip('/')}/fr/app/appareils?{query}"
+    target = f"{settings.public_base_url.rstrip('/')}/{ui_locale}/app/appareils?{query}"
     return RedirectResponse(url=target, status_code=status.HTTP_302_FOUND)
 
 
@@ -208,6 +208,7 @@ async def get_link_url(
     provider: str,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    locale: str | None = Query(default=None),
 ) -> DeviceLinkUrlOut:
     """URL d'autorisation OAuth a afficher a l'utilisateur pour relier son
     Dropbox/Google Drive a ce device."""
@@ -217,7 +218,12 @@ async def get_link_url(
     settings = get_settings()
 
     try:
-        state = crypto.issue_oauth_state(device_id, provider, ttl_seconds=settings.oauth_state_ttl_seconds)
+        state = crypto.issue_oauth_state(
+            device_id,
+            provider,
+            locale=locale,
+            ttl_seconds=settings.oauth_state_ttl_seconds,
+        )
     except crypto.CryptoError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -300,36 +306,57 @@ async def link_callback_get(
     device_id: uuid.UUID,
     code: str | None = Query(default=None),
     state: str | None = Query(default=None),
+    error: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
     """Callback OAuth public (navigateur) : valide `state`, echange `code`,
     redirige vers le dashboard. Sans auth Clerk — le `state` signe + store
-    serveur prouve l'intention de liaison."""
+    serveur prouve l'intention de liaison.
+
+    Les echecs (refus fournisseur, state absent/invalide, device supprime,
+    echange refuse) redirigent toujours vers le dashboard avec
+    `cloud_link=error` — jamais une page d'erreur API dans le navigateur.
+    """
+    locale = "fr"
+
+    if error:
+        # Refus utilisateur (access_denied) ou erreur provider : invalider le
+        # state s'il est present pour eviter un rejeu ulterieur.
+        if state:
+            try:
+                info = crypto.consume_oauth_state(state, device_id)
+                locale = info.locale
+            except crypto.CryptoError:
+                pass
+        logger.info("liaison cloud refusee device=%s error=%s", device_id, error)
+        return _dashboard_redirect("error", locale=locale)
+
     if not code or not state:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="code et state sont requis",
-        )
+        return _dashboard_redirect("error", locale=locale)
 
     try:
-        provider = crypto.consume_oauth_state(state, device_id)
-    except crypto.CryptoError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="state invalide") from exc
+        info = crypto.consume_oauth_state(state, device_id)
+    except crypto.CryptoError:
+        return _dashboard_redirect("error", locale=locale)
 
-    _check_provider(provider)
+    locale = info.locale
+    provider = info.provider
+    if provider not in _PROVIDERS:
+        return _dashboard_redirect("error", locale=locale)
 
     result = await db.execute(select(Device).where(Device.id == device_id))
     device = result.scalar_one_or_none()
     if device is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device introuvable")
+        logger.warning("callback cloud link device=%s introuvable (supprime?)", device_id)
+        return _dashboard_redirect("error", locale=locale)
 
     try:
         await _exchange_and_store_link(db, device, provider, code)
     except HTTPException as exc:
         logger.warning("echec callback cloud link device=%s: %s", device_id, exc.detail)
-        return _dashboard_redirect("error")
+        return _dashboard_redirect("error", locale=locale)
 
-    return _dashboard_redirect("ok")
+    return _dashboard_redirect("ok", locale=locale)
 
 
 @router.post("/{device_id}/link/callback", response_model=DeviceOut)

@@ -63,11 +63,26 @@ def test_oauth_state_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda: type("S", (), {"fernet_key": key, "oauth_state_ttl_seconds": 600})(),
     )
     device_id = uuid.uuid4()
-    state = crypto.issue_oauth_state(device_id, "drive")
-    assert crypto.consume_oauth_state(state, device_id) == "drive"
+    state = crypto.issue_oauth_state(device_id, "drive", locale="en")
+    info = crypto.consume_oauth_state(state, device_id)
+    assert info.provider == "drive"
+    assert info.locale == "en"
     # Usage unique
     with pytest.raises(crypto.CryptoError):
         crypto.consume_oauth_state(state, device_id)
+
+
+def test_oauth_state_defaults_locale_to_fr(monkeypatch: pytest.MonkeyPatch) -> None:
+    key = Fernet.generate_key().decode()
+    monkeypatch.setattr(
+        crypto,
+        "get_settings",
+        lambda: type("S", (), {"fernet_key": key, "oauth_state_ttl_seconds": 600})(),
+    )
+    device_id = uuid.uuid4()
+    state = crypto.issue_oauth_state(device_id, "dropbox", locale="de")
+    info = crypto.consume_oauth_state(state, device_id)
+    assert info.locale == "fr"
 
 
 def test_oauth_state_rejects_wrong_device(monkeypatch: pytest.MonkeyPatch) -> None:

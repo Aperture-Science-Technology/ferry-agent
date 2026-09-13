@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Tablet, Plus, Link2, Check, Trash2, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -31,14 +31,19 @@ import { conversionProfileLabel } from "@/components/app/devices/conversion-prof
 import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
+const CLOUD_LINK_MESSAGE = "ferry-cloud-link";
+
 export function DevicesView({
   initialDevices,
   devicesUnavailable,
+  cloudLinkStatus,
 }: {
   initialDevices: Device[];
   devicesUnavailable: boolean;
+  cloudLinkStatus?: "ok" | "error";
 }) {
   const t = useTranslations("devices");
+  const tCloud = useTranslations("cloudLink");
   const tEditDevice = useTranslations("editDevice");
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
@@ -48,6 +53,35 @@ export function DevicesView({
   const [linkTarget, setLinkTarget] = useState<Device | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!cloudLinkStatus) return;
+
+    // Popup OAuth : notifier la fenetre d'origine puis se fermer.
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(
+        { type: CLOUD_LINK_MESSAGE, status: cloudLinkStatus },
+        window.location.origin,
+      );
+      window.close();
+      return;
+    }
+
+    if (cloudLinkStatus === "ok") {
+      toast.success(tCloud("toastLinked"));
+      void call<Device[]>("/api/v1/devices")
+        .then((fresh) => setDevices(fresh))
+        .catch(() => {
+          /* liste initiale deja affichee */
+        });
+    } else {
+      toast.error(tCloud("toastFailed"));
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("cloud_link");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [cloudLinkStatus, call, tCloud]);
 
   async function confirmDelete() {
     if (!deleteTarget) return;

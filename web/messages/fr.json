@@ -354,7 +354,7 @@
     },
     "models": {
       "kindle": ["Paperwhite", "Oasis", "Scribe", "Basic", "Basic Kids", "Keyboard", "Voyage", "Fire", "Kids"],
-      "kobo": ["Clara", "Libra", "Forma", "Sage", "Elipsa", "Nia", "Aura", "Sage Colour"],
+      "kobo": ["Clara", "Libra", "Libra Colour", "Forma", "Sage", "Elipsa", "Nia", "Aura", "Sage Colour"],
       "tolino": ["Shine", "Vision", "Page", "Epos", "Tab"],
       "pocketbook": ["Touch", "InkPad", "Basic Lux", "Verse", "Era"]
     },

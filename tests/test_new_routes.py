@@ -192,6 +192,11 @@ class TestCreateDevice:
         assert status == 201
         assert created[0].delivery_tier == DeliveryTier.B
 
+    def test_kobo_libra_colour_tier_b(self):
+        status, created = self._post("kobo", "Libra Colour")
+        assert status == 201
+        assert created[0].delivery_tier == DeliveryTier.B
+
     def test_kobo_entry_tier_c(self):
         status, created = self._post("kobo", "Clara")
         assert status == 201
