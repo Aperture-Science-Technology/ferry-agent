@@ -65,6 +65,142 @@ async def test_pairing_token_ttl_is_enforced() -> None:
     assert gateway.pairing_status == PairingStatus.pending
 
 
+async def test_create_gateway_returns_both_secrets(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Les deux secrets sont toujours emis a la creation (contrat dashboard/agent)."""
+    tokens = iter(["pair-secret-value-32chars-min!!", "gateway-key-value-48chars-minimum-xxxxxxxx"])
+
+    def fake_token(_nbytes: int) -> str:
+        return next(tokens)
+
+    monkeypatch.setattr(gateways.secrets, "token_urlsafe", fake_token)
+    db = FakeSession()
+    user_id = uuid.uuid4()
+
+    gateway, pairing_token, gateway_key = await gateways.create_gateway(
+        db, user_id, "Maison", ttl_minutes=15
+    )
+
+    assert pairing_token == "pair-secret-value-32chars-min!!"
+    assert gateway_key == "gateway-key-value-48chars-minimum-xxxxxxxx"
+    assert gateway.pairing_status == PairingStatus.pending
+    assert gateway.api_key_hash == hash_secret(gateway_key)
+    assert gateway.pairing_token_hash == hash_secret(pairing_token)
+    assert gateway.pairing_expires_at is not None
+    assert gateway.pairing_used is False
+    assert db.commits == 1
+    assert gateway in db.added
+
+
+async def test_recreate_credentials_after_expiry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Apres expiration, recreer regenere les deux secrets et rouvre la fenetre."""
+    gateway = make_gateway(
+        pairing_expires_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+        pairing_status=PairingStatus.pending,
+        pairing_used=False,
+    )
+    old_api_hash = gateway.api_key_hash
+    old_token_hash = gateway.pairing_token_hash
+    tokens = iter(["new-pair-token-32chars-minimum!", "new-gateway-key-48chars-minimum-yyyyyyyyyy"])
+
+    def fake_token(_nbytes: int) -> str:
+        return next(tokens)
+
+    monkeypatch.setattr(gateways.secrets, "token_urlsafe", fake_token)
+    db = FakeSession()
+
+    updated, pairing_token, gateway_key = await gateways.recreate_gateway_credentials(
+        db, gateway, ttl_minutes=15
+    )
+
+    assert updated is gateway
+    assert pairing_token == "new-pair-token-32chars-minimum!"
+    assert gateway_key == "new-gateway-key-48chars-minimum-yyyyyyyyyy"
+    assert gateway.api_key_hash == hash_secret(gateway_key)
+    assert gateway.pairing_token_hash == hash_secret(pairing_token)
+    assert gateway.api_key_hash != old_api_hash
+    assert gateway.pairing_token_hash != old_token_hash
+    assert gateway.pairing_status == PairingStatus.pending
+    assert gateway.pairing_used is False
+    assert gateway.last_seen_at is None
+    assert gateway.pairing_expires_at is not None
+    assert gateway.pairing_expires_at > datetime.now(timezone.utc)
+    assert db.commits == 1
+
+
+async def test_recreate_credentials_rejects_paired() -> None:
+    gateway = make_gateway(pairing_status=PairingStatus.paired, pairing_used=True)
+    with pytest.raises(HTTPException) as exc:
+        await gateways.recreate_gateway_credentials(FakeSession(), gateway, ttl_minutes=15)
+    assert exc.value.status_code == 409
+    assert gateway.pairing_status == PairingStatus.paired
+
+
+async def test_recreate_credentials_from_revoked(monkeypatch: pytest.MonkeyPatch) -> None:
+    gateway = make_gateway(
+        pairing_status=PairingStatus.revoked,
+        pairing_used=True,
+        api_key_hash=None,
+        pairing_token_hash=None,
+    )
+    tokens = iter(["rev-pair-token-32chars-minimum!", "rev-gateway-key-48chars-minimum-zzzzzzzzzz"])
+    monkeypatch.setattr(gateways.secrets, "token_urlsafe", lambda _n: next(tokens))
+
+    _, pairing_token, gateway_key = await gateways.recreate_gateway_credentials(
+        FakeSession(), gateway, ttl_minutes=10
+    )
+
+    assert pairing_token and gateway_key
+    assert gateway.pairing_status == PairingStatus.pending
+    assert gateway.api_key_hash == hash_secret(gateway_key)
+    assert gateway.pairing_token_hash == hash_secret(pairing_token)
+
+
+async def test_poll_dead_letters_poison_job_and_serves_next(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Un job poison ne bloque pas la file : dead-letter puis job suivant."""
+    monkeypatch.setattr(
+        gateways,
+        "get_settings",
+        lambda: SimpleNamespace(gateway_job_max_attempts=2, gateway_job_backoff_base_seconds=0),
+    )
+    gateway_id = uuid.uuid4()
+    poison = GatewayJob(
+        id=uuid.uuid4(),
+        gateway_id=gateway_id,
+        type=GatewayJobType.fetch,
+        payload={},
+        status=GatewayJobStatus.pending,
+        attempts=0,
+    )
+    nxt = GatewayJob(
+        id=uuid.uuid4(),
+        gateway_id=gateway_id,
+        type=GatewayJobType.search,
+        payload={"query": "Dune"},
+        status=GatewayJobStatus.pending,
+        attempts=0,
+    )
+    # polls 1-2 : poison ; poll 3 : poison dead-letter puis nxt
+    db = FakeSession([poison, poison, poison, nxt])
+
+    first = await gateways.poll_job(db, gateway_id)
+    assert first is poison and poison.attempts == 1 and poison.status == GatewayJobStatus.running
+    poison.next_attempt_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+
+    second = await gateways.poll_job(db, gateway_id)
+    assert second is poison and poison.attempts == 2
+    poison.next_attempt_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+
+    third = await gateways.poll_job(db, gateway_id)
+    assert third is nxt
+    assert poison.status == GatewayJobStatus.failed
+    assert poison.attempts == 3
+    assert poison.result_ref == "abandonné après 3 tentatives"
+    assert nxt.status == GatewayJobStatus.running
+    assert nxt.attempts == 1
+
+
 async def test_revoke_invalidates_key_and_cancels_pending_jobs() -> None:
     gateway = make_gateway(pairing_status=PairingStatus.paired)
     db = FakeSession()
@@ -392,5 +528,82 @@ class TestListGatewayJobsApi:
             with TestClient(app) as client:
                 resp = client.get(f"/api/v1/gateways/{uuid.uuid4()}/jobs")
             assert resp.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+
+class TestRecreateGatewayApi:
+    def test_recreates_and_returns_both_secrets(self, monkeypatch: pytest.MonkeyPatch):
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from fastapi.testclient import TestClient
+
+        from ferry_agent.main import app
+        from tests.fakes import override_app_deps
+
+        user_id = uuid.uuid4()
+        gateway = make_gateway(
+            user_id=user_id,
+            pairing_status=PairingStatus.pending,
+            pairing_expires_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+        )
+        tokens = iter(["api-pair-token-32chars-minimum!!", "api-gateway-key-48chars-minimum-wwwwwwwwww"])
+        monkeypatch.setattr(
+            "ferry_agent.services.gateways.secrets.token_urlsafe",
+            lambda _n: next(tokens),
+        )
+
+        async def fake_db():
+            db = AsyncMock()
+            result = MagicMock(scalar_one_or_none=MagicMock(return_value=gateway))
+            db.execute = AsyncMock(return_value=result)
+            db.commit = AsyncMock()
+            db.refresh = AsyncMock()
+            yield db
+
+        override_app_deps(fake_db, user_id=user_id)
+        try:
+            with patch(
+                "ferry_agent.api.gateways.get_settings",
+                lambda: SimpleNamespace(
+                    pairing_token_ttl_minutes=15,
+                    gateway_online_seconds=60,
+                ),
+            ):
+                with TestClient(app) as client:
+                    resp = client.post(f"/api/v1/gateways/{gateway.id}/recreate")
+            assert resp.status_code == 200
+            body = resp.json()
+            assert body["gateway_id"] == str(gateway.id)
+            assert body["pairing_token"] == "api-pair-token-32chars-minimum!!"
+            assert body["gateway_key"] == "api-gateway-key-48chars-minimum-wwwwwwwwww"
+            assert body["pairing_token_ttl_minutes"] == 15
+            assert body["gateway_online_seconds"] == 60
+            assert gateway.pairing_status == PairingStatus.pending
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_409_when_already_paired(self):
+        from unittest.mock import AsyncMock, MagicMock
+
+        from fastapi.testclient import TestClient
+
+        from ferry_agent.main import app
+        from tests.fakes import override_app_deps
+
+        user_id = uuid.uuid4()
+        gateway = make_gateway(user_id=user_id, pairing_status=PairingStatus.paired)
+
+        async def fake_db():
+            db = AsyncMock()
+            result = MagicMock(scalar_one_or_none=MagicMock(return_value=gateway))
+            db.execute = AsyncMock(return_value=result)
+            yield db
+
+        override_app_deps(fake_db, user_id=user_id)
+        try:
+            with TestClient(app) as client:
+                resp = client.post(f"/api/v1/gateways/{gateway.id}/recreate")
+            assert resp.status_code == 409
         finally:
             app.dependency_overrides.clear()

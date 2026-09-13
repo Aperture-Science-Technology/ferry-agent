@@ -182,6 +182,17 @@
           },
           "status": {
             "$ref": "#/components/schemas/DeliveryStatus"
+          },
+          "target_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Format"
           }
         },
         "required": [
@@ -2914,6 +2925,22 @@
             }
           },
           {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Locale"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -2976,7 +3003,7 @@
     },
     "/api/v1/devices/{device_id}/link/callback": {
       "get": {
-        "description": "Callback OAuth public (navigateur) : valide `state`, echange `code`,\nredirige vers le dashboard. Sans auth Clerk \u2014 le `state` signe + store\nserveur prouve l'intention de liaison.",
+        "description": "Callback OAuth public (navigateur) : valide `state`, echange `code`,\nredirige vers le dashboard. Sans auth Clerk \u2014 le `state` signe + store\nserveur prouve l'intention de liaison.\n\nLes echecs (refus fournisseur, state absent/invalide, device supprime,\nechange refuse) redirigent toujours vers le dashboard avec\n`cloud_link=error` \u2014 jamais une page d'erreur API dans le navigateur.",
         "operationId": "link_callback_get_api_v1_devices__device_id__link_callback_get",
         "parameters": [
           {
@@ -3019,6 +3046,22 @@
                 }
               ],
               "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
             }
           }
         ],
@@ -3901,6 +3944,82 @@
           }
         },
         "summary": "List Gateway Jobs",
+        "tags": [
+          "gateways"
+        ]
+      }
+    },
+    "/api/v1/gateways/{gateway_id}/recreate": {
+      "post": {
+        "description": "Regenere le code de connexion et la cle d'acces (affichage unique).",
+        "operationId": "recreate_gateway_api_v1_gateways__gateway_id__recreate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gateway_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Gateway Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Dev-User",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayCredentials"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recreate Gateway",
         "tags": [
           "gateways"
         ]

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Radio, Plus, Ban, Trash2 } from "lucide-react";
+import { Radio, Plus, Ban, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/app/empty-state";
-import { CreateGatewayDialog } from "@/components/app/gateways/create-gateway-dialog";
+import {
+  CreateGatewayDialog,
+  GatewayCredentialsPanel,
+  gatewayFromCredentials,
+} from "@/components/app/gateways/create-gateway-dialog";
 import { useApiClient } from "@/lib/api-client";
-import type { Gateway, GatewayJobStatus, GatewayJobStatusOut, GatewayJobType } from "@/lib/types";
+import type {
+  Gateway,
+  GatewayCredentials,
+  GatewayJobStatus,
+  GatewayJobStatusOut,
+  GatewayJobType,
+} from "@/lib/types";
 
 const MAX_ATTEMPTS_DISPLAY = 5;
 const PENDING_POLL_MS = 5_000;
+const PAIRED_POLL_MS = 15_000;
 const NOW_TICK_MS = 15_000;
 const DEFAULT_ONLINE_SECONDS = 60;
 
@@ -55,6 +66,12 @@ function minutesUntil(expiresAt: string | null | undefined, now: number): number
   return Math.ceil((new Date(expiresAt).getTime() - now) / 60_000);
 }
 
+function isPairingExpired(gateway: Gateway, now: number): boolean {
+  if (gateway.status !== "pending") return false;
+  const left = minutesUntil(gateway.pairing_expires_at, now);
+  return left !== null && left <= 0;
+}
+
 function mapJobError(
   type: GatewayJobType,
   error: string | null | undefined,
@@ -74,7 +91,13 @@ function mapJobError(
   return type === "search" ? t("jobFailedSearch") : t("jobFailedGeneric");
 }
 
-function GatewayRecentActivity({ gatewayId }: { gatewayId: string }) {
+function GatewayRecentActivity({
+  gatewayId,
+  refreshKey,
+}: {
+  gatewayId: string;
+  refreshKey: number;
+}) {
   const t = useTranslations("access");
   const { call } = useApiClient();
   const [jobs, setJobs] = useState<GatewayJobStatusOut[] | null>(null);
@@ -91,7 +114,7 @@ function GatewayRecentActivity({ gatewayId }: { gatewayId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [gatewayId, call]);
+  }, [gatewayId, call, refreshKey]);
 
   function typeLabel(type: GatewayJobType) {
     return type === "search" ? t("jobTypeSearch") : t("jobTypeFetch");
@@ -149,19 +172,24 @@ function GatewayRecentActivity({ gatewayId }: { gatewayId: string }) {
 function PendingWaitState({
   gateway,
   now,
+  recreating,
+  onRecreate,
 }: {
   gateway: Gateway;
   now: number;
+  recreating: boolean;
+  onRecreate: () => void;
 }) {
   const t = useTranslations("access");
   const minutesLeft = minutesUntil(gateway.pairing_expires_at, now);
+  const expired = minutesLeft !== null && minutesLeft <= 0;
 
   let expiryMessage: string;
   if (minutesLeft === null) {
     expiryMessage = t("codeExpiresIn", {
       minutes: gateway.pairing_token_ttl_minutes ?? 15,
     });
-  } else if (minutesLeft <= 0) {
+  } else if (expired) {
     expiryMessage = t("codeExpired");
   } else if (minutesLeft === 1) {
     expiryMessage = t("codeExpiresSoon");
@@ -173,12 +201,23 @@ function PendingWaitState({
     <div className="mt-3 max-w-sm space-y-2 border-t border-border/40 pt-3">
       <p className="text-sm font-medium text-foreground">{t("statusWaiting")}</p>
       <p className="text-sm text-muted-foreground">{expiryMessage}</p>
-      <Link
-        href="/docs#depannage"
-        className="inline-block text-sm text-foreground underline-offset-4 hover:underline"
-      >
-        {t("troubleshootLink")}
-      </Link>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          size="sm"
+          variant={expired ? "default" : "outline"}
+          disabled={recreating}
+          onClick={onRecreate}
+        >
+          {recreating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+          {t("recreateCodes")}
+        </Button>
+        <Link
+          href="/docs#depannage"
+          className="inline-block text-sm text-foreground underline-offset-4 hover:underline"
+        >
+          {t("troubleshootLink")}
+        </Link>
+      </div>
     </div>
   );
 }
@@ -190,7 +229,9 @@ function AccessStatusCell({ gateway, now }: { gateway: Gateway; now: number }) {
     return (
       <div className="flex items-center gap-2">
         <StatusDot online={false} />
-        <Badge variant="secondary">{t("statusPending")}</Badge>
+        <Badge variant="secondary">
+          {isPairingExpired(gateway, now) ? t("statusExpired") : t("statusPending")}
+        </Badge>
       </div>
     );
   }
@@ -236,18 +277,23 @@ export function GatewaysView({
   gatewaysUnavailable: boolean;
 }) {
   const t = useTranslations("access");
+  const tCreate = useTranslations("createAccess");
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [gateways, setGateways] = useState(initialGateways);
   const [createOpen, setCreateOpen] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [recreatingId, setRecreatingId] = useState<string | null>(null);
+  const [credentials, setCredentials] = useState<GatewayCredentials | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Gateway | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [activityRefreshKey, setActivityRefreshKey] = useState(0);
 
   const hasPending = gateways.some((gateway) => gateway.status === "pending");
-  const needsClock =
-    hasPending || gateways.some((gateway) => gateway.status === "paired");
+  const hasPaired = gateways.some((gateway) => gateway.status === "paired");
+  const needsClock = hasPending || hasPaired;
+  const needsListPoll = hasPending || hasPaired;
 
   useEffect(() => {
     if (!needsClock) return;
@@ -256,7 +302,7 @@ export function GatewaysView({
   }, [needsClock]);
 
   useEffect(() => {
-    if (!hasPending) return;
+    if (!needsListPoll) return;
     let cancelled = false;
 
     const refresh = async () => {
@@ -265,21 +311,23 @@ export function GatewaysView({
         if (!cancelled) {
           setGateways(data);
           setNow(Date.now());
+          setActivityRefreshKey((key) => key + 1);
         }
       } catch {
         // Keep showing the last known list; the next tick retries.
       }
     };
 
+    const intervalMs = hasPending ? PENDING_POLL_MS : PAIRED_POLL_MS;
     const pollId = setInterval(() => {
       void refresh();
-    }, PENDING_POLL_MS);
+    }, intervalMs);
 
     return () => {
       cancelled = true;
       clearInterval(pollId);
     };
-  }, [hasPending, call]);
+  }, [needsListPoll, hasPending, call]);
 
   async function revoke(gateway: Gateway) {
     setRevokingId(gateway.gateway_id);
@@ -298,6 +346,28 @@ export function GatewaysView({
       toast.error(t("toastRevokeFailed"));
     } finally {
       setRevokingId(null);
+    }
+  }
+
+  async function recreate(gateway: Gateway) {
+    setRecreatingId(gateway.gateway_id);
+    try {
+      const created = await call<GatewayCredentials>(
+        `/api/v1/gateways/${gateway.gateway_id}/recreate`,
+        { method: "POST" }
+      );
+      setCredentials(created);
+      setGateways((prev) =>
+        prev.map((g) =>
+          g.gateway_id === gateway.gateway_id
+            ? gatewayFromCredentials(created, g.name)
+            : g
+        )
+      );
+    } catch {
+      toast.error(t("toastRecreateFailed"));
+    } finally {
+      setRecreatingId(null);
     }
   }
 
@@ -349,9 +419,17 @@ export function GatewaysView({
                   <TableCell className="align-top font-medium">
                     <div>{gateway.name}</div>
                     {gateway.status === "pending" ? (
-                      <PendingWaitState gateway={gateway} now={now} />
+                      <PendingWaitState
+                        gateway={gateway}
+                        now={now}
+                        recreating={recreatingId === gateway.gateway_id}
+                        onRecreate={() => void recreate(gateway)}
+                      />
                     ) : (
-                      <GatewayRecentActivity gatewayId={gateway.gateway_id} />
+                      <GatewayRecentActivity
+                        gatewayId={gateway.gateway_id}
+                        refreshKey={activityRefreshKey}
+                      />
                     )}
                   </TableCell>
                   <TableCell className="align-top">
@@ -373,6 +451,21 @@ export function GatewaysView({
                         >
                           <Ban />
                           {t("revoke")}
+                        </Button>
+                      )}
+                      {gateway.status === "revoked" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={recreatingId === gateway.gateway_id}
+                          onClick={() => void recreate(gateway)}
+                        >
+                          {recreatingId === gateway.gateway_id ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <RefreshCw />
+                          )}
+                          {t("recreateCodes")}
                         </Button>
                       )}
                       <Button
@@ -397,6 +490,22 @@ export function GatewaysView({
         onOpenChange={setCreateOpen}
         onCreated={(gateway) => setGateways((prev) => [gateway, ...prev])}
       />
+
+      <Dialog
+        open={credentials !== null}
+        onOpenChange={(open) => !open && setCredentials(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{tCreate("createdTitle")}</DialogTitle>
+            <DialogDescription>{tCreate("createdDescription")}</DialogDescription>
+          </DialogHeader>
+          {credentials ? <GatewayCredentialsPanel credentials={credentials} /> : null}
+          <DialogFooter>
+            <Button onClick={() => setCredentials(null)}>{tCommon("done")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={deleteTarget !== null}

@@ -41,6 +41,66 @@ function CopyField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function bothSecretsBlock(credentials: GatewayCredentials): string {
+  return `PAIRING_TOKEN=${credentials.pairing_token}\nGATEWAY_KEY=${credentials.gateway_key}`;
+}
+
+export function GatewayCredentialsPanel({
+  credentials,
+}: {
+  credentials: GatewayCredentials;
+}) {
+  const t = useTranslations("createAccess");
+  const tCommon = useTranslations("common");
+  const block = bothSecretsBlock(credentials);
+
+  return (
+    <div className="space-y-4">
+      <CopyField label={t("pairingToken")} value={credentials.pairing_token} />
+      <CopyField label={t("gatewayKey")} value={credentials.gateway_key} />
+      <div className="space-y-2">
+        <Label>{t("bothSecrets")}</Label>
+        <p className="text-sm text-muted-foreground">{t("bothSecretsHint")}</p>
+        <div className="flex gap-2">
+          <pre className="max-h-28 flex-1 overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap break-all">
+            {block}
+          </pre>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onClick={() => {
+              navigator.clipboard.writeText(block);
+              toast.success(tCommon("copied"));
+            }}
+          >
+            <Copy />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function gatewayFromCredentials(
+  credentials: GatewayCredentials,
+  name: string
+): Gateway {
+  const ttlMinutes = credentials.pairing_token_ttl_minutes ?? 15;
+  return {
+    gateway_id: credentials.gateway_id,
+    name,
+    status: "pending",
+    last_seen_at: null,
+    pairing_expires_at:
+      credentials.pairing_expires_at ??
+      new Date(Date.now() + ttlMinutes * 60_000).toISOString(),
+    pairing_token_ttl_minutes: ttlMinutes,
+    gateway_online_seconds: credentials.gateway_online_seconds ?? 60,
+  };
+}
+
 export function CreateGatewayDialog({
   open,
   onOpenChange,
@@ -67,18 +127,7 @@ export function CreateGatewayDialog({
         body: JSON.stringify({ name: displayName }),
       });
       setCredentials(created);
-      const ttlMinutes = created.pairing_token_ttl_minutes ?? 15;
-      onCreated({
-        gateway_id: created.gateway_id,
-        name: displayName,
-        status: "pending",
-        last_seen_at: null,
-        pairing_expires_at:
-          created.pairing_expires_at ??
-          new Date(Date.now() + ttlMinutes * 60_000).toISOString(),
-        pairing_token_ttl_minutes: ttlMinutes,
-        gateway_online_seconds: created.gateway_online_seconds ?? 60,
-      });
+      onCreated(gatewayFromCredentials(created, displayName));
     } catch {
       toast.error(t("toastFailed"));
     } finally {
@@ -103,10 +152,7 @@ export function CreateGatewayDialog({
               <DialogTitle>{t("createdTitle")}</DialogTitle>
               <DialogDescription>{t("createdDescription")}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <CopyField label={t("pairingToken")} value={credentials.pairing_token} />
-              <CopyField label={t("gatewayKey")} value={credentials.gateway_key} />
-            </div>
+            <GatewayCredentialsPanel credentials={credentials} />
             <DialogFooter>
               <Button onClick={() => close(false)}>{tCommon("done")}</Button>
             </DialogFooter>

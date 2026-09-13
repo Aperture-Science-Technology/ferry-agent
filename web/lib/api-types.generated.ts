@@ -243,6 +243,10 @@ export interface paths {
          * @description Callback OAuth public (navigateur) : valide `state`, echange `code`,
          *     redirige vers le dashboard. Sans auth Clerk — le `state` signe + store
          *     serveur prouve l'intention de liaison.
+         *
+         *     Les echecs (refus fournisseur, state absent/invalide, device supprime,
+         *     echange refuse) redirigent toujours vers le dashboard avec
+         *     `cloud_link=error` — jamais une page d'erreur API dans le navigateur.
          */
         get: operations["link_callback_get_api_v1_devices__device_id__link_callback_get"];
         put?: never;
@@ -430,6 +434,26 @@ export interface paths {
         get: operations["list_gateway_jobs_api_v1_gateways__gateway_id__jobs_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/gateways/{gateway_id}/recreate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recreate Gateway
+         * @description Regenere le code de connexion et la cle d'acces (affichage unique).
+         */
+        post: operations["recreate_gateway_api_v1_gateways__gateway_id__recreate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -822,6 +846,8 @@ export interface components {
             library_item_id?: string | null;
             method: components["schemas"]["DeliveryMethod"];
             status: components["schemas"]["DeliveryStatus"];
+            /** Target Format */
+            target_format?: string | null;
         };
         /**
          * DeliveryStatus
@@ -1904,6 +1930,7 @@ export interface operations {
         parameters: {
             query: {
                 provider: string;
+                locale?: string | null;
             };
             header?: {
                 authorization?: string | null;
@@ -1941,6 +1968,7 @@ export interface operations {
             query?: {
                 code?: string | null;
                 state?: string | null;
+                error?: string | null;
             };
             header?: never;
             path: {
@@ -2373,6 +2401,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GatewayJobStatusOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recreate_gateway_api_v1_gateways__gateway_id__recreate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-Dev-User"?: string | null;
+            };
+            path: {
+                gateway_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatewayCredentials"];
                 };
             };
             /** @description Validation Error */

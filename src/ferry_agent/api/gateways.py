@@ -64,6 +64,33 @@ async def pair_gateway(
     return GatewayId(gateway_id=gateway.id)
 
 
+@router.post("/{gateway_id}/recreate", response_model=GatewayCredentials)
+async def recreate_gateway(
+    gateway_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> GatewayCredentials:
+    """Regenere le code de connexion et la cle d'acces (affichage unique)."""
+    settings = get_settings()
+    result = await db.execute(
+        select(Gateway).where(Gateway.id == gateway_id, Gateway.user_id == user.id)
+    )
+    gateway = result.scalar_one_or_none()
+    if gateway is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="gateway introuvable")
+    gateway, pairing_token, gateway_key = await gateway_service.recreate_gateway_credentials(
+        db, gateway, settings.pairing_token_ttl_minutes
+    )
+    return GatewayCredentials(
+        gateway_id=gateway.id,
+        pairing_token=pairing_token,
+        gateway_key=gateway_key,
+        pairing_expires_at=gateway.pairing_expires_at,
+        pairing_token_ttl_minutes=settings.pairing_token_ttl_minutes,
+        gateway_online_seconds=settings.gateway_online_seconds,
+    )
+
+
 @router.get("", response_model=list[GatewayOut])
 async def list_gateways(
     user: CurrentUser = Depends(get_current_user),
