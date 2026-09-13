@@ -5,17 +5,15 @@ import { toast } from "sonner";
 import { Radio, Plus, Ban, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { StatusDot } from "@/components/status-dot";
+import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Card,
+  CardContent,
+  CardDescription,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -24,12 +22,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { EmptyState } from "@/components/app/empty-state";
+import { SectionHeader } from "@/components/app/section-header";
+import { StatusDot } from "@/components/status-dot";
 import {
   CreateGatewayDialog,
   GatewayCredentialsPanel,
   gatewayFromCredentials,
 } from "@/components/app/gateways/create-gateway-dialog";
+import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
 import type {
   Gateway,
@@ -104,6 +114,7 @@ function GatewayRecentActivity({
 
   useEffect(() => {
     let cancelled = false;
+    setJobs(null);
     call<GatewayJobStatusOut[]>(`/api/v1/gateways/${gatewayId}/jobs?limit=20`)
       .then((data) => {
         if (!cancelled) setJobs(data);
@@ -126,7 +137,15 @@ function GatewayRecentActivity({
     return t("jobStatusActive");
   }
 
-  if (jobs === null) return null;
+  if (jobs === null) {
+    return (
+      <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+        <p className="text-sm font-medium">{t("recentActivity")}</p>
+        <p className="text-sm text-muted-foreground">{t("activityLoading")}</p>
+        <Skeleton className="h-8 w-full rounded-md" />
+      </div>
+    );
+  }
 
   return (
     <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
@@ -141,10 +160,10 @@ function GatewayRecentActivity({
             return (
               <li
                 key={job.job_id}
-                className="flex flex-col gap-0.5 text-sm text-muted-foreground"
+                className="flex min-w-0 flex-col gap-0.5 text-sm text-muted-foreground"
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-foreground">{typeLabel(job.type)}</span>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="min-w-0 truncate text-foreground">{typeLabel(job.type)}</span>
                   <Badge variant="secondary">{statusLabel(job.status)}</Badge>
                   {inProgress && job.attempts > 0 && (
                     <span className="text-xs">
@@ -156,7 +175,7 @@ function GatewayRecentActivity({
                   )}
                 </div>
                 {job.status === "failed" && (
-                  <span className="text-xs text-destructive/90">
+                  <span className="text-xs break-words text-destructive/90">
                     {mapJobError(job.type, job.error, t)}
                   </span>
                 )}
@@ -200,7 +219,7 @@ function PendingWaitState({
   return (
     <div className="mt-3 max-w-sm space-y-2 border-t border-border/40 pt-3">
       <p className="text-sm font-medium text-foreground">{t("statusWaiting")}</p>
-      <p className="text-sm text-muted-foreground">{expiryMessage}</p>
+      <p className="text-sm break-words text-muted-foreground">{expiryMessage}</p>
       <div className="flex flex-wrap items-center gap-3">
         <Button
           size="sm"
@@ -227,10 +246,12 @@ function AccessStatusCell({ gateway, now }: { gateway: Gateway; now: number }) {
 
   if (gateway.status === "pending") {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <StatusDot online={false} />
-        <Badge variant="secondary">
-          {isPairingExpired(gateway, now) ? t("statusExpired") : t("statusPending")}
+        <Badge variant="secondary" className="max-w-full">
+          <span className="truncate">
+            {isPairingExpired(gateway, now) ? t("statusExpired") : t("statusPending")}
+          </span>
         </Badge>
       </div>
     );
@@ -238,9 +259,11 @@ function AccessStatusCell({ gateway, now }: { gateway: Gateway; now: number }) {
 
   if (gateway.status === "revoked") {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <StatusDot online={false} />
-        <Badge variant="secondary">{t("statusRevoked")}</Badge>
+        <Badge variant="secondary" className="max-w-full">
+          <span className="truncate">{t("statusRevoked")}</span>
+        </Badge>
       </div>
     );
   }
@@ -248,9 +271,11 @@ function AccessStatusCell({ gateway, now }: { gateway: Gateway; now: number }) {
   const online = isGatewayOnline(gateway, now);
   if (online) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <StatusDot online />
-        <Badge variant="secondary">{t("statusConnected")}</Badge>
+        <Badge variant="secondary" className="max-w-full">
+          <span className="truncate">{t("statusConnected")}</span>
+        </Badge>
       </div>
     );
   }
@@ -262,9 +287,86 @@ function AccessStatusCell({ gateway, now }: { gateway: Gateway; now: number }) {
     : t("statusOffline");
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2">
       <StatusDot online={false} />
-      <Badge variant="secondary">{offlineLabel}</Badge>
+      <Badge variant="secondary" className="max-w-full">
+        <span className="truncate">{offlineLabel}</span>
+      </Badge>
+    </div>
+  );
+}
+
+function GatewayDetail({
+  gateway,
+  now,
+  recreating,
+  activityRefreshKey,
+  onRecreate,
+}: {
+  gateway: Gateway;
+  now: number;
+  recreating: boolean;
+  activityRefreshKey: number;
+  onRecreate: () => void;
+}) {
+  if (gateway.status === "pending") {
+    return (
+      <PendingWaitState
+        gateway={gateway}
+        now={now}
+        recreating={recreating}
+        onRecreate={onRecreate}
+      />
+    );
+  }
+
+  return (
+    <GatewayRecentActivity
+      gatewayId={gateway.gateway_id}
+      refreshKey={activityRefreshKey}
+    />
+  );
+}
+
+function GatewayActions({
+  gateway,
+  revoking,
+  recreating,
+  onRevoke,
+  onRecreate,
+  onDelete,
+  revokeLabel,
+  recreateLabel,
+  deleteLabel,
+}: {
+  gateway: Gateway;
+  revoking: boolean;
+  recreating: boolean;
+  onRevoke: () => void;
+  onRecreate: () => void;
+  onDelete: () => void;
+  revokeLabel: string;
+  recreateLabel: string;
+  deleteLabel: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {gateway.status === "paired" ? (
+        <Button size="sm" variant="outline" disabled={revoking} onClick={onRevoke}>
+          {revoking ? <Loader2 className="animate-spin" /> : <Ban />}
+          {revokeLabel}
+        </Button>
+      ) : null}
+      {gateway.status === "revoked" ? (
+        <Button size="sm" variant="outline" disabled={recreating} onClick={onRecreate}>
+          {recreating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+          {recreateLabel}
+        </Button>
+      ) : null}
+      <Button size="sm" variant="destructive" onClick={onDelete}>
+        <Trash2 />
+        {deleteLabel}
+      </Button>
     </div>
   );
 }
@@ -282,7 +384,8 @@ export function GatewaysView({
   const { call } = useApiClient();
   const [gateways, setGateways] = useState(initialGateways);
   const [createOpen, setCreateOpen] = useState(false);
-  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<Gateway | null>(null);
+  const [revoking, setRevoking] = useState(false);
   const [recreatingId, setRecreatingId] = useState<string | null>(null);
   const [credentials, setCredentials] = useState<GatewayCredentials | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Gateway | null>(null);
@@ -329,23 +432,25 @@ export function GatewaysView({
     };
   }, [needsListPoll, hasPending, call]);
 
-  async function revoke(gateway: Gateway) {
-    setRevokingId(gateway.gateway_id);
+  async function confirmRevoke() {
+    if (!revokeTarget) return;
+    setRevoking(true);
     try {
       await call(`/api/v1/gateways/revoke`, {
         method: "POST",
-        body: JSON.stringify({ gateway_id: gateway.gateway_id }),
+        body: JSON.stringify({ gateway_id: revokeTarget.gateway_id }),
       });
       setGateways((prev) =>
         prev.map((g) =>
-          g.gateway_id === gateway.gateway_id ? { ...g, status: "revoked" } : g
+          g.gateway_id === revokeTarget.gateway_id ? { ...g, status: "revoked" } : g
         )
       );
       toast.success(t("toastRevoked"));
+      setRevokeTarget(null);
     } catch {
       toast.error(t("toastRevokeFailed"));
     } finally {
-      setRevokingId(null);
+      setRevoking(false);
     }
   }
 
@@ -386,104 +491,144 @@ export function GatewaysView({
     }
   }
 
+  const createAction = (
+    <Button onClick={() => setCreateOpen(true)}>
+      <Plus />
+      {t("createLink")}
+    </Button>
+  );
+
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">{t("watchFolderHint")}</p>
-      <div className="flex justify-end">
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus />
-          {t("createLink")}
-        </Button>
-      </div>
-
-      {gateways.length === 0 ? (
-        <EmptyState
-          icon={Radio}
-          title={t("emptyTitle")}
-          description={gatewaysUnavailable ? t("emptyUnavailable") : t("emptyDescription")}
+      <Reveal>
+        <SectionHeader
+          title={t("sectionTitle")}
+          description={
+            gateways.length > 0
+              ? t("countLabel", { count: gateways.length })
+              : t("watchFolderHint")
+          }
+          action={createAction}
         />
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-border/60">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("colName")}</TableHead>
-                <TableHead>{t("colStatus")}</TableHead>
-                <TableHead>{t("colLastSeen")}</TableHead>
-                <TableHead className="text-right">{t("colAction")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+
+        {gatewaysUnavailable && gateways.length === 0 ? (
+          <Alert>
+            <Radio />
+            <AlertTitle>{t("emptyTitle")}</AlertTitle>
+            <AlertDescription>{t("emptyUnavailable")}</AlertDescription>
+          </Alert>
+        ) : gateways.length === 0 ? (
+          <EmptyState
+            icon={Radio}
+            title={t("emptyTitle")}
+            description={t("emptyDescription")}
+            action={createAction}
+          />
+        ) : (
+          <>
+            <p className="mb-4 text-sm text-muted-foreground">{t("watchFolderHint")}</p>
+
+            {/* Mobile / narrow: cards */}
+            <RevealGroup className="grid gap-3 md:hidden">
               {gateways.map((gateway) => (
-                <TableRow key={gateway.gateway_id}>
-                  <TableCell className="align-top font-medium">
-                    <div>{gateway.name}</div>
-                    {gateway.status === "pending" ? (
-                      <PendingWaitState
+                <RevealItem key={gateway.gateway_id}>
+                  <Card size="sm" className="bg-card/60">
+                    <CardContent className="space-y-3">
+                      <div className="min-w-0 space-y-1">
+                        <CardTitle className="line-clamp-2 text-sm break-words">
+                          {gateway.name}
+                        </CardTitle>
+                        <CardDescription>
+                          <AccessStatusCell gateway={gateway} now={now} />
+                        </CardDescription>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        {gateway.last_seen_at
+                          ? new Date(gateway.last_seen_at).toLocaleString()
+                          : tCommon("never")}
+                      </p>
+
+                      <GatewayDetail
                         gateway={gateway}
                         now={now}
                         recreating={recreatingId === gateway.gateway_id}
+                        activityRefreshKey={activityRefreshKey}
                         onRecreate={() => void recreate(gateway)}
                       />
-                    ) : (
-                      <GatewayRecentActivity
-                        gatewayId={gateway.gateway_id}
-                        refreshKey={activityRefreshKey}
+
+                      <GatewayActions
+                        gateway={gateway}
+                        revoking={revoking && revokeTarget?.gateway_id === gateway.gateway_id}
+                        recreating={recreatingId === gateway.gateway_id}
+                        onRevoke={() => setRevokeTarget(gateway)}
+                        onRecreate={() => void recreate(gateway)}
+                        onDelete={() => setDeleteTarget(gateway)}
+                        revokeLabel={t("revoke")}
+                        recreateLabel={t("recreateCodes")}
+                        deleteLabel={t("delete")}
                       />
-                    )}
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <AccessStatusCell gateway={gateway} now={now} />
-                  </TableCell>
-                  <TableCell className="align-top text-muted-foreground">
-                    {gateway.last_seen_at
-                      ? new Date(gateway.last_seen_at).toLocaleString()
-                      : tCommon("never")}
-                  </TableCell>
-                  <TableCell className="align-top text-right">
-                    <div className="flex justify-end gap-2">
-                      {gateway.status === "paired" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={revokingId === gateway.gateway_id}
-                          onClick={() => revoke(gateway)}
-                        >
-                          <Ban />
-                          {t("revoke")}
-                        </Button>
-                      )}
-                      {gateway.status === "revoked" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={recreatingId === gateway.gateway_id}
-                          onClick={() => void recreate(gateway)}
-                        >
-                          {recreatingId === gateway.gateway_id ? (
-                            <Loader2 className="animate-spin" />
-                          ) : (
-                            <RefreshCw />
-                          )}
-                          {t("recreateCodes")}
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setDeleteTarget(gateway)}
-                      >
-                        <Trash2 />
-                        {t("delete")}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                    </CardContent>
+                  </Card>
+                </RevealItem>
               ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+            </RevealGroup>
+
+            {/* Desktop: table */}
+            <Reveal className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>{t("colName")}</TableHead>
+                    <TableHead>{t("colStatus")}</TableHead>
+                    <TableHead>{t("colLastSeen")}</TableHead>
+                    <TableHead className="text-right">{t("colAction")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {gateways.map((gateway) => (
+                    <TableRow key={gateway.gateway_id}>
+                      <TableCell className="align-top font-medium">
+                        <div className="min-w-0 space-y-1">
+                          <span className="line-clamp-2 break-words">{gateway.name}</span>
+                          <GatewayDetail
+                            gateway={gateway}
+                            now={now}
+                            recreating={recreatingId === gateway.gateway_id}
+                            activityRefreshKey={activityRefreshKey}
+                            onRecreate={() => void recreate(gateway)}
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <AccessStatusCell gateway={gateway} now={now} />
+                      </TableCell>
+                      <TableCell className="align-top whitespace-nowrap text-muted-foreground">
+                        {gateway.last_seen_at
+                          ? new Date(gateway.last_seen_at).toLocaleString()
+                          : tCommon("never")}
+                      </TableCell>
+                      <TableCell className="align-top text-right">
+                        <GatewayActions
+                          gateway={gateway}
+                          revoking={revoking && revokeTarget?.gateway_id === gateway.gateway_id}
+                          recreating={recreatingId === gateway.gateway_id}
+                          onRevoke={() => setRevokeTarget(gateway)}
+                          onRecreate={() => void recreate(gateway)}
+                          onDelete={() => setDeleteTarget(gateway)}
+                          revokeLabel={t("revoke")}
+                          recreateLabel={t("recreateCodes")}
+                          deleteLabel={t("delete")}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Reveal>
+          </>
+        )}
+      </Reveal>
 
       <CreateGatewayDialog
         open={createOpen}
@@ -508,8 +653,33 @@ export function GatewaysView({
       </Dialog>
 
       <Dialog
+        open={revokeTarget !== null}
+        onOpenChange={(open) => !open && !revoking && setRevokeTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("revokeConfirmTitle")}</DialogTitle>
+            <DialogDescription>{t("revokeConfirmDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRevokeTarget(null)}
+              disabled={revoking}
+            >
+              {tCommon("cancel")}
+            </Button>
+            <Button variant="destructive" onClick={confirmRevoke} disabled={revoking}>
+              {revoking ? <Loader2 className="animate-spin" /> : <Ban />}
+              {t("revoke")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={deleteTarget !== null}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
       >
         <DialogContent>
           <DialogHeader>
@@ -517,11 +687,15 @@ export function GatewaysView({
             <DialogDescription>{t("deleteConfirmDescription")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
               {tCommon("cancel")}
             </Button>
             <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
-              <Trash2 />
+              {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
               {t("delete")}
             </Button>
           </DialogFooter>

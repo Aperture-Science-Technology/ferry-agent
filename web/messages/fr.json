@@ -415,6 +415,11 @@
   },
   "access": {
     "createLink": "Ajouter un accès",
+    "sectionTitle": "Vos accès",
+    "countLabel": "{count} accès",
+    "revokeConfirmTitle": "Révoquer cet accès ?",
+    "revokeConfirmDescription": "Après révocation, ce programme ne pourra plus se connecter. Vous pourrez créer de nouveaux codes plus tard.",
+    "activityLoading": "Chargement de l’activité…",
     "emptyTitle": "Aucun accès",
     "emptyDescription": "Créez un accès pour relier le programme installé chez vous.",
     "emptyUnavailable": "Impossible de charger vos accès pour le moment. Réessayez un peu plus tard.",
@@ -474,6 +479,7 @@
     "gatewayKey": "Clé d'accès",
     "bothSecrets": "Les deux codes ensemble",
     "bothSecretsHint": "Copiez ce bloc tel quel : les deux codes sont indispensables.",
+    "copyAction": "Copier",
     "toastFailed": "Impossible de créer l'accès. Réessayez."
   },
   "sources": {

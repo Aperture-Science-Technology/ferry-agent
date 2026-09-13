@@ -415,6 +415,11 @@
   },
   "access": {
     "createLink": "Add access",
+    "sectionTitle": "Your accesses",
+    "countLabel": "{count} accesses",
+    "revokeConfirmTitle": "Revoke this access?",
+    "revokeConfirmDescription": "After revocation, this program will no longer be able to connect. You can create new codes later.",
+    "activityLoading": "Loading activity…",
     "emptyTitle": "No access yet",
     "emptyDescription": "Create an access to link the program installed on your machine.",
     "emptyUnavailable": "Your accesses couldn't be loaded right now. Please try again later.",
@@ -474,6 +479,7 @@
     "gatewayKey": "Access key",
     "bothSecrets": "Both codes together",
     "bothSecretsHint": "Copy this block as-is: both codes are required.",
+    "copyAction": "Copy",
     "toastFailed": "Couldn't create the access. Please try again."
   },
   "sources": {
