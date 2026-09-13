@@ -502,23 +502,27 @@
     "unavailableNote": "Impossible de charger l'état de vos sources pour le moment. Gutenberg et Standard Ebooks restent utilisables depuis la recherche."
   },
   "deliveries": {
+    "sectionTitle": "Vos envois",
+    "countLabel": "{count} envois",
     "emptyTitle": "Aucun envoi",
     "emptyDescription": "Envoyez un livre depuis votre bibliothèque pour suivre vos envois ici.",
     "emptyUnavailable": "Impossible de charger vos envois pour le moment. Réessayez un peu plus tard.",
     "colBook": "Livre",
-    "colDevice": "Appareil",
+    "colDevice": "Liseuse",
     "colStatus": "Statut",
-    "colMethod": "Méthode",
+    "colMethod": "Mode d'envoi",
+    "colFormat": "Format",
     "colCreated": "Envoyé",
     "colDelivered": "Arrivé",
     "colError": "Échec",
     "colAction": "Action",
     "track": "Suivre",
+    "openDownload": "Ouvrir le fichier",
     "statuses": {
-      "queued": "en file",
-      "sent": "envoyé",
-      "delivered": "arrivé",
-      "failed": "échec"
+      "queued": "En attente",
+      "sent": "En cours d'envoi",
+      "delivered": "Arrivé",
+      "failed": "Échec"
     }
   },
   "deliveryDetail": {
@@ -526,11 +530,17 @@
     "description": "Statut et détails de cet envoi.",
     "book": "Livre",
     "author": "Auteur",
-    "device": "Appareil",
+    "device": "Liseuse",
     "status": "Statut",
-    "method": "Méthode",
+    "method": "Mode d'envoi",
+    "format": "Format",
     "created": "Créé",
     "delivered": "Arrivé",
+    "error": "Problème",
+    "download": "Ouvrir le fichier",
+    "loading": "Chargement du suivi…",
+    "loadErrorTitle": "Suivi indisponible",
+    "loadErrorDescription": "Impossible d'afficher le détail de cet envoi pour le moment. Réessayez un peu plus tard.",
     "toastLoadFailed": "Impossible de charger le suivi de cet envoi."
   },
   "settings": {

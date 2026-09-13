@@ -502,23 +502,27 @@
     "unavailableNote": "Couldn't load the state of your sources right now. Gutenberg and Standard Ebooks still work from search."
   },
   "deliveries": {
+    "sectionTitle": "Your deliveries",
+    "countLabel": "{count} deliveries",
     "emptyTitle": "No deliveries",
     "emptyDescription": "Send a book from your library to track your deliveries here.",
     "emptyUnavailable": "Your deliveries couldn't be loaded right now. Please try again later.",
     "colBook": "Book",
-    "colDevice": "Device",
+    "colDevice": "E-reader",
     "colStatus": "Status",
-    "colMethod": "Method",
+    "colMethod": "Delivery mode",
+    "colFormat": "Format",
     "colCreated": "Sent",
     "colDelivered": "Arrived",
     "colError": "Failed",
     "colAction": "Action",
     "track": "Track",
+    "openDownload": "Open file",
     "statuses": {
-      "queued": "queued",
-      "sent": "sent",
-      "delivered": "arrived",
-      "failed": "failed"
+      "queued": "Waiting",
+      "sent": "Sending",
+      "delivered": "Arrived",
+      "failed": "Failed"
     }
   },
   "deliveryDetail": {
@@ -526,11 +530,17 @@
     "description": "Status and details for this delivery.",
     "book": "Book",
     "author": "Author",
-    "device": "Device",
+    "device": "E-reader",
     "status": "Status",
-    "method": "Method",
+    "method": "Delivery mode",
+    "format": "Format",
     "created": "Created",
     "delivered": "Arrived",
+    "error": "Problem",
+    "download": "Open file",
+    "loading": "Loading tracking…",
+    "loadErrorTitle": "Tracking unavailable",
+    "loadErrorDescription": "This delivery's details couldn't be shown right now. Please try again later.",
     "toastLoadFailed": "Couldn't load tracking for this delivery."
   },
   "settings": {
