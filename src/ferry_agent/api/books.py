@@ -223,14 +223,14 @@ async def search_books(
         .where(LibraryItem.user_id == user.id)
     )
     owned_rows = owned_result.all()
-    # Identite titre + auteur + provider : deux resultats du meme provider
-    # (gutenberg, standard_ebooks, gateway...) partageant titre et auteur
-    # normalises sont consideres comme le meme livre. Un isbn identique
-    # renforce le match (bonus), mais n'est plus le seul critere possible :
-    # la plupart des resultats n'ont ni isbn ni reference source exacte, ce
-    # qui rendait le badge quasi invisible.
+    # Matching en couches :
+    # 1. `source_ref` exact (`gutenberg:1342`) — identite canonique (mig 0008)
+    # 2. ISBN normalise — editions partageant le meme ISBN
+    # 3. titre + auteur + provider — filet quand ni ref ni ISBN ne sont
+    #    disponibles (cas frequent cote gateway / indexeurs incomplets)
     owned_index: set[tuple[str | None, str, str]] = set()
     owned_isbns: set[str] = set()
+    owned_refs: set[str] = set()
     for owned, source_type in owned_rows:
         provider = _normalize_provider(source_type)
         title = _normalize_text(owned.title)
@@ -238,8 +238,13 @@ async def search_books(
             owned_index.add((provider, title, _normalize_text(owned.author)))
         if owned.isbn:
             owned_isbns.add(_normalize_isbn(owned.isbn))
+        if owned.source_ref:
+            owned_refs.add(owned.source_ref)
 
     def _is_owned(result: Result) -> bool:
+        result_ref = f"{result.source}:{result.result_id}"
+        if result_ref in owned_refs:
+            return True
         isbn = getattr(result, "isbn", None)
         if isbn and _normalize_isbn(isbn) in owned_isbns:
             return True

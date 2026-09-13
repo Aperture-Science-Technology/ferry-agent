@@ -40,6 +40,15 @@ type ViewMode = "grid" | "list";
 type SortBy = "title" | "author" | "added";
 type SourceFilter = "all" | "linked" | "manual";
 
+/** Upload = pas de `source_ref` ; accès personnel = ref `gateway:…`. */
+function isManualLibraryItem(item: LibraryItem): boolean {
+  return !item.source_ref;
+}
+
+function isLinkedLibraryItem(item: LibraryItem): boolean {
+  return Boolean(item.source_ref?.startsWith("gateway:"));
+}
+
 function mapFetchError(
   error: string | null,
   t: ReturnType<typeof useTranslations<"library">>
@@ -132,10 +141,10 @@ export function LibraryView({
     if (formatFilter !== "all") {
       list = list.filter((item) => item.original_format === formatFilter);
     }
-    if (sourceFilter !== "all") {
-      list = list.filter((item) =>
-        sourceFilter === "linked" ? item.source_id !== null : item.source_id === null
-      );
+    if (sourceFilter === "linked") {
+      list = list.filter(isLinkedLibraryItem);
+    } else if (sourceFilter === "manual") {
+      list = list.filter(isManualLibraryItem);
     }
     return [...list].sort((a, b) => {
       if (sortBy === "title") return a.title.localeCompare(b.title);
@@ -243,7 +252,12 @@ export function LibraryView({
   }
 
   function sourceBadgeLabel(item: LibraryItem) {
-    return item.source_id ? t("sourceLinked") : t("sourceManual");
+    const ref = item.source_ref;
+    if (!ref) return t("sourceManual");
+    if (ref.startsWith("gateway:")) return t("sourceLinked");
+    if (ref.startsWith("gutenberg:")) return t("sourceGutenberg");
+    if (ref.startsWith("standard_ebooks:")) return t("sourceStandardEbooks");
+    return t("sourceManual");
   }
 
   function sourceLabel(source: string) {

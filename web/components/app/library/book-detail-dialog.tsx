@@ -227,6 +227,14 @@ export function BookDetailDialog({
         item={deliverOpen ? item : null}
         devices={devices}
         onOpenChange={(open) => !open && setDeliverOpen(false)}
+        onDelivered={(job) => {
+          if (!itemId) return;
+          setFailedId((prev) => (prev === itemId ? null : prev));
+          setDeliveriesState((prev) => {
+            const jobs = prev?.id === itemId ? prev.jobs : [];
+            return { id: itemId, jobs: [job, ...jobs] };
+          });
+        }}
       />
 
       <BookEditDialog

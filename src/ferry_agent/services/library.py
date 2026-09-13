@@ -96,6 +96,17 @@ async def import_from_connector(
     if connector is None:
         raise ValueError(f"connecteur inconnu: {source_name}")
 
+    source_ref = f"{source_name}:{result_id}"
+    existing_result = await db.execute(
+        select(LibraryItem).where(
+            LibraryItem.user_id == user_id,
+            LibraryItem.source_ref == source_ref,
+        )
+    )
+    existing = existing_result.scalar_one_or_none()
+    if existing is not None:
+        return existing
+
     fetched_path = await connector.fetch(result_id)
     fetched = Path(fetched_path)
 
@@ -116,7 +127,7 @@ async def import_from_connector(
         page_count=metadata.get("page_count") or None,
         isbn=metadata.get("isbn") or None,
         source_id=source.id,
-        source_ref=f"{source_name}:{result_id}",
+        source_ref=source_ref,
         original_format=dest.suffix.lstrip(".") or "epub",
         storage_path=str(dest),
         size_bytes=dest.stat().st_size,

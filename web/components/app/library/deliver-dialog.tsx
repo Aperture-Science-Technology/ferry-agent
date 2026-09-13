@@ -117,10 +117,12 @@ export function DeliverDialog({
   item,
   devices,
   onOpenChange,
+  onDelivered,
 }: {
   item: LibraryItem | null;
   devices: Device[];
   onOpenChange: (open: boolean) => void;
+  onDelivered?: (job: DeliveryJob) => void;
 }) {
   const t = useTranslations("deliverDialog");
   const tCommon = useTranslations("common");
@@ -172,6 +174,7 @@ export function DeliverDialog({
       } else {
         toast.success(t("toastStarted", { status: job.status }));
       }
+      onDelivered?.(job);
       onOpenChange(false);
     } catch (error) {
       if (error instanceof ApiError && error.status === 400) {

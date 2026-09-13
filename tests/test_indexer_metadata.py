@@ -144,6 +144,42 @@ async def test_import_from_connector_falls_back_to_filename_stem_without_metadat
     assert item.cover_url is None
 
 
+@pytest.mark.asyncio
+async def test_import_from_connector_returns_existing_on_same_source_ref(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Re-ajout du meme resultat : retourne l'item existant sans re-fetch."""
+    fetched = tmp_path / "should-not-be-used.epub"
+    fetched.write_bytes(b"fake-epub-content")
+
+    storage_dir = tmp_path / "storage"
+    settings = Settings(library_storage_dir=str(storage_dir))
+    monkeypatch.setattr(library, "get_settings", lambda: settings)
+
+    connector = _FakeConnector(str(fetched))
+    connector.fetch = AsyncMock(side_effect=AssertionError("fetch must not run"))  # type: ignore[method-assign]
+    monkeypatch.setattr(
+        "ferry_agent.services.library.get_connector",
+        lambda name: connector,
+    )
+
+    existing = _fake_library_item(source_ref="gutenberg:1342", title="Already owned")
+    existing_result = MagicMock(scalar_one_or_none=MagicMock(return_value=existing))
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=existing_result)
+    db.commit = AsyncMock()
+    db.add = MagicMock()
+
+    item = await library.import_from_connector(
+        db, _USER_ID, "gutenberg", "1342", metadata={"title": "Ignored"}
+    )
+
+    assert item is existing
+    assert item.title == "Already owned"
+    db.add.assert_not_called()
+    db.commit.assert_not_called()
+
+
 def _fake_library_item(**overrides):
     item = SimpleNamespace(
         id=uuid.uuid4(),
