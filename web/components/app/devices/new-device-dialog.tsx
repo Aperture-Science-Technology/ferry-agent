@@ -136,11 +136,15 @@ export function NewDeviceDialog({
           <ConversionProfileField value={conversionProfile} onChange={setConversionProfile} />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
             {tCommon("cancel")}
           </Button>
           <Button onClick={submit} disabled={submitting}>
-            {submitting && <Loader2 className="animate-spin" />}
+            {submitting ? <Loader2 className="animate-spin" /> : null}
             {tCommon("create")}
           </Button>
         </DialogFooter>

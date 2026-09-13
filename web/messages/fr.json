@@ -302,6 +302,10 @@
   },
   "devices": {
     "newDevice": "Nouvel appareil",
+    "sectionTitle": "Vos appareils",
+    "countLabel": "{count} appareils",
+    "colProfile": "Profil de conversion",
+    "refreshing": "Mise à jour de la liste…",
     "emptyTitle": "Aucun appareil",
     "emptyDescription": "Ajoutez votre première liseuse pour commencer à recevoir des livres.",
     "emptyUnavailable": "Impossible de charger vos appareils pour le moment. Réessayez un peu plus tard.",

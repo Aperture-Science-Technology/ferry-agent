@@ -202,7 +202,11 @@ export function CloudLinkDialog({
           </Button>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={loadingUrl}
+          >
             {tCommon("cancel")}
           </Button>
         </DialogFooter>

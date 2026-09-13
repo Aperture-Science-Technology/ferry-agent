@@ -302,6 +302,10 @@
   },
   "devices": {
     "newDevice": "New device",
+    "sectionTitle": "Your devices",
+    "countLabel": "{count} devices",
+    "colProfile": "Conversion profile",
+    "refreshing": "Updating the list…",
     "emptyTitle": "No devices",
     "emptyDescription": "Add your first e-reader to start receiving books.",
     "emptyUnavailable": "Your devices couldn't be loaded right now. Please try again later.",
