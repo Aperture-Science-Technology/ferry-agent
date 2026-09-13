@@ -27,10 +27,7 @@ export function CatalogQrCode({ url, size = 180 }: { url: string; size?: number 
 
   if (!dataUrl) {
     return (
-      <div
-        className="flex items-center justify-center rounded-md border border-border/60 bg-muted/30 text-xs text-muted-foreground"
-        style={{ width: size, height: size }}
-      >
+      <div className="flex size-[180px] items-center justify-center rounded-md border border-border/60 bg-muted/30 text-xs text-muted-foreground">
         …
       </div>
     );
@@ -43,7 +40,7 @@ export function CatalogQrCode({ url, size = 180 }: { url: string; size?: number 
       alt=""
       width={size}
       height={size}
-      className="rounded-md border border-border/60 bg-white p-1"
+      className="size-[180px] rounded-md border border-border/60 bg-white p-1"
     />
   );
 }

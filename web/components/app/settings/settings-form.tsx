@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Eraser, Loader2, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -16,8 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SectionHeader } from "@/components/app/section-header";
 import { SourcesManager } from "@/components/app/sources/sources-manager";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
+import { Reveal } from "@/components/motion/reveal";
 import { ApiError, useApiClient } from "@/lib/api-client";
 import type { OpdsToken, Source } from "@/lib/types";
 
@@ -109,108 +112,118 @@ export function SettingsForm({
   }
 
   return (
-    <div className="max-w-xl space-y-6">
-      {settingsUnavailable && (
-        <p className="text-sm text-muted-foreground">{t("unavailable")}</p>
-      )}
+    <div className="mx-auto max-w-2xl space-y-10">
+      {settingsUnavailable ? (
+        <Alert>
+          <Settings2 />
+          <AlertTitle>{t("unavailableTitle")}</AlertTitle>
+          <AlertDescription>{t("unavailable")}</AlertDescription>
+        </Alert>
+      ) : null}
 
-      <Card className="border-border/60 bg-card/40">
-        <CardHeader>
-          <CardTitle className="font-heading text-lg font-medium">
-            {t("accountTitle")}
-          </CardTitle>
-          <CardDescription>{t("accountDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>{t("email")}</Label>
-            <Input value={initialEmail} readOnly disabled />
-            <p className="text-xs text-muted-foreground">{t("emailHint")}</p>
-          </div>
-          <div className="space-y-2">
-            <Label>{t("kindleEmail")}</Label>
-            <Input
-              type="email"
-              value={kindleEmail}
-              onChange={(event) => setKindleEmail(event.target.value)}
-              placeholder={t("kindleEmailPlaceholder")}
-              disabled={settingsUnavailable}
+      <Reveal>
+        <SectionHeader
+          title={t("deliveryPreferencesTitle")}
+          description={t("deliveryPreferencesDescription")}
+        />
+        <Card className="border-border/60 bg-card/60">
+          <CardContent className="space-y-5 pt-6">
+            <div className="space-y-2">
+              <Label htmlFor="settings-account-email">{t("email")}</Label>
+              <Input id="settings-account-email" value={initialEmail} readOnly disabled />
+              <p className="text-xs text-muted-foreground">{t("emailHint")}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="settings-kindle-email">{t("kindleEmail")}</Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  id="settings-kindle-email"
+                  type="email"
+                  value={kindleEmail}
+                  onChange={(event) => setKindleEmail(event.target.value)}
+                  placeholder={t("kindleEmailPlaceholder")}
+                  disabled={settingsUnavailable}
+                  className="min-w-0 flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={settingsUnavailable || !kindleEmail}
+                  onClick={() => setKindleEmail("")}
+                  className="shrink-0"
+                >
+                  <Eraser />
+                  {t("clearKindleEmail")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("kindleEmailHint")}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t("defaultFormat")}</Label>
+              <Select
+                value={defaultFormat}
+                onValueChange={(value) => setDefaultFormat(value ?? "epub")}
+                disabled={settingsUnavailable}
+              >
+                <SelectTrigger className="w-full uppercase">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FORMATS.map((format) => (
+                    <SelectItem key={format} value={format} className="uppercase">
+                      {format}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{t("defaultFormatHint")}</p>
+            </div>
+
+            <Button type="button" onClick={save} disabled={saving || settingsUnavailable}>
+              {saving ? <Loader2 className="animate-spin" /> : null}
+              {tCommon("save")}
+            </Button>
+          </CardContent>
+        </Card>
+      </Reveal>
+
+      <Reveal>
+        <SectionHeader title={t("sourcesTitle")} description={t("sourcesDescription")} />
+        <SourcesManager
+          initialSources={initialSources}
+          sourcesUnavailable={sourcesUnavailable}
+        />
+      </Reveal>
+
+      <Reveal>
+        <SectionHeader
+          title={t("readerCatalogTitle")}
+          description={t("readerCatalogDescription")}
+        />
+        <ReaderCatalogSection
+          initialTokens={initialOpdsTokens}
+          tokensUnavailable={opdsTokensUnavailable}
+        />
+      </Reveal>
+
+      <Reveal>
+        <SectionHeader title={t("devicesTitle")} description={t("devicesDescription")} />
+        <Card size="sm" className="border-border/60 bg-card/60">
+          <CardContent className="pt-4">
+            <Button
+              variant="outline"
+              render={
+                <Link href="/app/appareils">
+                  {t("devicesCta")}
+                  <ArrowRight />
+                </Link>
+              }
             />
-            <p className="text-xs text-muted-foreground">{t("kindleEmailHint")}</p>
-          </div>
-          <div className="space-y-2">
-            <Label>{t("defaultFormat")}</Label>
-            <Select
-              value={defaultFormat}
-              onValueChange={(value) => setDefaultFormat(value ?? "epub")}
-              disabled={settingsUnavailable}
-            >
-              <SelectTrigger className="w-full uppercase">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {FORMATS.map((format) => (
-                  <SelectItem key={format} value={format} className="uppercase">
-                    {format}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">{t("defaultFormatHint")}</p>
-          </div>
-          <Button onClick={save} disabled={saving || settingsUnavailable}>
-            {saving && <Loader2 className="animate-spin" />}
-            {tCommon("save")}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/60 bg-card/40">
-        <CardHeader>
-          <CardTitle className="font-heading text-lg font-medium">
-            {t("sourcesTitle")}
-          </CardTitle>
-          <CardDescription>{t("sourcesDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SourcesManager initialSources={initialSources} sourcesUnavailable={sourcesUnavailable} />
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/60 bg-card/40">
-        <CardHeader>
-          <CardTitle className="font-heading text-lg font-medium">
-            {t("readerCatalogTitle")}
-          </CardTitle>
-          <CardDescription>{t("readerCatalogDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ReaderCatalogSection
-            initialTokens={initialOpdsTokens}
-            tokensUnavailable={opdsTokensUnavailable}
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/60 bg-card/40">
-        <CardHeader>
-          <CardTitle className="font-heading text-lg font-medium">
-            {t("devicesTitle")}
-          </CardTitle>
-          <CardDescription>{t("devicesDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            variant="outline"
-            render={
-              <Link href="/app/appareils">
-                {t("devicesCta")}
-                <ArrowRight />
-              </Link>
-            }
-          />
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Reveal>
     </div>
   );
 }
