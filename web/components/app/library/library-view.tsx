@@ -2,12 +2,25 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { motion } from "motion/react";
-import { BookOpen, LayoutGrid, List, Loader2, Search, SearchX } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
+import {
+  BookOpen,
+  LayoutGrid,
+  List,
+  Loader2,
+  Search,
+  SearchX,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -24,16 +37,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { EmptyState } from "@/components/app/empty-state";
+import { SectionHeader } from "@/components/app/section-header";
+import { StatePanel } from "@/components/app/state-panel";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
 import {
   LibraryCoverImage,
   SearchCoverImage,
 } from "@/components/app/library/cover-image";
 import { UploadDropzone } from "@/components/app/library/upload-dropzone";
-import { Reveal } from "@/components/motion/reveal";
+import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { ApiError, useApiClient } from "@/lib/api-client";
 import { useGatewayJob } from "@/lib/use-gateway-job";
+import { cn } from "@/lib/utils";
 import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@/lib/types";
 
 type ViewMode = "grid" | "list";
@@ -100,6 +119,48 @@ function PendingFetchTracker({
   return null;
 }
 
+function SearchResultActions({
+  result,
+  resultKey,
+  isPending,
+  addingId,
+  onAdd,
+  t,
+}: {
+  result: SearchResult;
+  resultKey: string;
+  isPending: boolean;
+  addingId: string | null;
+  onAdd: (result: SearchResult) => void;
+  t: ReturnType<typeof useTranslations<"library">>;
+}) {
+  if (result.owned) {
+    return (
+      <Button size="sm" variant="secondary" disabled>
+        {t("inLibrary")}
+      </Button>
+    );
+  }
+  if (isPending) {
+    return (
+      <Button size="sm" variant="outline" disabled>
+        <Loader2 className="animate-spin" />
+        {t("fetching")}
+      </Button>
+    );
+  }
+  return (
+    <Button
+      size="sm"
+      disabled={addingId === resultKey}
+      onClick={() => onAdd(result)}
+    >
+      {addingId === resultKey ? <Loader2 className="animate-spin" /> : null}
+      {t("add")}
+    </Button>
+  );
+}
+
 export function LibraryView({
   initialItems,
   itemsUnavailable,
@@ -111,6 +172,7 @@ export function LibraryView({
 }) {
   const t = useTranslations("library");
   const { call } = useApiClient();
+  const prefersReducedMotion = useReducedMotion();
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -279,8 +341,91 @@ export function LibraryView({
     setSourceFilter("all");
   }
 
+  const filterControls =
+    items.length > 0 ? (
+      <div className="flex flex-wrap items-center gap-2" aria-label={t("filtersLabel")}>
+        <Select value={sortBy} onValueChange={(value) => setSortBy((value as SortBy) ?? "added")}>
+          <SelectTrigger size="sm" className="min-w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="added">{t("sortAdded")}</SelectItem>
+            <SelectItem value="title">{t("sortTitle")}</SelectItem>
+            <SelectItem value="author">{t("sortAuthor")}</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {languages.length > 0 && (
+          <Select value={languageFilter} onValueChange={(value) => setLanguageFilter(value ?? "all")}>
+            <SelectTrigger size="sm" className="min-w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("filterLanguageAll")}</SelectItem>
+              {languages.map((language) => (
+                <SelectItem key={language} value={language}>
+                  {language}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {formats.length > 1 && (
+          <Select value={formatFilter} onValueChange={(value) => setFormatFilter(value ?? "all")}>
+            <SelectTrigger size="sm" className="min-w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("filterFormatAll")}</SelectItem>
+              {formats.map((format) => (
+                <SelectItem key={format} value={format}>
+                  {format.toUpperCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        <Select
+          value={sourceFilter}
+          onValueChange={(value) => setSourceFilter((value as SourceFilter) ?? "all")}
+        >
+          <SelectTrigger size="sm" className="min-w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("filterSourceAll")}</SelectItem>
+            <SelectItem value="linked">{t("sourceLinked")}</SelectItem>
+            <SelectItem value="manual">{t("sourceManual")}</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="flex gap-1 rounded-lg border border-border/60 p-0.5">
+          <Button
+            size="icon-sm"
+            variant={viewMode === "grid" ? "secondary" : "ghost"}
+            onClick={() => setViewMode("grid")}
+            aria-label={t("gridView")}
+            aria-pressed={viewMode === "grid"}
+          >
+            <LayoutGrid />
+          </Button>
+          <Button
+            size="icon-sm"
+            variant={viewMode === "list" ? "secondary" : "ghost"}
+            onClick={() => setViewMode("list")}
+            aria-label={t("listView")}
+            aria-pressed={viewMode === "list"}
+          >
+            <List />
+          </Button>
+        </div>
+      </div>
+    ) : null;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {Object.entries(pendingJobs).map(([resultKey, jobId]) => (
         <PendingFetchTracker
           key={jobId}
@@ -292,34 +437,31 @@ export function LibraryView({
         />
       ))}
 
-      <div>
-        <div className="mb-4">
-          <h2 className="font-heading text-lg font-medium">{t("uploadTitle")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("uploadHelp")}</p>
-        </div>
-        <UploadDropzone
-          onUploaded={(item) => setItems((prev) => [item, ...prev])}
+      <Reveal>
+        <SectionHeader
+          title={t("uploadTitle")}
+          description={`${t("uploadHelp")} ${t("passageHint")}`}
         />
-      </div>
+        <UploadDropzone onUploaded={(item) => setItems((prev) => [item, ...prev])} />
+      </Reveal>
 
-      <div>
-        <div className="mb-4">
-          <h2 className="font-heading text-lg font-medium">{t("addBooksTitle")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("searchHelp")}</p>
-        </div>
+      <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
 
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-64">
+      <Reveal delay={0.05}>
+        <SectionHeader title={t("addBooksTitle")} description={t("searchHelp")} />
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => event.key === "Enter" && runSearch()}
               placeholder={t("searchPlaceholder")}
-              className="pl-9"
+              className="h-10 pl-9"
             />
           </div>
-          <Button onClick={runSearch} disabled={searching}>
+          <Button onClick={runSearch} disabled={searching} className="sm:shrink-0">
             {searching ? <Loader2 className="animate-spin" /> : <Search />}
             {t("search")}
           </Button>
@@ -327,50 +469,66 @@ export function LibraryView({
 
         {searching && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-border/60 py-10 text-sm text-muted-foreground"
+            transition={{ duration: prefersReducedMotion ? 0.01 : 0.3, ease: "easeOut" }}
+            className="mt-5"
           >
-            <Loader2 className="size-4 animate-spin" />
-            {t("searching")}
+            <StatePanel className="py-10">
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin text-chart-1" />
+                {t("searching")}
+              </div>
+              <div className="mt-4 grid w-full gap-3 sm:grid-cols-2">
+                <Skeleton className="h-20 w-full rounded-lg" />
+                <Skeleton className="h-20 w-full rounded-lg" />
+                <Skeleton className="h-20 w-full rounded-lg sm:col-span-2" />
+              </div>
+            </StatePanel>
           </motion.div>
         )}
 
         {!searching && results !== null && (
-          <Reveal className="mt-4">
+          <Reveal className="mt-5">
             {results.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noResultsHint")}</p>
+              <EmptyState
+                icon={SearchX}
+                title={t("noResultsHint")}
+                description={t("searchHelpMatch")}
+              />
             ) : (
-              <div className="overflow-hidden rounded-lg border border-border/60">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12" />
-                      <TableHead>{t("title")}</TableHead>
-                      <TableHead>{t("author")}</TableHead>
-                      <TableHead>{t("source")}</TableHead>
-                      <TableHead>{t("format")}</TableHead>
-                      <TableHead className="text-right">{t("action")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map((result) => {
-                      const resultKey = `${result.source}:${result.result_id}`;
-                      const isPending = resultKey in pendingJobs;
-                      return (
-                        <TableRow key={resultKey}>
-                          <TableCell>
-                            <div className="relative flex size-10 items-center justify-center overflow-hidden rounded bg-muted">
-                              <SearchCoverImage
-                                coverUrl={result.cover_url}
-                                iconClassName="size-4"
-                              />
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {t("resultsFound", { count: results.length })}
+                </p>
+
+                {/* Mobile / narrow: cards */}
+                <div className="grid gap-3 md:hidden">
+                  {results.map((result) => {
+                    const resultKey = `${result.source}:${result.result_id}`;
+                    const isPending = resultKey in pendingJobs;
+                    return (
+                      <Card key={resultKey} size="sm" className="bg-card/60">
+                        <CardContent className="flex gap-3">
+                          <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/50">
+                            <SearchCoverImage
+                              coverUrl={result.cover_url}
+                              className="absolute inset-0 size-full"
+                              iconClassName="size-5"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <div>
+                              <CardTitle className="line-clamp-2 text-sm">{result.title}</CardTitle>
+                              <CardDescription className="line-clamp-1">
+                                {result.author}
+                              </CardDescription>
                             </div>
-                          </TableCell>
-                          <TableCell className="font-medium">
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <span>{result.title}</span>
+                              <Badge variant="secondary">{sourceLabel(result.source)}</Badge>
+                              <Badge variant="outline" className="uppercase">
+                                {result.format}
+                              </Badge>
                               {result.owned && <Badge variant="secondary">{t("owned")}</Badge>}
                               {isPending && (
                                 <Badge variant="outline" className="gap-1">
@@ -379,138 +537,115 @@ export function LibraryView({
                                 </Badge>
                               )}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{result.author}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{sourceLabel(result.source)}</Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground uppercase">
-                            {result.format}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {result.owned ? (
-                              <Button size="sm" variant="outline" disabled>
-                                {t("inLibrary")}
-                              </Button>
-                            ) : isPending ? (
-                              <Button size="sm" variant="outline" disabled>
-                                <Loader2 className="animate-spin" />
-                                {t("fetching")}
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={addingId === resultKey}
-                                onClick={() => addResult(result)}
-                              >
-                                {addingId === resultKey ? (
-                                  <Loader2 className="animate-spin" />
-                                ) : null}
-                                {t("add")}
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                            <SearchResultActions
+                              result={result}
+                              resultKey={resultKey}
+                              isPending={isPending}
+                              addingId={addingId}
+                              onAdd={addResult}
+                              t={t}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="w-14" />
+                        <TableHead>{t("title")}</TableHead>
+                        <TableHead>{t("author")}</TableHead>
+                        <TableHead>{t("source")}</TableHead>
+                        <TableHead>{t("format")}</TableHead>
+                        <TableHead className="text-right">{t("action")}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {results.map((result) => {
+                        const resultKey = `${result.source}:${result.result_id}`;
+                        const isPending = resultKey in pendingJobs;
+                        return (
+                          <TableRow key={resultKey}>
+                            <TableCell>
+                              <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-md bg-muted ring-1 ring-border/40">
+                                <SearchCoverImage
+                                  coverUrl={result.cover_url}
+                                  iconClassName="size-4"
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="line-clamp-2">{result.title}</span>
+                                {result.owned && (
+                                  <Badge variant="secondary">{t("owned")}</Badge>
+                                )}
+                                {isPending && (
+                                  <Badge variant="outline" className="gap-1">
+                                    <Loader2 className="size-3 animate-spin" />
+                                    {t("fetching")}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {result.author}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{sourceLabel(result.source)}</Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground uppercase">
+                              {result.format}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <SearchResultActions
+                                result={result}
+                                resultKey={resultKey}
+                                isPending={isPending}
+                                addingId={addingId}
+                                onAdd={addResult}
+                                t={t}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </Reveal>
         )}
-      </div>
+      </Reveal>
 
-      <div>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-heading text-lg font-medium">{t("myLibrary")}</h2>
-          {items.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={sortBy} onValueChange={(value) => setSortBy((value as SortBy) ?? "added")}>
-                <SelectTrigger size="sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="added">{t("sortAdded")}</SelectItem>
-                  <SelectItem value="title">{t("sortTitle")}</SelectItem>
-                  <SelectItem value="author">{t("sortAuthor")}</SelectItem>
-                </SelectContent>
-              </Select>
+      <Separator className="bg-gradient-to-r from-transparent via-border to-transparent" />
 
-              {languages.length > 0 && (
-                <Select value={languageFilter} onValueChange={(value) => setLanguageFilter(value ?? "all")}>
-                  <SelectTrigger size="sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t("filterLanguageAll")}</SelectItem>
-                    {languages.map((language) => (
-                      <SelectItem key={language} value={language}>
-                        {language}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+      <Reveal delay={0.08}>
+        <SectionHeader
+          title={t("myLibrary")}
+          description={
+            items.length > 0 ? t("booksCount", { count: displayedItems.length }) : undefined
+          }
+          action={filterControls}
+        />
 
-              {formats.length > 1 && (
-                <Select value={formatFilter} onValueChange={(value) => setFormatFilter(value ?? "all")}>
-                  <SelectTrigger size="sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t("filterFormatAll")}</SelectItem>
-                    {formats.map((format) => (
-                      <SelectItem key={format} value={format}>
-                        {format.toUpperCase()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Select
-                value={sourceFilter}
-                onValueChange={(value) => setSourceFilter((value as SourceFilter) ?? "all")}
-              >
-                <SelectTrigger size="sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("filterSourceAll")}</SelectItem>
-                  <SelectItem value="linked">{t("sourceLinked")}</SelectItem>
-                  <SelectItem value="manual">{t("sourceManual")}</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="flex gap-1">
-                <Button
-                  size="icon-sm"
-                  variant={viewMode === "grid" ? "secondary" : "outline"}
-                  onClick={() => setViewMode("grid")}
-                  aria-label={t("gridView")}
-                >
-                  <LayoutGrid />
-                </Button>
-                <Button
-                  size="icon-sm"
-                  variant={viewMode === "list" ? "secondary" : "outline"}
-                  onClick={() => setViewMode("list")}
-                  aria-label={t("listView")}
-                >
-                  <List />
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {items.length === 0 ? (
+        {itemsUnavailable && items.length === 0 ? (
+          <Alert>
+            <BookOpen />
+            <AlertTitle>{t("emptyTitle")}</AlertTitle>
+            <AlertDescription>{t("emptyUnavailable")}</AlertDescription>
+          </Alert>
+        ) : items.length === 0 ? (
           <EmptyState
             icon={BookOpen}
             title={t("emptyTitle")}
-            description={itemsUnavailable ? t("emptyUnavailable") : t("emptyDescription")}
+            description={t("emptyDescription")}
           />
         ) : displayedItems.length === 0 ? (
           <EmptyState
@@ -523,73 +658,149 @@ export function LibraryView({
             }
           />
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <RevealGroup className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {displayedItems.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="flex flex-1 flex-col gap-3">
-                  <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
+              <RevealItem key={item.id}>
+                <Card
+                  className={cn(
+                    "h-full cursor-pointer pt-0 transition-colors hover:bg-card/90",
+                    "ring-border/15 hover:ring-chart-1/25"
+                  )}
+                  onClick={() => setDetailItem(item)}
+                >
+                  <div className="relative aspect-3/4 w-full overflow-hidden bg-muted">
                     <LibraryCoverImage
                       itemId={item.id}
                       hasCover={Boolean(item.cover_url)}
                       alt={item.title}
                     />
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card/90 to-transparent"
+                    />
                   </div>
-                  <div>
-                    <p className="line-clamp-2 font-medium">{item.title}</p>
-                    <p className="line-clamp-1 text-sm text-muted-foreground">{item.author}</p>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex items-center justify-between gap-2">
-                  <div className="flex flex-wrap gap-1.5">
-                    <Badge variant="secondary">{item.original_format.toUpperCase()}</Badge>
-                    <Badge variant="outline">{sourceBadgeLabel(item)}</Badge>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => setDetailItem(item)}>
-                    {t("details")}
-                  </Button>
-                </CardFooter>
-              </Card>
+                  <CardContent className="flex flex-1 flex-col gap-1">
+                    <CardTitle className="line-clamp-2">{item.title}</CardTitle>
+                    <CardDescription className="line-clamp-1">{item.author}</CardDescription>
+                  </CardContent>
+                  <CardFooter className="justify-between gap-2 border-border/50 bg-transparent">
+                    <div className="flex min-w-0 flex-wrap gap-1.5">
+                      <Badge variant="secondary">{item.original_format.toUpperCase()}</Badge>
+                      <Badge variant="outline" className="max-w-28 truncate">
+                        {sourceBadgeLabel(item)}
+                      </Badge>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDetailItem(item);
+                      }}
+                    >
+                      {t("details")}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </RevealItem>
             ))}
-          </div>
+          </RevealGroup>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-border/60">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("title")}</TableHead>
-                  <TableHead>{t("author")}</TableHead>
-                  <TableHead>{t("format")}</TableHead>
-                  <TableHead>{t("language")}</TableHead>
-                  <TableHead>{t("added")}</TableHead>
-                  <TableHead className="text-right">{t("action")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.author}</TableCell>
-                    <TableCell className="text-muted-foreground uppercase">
-                      {item.original_format}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {item.language ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(item.added_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => setDetailItem(item)}>
-                        {t("details")}
-                      </Button>
-                    </TableCell>
+          <>
+            <div className="grid gap-3 md:hidden">
+              {displayedItems.map((item) => (
+                <Card
+                  key={item.id}
+                  size="sm"
+                  className="cursor-pointer bg-card/60"
+                  onClick={() => setDetailItem(item)}
+                >
+                  <CardContent className="flex gap-3">
+                    <div className="relative aspect-3/4 w-14 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/40">
+                      <LibraryCoverImage
+                        itemId={item.id}
+                        hasCover={Boolean(item.cover_url)}
+                        alt={item.title}
+                        iconClassName="size-5"
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div>
+                        <CardTitle className="line-clamp-2 text-sm">{item.title}</CardTitle>
+                        <CardDescription className="line-clamp-1">{item.author}</CardDescription>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge variant="secondary">{item.original_format.toUpperCase()}</Badge>
+                        <Badge variant="outline">{sourceBadgeLabel(item)}</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-14" />
+                    <TableHead>{t("title")}</TableHead>
+                    <TableHead>{t("author")}</TableHead>
+                    <TableHead>{t("format")}</TableHead>
+                    <TableHead>{t("language")}</TableHead>
+                    <TableHead>{t("added")}</TableHead>
+                    <TableHead className="text-right">{t("action")}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {displayedItems.map((item) => (
+                    <TableRow
+                      key={item.id}
+                      className="cursor-pointer"
+                      onClick={() => setDetailItem(item)}
+                    >
+                      <TableCell>
+                        <div className="relative size-11 overflow-hidden rounded-md bg-muted ring-1 ring-border/40">
+                          <LibraryCoverImage
+                            itemId={item.id}
+                            hasCover={Boolean(item.cover_url)}
+                            alt={item.title}
+                            iconClassName="size-4"
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <span className="line-clamp-2">{item.title}</span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{item.author}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{item.original_format.toUpperCase()}</Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {item.language ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(item.added_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setDetailItem(item);
+                          }}
+                        >
+                          {t("details")}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
-      </div>
+      </Reveal>
 
       <BookDetailDialog
         item={detailItem}

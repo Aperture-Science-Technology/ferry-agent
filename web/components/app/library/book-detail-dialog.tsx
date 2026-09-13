@@ -111,13 +111,16 @@ export function BookDetailDialog({
       <Dialog open={item !== null} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{item?.title ?? ""}</DialogTitle>
+            <div className="mb-1 h-px w-14 bg-gradient-to-r from-chart-1 via-chart-2 to-transparent" />
+            <DialogTitle className="font-heading text-xl tracking-tight">
+              {item?.title ?? ""}
+            </DialogTitle>
             <DialogDescription>{item?.author ?? ""}</DialogDescription>
           </DialogHeader>
 
           {item && (
-            <div className="grid gap-4 sm:grid-cols-[160px_1fr]">
-              <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
+            <div className="grid gap-5 sm:grid-cols-[168px_1fr]">
+              <div className="relative mx-auto aspect-3/4 w-full max-w-42 overflow-hidden rounded-xl bg-muted ring-1 ring-border/50 sm:mx-0">
                 <LibraryCoverImage
                   itemId={item.id}
                   hasCover={Boolean(item.cover_url)}
@@ -125,13 +128,13 @@ export function BookDetailDialog({
                 />
               </div>
 
-              <div className="space-y-3 text-sm">
+              <div className="space-y-4 text-sm">
                 <div className="flex flex-wrap gap-1.5">
                   <Badge variant="secondary">{item.original_format.toUpperCase()}</Badge>
                   {item.language && <Badge variant="outline">{item.language}</Badge>}
                 </div>
 
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
                   {item.page_count != null && (
                     <>
                       <dt className="text-muted-foreground">{t("pages")}</dt>
@@ -167,10 +170,10 @@ export function BookDetailDialog({
                 </dl>
 
                 {item.description && (
-                  <p className="text-muted-foreground">{item.description}</p>
+                  <p className="leading-relaxed text-muted-foreground">{item.description}</p>
                 )}
 
-                <div className="flex flex-wrap gap-2 pt-1">
+                <div className="flex flex-wrap gap-2 border-t border-border/50 pt-4">
                   <Button size="sm" onClick={() => setDeliverOpen(true)}>
                     <Send />
                     {t("send")}
@@ -192,19 +195,21 @@ export function BookDetailDialog({
             </div>
           )}
 
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium">{t("deliveryHistory")}</h3>
+          <div className="space-y-3 border-t border-border/50 pt-4">
+            <h3 className="font-heading text-sm font-medium tracking-tight">
+              {t("deliveryHistory")}
+            </h3>
             {loadingDeliveries ? (
               <div className="space-y-1.5">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton className="h-10 w-full rounded-lg" />
               </div>
             ) : deliveries && deliveries.length > 0 ? (
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {deliveries.map((job) => (
                   <li
                     key={job.id}
-                    className="flex flex-col gap-1 rounded-lg border border-border/60 px-2.5 py-1.5"
+                    className="flex flex-col gap-1 rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate">
@@ -214,7 +219,7 @@ export function BookDetailDialog({
                       <Badge variant={STATUS_VARIANT[job.status]}>
                         {tDeliveries(`statuses.${job.status}`)}
                       </Badge>
-                      <span className="text-muted-foreground shrink-0">
+                      <span className="shrink-0 text-muted-foreground">
                         {new Date(job.delivered_at ?? job.created_at).toLocaleDateString()}
                       </span>
                     </div>

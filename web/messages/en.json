@@ -142,7 +142,7 @@
   "pages": {
     "library": {
       "title": "Library",
-      "description": "Your books, found in a free source, via your personal access, or added yourself."
+      "description": "Your books, ready for your e-reader — found in free sources, via your personal access, or added yourself."
     },
     "devices": {
       "title": "Devices",
@@ -213,7 +213,7 @@
     "sourceStandardEbooks": "Standard Ebooks",
     "gridView": "Grid view",
     "listView": "List view",
-    "searchHelp": "Type a title or author. Search covers all your access points and partner libraries (Project Gutenberg, Standard Ebooks).",
+    "searchHelp": "Type a title or author. Search covers your personal access and partner libraries (Project Gutenberg, Standard Ebooks).",
     "searchHelpMatch": "Search matches on title and author, with no guaranteed approximate matching.",
     "searching": "Searching…",
     "noResultsHint": "No results. Check your spelling or try a different term.",
@@ -227,31 +227,35 @@
     "uploadErrorBadFormat": "This file is not a recognized book. Accepted formats: EPUB, PDF, MOBI, AZW3.",
     "uploadErrorQuota": "Your storage is full. Delete some books or choose a smaller file.",
     "uploadErrorGeneric": "Couldn't add this file. Please try again.",
-    "toastUploaded": "“{title}” was added to your library."
+    "toastUploaded": "“{title}” was added to your library.",
+    "resultsFound": "{count} results found",
+    "booksCount": "{count} books",
+    "filtersLabel": "Filters",
+    "passageHint": "From file to e-reader — a simple path."
   },
   "deliverDialog": {
     "title": "Send “{title}”",
     "description": "Choose a destination device and the file format to send.",
-  "device": "Device",
-  "devicePlaceholder": "Choose a device",
-  "noDevices": "No devices yet. Add one under Devices.",
-  "methodLabel": "Delivery mode",
-  "methodPlaceholder": "Choose a delivery mode",
-  "methodLoading": "Looking up available delivery modes…",
-  "methodLoadFailed": "Couldn't fetch the available delivery modes.",
-  "noMethodsAvailable": "No delivery mode available for this device.",
-  "methods": {
-    "email": "Email (Send-to-Kindle)",
-    "dropbox": "Dropbox",
-    "drive": "Google Drive",
-    "browser_code": "Code in the browser",
-    "usb": "USB transfer"
-  },
-  "methodUnavailable": {
-    "smtp_not_configured": "Send-to-Kindle unavailable (SMTP not configured).",
-    "cloud_not_linked": "Cloud not linked: link Dropbox or Google Drive from Devices to enable delivery."
-  },
-  "formatOptional": "Format (optional)",
+    "device": "Device",
+    "devicePlaceholder": "Choose a device",
+    "noDevices": "No devices yet. Add one under Devices.",
+    "methodLabel": "Delivery mode",
+    "methodPlaceholder": "Choose a delivery mode",
+    "methodLoading": "Looking up available delivery modes…",
+    "methodLoadFailed": "Couldn't fetch the available delivery modes.",
+    "noMethodsAvailable": "No delivery mode available for this device.",
+    "methods": {
+      "email": "Email (Send-to-Kindle)",
+      "dropbox": "Dropbox",
+      "drive": "Google Drive",
+      "browser_code": "Code in the browser",
+      "usb": "USB transfer"
+    },
+    "methodUnavailable": {
+      "smtp_not_configured": "Send-to-Kindle unavailable (SMTP not configured).",
+      "cloud_not_linked": "Cloud not linked: link Dropbox or Google Drive from Devices to enable delivery."
+    },
+    "formatOptional": "Format (optional)",
     "formatPlaceholder": "Choose a format",
     "formats": {
       "epub": "EPUB",
@@ -339,14 +343,14 @@
     }
   },
   "newDevice": {
-  "title": "New device",
-  "description": "Choose the brand and model: how books arrive is figured out automatically.",
-  "brand": "Brand",
-  "nameOptional": "Name (optional)",
-  "namePlaceholder": "E.g. My salon reader",
-  "modelOptional": "Model (optional)",
-  "modelPlaceholder": "Choose a model",
-  "brands": {
+    "title": "New device",
+    "description": "Choose the brand and model: how books arrive is figured out automatically.",
+    "brand": "Brand",
+    "nameOptional": "Name (optional)",
+    "namePlaceholder": "E.g. My salon reader",
+    "modelOptional": "Model (optional)",
+    "modelPlaceholder": "Choose a model",
+    "brands": {
       "kindle": "Kindle",
       "kobo": "Kobo",
       "tolino": "Tolino",
@@ -354,10 +358,42 @@
       "other": "Other"
     },
     "models": {
-      "kindle": ["Paperwhite", "Oasis", "Scribe", "Basic", "Basic Kids", "Keyboard", "Voyage", "Fire", "Kids"],
-      "kobo": ["Clara", "Libra", "Libra Colour", "Forma", "Sage", "Elipsa", "Nia", "Aura", "Sage Colour"],
-      "tolino": ["Shine", "Vision", "Page", "Epos", "Tab"],
-      "pocketbook": ["Touch", "InkPad", "Basic Lux", "Verse", "Era"]
+      "kindle": [
+        "Paperwhite",
+        "Oasis",
+        "Scribe",
+        "Basic",
+        "Basic Kids",
+        "Keyboard",
+        "Voyage",
+        "Fire",
+        "Kids"
+      ],
+      "kobo": [
+        "Clara",
+        "Libra",
+        "Libra Colour",
+        "Forma",
+        "Sage",
+        "Elipsa",
+        "Nia",
+        "Aura",
+        "Sage Colour"
+      ],
+      "tolino": [
+        "Shine",
+        "Vision",
+        "Page",
+        "Epos",
+        "Tab"
+      ],
+      "pocketbook": [
+        "Touch",
+        "InkPad",
+        "Basic Lux",
+        "Verse",
+        "Era"
+      ]
     },
     "toastCreated": "Device added.",
     "toastFailed": "Couldn't add the device right now. Please try again."

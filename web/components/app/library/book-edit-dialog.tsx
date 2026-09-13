@@ -100,7 +100,10 @@ export function BookEditDialog({
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t("title", { title: item?.title ?? "" })}</DialogTitle>
+          <div className="mb-1 h-px w-14 bg-gradient-to-r from-chart-1 via-chart-2 to-transparent" />
+          <DialogTitle className="font-heading tracking-tight">
+            {t("title", { title: item?.title ?? "" })}
+          </DialogTitle>
           <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 

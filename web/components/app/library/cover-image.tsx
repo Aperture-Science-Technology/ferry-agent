@@ -58,8 +58,13 @@ export function LibraryCoverImage({
 
   if (!src) {
     return (
-      <div className={cn("flex h-full w-full items-center justify-center", className)}>
-        <BookOpen className={cn("size-10 text-muted-foreground", iconClassName)} />
+      <div
+        className={cn(
+          "flex h-full w-full items-center justify-center bg-gradient-to-br from-muted via-muted to-accent/40",
+          className
+        )}
+      >
+        <BookOpen className={cn("size-10 text-chart-1/70", iconClassName)} />
       </div>
     );
   }
@@ -89,7 +94,11 @@ export function SearchCoverImage({
   iconClassName?: string;
 }) {
   if (!coverUrl) {
-    return <BookOpen className={cn("size-4 text-muted-foreground", iconClassName)} />;
+    return (
+      <div className={cn("flex h-full w-full items-center justify-center", className)}>
+        <BookOpen className={cn("size-4 text-chart-1/70", iconClassName)} />
+      </div>
+    );
   }
 
   return (
