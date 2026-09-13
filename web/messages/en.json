@@ -196,6 +196,7 @@
     "toastFetchRevoked": "Your access is no longer available.",
     "toastAdded": "“{title}” was added to your library.",
     "toastAddFailed": "Couldn't add this book. Please try again.",
+    "toastAddQuota": "Your storage is full. Delete some books or choose a smaller file.",
     "language": "Language",
     "details": "Details",
     "noMatch": "No book matches these filters.",
@@ -497,7 +498,7 @@
     "toastLoadFailed": "Couldn't load tracking for this delivery."
   },
   "settings": {
-    "unavailable": "These settings aren't available yet. Default values are shown.",
+    "unavailable": "Couldn't load your settings right now. The values shown may be incomplete.",
     "accountTitle": "My account",
     "accountDescription": "Your information and delivery preferences.",
     "email": "Email",

@@ -109,6 +109,12 @@ async def import_from_connector(
 
     fetched_path = await connector.fetch(result_id)
     fetched = Path(fetched_path)
+    incoming_bytes = fetched.stat().st_size
+    try:
+        await ensure_storage_quota(db, user_id, incoming_bytes)
+    except QuotaExceededError:
+        fetched.unlink(missing_ok=True)
+        raise
 
     dest = _library_storage_path(fetched.name)
     shutil.move(str(fetched), str(dest))
@@ -184,6 +190,7 @@ async def import_from_gateway(
     metadata: dict,
 ) -> LibraryItem:
     """Persiste un ebook relaye et conserve sa provenance dans Source.config."""
+    await ensure_storage_quota(db, user_id, len(content))
     safe_name = Path(filename).name or f"gateway-book.{detected_format}"
     dest = _library_storage_path(safe_name)
     dest.write_bytes(content)

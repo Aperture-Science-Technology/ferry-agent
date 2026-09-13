@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -15,13 +16,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Link } from "@/i18n/navigation";
 import { SourcesManager } from "@/components/app/sources/sources-manager";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
-import { useApiClient } from "@/lib/api-client";
+import { ApiError, useApiClient } from "@/lib/api-client";
 import type { OpdsToken, Source } from "@/lib/types";
 
-const FORMATS = ["epub", "mobi", "azw3", "pdf"];
+const FORMATS = ["epub", "mobi", "azw3", "pdf"] as const;
+
+type SavedSettings = {
+  kindle_email: string | null;
+  default_format: string;
+};
+
+function parseApiDetail(raw: string): string | null {
+  try {
+    const body = JSON.parse(raw) as { detail?: unknown };
+    if (typeof body.detail === "string" && body.detail.trim()) {
+      return body.detail.trim();
+    }
+    if (Array.isArray(body.detail)) {
+      const first = body.detail[0] as { msg?: string } | undefined;
+      if (first?.msg) return first.msg;
+    }
+  } catch {
+    // plain text
+  }
+  const trimmed = raw.trim();
+  return trimmed || null;
+}
 
 export function SettingsForm({
   initialEmail,
@@ -44,24 +66,43 @@ export function SettingsForm({
 }) {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
+  const router = useRouter();
   const { call } = useApiClient();
   const [kindleEmail, setKindleEmail] = useState(initialKindleEmail);
   const [defaultFormat, setDefaultFormat] = useState(initialDefaultFormat);
   const [saving, setSaving] = useState(false);
 
+  // Apres router.refresh(), les props SSR redeviennent la source de verite.
+  useEffect(() => {
+    setKindleEmail(initialKindleEmail);
+    setDefaultFormat(initialDefaultFormat);
+  }, [initialKindleEmail, initialDefaultFormat]);
+
   async function save() {
     setSaving(true);
     try {
-      await call("/api/v1/users/me", {
+      const saved = await call<SavedSettings>("/api/v1/users/me", {
         method: "PATCH",
         body: JSON.stringify({
-          kindle_email: kindleEmail || null,
+          kindle_email: kindleEmail.trim() ? kindleEmail.trim() : null,
           default_format: defaultFormat,
         }),
       });
+      setKindleEmail(saved.kindle_email ?? "");
+      setDefaultFormat(saved.default_format);
       toast.success(t("toastSaved"));
-    } catch {
-      toast.error(t("toastFailed"));
+      router.refresh();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const detail = parseApiDetail(error.message);
+        if (error.status === 422 && detail) {
+          toast.error(detail);
+        } else {
+          toast.error(t("toastFailed"));
+        }
+      } else {
+        toast.error(t("toastFailed"));
+      }
     } finally {
       setSaving(false);
     }
@@ -93,6 +134,7 @@ export function SettingsForm({
               value={kindleEmail}
               onChange={(event) => setKindleEmail(event.target.value)}
               placeholder={t("kindleEmailPlaceholder")}
+              disabled={settingsUnavailable}
             />
             <p className="text-xs text-muted-foreground">{t("kindleEmailHint")}</p>
           </div>
@@ -101,6 +143,7 @@ export function SettingsForm({
             <Select
               value={defaultFormat}
               onValueChange={(value) => setDefaultFormat(value ?? "epub")}
+              disabled={settingsUnavailable}
             >
               <SelectTrigger className="w-full uppercase">
                 <SelectValue />
@@ -115,7 +158,7 @@ export function SettingsForm({
             </Select>
             <p className="text-xs text-muted-foreground">{t("defaultFormatHint")}</p>
           </div>
-          <Button onClick={save} disabled={saving}>
+          <Button onClick={save} disabled={saving || settingsUnavailable}>
             {saving && <Loader2 className="animate-spin" />}
             {tCommon("save")}
           </Button>

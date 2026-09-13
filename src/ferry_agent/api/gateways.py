@@ -26,7 +26,7 @@ from ferry_agent.schemas import (
 )
 from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services import library
-from ferry_agent.services.errors import FileTooLargeError, UnknownFormatError
+from ferry_agent.services.errors import FileTooLargeError, QuotaExceededError, UnknownFormatError
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 from ferry_agent.services.virustotal import is_known_malicious
 
@@ -216,16 +216,24 @@ async def submit_fetch_result(
     if detected_format == "mobi" and Path(filename).suffix.lower() == ".azw3":
         detected_format = "azw3"
     metadata = job.payload.get("result", {})
-    item = await library.import_from_gateway(
-        db,
-        gateway.user_id,
-        gateway.id,
-        job.id,
-        filename,
-        content,
-        detected_format,
-        metadata,
-    )
+    try:
+        item = await library.import_from_gateway(
+            db,
+            gateway.user_id,
+            gateway.id,
+            job.id,
+            filename,
+            content,
+            detected_format,
+            metadata,
+        )
+    except QuotaExceededError as exc:
+        job.status = GatewayJobStatus.failed
+        job.result_ref = str(exc)
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_507_INSUFFICIENT_STORAGE, detail=str(exc)
+        ) from exc
     job.status = GatewayJobStatus.done
     job.result_ref = str(item.id)
     await db.commit()

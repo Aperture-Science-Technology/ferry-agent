@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { BookOpen, Feather, Loader2, Share2, Upload, type LucideIcon } from "lucide-react";
@@ -27,6 +27,10 @@ export function SourcesManager({
   const { call } = useApiClient();
   const [sources, setSources] = useState(initialSources);
   const [pendingId, setPendingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSources(initialSources);
+  }, [initialSources]);
 
   async function toggle(source: Source) {
     setPendingId(source.id);

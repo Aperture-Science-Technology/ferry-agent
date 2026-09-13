@@ -21,8 +21,9 @@ async def ensure_default_sources(db: AsyncSession, user_id: uuid.UUID) -> None:
     """Insere les Source par defaut manquantes pour ``user_id`` (idempotent).
 
     Les appels concurrents s'appuient sur ``UNIQUE(user_id, type)`` : un
-    ``IntegrityError`` signifie qu'un autre requete a gagne la course — on
-    rollback et on laisse l'appelant relire l'etat coherent.
+    ``IntegrityError`` dans le savepoint signifie qu'une autre requete a
+    gagne la course. Le savepoint est annule sans rollback de la transaction
+    externe (ex. User fraichement cree dans ``_get_or_create_user``).
     """
     result = await db.execute(
         select(Source.type).where(
@@ -35,16 +36,18 @@ async def ensure_default_sources(db: AsyncSession, user_id: uuid.UUID) -> None:
     if not missing:
         return
 
-    for source_type in missing:
-        db.add(
-            Source(
-                user_id=user_id,
-                type=source_type,
-                config={},
-                enabled=True,
-            )
-        )
     try:
-        await db.commit()
+        async with db.begin_nested():
+            for source_type in missing:
+                db.add(
+                    Source(
+                        user_id=user_id,
+                        type=source_type,
+                        config={},
+                        enabled=True,
+                    )
+                )
+            await db.flush()
     except IntegrityError:
-        await db.rollback()
+        pass
+    await db.commit()

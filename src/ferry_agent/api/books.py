@@ -372,6 +372,10 @@ async def add_book(
             item = await library.import_from_connector(
                 db, user.id, source, result_id, metadata=metadata
             )
+        except QuotaExceededError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_507_INSUFFICIENT_STORAGE, detail=str(exc)
+            ) from exc
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         return LibraryItemOut.model_validate(item)

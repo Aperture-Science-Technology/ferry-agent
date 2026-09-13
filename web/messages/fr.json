@@ -196,6 +196,7 @@
     "toastFetchRevoked": "Votre accès n'est plus disponible.",
     "toastAdded": "« {title} » a été ajouté à votre bibliothèque.",
     "toastAddFailed": "Impossible d'ajouter ce livre. Réessayez.",
+    "toastAddQuota": "Votre espace est plein. Supprimez des livres ou choisissez un fichier plus léger.",
     "language": "Langue",
     "details": "Détails",
     "noMatch": "Aucun livre ne correspond à ces filtres.",
@@ -497,7 +498,7 @@
     "toastLoadFailed": "Impossible de charger le suivi de cet envoi."
   },
   "settings": {
-    "unavailable": "Ces réglages ne sont pas encore disponibles. Les valeurs par défaut sont affichées.",
+    "unavailable": "Impossible de charger vos réglages pour le moment. Les valeurs affichées peuvent être incomplètes.",
     "accountTitle": "Mon compte",
     "accountDescription": "Vos informations et vos préférences d'envoi.",
     "email": "Email",

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, RootModel
+from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, RootModel, field_validator
 
 from ferry_agent.models import (
     DeliveryMethod,
@@ -211,8 +211,18 @@ class UserOut(BaseModel):
 
 
 class UserPatch(BaseModel):
+    """Champs optionnels du profil. Absent = inchange ; null = efface (kindle_email)."""
+
     kindle_email: EmailStr | None = None
     default_format: Literal["epub", "mobi", "azw3", "pdf"] | None = None
+
+    @field_validator("kindle_email", mode="before")
+    @classmethod
+    def _empty_kindle_email_to_none(cls, value: object) -> object:
+        # "" depuis un formulaire = effacement, pas une adresse invalide.
+        if value == "":
+            return None
+        return value
 
 
 class SourceOut(BaseModel):

@@ -32,7 +32,7 @@ import {
 } from "@/components/app/library/cover-image";
 import { UploadDropzone } from "@/components/app/library/upload-dropzone";
 import { Reveal } from "@/components/motion/reveal";
-import { useApiClient } from "@/lib/api-client";
+import { ApiError, useApiClient } from "@/lib/api-client";
 import { useGatewayJob } from "@/lib/use-gateway-job";
 import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@/lib/types";
 
@@ -59,6 +59,7 @@ function mapFetchError(
   }
   if (/malveillant|VirusTotal/i.test(error)) return t("toastFetchMalicious");
   if (/volumineux|too large/i.test(error)) return t("toastFetchTooLarge");
+  if (/espace est plein|storage is full/i.test(error)) return t("toastAddQuota");
   if (/livre reconnu|Formats acceptés|not a recognized/i.test(error)) {
     return t("toastFetchBadFormat");
   }
@@ -244,8 +245,12 @@ export function LibraryView({
         toast.success(t("toastAdded", { title: added.title }));
         markOwned(resultKey);
       }
-    } catch {
-      toast.error(t("toastAddFailed"));
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 507) {
+        toast.error(t("toastAddQuota"));
+      } else {
+        toast.error(t("toastAddFailed"));
+      }
     } finally {
       setAddingId(null);
     }
