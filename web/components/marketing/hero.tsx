@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { Show, SignInButton } from "@clerk/nextjs";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
@@ -9,6 +9,10 @@ import { StatusDot } from "@/components/status-dot";
 
 export function Hero() {
   const t = useTranslations("hero");
+  const prefersReducedMotion = useReducedMotion();
+  const enterY = prefersReducedMotion ? 0 : 16;
+  const duration = prefersReducedMotion ? 0.01 : 0.6;
+  const delayStep = prefersReducedMotion ? 0 : 0.1;
 
   return (
     <section className="relative overflow-hidden">
@@ -18,9 +22,9 @@ export function Hero() {
 
       <div className="mx-auto flex max-w-4xl flex-col items-center px-6 pt-24 pb-20 text-center">
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: prefersReducedMotion ? 0.01 : 0.5 }}
           className="mb-8 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/50 px-3 py-1 text-xs text-muted-foreground"
         >
           <StatusDot />
@@ -28,30 +32,30 @@ export function Hero() {
         </motion.div>
 
         <motion.h1
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: enterY }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          transition={{ duration, ease: "easeOut" }}
           className="font-heading text-5xl leading-[1.05] font-medium tracking-tight text-balance sm:text-6xl"
         >
           {t("titleBefore")}{" "}
-          <span className="bg-gradient-to-r from-teal-300 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-teal-300 via-sky-300 to-teal-200 bg-clip-text text-transparent">
             {t("titleHighlight")}
           </span>
         </motion.h1>
 
         <motion.p
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: enterY }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
+          transition={{ duration, ease: "easeOut", delay: delayStep }}
           className="mt-6 max-w-xl text-lg text-muted-foreground"
         >
           {t("subtitle")}
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: enterY }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+          transition={{ duration, ease: "easeOut", delay: delayStep * 2 }}
           className="mt-10 flex flex-wrap items-center justify-center gap-3"
         >
           <Show when="signed-out">

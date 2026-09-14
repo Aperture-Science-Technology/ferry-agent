@@ -29,16 +29,17 @@
   },
   "footer": {
     "builtBy": "Built by Aperture Science Technology",
-    "openSource": "open-source",
-    "docs": "guide",
-    "dashboard": "dashboard"
+    "howItWorks": "How it works",
+    "faq": "FAQ",
+    "docs": "Guide",
+    "dashboard": "Workspace"
   },
   "hero": {
-    "badge": "Your personal access is ready",
-    "titleBefore": "The bridge between your books and",
-    "titleHighlight": "your e-reader.",
-    "subtitle": "Runs at home. Free book sources, one tap away. Your access stays yours.",
-    "ctaDashboard": "Open dashboard",
+    "badge": "At home, for your e-reader",
+    "titleBefore": "Ferry Agent.",
+    "titleHighlight": "Find, prepare, send.",
+    "subtitle": "Search for a book, add it to your library, send it to your device — simply.",
+    "ctaDashboard": "Open the workspace",
     "ctaHow": "How it works"
   },
   "valueProps": {
@@ -46,15 +47,15 @@
     "items": {
       "selfHosted": {
         "title": "Runs at home.",
-        "body": "Your books stay on your machine. Nothing is stored on our side."
+        "body": "Your books stay on your machine. Nothing is stored with us."
       },
       "legal": {
-        "title": "Free book sources.",
-        "body": "Gutenberg, Standard Ebooks, your own files… Search once, send anywhere."
+        "title": "Open-access books.",
+        "body": "Gutenberg, Standard Ebooks, your own files… Search once, send wherever you want."
       },
       "detached": {
-        "title": "On your machine, not ours.",
-        "body": "Your personal access runs on your computer. It never goes through our servers."
+        "title": "Your access, at home.",
+        "body": "The Access program runs on your computer. It never goes through our servers."
       }
     }
   },
@@ -81,52 +82,53 @@
   },
   "howItWorks": {
     "title": "How it works.",
+    "subtitle": "Three steps: find a book, prepare it in your library, send it to your e-reader.",
     "steps": {
-      "pair": {
+      "find": {
         "number": "01",
-        "title": "Connect your personal access",
-        "body": "Create your access, run the small program at home, you're set."
+        "title": "Find a book",
+        "body": "Search by title or author. Open-access sources and your personal access, in one search."
       },
-      "search": {
+      "prepare": {
         "number": "02",
-        "title": "Search for a book",
-        "body": "Free sources and your personal access, in one search."
+        "title": "Prepare it in your library",
+        "body": "Add the book. It stays on your side, ready to send."
       },
-      "deliver": {
+      "send": {
         "number": "03",
         "title": "Send it to your e-reader",
-        "body": "Pick a device. Ferry Agent handles the format and the delivery."
+        "body": "Choose the device. Ferry Agent handles the format and delivery."
       }
     }
   },
   "mcpSpotlight": {
     "eyebrow": "For AI assistants too",
-    "title": "Your library, accessible by AI",
-    "body": "Ferry Agent also works from an AI assistant (Claude, ChatGPT…) via MCP — search, add, and send your books from the conversation.",
+    "title": "Your library, also from a conversation",
+    "body": "Search, add, and send your books from an AI assistant (Claude, ChatGPT…), with the same connection as the workspace.",
     "cta": "See the guide"
   },
   "faq": {
-    "title": "Questions. Answered.",
+    "title": "Questions. Answers.",
     "items": {
       "selfHosted": {
-        "q": "Does it run on my machine?",
-        "a": "Yes. The core and your library stay on your machine. Nothing is stored on servers we control."
+        "q": "Does this run on my machine?",
+        "a": "Yes. The essentials and your library stay on your machine. Nothing is stored on servers we control."
       },
       "gatewayNeeded": {
-        "q": "Do I need personal access for free book sources?",
-        "a": "No. Gutenberg, Standard Ebooks and your uploads work right away. Personal access is only needed for sources that live on your own network."
+        "q": "Do I need personal access to get started?",
+        "a": "Not for open-access books (Gutenberg, Standard Ebooks) and your own files. Personal access is only for sources set up on your machine."
       },
       "readers": {
         "q": "Which e-readers are supported?",
-        "a": "Kindle (sent by email), Kobo and cloud-linked devices, Tolino and browsers via a short-lived code, and any USB-connected reader."
+        "a": "Kindle (email delivery), Kobo and cloud-linked devices, Tolino and browsers via a temporary code, and any e-reader connected over USB."
       },
       "myData": {
-        "q": "Is my data mine?",
-        "a": "Yes. Your library, your devices, your delivery history — all stored on your own setup."
+        "q": "Do I own my data?",
+        "a": "Yes. Your library, your devices, your delivery history — everything stays with you."
       },
       "agent": {
         "q": "Can I automate deliveries?",
-        "a": "Yes. A technical interface (API) uses the same sign-in as the dashboard, so something automated can search and deliver for you."
+        "a": "Yes. An AI assistant can search, add, and send for you, using the same connection as the workspace."
       }
     }
   },
@@ -621,56 +623,65 @@
   },
   "docs": {
     "metaTitle": "Install guide | Ferry Agent",
-    "metaDescription": "Install your Ferry Agent personal access at home with Docker, in a single command.",
+    "metaDescription": "Install your Ferry Agent personal access at home with Docker Desktop or OrbStack.",
     "eyebrow": "Guide",
     "title": "Install your personal access",
-    "intro": "Just one command to run: your Ferry Agent personal access is up and running in minutes.",
-    "openAccess": "Open Access",
+    "intro": "This guide follows the simple path: Docker Desktop or OrbStack, then import the provided file. In a few minutes, your access runs at home.",
+    "pathChoice": "Recommended path: the Docker Desktop or OrbStack interface. Advanced options (terminal) are at the bottom of the page.",
     "checklistTitle": "What you need",
     "checklistItem1": "Docker Desktop installed (or OrbStack on Mac)",
-    "checklistItem2": "An access created in the Ferry Agent dashboard",
-    "stepsTitle": "The 5 steps",
+    "checklistItem2": "A Ferry Agent account, so you can open the Access page",
+    "checklistItem3": "A few minutes to copy the two codes shown only once",
+    "stepsTitle": "The steps",
     "stepSuccessLabel": "You'll know it worked when:",
     "step1Title": "Create your access",
-    "step1Action": "Open the Access page and click Create an access.",
+    "step1Action": "Open the Access page, then click Add access. When it is created, note the connection code and the access key. Use the “Both codes together” block to copy everything at once — they will never be shown again.",
     "step1Cta": "Open Access",
-    "step1Success": "A connection code and an access key appear. Copy them now: they will never be shown again.",
-    "step2Title": "Get the image",
-    "step2Action": "Download the Docker image with the button below. This is the only way to get it.",
-    "step2Cta": "Direct download of the Docker image",
-    "step2UseFile": "The .tar file can be imported directly into Docker Desktop or OrbStack. Once imported, continue to the next step.",
-    "step2Success": "The image appears in Docker Desktop or OrbStack.",
-    "step3Title": "Launch the container",
-    "step3Action": "Paste this command in the terminal. Replace CODE and KEY with the two codes shown once when you created the access (or copy the “Both codes together” block from the Access page).",
-    "step3Hint": "Both codes are required. The downloads folder is created automatically next to where you run the command.",
-    "step3Success": "On the Access page, your access shows as Connected.",
-    "step4Title": "Add an indexer",
-    "step4Action": "Open this address in your browser, then add an indexer.",
-    "step4Success": "The Prowlarr page shows your indexer in the list.",
-    "step5Title": "Connect your AI assistant",
-    "step5Action": "Add this MCP URL to Claude, ChatGPT, or your favorite assistant to search, add, and send your books from the conversation:",
-    "step5Cta": "Open the dashboard",
-    "closingLine": "Your books arrive on their own in your library.",
-    "glossaryTitle": "Glossary",
+    "step1Success": "Both codes appear once, with the “Both codes together” block.",
+    "step2Title": "Download the install file",
+    "step2Action": "Download the file with the button below. This is the file to import into Docker Desktop or OrbStack.",
+    "step2Cta": "Download the install file",
+    "step2UseFile": "Keep this .tar file handy for the next step.",
+    "step2Success": "The download is complete on your computer.",
+    "step3Title": "Import the file in Docker Desktop or OrbStack",
+    "step3Action": "Open Docker Desktop or OrbStack. Import the .tar file you just downloaded, then wait until import finishes.",
+    "step3Success": "The Ferry Agent image appears in the Images list in Docker Desktop or OrbStack.",
+    "step4Title": "Start with both codes",
+    "step4Action": "In Docker Desktop or OrbStack, start the imported image. Paste exactly the “Both codes together” block from Access (PAIRING_TOKEN and GATEWAY_KEY) into the startup settings that ask for them. Do not invent values, and do not leave blanks to fill in.",
+    "step4Hint": "Both codes are required. Without them, the Access page will stay waiting for a connection.",
+    "step4Success": "The program is running at home (started status in Docker Desktop or OrbStack).",
+    "step5Title": "Check the connection",
+    "step5Action": "Go back to the Access page in Ferry Agent. The status should become Connected.",
+    "step5Cta": "Back to Access",
+    "step5Success": "On Access, the status shows Connected.",
+    "afterTitle": "Next",
+    "afterBody": "You can search for a book, add it to your library, then send it to your e-reader. For sources set up at home, also open the program’s local address (often http://127.0.0.1:9696) once Access is connected.",
+    "afterMcp": "For an AI assistant, add this address to Claude, ChatGPT, or your tool:",
+    "closingLine": "Find, prepare, send — your books follow this path to your e-reader.",
+    "glossaryTitle": "Short glossary",
+    "glossaryAccessTerm": "Personal access",
+    "glossaryAccessDef": "The program installed on your computer that links it to your Ferry Agent account.",
+    "glossaryCodesTerm": "Connection code and access key",
+    "glossaryCodesDef": "Two distinct codes, shown only once at creation. The “Both codes together” block groups them so you can paste PAIRING_TOKEN and GATEWAY_KEY as-is.",
     "glossaryProwlarrTerm": "Prowlarr",
-    "glossaryProwlarrDef": "The program that manages your indexers and sends them to Ferry Agent.",
-    "glossaryIndexerTerm": "Indexer",
-    "glossaryIndexerDef": "A site that lists files available for download.",
-    "glossaryMagnetTerm": "Magnet link",
-    "glossaryMagnetDef": "A link that starts a download directly, without a .torrent file.",
-    "glossaryGatewayTerm": "Gateway",
-    "glossaryGatewayDef": "The program installed on your computer that connects it to Ferry Agent.",
-    "advancedTitle": "Advanced options",
-    "scriptAltTitle": "Install assistant (optional)",
-    "scriptAltDescription": "This assistant does not download the Docker image. Use it only if you want help finishing the install, after getting the image in step 2.",
-    "scriptAltBody": "Unzip the downloaded file, open a terminal in that folder, then run:",
-    "scriptAltCta": "Download the install assistant",
-    "scriptAltHint": "The assistant will ask for your connection code and access key, then finish the install.",
+    "glossaryProwlarrDef": "The local screen that helps you connect extra search sources at home.",
+    "glossaryIndexerTerm": "Source / indexer",
+    "glossaryIndexerDef": "A site or catalog that lists books available to retrieve.",
+    "advancedTitle": "Troubleshooting and advanced options",
+    "troubleshootTitle": "Troubleshooting",
+    "troubleshootIntro": "If something is stuck, start with these points:",
+    "troubleshootWaiting": "Access stays on “Waiting for the first connection”: check that the program is running in Docker Desktop or OrbStack, and that both codes are pasted there.",
+    "troubleshootExpired": "The code expired: on Access, click Create new codes, then update both codes in Docker Desktop or OrbStack.",
+    "troubleshootOffline": "Status Offline: restart the program at home. Your computer must stay on and connected to the internet.",
+    "troubleshootBothCodes": "One code is not enough. Always paste the “Both codes together” block (connection code + access key).",
+    "terminalAltTitle": "Start from the terminal (advanced)",
+    "terminalAltBody": "If you prefer the terminal, start the already imported image and paste the real values from the “Both codes together” block (PAIRING_TOKEN and GATEWAY_KEY) as environment variables. Never replace them with sample values like CODE or KEY.",
+    "terminalAltHint": "Codes come only from the Access page, once at creation (or after Create new codes).",
     "byoTitle": "Runs on your computer",
     "byoDescription": "Your personal access runs on your machine, not on our servers.",
     "byoBody1": "Your computer must stay on and connected to the internet for searches and downloads to work.",
-    "byoBody2": "For 24/7 use, install the program on a small always-on server, using the same two codes.",
-    "createAccess": "Create an access",
+    "byoBody2": "For 24/7 use, install the program on a machine that stays on, using the same two codes.",
+    "createAccess": "Add access",
     "backHome": "Back to home"
   }
 }

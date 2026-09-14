@@ -10,17 +10,27 @@ export function SiteFooter() {
   return (
     <footer className="mx-auto max-w-6xl px-6 py-10">
       <Separator className="mb-8 bg-border/60" />
-      <div className="flex flex-col items-center justify-between gap-4 text-sm text-muted-foreground sm:flex-row">
-        <p>{t("builtBy")}</p>
-        <div className="flex items-center gap-6">
-          <span>{t("openSource")}</span>
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <p className="font-heading text-lg font-medium tracking-tight text-foreground">
+            Ferry Agent
+          </p>
+          <p className="text-sm text-muted-foreground">{t("builtBy")}</p>
+        </div>
+        <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+          <Link href="/#how-it-works" className="transition hover:text-foreground">
+            {t("howItWorks")}
+          </Link>
+          <Link href="/#faq" className="transition hover:text-foreground">
+            {t("faq")}
+          </Link>
           <Link href="/docs" className="transition hover:text-foreground">
             {t("docs")}
           </Link>
           <Link href="/app/bibliotheque" className="transition hover:text-foreground">
             {t("dashboard")}
           </Link>
-        </div>
+        </nav>
       </div>
     </footer>
   );

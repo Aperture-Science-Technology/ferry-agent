@@ -29,15 +29,16 @@
   },
   "footer": {
     "builtBy": "Conçu par Aperture Science Technology",
-    "openSource": "open-source",
-    "docs": "guide",
-    "dashboard": "espace"
+    "howItWorks": "Comment ça marche",
+    "faq": "FAQ",
+    "docs": "Guide",
+    "dashboard": "Espace"
   },
   "hero": {
-    "badge": "Votre accès personnel est prêt",
-    "titleBefore": "Le pont entre vos livres et",
-    "titleHighlight": "votre liseuse.",
-    "subtitle": "Tourne chez vous. Des livres en accès libre, en un clic. Votre accès reste le vôtre.",
+    "badge": "Chez vous, pour votre liseuse",
+    "titleBefore": "Ferry Agent.",
+    "titleHighlight": "Trouver, préparer, envoyer.",
+    "subtitle": "Cherchez un livre, ajoutez-le à votre bibliothèque, envoyez-le sur votre appareil — simplement.",
     "ctaDashboard": "Ouvrir l'espace",
     "ctaHow": "Comment ça marche"
   },
@@ -53,8 +54,8 @@
         "body": "Gutenberg, Standard Ebooks, vos fichiers… Cherchez une fois, envoyez où vous voulez."
       },
       "detached": {
-        "title": "Installé chez vous, pas chez nous.",
-        "body": "Votre accès personnel tourne sur votre ordinateur. Il ne passe jamais par nos serveurs."
+        "title": "Votre accès, chez vous.",
+        "body": "Le programme Accès tourne sur votre ordinateur. Il ne passe jamais par nos serveurs."
       }
     }
   },
@@ -81,18 +82,19 @@
   },
   "howItWorks": {
     "title": "Comment ça marche.",
+    "subtitle": "Trois gestes : trouver un livre, le préparer dans votre bibliothèque, l'envoyer à votre liseuse.",
     "steps": {
-      "pair": {
+      "find": {
         "number": "01",
-        "title": "Connectez votre accès personnel",
-        "body": "Créez votre accès, lancez le petit programme chez vous, c'est prêt."
+        "title": "Trouvez un livre",
+        "body": "Cherchez par titre ou auteur. Sources en accès libre et votre accès personnel, en une seule recherche."
       },
-      "search": {
+      "prepare": {
         "number": "02",
-        "title": "Cherchez un livre",
-        "body": "Sources en accès libre et votre accès personnel, en une seule recherche."
+        "title": "Préparez-le dans votre bibliothèque",
+        "body": "Ajoutez le livre. Il reste chez vous, prêt pour l'envoi."
       },
-      "deliver": {
+      "send": {
         "number": "03",
         "title": "Envoyez-le à votre liseuse",
         "body": "Choisissez l'appareil. Ferry Agent s'occupe du format et de l'envoi."
@@ -101,8 +103,8 @@
   },
   "mcpSpotlight": {
     "eyebrow": "Pour les assistants IA aussi",
-    "title": "Votre bibliothèque accessible par IA",
-    "body": "Ferry Agent s'utilise aussi depuis un assistant IA (Claude, ChatGPT…) via MCP — chercher, ajouter, envoyer vos livres, dans la conversation.",
+    "title": "Votre bibliothèque, aussi depuis une conversation",
+    "body": "Cherchez, ajoutez et envoyez vos livres depuis un assistant IA (Claude, ChatGPT…), avec la même connexion que l'espace.",
     "cta": "Voir le guide"
   },
   "faq": {
@@ -113,8 +115,8 @@
         "a": "Oui. L'essentiel et votre bibliothèque restent sur votre machine. Rien n'est stocké sur des serveurs que nous contrôlons."
       },
       "gatewayNeeded": {
-        "q": "Ai-je besoin d'un accès personnel pour les livres en accès libre ?",
-        "a": "Non. Gutenberg, Standard Ebooks et vos fichiers fonctionnent tout de suite. L'accès personnel sert seulement pour les sources installées chez vous."
+        "q": "Ai-je besoin d'un accès personnel pour commencer ?",
+        "a": "Non pour les livres en accès libre (Gutenberg, Standard Ebooks) et vos propres fichiers. L'accès personnel sert pour les sources installées chez vous."
       },
       "readers": {
         "q": "Quelles liseuses sont prises en charge ?",
@@ -126,7 +128,7 @@
       },
       "agent": {
         "q": "Puis-je automatiser les envois ?",
-        "a": "Oui. Une interface technique (API) utilise la même connexion que l'espace, pour chercher et envoyer à votre place."
+        "a": "Oui. Un assistant IA peut chercher, ajouter et envoyer à votre place, avec la même connexion que l'espace."
       }
     }
   },
@@ -621,56 +623,65 @@
   },
   "docs": {
     "metaTitle": "Guide d'installation | Ferry Agent",
-    "metaDescription": "Installez votre accès personnel Ferry Agent chez vous avec Docker, en une seule commande.",
+    "metaDescription": "Installez votre accès personnel Ferry Agent chez vous avec Docker Desktop ou OrbStack.",
     "eyebrow": "Guide",
     "title": "Installez votre accès personnel",
-    "intro": "Une seule commande à lancer : votre accès personnel Ferry Agent tourne chez vous en quelques minutes.",
-    "openAccess": "Ouvrir Accès",
+    "intro": "Ce guide suit le parcours simple : Docker Desktop ou OrbStack, puis import du fichier fourni. En quelques minutes, votre accès tourne chez vous.",
+    "pathChoice": "Parcours recommandé : l'interface Docker Desktop ou OrbStack. Les options avancées (terminal) sont en bas de page.",
     "checklistTitle": "Ce dont vous avez besoin",
     "checklistItem1": "Docker Desktop installé (ou OrbStack sur Mac)",
-    "checklistItem2": "Un accès créé dans le tableau de bord Ferry Agent",
-    "stepsTitle": "Les 5 étapes",
-    "stepSuccessLabel": "Vous savez que c'est bon quand :",
+    "checklistItem2": "Un compte Ferry Agent, pour ouvrir la page Accès",
+    "checklistItem3": "Quelques minutes pour copier les deux codes affichés une seule fois",
+    "stepsTitle": "Les étapes",
+    "stepSuccessLabel": "C'est bon quand :",
     "step1Title": "Créez votre accès",
-    "step1Action": "Ouvrez la page Accès et cliquez sur Créer un accès.",
+    "step1Action": "Ouvrez la page Accès, puis cliquez sur Ajouter un accès. À la création, notez le code de connexion et la clé d'accès. Utilisez le bloc « Les deux codes ensemble » pour tout copier d'un coup — ils ne seront plus jamais réaffichés.",
     "step1Cta": "Ouvrir Accès",
-    "step1Success": "Un code de connexion et une clé d'accès s'affichent. Copiez-les tout de suite : ils ne seront plus jamais réaffichés.",
-    "step2Title": "Récupérez l'image",
-    "step2Action": "Téléchargez l'image Docker avec le bouton ci-dessous. C'est le seul moyen de la récupérer.",
-    "step2Cta": "Téléchargement direct de l'image Docker",
-    "step2UseFile": "Le fichier .tar peut être importé directement dans Docker Desktop ou OrbStack. Une fois importé, passez à l'étape suivante.",
-    "step2Success": "L'image apparaît dans Docker Desktop ou OrbStack.",
-    "step3Title": "Lancez le conteneur",
-    "step3Action": "Collez cette commande dans le terminal. Remplacez CODE et KEY par les deux codes affichés une seule fois à la création de l'accès (ou copiez le bloc « Les deux codes ensemble » depuis la page Accès).",
-    "step3Hint": "Les deux codes sont indispensables. Le dossier downloads est créé automatiquement à côté de l'endroit où vous lancez la commande.",
-    "step3Success": "Sur la page Accès, votre accès passe à Connecté.",
-    "step4Title": "Ajoutez un indexeur",
-    "step4Action": "Ouvrez cette adresse dans votre navigateur, puis ajoutez un indexeur.",
-    "step4Success": "La page Prowlarr affiche votre indexeur dans la liste.",
-    "step5Title": "Connectez votre assistant IA",
-    "step5Action": "Ajoutez cette URL MCP à Claude, ChatGPT ou votre assistant préféré pour chercher, ajouter et envoyer vos livres depuis la conversation :",
-    "step5Cta": "Ouvrir le tableau de bord",
-    "closingLine": "Vos livres arrivent tout seuls dans votre bibliothèque.",
-    "glossaryTitle": "Glossaire",
+    "step1Success": "Les deux codes s'affichent une fois, avec le bloc « Les deux codes ensemble ».",
+    "step2Title": "Téléchargez le fichier d'installation",
+    "step2Action": "Téléchargez le fichier avec le bouton ci-dessous. C'est le fichier à importer dans Docker Desktop ou OrbStack.",
+    "step2Cta": "Télécharger le fichier d'installation",
+    "step2UseFile": "Gardez ce fichier .tar à portée de main pour l'étape suivante.",
+    "step2Success": "Le téléchargement est terminé sur votre ordinateur.",
+    "step3Title": "Importez le fichier dans Docker Desktop ou OrbStack",
+    "step3Action": "Ouvrez Docker Desktop ou OrbStack. Importez le fichier .tar que vous venez de télécharger, puis attendez la fin de l'import.",
+    "step3Success": "L'image Ferry Agent apparaît dans la liste Images de Docker Desktop ou OrbStack.",
+    "step4Title": "Démarrez avec les deux codes",
+    "step4Action": "Dans Docker Desktop ou OrbStack, démarrez l'image importée. Collez exactement le bloc « Les deux codes ensemble » depuis Accès (PAIRING_TOKEN et GATEWAY_KEY) dans les réglages demandés au démarrage. N'inventez pas de valeurs, et ne laissez pas de trous à remplir.",
+    "step4Hint": "Les deux codes sont indispensables. Sans eux, la page Accès restera en attente de connexion.",
+    "step4Success": "Le programme tourne chez vous (statut démarré dans Docker Desktop ou OrbStack).",
+    "step5Title": "Vérifiez la connexion",
+    "step5Action": "Revenez à la page Accès dans Ferry Agent. Le statut doit passer à Connecté.",
+    "step5Cta": "Retourner à Accès",
+    "step5Success": "Sur Accès, le statut affiche Connecté.",
+    "afterTitle": "Ensuite",
+    "afterBody": "Vous pouvez chercher un livre, l'ajouter à votre bibliothèque, puis l'envoyer à votre liseuse. Pour des sources installées chez vous, ouvrez aussi l'adresse locale du programme (souvent http://127.0.0.1:9696) une fois Accès connecté.",
+    "afterMcp": "Pour un assistant IA, ajoutez cette adresse à Claude, ChatGPT ou votre outil :",
+    "closingLine": "Trouver, préparer, envoyer — vos livres suivent ce chemin jusqu'à votre liseuse.",
+    "glossaryTitle": "Petit glossaire",
+    "glossaryAccessTerm": "Accès personnel",
+    "glossaryAccessDef": "Le programme installé chez vous qui relie votre ordinateur à votre compte Ferry Agent.",
+    "glossaryCodesTerm": "Code de connexion et clé d'accès",
+    "glossaryCodesDef": "Deux codes distincts, affichés une seule fois à la création. Le bloc « Les deux codes ensemble » les regroupe pour coller PAIRING_TOKEN et GATEWAY_KEY tels quels.",
     "glossaryProwlarrTerm": "Prowlarr",
-    "glossaryProwlarrDef": "Le programme qui gère vos indexeurs et les transmet à Ferry Agent.",
-    "glossaryIndexerTerm": "Indexeur",
-    "glossaryIndexerDef": "Un site qui référence des fichiers disponibles au téléchargement.",
-    "glossaryMagnetTerm": "Lien magnet",
-    "glossaryMagnetDef": "Un lien qui démarre un téléchargement directement, sans fichier .torrent.",
-    "glossaryGatewayTerm": "Passerelle (gateway)",
-    "glossaryGatewayDef": "Le programme installé chez vous qui relie votre ordinateur à Ferry Agent.",
-    "advancedTitle": "Options avancées",
-    "scriptAltTitle": "Assistant d'installation (optionnel)",
-    "scriptAltDescription": "Cet assistant ne télécharge pas l'image Docker. Utilisez-le seulement si vous voulez de l'aide pour finaliser l'installation, après avoir récupéré l'image à l'étape 2.",
-    "scriptAltBody": "Décompressez le fichier téléchargé, ouvrez un terminal dans ce dossier, puis lancez :",
-    "scriptAltCta": "Télécharger l'assistant d'installation",
-    "scriptAltHint": "L'assistant vous demandera votre code de connexion et votre clé d'accès, puis finalisera l'installation.",
+    "glossaryProwlarrDef": "L'écran local qui aide à brancher des sources de recherche supplémentaires chez vous.",
+    "glossaryIndexerTerm": "Source / indexeur",
+    "glossaryIndexerDef": "Un site ou un catalogue qui référence des livres disponibles à récupérer.",
+    "advancedTitle": "Dépannage et options avancées",
+    "troubleshootTitle": "Dépannage",
+    "troubleshootIntro": "Si quelque chose bloque, commencez par ces points :",
+    "troubleshootWaiting": "Accès reste en « En attente de la première connexion » : vérifiez que le programme tourne bien dans Docker Desktop ou OrbStack, et que les deux codes y sont bien collés.",
+    "troubleshootExpired": "Le code a expiré : sur Accès, cliquez sur Créer de nouveaux codes, puis mettez à jour les deux codes dans Docker Desktop ou OrbStack.",
+    "troubleshootOffline": "Statut Hors ligne : rallumez le programme chez vous. Votre ordinateur doit rester allumé et connecté à Internet.",
+    "troubleshootBothCodes": "Un seul code ne suffit pas. Collez toujours le bloc « Les deux codes ensemble » (code de connexion + clé d'accès).",
+    "terminalAltTitle": "Démarrage depuis le terminal (avancé)",
+    "terminalAltBody": "Si vous préférez le terminal, démarrez l'image déjà importée et collez les vraies valeurs du bloc « Les deux codes ensemble » (PAIRING_TOKEN et GATEWAY_KEY) dans les variables d'environnement. Ne remplacez jamais par des exemples du type CODE ou KEY.",
+    "terminalAltHint": "Les codes viennent uniquement de la page Accès, une seule fois à la création (ou après Créer de nouveaux codes).",
     "byoTitle": "Fonctionnement chez vous",
     "byoDescription": "Votre accès personnel tourne sur votre machine, pas sur nos serveurs.",
     "byoBody1": "Votre ordinateur doit rester allumé et connecté à Internet pour que les recherches et téléchargements fonctionnent.",
-    "byoBody2": "Pour un fonctionnement 24 h/24, installez le programme sur un petit serveur toujours allumé, avec les deux mêmes codes.",
-    "createAccess": "Créer un accès",
+    "byoBody2": "Pour un fonctionnement 24 h/24, installez le programme sur une machine toujours allumée, avec les deux mêmes codes.",
+    "createAccess": "Ajouter un accès",
     "backHome": "Retour à l'accueil"
   }
 }
