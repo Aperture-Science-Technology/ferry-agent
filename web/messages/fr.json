@@ -17,7 +17,11 @@
     "never": "Jamais",
     "dash": "—",
     "loading": "Chargement…",
-    "copyFailed": "Impossible de copier. Sélectionnez le texte et copiez-le manuellement."
+    "copyFailed": "Impossible de copier. Sélectionnez le texte et copiez-le manuellement.",
+    "close": "Fermer",
+    "toggleSidebar": "Ouvrir ou fermer le menu",
+    "sidebar": "Menu",
+    "sidebarDescription": "Navigation de votre espace Ferry Agent."
   },
   "brand": {
     "name": "Ferry Agent",

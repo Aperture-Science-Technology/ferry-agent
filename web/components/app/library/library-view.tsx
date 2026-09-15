@@ -12,7 +12,7 @@ import {
   Search,
   SearchX,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,6 +65,12 @@ import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@
 
 type ViewMode = "grid" | "list";
 type AddTab = "import" | "search";
+
+function formatAppDate(iso: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "short",
+  }).format(new Date(iso));
+}
 
 function mapFetchError(
   error: string | null,
@@ -175,6 +181,8 @@ export function LibraryView({
   devices: Device[];
 }) {
   const t = useTranslations("library");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const { call } = useApiClient();
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
@@ -563,7 +571,7 @@ export function LibraryView({
                     {t("resultsFound", { count: results.length })}
                   </p>
 
-                  <div className="grid gap-3 md:hidden">
+                  <div className="grid gap-3 lg:hidden">
                     {results.map((result) => {
                       const resultKey = `${result.source}:${result.result_id}`;
                       const isPending = resultKey in pendingJobs;
@@ -612,7 +620,7 @@ export function LibraryView({
                     })}
                   </div>
 
-                  <div className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+                  <div className="hidden overflow-hidden rounded-xl border border-border/60 lg:block">
                     <Table>
                       <TableHeader>
                         <TableRow className="hover:bg-transparent">
@@ -812,7 +820,7 @@ export function LibraryView({
                             {item.title}
                           </h3>
                           <p className="line-clamp-1 text-sm text-muted-foreground">
-                            {item.author || "—"}
+                            {item.author || tCommon("dash")}
                           </p>
                           <p className="text-xs tracking-wide text-muted-foreground uppercase">
                             {item.original_format}
@@ -835,7 +843,7 @@ export function LibraryView({
                 </RevealGroup>
               ) : (
                 <>
-                  <div className="grid gap-3 md:hidden">
+                  <div className="grid gap-3 lg:hidden">
                     {displayedItems.map((item) => (
                       <article
                         key={item.id}
@@ -853,7 +861,7 @@ export function LibraryView({
                           <div>
                             <h3 className="line-clamp-2 text-sm font-medium">{item.title}</h3>
                             <p className="line-clamp-1 text-sm text-muted-foreground">
-                              {item.author || "—"}
+                              {item.author || tCommon("dash")}
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-1.5">
@@ -872,7 +880,7 @@ export function LibraryView({
                       </article>
                     ))}
                   </div>
-                  <div className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+                  <div className="hidden overflow-hidden rounded-xl border border-border/60 lg:block">
                     <Table>
                       <TableHeader>
                         <TableRow className="hover:bg-transparent">
@@ -902,7 +910,7 @@ export function LibraryView({
                               <span className="line-clamp-2">{item.title}</span>
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {item.author || "—"}
+                              {item.author || tCommon("dash")}
                             </TableCell>
                             <TableCell>
                               <Badge variant="secondary">
@@ -910,10 +918,10 @@ export function LibraryView({
                               </Badge>
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {item.language ?? "—"}
+                              {item.language ?? tCommon("dash")}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {new Date(item.added_at).toLocaleDateString()}
+                              {formatAppDate(item.added_at, locale)}
                             </TableCell>
                             <TableCell className="text-right">
                               <Button
