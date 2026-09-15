@@ -1108,7 +1108,7 @@ export function LibraryView({
               ) : viewMode === "grid" ? (
                 <div className="space-y-6">
                   <RevealGroup
-                    className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4"
+                    className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                     stagger={prefersReducedMotion ? 0 : 0.04}
                   >
                     {pageSlice.items.map((item) => (
