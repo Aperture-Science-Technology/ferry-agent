@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -43,20 +43,16 @@ export function EditDeviceDialog({
   const tNewDevice = useTranslations("newDevice");
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
-  const [name, setName] = useState("");
-  const [brand, setBrand] = useState<Device["brand"]>("kindle");
-  const [model, setModel] = useState("");
-  const [conversionProfile, setConversionProfile] = useState<ConversionPreset | null>(null);
+  const nameId = useId();
+  const brandId = useId();
+  const modelId = useId();
+  const [name, setName] = useState(device?.name ?? "");
+  const [brand, setBrand] = useState<Device["brand"]>(device?.brand ?? "kindle");
+  const [model, setModel] = useState(device?.model ?? "");
+  const [conversionProfile, setConversionProfile] = useState<ConversionPreset | null>(
+    device?.conversion_profile ?? null
+  );
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (device) {
-      setName(device.name ?? "");
-      setBrand(device.brand);
-      setModel(device.model ?? "");
-      setConversionProfile(device.conversion_profile);
-    }
-  }, [device]);
 
   const modelOptions =
     brand !== "other" && (MODEL_BRANDS as readonly string[]).includes(brand)
@@ -68,8 +64,13 @@ export function EditDeviceDialog({
     setModel("");
   }
 
+  function handleOpenChange(open: boolean) {
+    if (submitting) return;
+    onOpenChange(open);
+  }
+
   async function submit() {
-    if (!device) return;
+    if (!device || submitting) return;
     setSubmitting(true);
     try {
       const payload: DevicePatch = {
@@ -93,7 +94,7 @@ export function EditDeviceDialog({
   }
 
   return (
-    <Dialog open={device !== null} onOpenChange={onOpenChange}>
+    <Dialog open={device !== null} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
@@ -101,16 +102,25 @@ export function EditDeviceDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>{tNewDevice("nameOptional")}</Label>
-            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={tNewDevice("namePlaceholder")} />
+            <Label htmlFor={nameId}>{tNewDevice("nameOptional")}</Label>
+            <Input
+              id={nameId}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={tNewDevice("namePlaceholder")}
+              disabled={submitting}
+            />
           </div>
           <div className="space-y-2">
-            <Label>{tNewDevice("brand")}</Label>
+            <Label htmlFor={brandId}>{tNewDevice("brand")}</Label>
             <Select
               value={brand}
-              onValueChange={(value) => value && handleBrandChange(value as Device["brand"])}
+              onValueChange={(value) =>
+                value && handleBrandChange(value as Device["brand"])
+              }
+              disabled={submitting}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger id={brandId} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -123,10 +133,14 @@ export function EditDeviceDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>{tNewDevice("modelOptional")}</Label>
+            <Label htmlFor={modelId}>{tNewDevice("modelOptional")}</Label>
             {modelOptions ? (
-              <Select value={model} onValueChange={(value) => setModel(value ?? "")}>
-                <SelectTrigger className="w-full">
+              <Select
+                value={model}
+                onValueChange={(value) => setModel(value ?? "")}
+                disabled={submitting}
+              >
+                <SelectTrigger id={modelId} className="w-full">
                   <SelectValue placeholder={tNewDevice("modelPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -138,17 +152,30 @@ export function EditDeviceDialog({
                 </SelectContent>
               </Select>
             ) : (
-              <Input value={model} onChange={(event) => setModel(event.target.value)} />
+              <Input
+                id={modelId}
+                value={model}
+                onChange={(event) => setModel(event.target.value)}
+                disabled={submitting}
+              />
             )}
           </div>
-          <ConversionProfileField value={conversionProfile} onChange={setConversionProfile} />
+          <ConversionProfileField
+            value={conversionProfile}
+            onChange={setConversionProfile}
+            disabled={submitting}
+          />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={submitting}
+          >
             {tCommon("cancel")}
           </Button>
-          <Button onClick={submit} disabled={submitting}>
-            {submitting && <Loader2 className="animate-spin" />}
+          <Button onClick={() => void submit()} disabled={submitting}>
+            {submitting ? <Loader2 className="animate-spin" /> : null}
             {tCommon("save")}
           </Button>
         </DialogFooter>

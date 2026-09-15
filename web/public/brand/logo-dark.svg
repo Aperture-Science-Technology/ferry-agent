@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 32" fill="none" role="img">
+  <title>Ferry Agent</title>
+  <desc>Open book with a soft arc suggesting the transfer of a book — not a boat.</desc>
+  <g transform="translate(0,0)">
+  <!-- Left page -->
+  <path fill="#EDF3F1" d="M5.5 8.2c0-.7.5-1.2 1.1-1.4 2.9-.8 5.6.1 7.4 1.6.3.3.5.7.5 1.1v14.2c0 .8-.7 1.3-1.4 1.1-2.6-.7-5-.2-7.1 1.1-.5.3-1.1-.1-1.1-.7V8.2Z"/>
+  <!-- Right page -->
+  <path fill="#EDF3F1" d="M26.5 8.2c0-.7-.5-1.2-1.1-1.4-2.9-.8-5.6.1-7.4 1.6-.3.3-.5.7-.5 1.1v14.2c0 .8.7 1.3 1.4 1.1 2.6-.7 5-.2 7.1 1.1.5.3 1.1-.1 1.1-.7V8.2Z"/>
+  <!-- Spine gutter -->
+  <path fill="#B0C0C0" fill-opacity=".55" d="M15.2 8.6h1.6v15.2h-1.6z"/>
+  <!-- Passage arc: transfer across the book -->
+  <path fill="none" stroke="#93D3C7" stroke-width="2.2" stroke-linecap="round" d="M8.2 15.2c2.4-3.4 5.2-5.1 7.8-5.1s5.4 1.7 7.8 5.1"/>
+  <circle cx="8.2" cy="15.2" r="1.35" fill="#93D3C7"/>
+  <circle cx="23.8" cy="15.2" r="1.35" fill="#93D3C7"/>
+  </g>
+  <text x="40" y="21" fill="#EDF3F1" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="600" letter-spacing="-0.02em">Ferry Agent</text>
+</svg>

@@ -1,13 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { motion } from "motion/react";
-import { BookOpen, LayoutGrid, List, Loader2, Search, SearchX } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { motion, useReducedMotion } from "motion/react";
+import {
+  LayoutGrid,
+  List,
+  Loader2,
+  Plus,
+  Search,
+  SearchX,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -24,21 +38,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/app/empty-state";
+import { PageHeader } from "@/components/app/page-header";
+import { SectionHeader } from "@/components/app/section-header";
+import { StatePanel } from "@/components/app/state-panel";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
+import {
+  filterAndSortLibraryItems,
+  type SortBy,
+  type SourceFilter,
+} from "@/components/app/library/library-collection";
 import {
   LibraryCoverImage,
   SearchCoverImage,
 } from "@/components/app/library/cover-image";
 import { UploadDropzone } from "@/components/app/library/upload-dropzone";
-import { Reveal } from "@/components/motion/reveal";
-import { useApiClient } from "@/lib/api-client";
+import { EmptyLibraryIllustration } from "@/components/illustrations";
+import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { ApiError, useApiClient } from "@/lib/api-client";
 import { useGatewayJob } from "@/lib/use-gateway-job";
 import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@/lib/types";
 
 type ViewMode = "grid" | "list";
-type SortBy = "title" | "author" | "added";
-type SourceFilter = "all" | "linked" | "manual";
+type AddTab = "import" | "search";
+
+function formatAppDate(iso: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "short",
+  }).format(new Date(iso));
+}
 
 function mapFetchError(
   error: string | null,
@@ -50,6 +82,7 @@ function mapFetchError(
   }
   if (/malveillant|VirusTotal/i.test(error)) return t("toastFetchMalicious");
   if (/volumineux|too large/i.test(error)) return t("toastFetchTooLarge");
+  if (/espace est plein|storage is full/i.test(error)) return t("toastAddQuota");
   if (/livre reconnu|Formats acceptés|not a recognized/i.test(error)) {
     return t("toastFetchBadFormat");
   }
@@ -90,17 +123,71 @@ function PendingFetchTracker({
   return null;
 }
 
+function SearchResultActions({
+  result,
+  resultKey,
+  isPending,
+  addingId,
+  onAdd,
+  t,
+}: {
+  result: SearchResult;
+  resultKey: string;
+  isPending: boolean;
+  addingId: string | null;
+  onAdd: (result: SearchResult) => void;
+  t: ReturnType<typeof useTranslations<"library">>;
+}) {
+  if (result.owned) {
+    return (
+      <Button size="sm" variant="secondary" disabled>
+        {t("inLibrary")}
+      </Button>
+    );
+  }
+  if (isPending) {
+    return (
+      <Button size="sm" variant="outline" disabled>
+        <Loader2 className="animate-spin" />
+        {t("fetching")}
+      </Button>
+    );
+  }
+  return (
+    <Button
+      size="sm"
+      disabled={addingId === resultKey}
+      onClick={() => onAdd(result)}
+    >
+      {addingId === resultKey ? <Loader2 className="animate-spin" /> : null}
+      {t("add")}
+    </Button>
+  );
+}
+
 export function LibraryView({
+  title,
+  description,
   initialItems,
   itemsUnavailable,
+  itemsPartial,
   devices,
 }: {
+  title: string;
+  description: string;
   initialItems: LibraryItem[];
   itemsUnavailable: boolean;
+  itemsPartial: boolean;
   devices: Device[];
 }) {
   const t = useTranslations("library");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const { call } = useApiClient();
+  const router = useRouter();
+  const prefersReducedMotion = useReducedMotion();
+  const addSectionRef = useRef<HTMLElement>(null);
+
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -108,12 +195,16 @@ export function LibraryView({
   const [pendingJobs, setPendingJobs] = useState<Record<string, string>>({});
   const [items, setItems] = useState(initialItems);
   const [detailItem, setDetailItem] = useState<LibraryItem | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortBy, setSortBy] = useState<SortBy>("added");
   const [languageFilter, setLanguageFilter] = useState("all");
   const [formatFilter, setFormatFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+
+  const [addOpen, setAddOpen] = useState(initialItems.length === 0 && !itemsUnavailable);
+  const [addTab, setAddTab] = useState<AddTab>("import");
 
   const languages = useMemo(
     () => Array.from(new Set(items.map((item) => item.language).filter((v): v is string => !!v))),
@@ -124,25 +215,27 @@ export function LibraryView({
     [items]
   );
 
-  const displayedItems = useMemo(() => {
-    let list = items;
-    if (languageFilter !== "all") {
-      list = list.filter((item) => item.language === languageFilter);
-    }
-    if (formatFilter !== "all") {
-      list = list.filter((item) => item.original_format === formatFilter);
-    }
-    if (sourceFilter !== "all") {
-      list = list.filter((item) =>
-        sourceFilter === "linked" ? item.source_id !== null : item.source_id === null
-      );
-    }
-    return [...list].sort((a, b) => {
-      if (sortBy === "title") return a.title.localeCompare(b.title);
-      if (sortBy === "author") return a.author.localeCompare(b.author);
-      return new Date(b.added_at).getTime() - new Date(a.added_at).getTime();
+  const displayedItems = useMemo(
+    () =>
+      filterAndSortLibraryItems(items, {
+        languageFilter,
+        formatFilter,
+        sourceFilter,
+        sortBy,
+      }),
+    [items, languageFilter, formatFilter, sourceFilter, sortBy]
+  );
+
+  function openAdd(tab: AddTab = "import") {
+    setAddTab(tab);
+    setAddOpen(true);
+    requestAnimationFrame(() => {
+      addSectionRef.current?.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
     });
-  }, [items, languageFilter, formatFilter, sourceFilter, sortBy]);
+  }
 
   function markOwned(resultKey: string) {
     const [source, ...rest] = resultKey.split(":");
@@ -166,7 +259,7 @@ export function LibraryView({
     });
   }
 
-  async function handleFetchDone(resultKey: string, _libraryItemId: string | null) {
+  async function handleFetchDone(resultKey: string) {
     clearPending(resultKey);
     markOwned(resultKey);
     try {
@@ -174,8 +267,12 @@ export function LibraryView({
       const itemsAcc = [...refreshed.items];
       const totalPages = Math.max(1, Math.ceil(refreshed.total / refreshed.limit));
       for (let page = 2; page <= totalPages; page += 1) {
-        const next = await call<PaginatedLibraryItems>(`/api/v1/books?page=${page}&limit=200`);
-        itemsAcc.push(...next.items);
+        try {
+          const next = await call<PaginatedLibraryItems>(`/api/v1/books?page=${page}&limit=200`);
+          itemsAcc.push(...next.items);
+        } catch {
+          break;
+        }
       }
       setItems(itemsAcc);
     } catch {
@@ -235,15 +332,24 @@ export function LibraryView({
         toast.success(t("toastAdded", { title: added.title }));
         markOwned(resultKey);
       }
-    } catch {
-      toast.error(t("toastAddFailed"));
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 507) {
+        toast.error(t("toastAddQuota"));
+      } else {
+        toast.error(t("toastAddFailed"));
+      }
     } finally {
       setAddingId(null);
     }
   }
 
   function sourceBadgeLabel(item: LibraryItem) {
-    return item.source_id ? t("sourceLinked") : t("sourceManual");
+    const ref = item.source_ref;
+    if (!ref) return t("sourceManual");
+    if (ref.startsWith("gateway:")) return t("sourceLinked");
+    if (ref.startsWith("gutenberg:")) return t("sourceGutenberg");
+    if (ref.startsWith("standard_ebooks:")) return t("sourceStandardEbooks");
+    return t("sourceManual");
   }
 
   function sourceLabel(source: string) {
@@ -260,8 +366,336 @@ export function LibraryView({
     setSourceFilter("all");
   }
 
+  function handleRetry() {
+    setRetrying(true);
+    router.refresh();
+  }
+
+  const filterControls = (
+    <div className="flex flex-wrap items-end gap-3" role="group" aria-label={t("filtersLabel")}>
+      <div className="space-y-1.5">
+        <Label htmlFor="library-sort" className="text-xs text-muted-foreground">
+          {t("sortLabel")}
+        </Label>
+        <Select value={sortBy} onValueChange={(value) => setSortBy((value as SortBy) ?? "added")}>
+          <SelectTrigger id="library-sort" size="sm" className="min-w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="added">{t("sortAdded")}</SelectItem>
+            <SelectItem value="title">{t("sortTitle")}</SelectItem>
+            <SelectItem value="author">{t("sortAuthor")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {languages.length > 0 && (
+        <div className="space-y-1.5">
+          <Label htmlFor="library-language" className="text-xs text-muted-foreground">
+            {t("filterLanguageLabel")}
+          </Label>
+          <Select value={languageFilter} onValueChange={(value) => setLanguageFilter(value ?? "all")}>
+            <SelectTrigger id="library-language" size="sm" className="min-w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("filterLanguageAll")}</SelectItem>
+              {languages.map((language) => (
+                <SelectItem key={language} value={language}>
+                  {language}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {formats.length > 1 && (
+        <div className="space-y-1.5">
+          <Label htmlFor="library-format" className="text-xs text-muted-foreground">
+            {t("filterFormatLabel")}
+          </Label>
+          <Select value={formatFilter} onValueChange={(value) => setFormatFilter(value ?? "all")}>
+            <SelectTrigger id="library-format" size="sm" className="min-w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("filterFormatAll")}</SelectItem>
+              {formats.map((format) => (
+                <SelectItem key={format} value={format}>
+                  {format.toUpperCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <Label htmlFor="library-source" className="text-xs text-muted-foreground">
+          {t("filterSourceLabel")}
+        </Label>
+        <Select
+          value={sourceFilter}
+          onValueChange={(value) => setSourceFilter((value as SourceFilter) ?? "all")}
+        >
+          <SelectTrigger id="library-source" size="sm" className="min-w-36">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t("filterSourceAll")}</SelectItem>
+            <SelectItem value="linked">{t("sourceLinked")}</SelectItem>
+            <SelectItem value="manual">{t("sourceManual")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex gap-1 rounded-lg border border-border/60 p-0.5">
+        <Button
+          size="icon-sm"
+          variant={viewMode === "grid" ? "secondary" : "ghost"}
+          onClick={() => setViewMode("grid")}
+          aria-label={t("gridView")}
+          aria-pressed={viewMode === "grid"}
+        >
+          <LayoutGrid />
+        </Button>
+        <Button
+          size="icon-sm"
+          variant={viewMode === "list" ? "secondary" : "ghost"}
+          onClick={() => setViewMode("list")}
+          aria-label={t("listView")}
+          aria-pressed={viewMode === "list"}
+        >
+          <List />
+        </Button>
+      </div>
+    </div>
+  );
+
+  const collectionCountLabel =
+    items.length === 0
+      ? undefined
+      : itemsPartial
+        ? t("booksCountPartial", { count: displayedItems.length })
+        : t("booksCount", { count: displayedItems.length });
+
+  const addPanel = (
+    <section
+      ref={addSectionRef}
+      aria-label={t("addRegion")}
+      className="scroll-mt-6 space-y-4"
+    >
+      <SectionHeader title={t("addBooksTitle")} description={t("addBooksDescription")} />
+      <Tabs
+        value={addTab}
+        onValueChange={(value) => setAddTab((value as AddTab) ?? "import")}
+      >
+        <TabsList variant="line" className="mb-4 w-full max-w-md sm:w-auto">
+          <TabsTrigger value="import">{t("importTab")}</TabsTrigger>
+          <TabsTrigger value="search">{t("searchSourcesTab")}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="import" className="space-y-3">
+          <p className="text-sm text-muted-foreground">{t("uploadHelp")}</p>
+          <UploadDropzone
+            onUploaded={(item) => {
+              setItems((prev) => [item, ...prev]);
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="search" className="space-y-4">
+          <p className="text-sm text-muted-foreground">{t("searchHelp")}</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="relative min-w-0 flex-1 space-y-1.5">
+              <Label htmlFor="library-source-search">{t("searchSourcesLabel")}</Label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="library-source-search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => event.key === "Enter" && void runSearch()}
+                  placeholder={t("searchPlaceholder")}
+                  className="h-10 pl-9"
+                  disabled={searching}
+                />
+              </div>
+            </div>
+            <Button
+              onClick={() => void runSearch()}
+              disabled={searching || !query.trim()}
+              className="sm:shrink-0"
+            >
+              {searching ? <Loader2 className="animate-spin" /> : <Search />}
+              {t("search")}
+            </Button>
+          </div>
+
+          {searching && (
+            <motion.div
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: prefersReducedMotion ? 0.01 : 0.18,
+                ease: [0.2, 0, 0, 1],
+              }}
+              aria-busy="true"
+              aria-live="polite"
+            >
+              <StatePanel className="py-10">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin text-chart-1" />
+                  {t("searching")}
+                </div>
+                <div className="mt-4 grid w-full gap-3 sm:grid-cols-2">
+                  <Skeleton className="h-20 w-full rounded-lg" />
+                  <Skeleton className="h-20 w-full rounded-lg" />
+                </div>
+              </StatePanel>
+            </motion.div>
+          )}
+
+          {!searching && results !== null && (
+            <Reveal>
+              {results.length === 0 ? (
+                <EmptyState
+                  icon={SearchX}
+                  title={t("noResultsHint")}
+                  description={t("searchHelpMatch")}
+                />
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground" role="status">
+                    {t("resultsFound", { count: results.length })}
+                  </p>
+
+                  <div className="grid gap-3 lg:hidden">
+                    {results.map((result) => {
+                      const resultKey = `${result.source}:${result.result_id}`;
+                      const isPending = resultKey in pendingJobs;
+                      return (
+                        <Card key={resultKey} size="sm" className="bg-card/60">
+                          <CardContent className="flex gap-3">
+                            <div className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/50">
+                              <SearchCoverImage
+                                coverUrl={result.cover_url}
+                                className="absolute inset-0 size-full"
+                                iconClassName="size-5"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-2">
+                              <div>
+                                <CardTitle className="line-clamp-2 text-sm">{result.title}</CardTitle>
+                                <CardDescription className="line-clamp-1">
+                                  {result.author}
+                                </CardDescription>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <Badge variant="secondary">{sourceLabel(result.source)}</Badge>
+                                <Badge variant="outline" className="uppercase">
+                                  {result.format}
+                                </Badge>
+                                {result.owned && <Badge variant="secondary">{t("owned")}</Badge>}
+                                {isPending && (
+                                  <Badge variant="outline" className="gap-1">
+                                    <Loader2 className="size-3 animate-spin" />
+                                    {t("fetching")}
+                                  </Badge>
+                                )}
+                              </div>
+                              <SearchResultActions
+                                result={result}
+                                resultKey={resultKey}
+                                isPending={isPending}
+                                addingId={addingId}
+                                onAdd={addResult}
+                                t={t}
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  <div className="hidden overflow-hidden rounded-xl border border-border/60 lg:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-14" />
+                          <TableHead>{t("title")}</TableHead>
+                          <TableHead>{t("author")}</TableHead>
+                          <TableHead>{t("source")}</TableHead>
+                          <TableHead>{t("format")}</TableHead>
+                          <TableHead className="text-right">{t("action")}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {results.map((result) => {
+                          const resultKey = `${result.source}:${result.result_id}`;
+                          const isPending = resultKey in pendingJobs;
+                          return (
+                            <TableRow key={resultKey}>
+                              <TableCell>
+                                <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-md bg-muted ring-1 ring-border/40">
+                                  <SearchCoverImage
+                                    coverUrl={result.cover_url}
+                                    iconClassName="size-4"
+                                  />
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="line-clamp-2">{result.title}</span>
+                                  {result.owned && (
+                                    <Badge variant="secondary">{t("owned")}</Badge>
+                                  )}
+                                  {isPending && (
+                                    <Badge variant="outline" className="gap-1">
+                                      <Loader2 className="size-3 animate-spin" />
+                                      {t("fetching")}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {result.author}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{sourceLabel(result.source)}</Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground uppercase">
+                                {result.format}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <SearchResultActions
+                                  result={result}
+                                  resultKey={resultKey}
+                                  isPending={isPending}
+                                  addingId={addingId}
+                                  onAdd={addResult}
+                                  t={t}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </Reveal>
+          )}
+        </TabsContent>
+      </Tabs>
+    </section>
+  );
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {Object.entries(pendingJobs).map(([resultKey, jobId]) => (
         <PendingFetchTracker
           key={jobId}
@@ -273,304 +707,250 @@ export function LibraryView({
         />
       ))}
 
-      <div>
-        <div className="mb-4">
-          <h2 className="font-heading text-lg font-medium">{t("uploadTitle")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("uploadHelp")}</p>
-        </div>
-        <UploadDropzone
-          onUploaded={(item) => setItems((prev) => [item, ...prev])}
-        />
-      </div>
-
-      <div>
-        <div className="mb-4">
-          <h2 className="font-heading text-lg font-medium">{t("addBooksTitle")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("searchHelp")}</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-64">
-            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && runSearch()}
-              placeholder={t("searchPlaceholder")}
-              className="pl-9"
-            />
-          </div>
-          <Button onClick={runSearch} disabled={searching}>
-            {searching ? <Loader2 className="animate-spin" /> : <Search />}
-            {t("search")}
-          </Button>
-        </div>
-
-        {searching && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-border/60 py-10 text-sm text-muted-foreground"
+      <PageHeader
+        title={title}
+        description={description}
+        action={
+          <Button
+            onClick={() => (addOpen ? setAddOpen(false) : openAdd(addTab))}
+            variant={addOpen ? "outline" : "default"}
+            aria-expanded={addOpen}
+            aria-controls="library-add-panel"
           >
-            <Loader2 className="size-4 animate-spin" />
-            {t("searching")}
-          </motion.div>
-        )}
+            {!addOpen ? <Plus /> : null}
+            {addOpen ? t("hideAddBooks") : t("addBooks")}
+          </Button>
+        }
+      />
 
-        {!searching && results !== null && (
-          <Reveal className="mt-4">
-            {results.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noResultsHint")}</p>
-            ) : (
-              <div className="overflow-hidden rounded-lg border border-border/60">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12" />
-                      <TableHead>{t("title")}</TableHead>
-                      <TableHead>{t("author")}</TableHead>
-                      <TableHead>{t("source")}</TableHead>
-                      <TableHead>{t("format")}</TableHead>
-                      <TableHead className="text-right">{t("action")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map((result) => {
-                      const resultKey = `${result.source}:${result.result_id}`;
-                      const isPending = resultKey in pendingJobs;
-                      return (
-                        <TableRow key={resultKey}>
-                          <TableCell>
-                            <div className="relative flex size-10 items-center justify-center overflow-hidden rounded bg-muted">
-                              <SearchCoverImage
-                                coverUrl={result.cover_url}
-                                iconClassName="size-4"
-                              />
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span>{result.title}</span>
-                              {result.owned && <Badge variant="secondary">{t("owned")}</Badge>}
-                              {isPending && (
-                                <Badge variant="outline" className="gap-1">
-                                  <Loader2 className="size-3 animate-spin" />
-                                  {t("fetching")}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{result.author}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{sourceLabel(result.source)}</Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground uppercase">
-                            {result.format}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {result.owned ? (
-                              <Button size="sm" variant="outline" disabled>
-                                {t("inLibrary")}
-                              </Button>
-                            ) : isPending ? (
-                              <Button size="sm" variant="outline" disabled>
-                                <Loader2 className="animate-spin" />
-                                {t("fetching")}
-                              </Button>
-                            ) : (
+      {itemsUnavailable && items.length === 0 ? (
+        <Alert role="alert">
+          <AlertTitle>{t("emptyUnavailableTitle")}</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>{t("emptyUnavailable")}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRetry}
+              disabled={retrying}
+              className="w-fit"
+            >
+              {retrying ? <Loader2 className="animate-spin" /> : null}
+              {t("retryLoad")}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <section aria-label={t("collectionRegion")} className="space-y-5">
+          {itemsPartial && items.length > 0 ? (
+            <Alert>
+              <AlertTitle>{t("partialWarningTitle")}</AlertTitle>
+              <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>{t("partialWarning")}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRetry}
+                  disabled={retrying}
+                  className="w-fit"
+                >
+                  {retrying ? <Loader2 className="animate-spin" /> : null}
+                  {t("retryLoad")}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {items.length === 0 ? (
+            <EmptyState
+              visual={<EmptyLibraryIllustration />}
+              title={t("emptyTitle")}
+              description={t("emptyDescription")}
+              action={
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+                  <Button onClick={() => openAdd("import")}>{t("importTab")}</Button>
+                  <Button variant="outline" onClick={() => openAdd("search")}>
+                    {t("searchSourcesTab")}
+                  </Button>
+                </div>
+              }
+            />
+          ) : (
+            <>
+              <SectionHeader
+                title={t("myLibrary")}
+                description={collectionCountLabel}
+                action={<div className="hidden lg:block">{filterControls}</div>}
+              />
+
+              <details className="rounded-xl border border-border/60 bg-card/30 px-4 py-3 lg:hidden">
+                <summary className="cursor-pointer text-sm font-medium">
+                  {t("filtersSummary")}
+                </summary>
+                <div className="mt-4">{filterControls}</div>
+              </details>
+
+              {displayedItems.length === 0 ? (
+                <EmptyState
+                  icon={SearchX}
+                  title={t("noMatch")}
+                  action={
+                    <Button variant="outline" size="sm" onClick={resetFilters}>
+                      {t("resetFilters")}
+                    </Button>
+                  }
+                />
+              ) : viewMode === "grid" ? (
+                <RevealGroup
+                  className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                  stagger={prefersReducedMotion ? 0 : 0.04}
+                >
+                  {displayedItems.map((item) => (
+                    <RevealItem key={item.id}>
+                      <article className="flex h-full flex-col gap-3">
+                        <div className="relative aspect-3/4 overflow-hidden rounded-lg bg-muted ring-1 ring-border/40">
+                          <LibraryCoverImage
+                            itemId={item.id}
+                            hasCover={Boolean(item.cover_url)}
+                            alt={item.title}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <h3 className="line-clamp-2 text-[15px] leading-snug font-medium">
+                            {item.title}
+                          </h3>
+                          <p className="line-clamp-1 text-sm text-muted-foreground">
+                            {item.author || tCommon("dash")}
+                          </p>
+                          <p className="text-xs tracking-wide text-muted-foreground uppercase">
+                            {item.original_format}
+                            <span className="mx-1.5 text-border">·</span>
+                            {sourceBadgeLabel(item)}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          aria-label={t("detailsOf", { title: item.title })}
+                          onClick={() => setDetailItem(item)}
+                        >
+                          {t("details")}
+                        </Button>
+                      </article>
+                    </RevealItem>
+                  ))}
+                </RevealGroup>
+              ) : (
+                <>
+                  <div className="grid gap-3 lg:hidden">
+                    {displayedItems.map((item) => (
+                      <article
+                        key={item.id}
+                        className="flex gap-3 rounded-xl border border-border/60 bg-card/40 p-3"
+                      >
+                        <div className="relative aspect-3/4 w-14 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/40">
+                          <LibraryCoverImage
+                            itemId={item.id}
+                            hasCover={Boolean(item.cover_url)}
+                            alt={item.title}
+                            iconClassName="size-5"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div>
+                            <h3 className="line-clamp-2 text-sm font-medium">{item.title}</h3>
+                            <p className="line-clamp-1 text-sm text-muted-foreground">
+                              {item.author || tCommon("dash")}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            <Badge variant="secondary">{item.original_format.toUpperCase()}</Badge>
+                            <Badge variant="outline">{sourceBadgeLabel(item)}</Badge>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            aria-label={t("detailsOf", { title: item.title })}
+                            onClick={() => setDetailItem(item)}
+                          >
+                            {t("details")}
+                          </Button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="hidden overflow-hidden rounded-xl border border-border/60 lg:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-14" />
+                          <TableHead>{t("title")}</TableHead>
+                          <TableHead>{t("author")}</TableHead>
+                          <TableHead>{t("format")}</TableHead>
+                          <TableHead>{t("language")}</TableHead>
+                          <TableHead>{t("added")}</TableHead>
+                          <TableHead className="text-right">{t("action")}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {displayedItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <div className="relative size-11 overflow-hidden rounded-md bg-muted ring-1 ring-border/40">
+                                <LibraryCoverImage
+                                  itemId={item.id}
+                                  hasCover={Boolean(item.cover_url)}
+                                  alt={item.title}
+                                  iconClassName="size-4"
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              <span className="line-clamp-2">{item.title}</span>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {item.author || tCommon("dash")}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {item.original_format.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {item.language ?? tCommon("dash")}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatAppDate(item.added_at, locale)}
+                            </TableCell>
+                            <TableCell className="text-right">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                disabled={addingId === resultKey}
-                                onClick={() => addResult(result)}
+                                aria-label={t("detailsOf", { title: item.title })}
+                                onClick={() => setDetailItem(item)}
                               >
-                                {addingId === resultKey ? (
-                                  <Loader2 className="animate-spin" />
-                                ) : null}
-                                {t("add")}
+                                {t("details")}
                               </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </Reveal>
-        )}
-      </div>
-
-      <div>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-heading text-lg font-medium">{t("myLibrary")}</h2>
-          {items.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={sortBy} onValueChange={(value) => setSortBy((value as SortBy) ?? "added")}>
-                <SelectTrigger size="sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="added">{t("sortAdded")}</SelectItem>
-                  <SelectItem value="title">{t("sortTitle")}</SelectItem>
-                  <SelectItem value="author">{t("sortAuthor")}</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {languages.length > 0 && (
-                <Select value={languageFilter} onValueChange={(value) => setLanguageFilter(value ?? "all")}>
-                  <SelectTrigger size="sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t("filterLanguageAll")}</SelectItem>
-                    {languages.map((language) => (
-                      <SelectItem key={language} value={language}>
-                        {language}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
-
-              {formats.length > 1 && (
-                <Select value={formatFilter} onValueChange={(value) => setFormatFilter(value ?? "all")}>
-                  <SelectTrigger size="sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t("filterFormatAll")}</SelectItem>
-                    {formats.map((format) => (
-                      <SelectItem key={format} value={format}>
-                        {format.toUpperCase()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Select
-                value={sourceFilter}
-                onValueChange={(value) => setSourceFilter((value as SourceFilter) ?? "all")}
-              >
-                <SelectTrigger size="sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("filterSourceAll")}</SelectItem>
-                  <SelectItem value="linked">{t("sourceLinked")}</SelectItem>
-                  <SelectItem value="manual">{t("sourceManual")}</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <div className="flex gap-1">
-                <Button
-                  size="icon-sm"
-                  variant={viewMode === "grid" ? "secondary" : "outline"}
-                  onClick={() => setViewMode("grid")}
-                  aria-label={t("gridView")}
-                >
-                  <LayoutGrid />
-                </Button>
-                <Button
-                  size="icon-sm"
-                  variant={viewMode === "list" ? "secondary" : "outline"}
-                  onClick={() => setViewMode("list")}
-                  aria-label={t("listView")}
-                >
-                  <List />
-                </Button>
-              </div>
-            </div>
+            </>
           )}
-        </div>
+        </section>
+      )}
 
-        {items.length === 0 ? (
-          <EmptyState
-            icon={BookOpen}
-            title={t("emptyTitle")}
-            description={itemsUnavailable ? t("emptyUnavailable") : t("emptyDescription")}
-          />
-        ) : displayedItems.length === 0 ? (
-          <EmptyState
-            icon={SearchX}
-            title={t("noMatch")}
-            action={
-              <Button variant="outline" size="sm" onClick={resetFilters}>
-                {t("resetFilters")}
-              </Button>
-            }
-          />
-        ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {displayedItems.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="flex flex-1 flex-col gap-3">
-                  <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg bg-muted">
-                    <LibraryCoverImage
-                      itemId={item.id}
-                      hasCover={Boolean(item.cover_url)}
-                      alt={item.title}
-                    />
-                  </div>
-                  <div>
-                    <p className="line-clamp-2 font-medium">{item.title}</p>
-                    <p className="line-clamp-1 text-sm text-muted-foreground">{item.author}</p>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex items-center justify-between gap-2">
-                  <div className="flex flex-wrap gap-1.5">
-                    <Badge variant="secondary">{item.original_format.toUpperCase()}</Badge>
-                    <Badge variant="outline">{sourceBadgeLabel(item)}</Badge>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => setDetailItem(item)}>
-                    {t("details")}
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-border/60">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("title")}</TableHead>
-                  <TableHead>{t("author")}</TableHead>
-                  <TableHead>{t("format")}</TableHead>
-                  <TableHead>{t("language")}</TableHead>
-                  <TableHead>{t("added")}</TableHead>
-                  <TableHead className="text-right">{t("action")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.title}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.author}</TableCell>
-                    <TableCell className="text-muted-foreground uppercase">
-                      {item.original_format}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {item.language ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(item.added_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => setDetailItem(item)}>
-                        {t("details")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </div>
+      {addOpen ? (
+        <>
+          <Separator className="bg-border/60" />
+          <div id="library-add-panel">{addPanel}</div>
+        </>
+      ) : null}
 
       <BookDetailDialog
         item={detailItem}

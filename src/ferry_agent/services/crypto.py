@@ -36,10 +36,28 @@ class _PendingOAuth:
     device_id: uuid.UUID
     provider: str
     expires_at: float
+    locale: str = "fr"
+
+
+@dataclass(frozen=True)
+class OAuthStateInfo:
+    """Résultat de `consume_oauth_state` : provider + locale UI pour le redirect."""
+
+    provider: str
+    locale: str
 
 
 _pending_lock = threading.Lock()
 _pending_nonces: dict[str, _PendingOAuth] = {}
+
+_ALLOWED_LOCALES = frozenset({"fr", "en"})
+
+
+def normalize_oauth_locale(locale: str | None) -> str:
+    """Locale UI pour le redirect post-OAuth ; défaut `fr` si inconnue."""
+    if locale in _ALLOWED_LOCALES:
+        return locale
+    return "fr"
 
 
 def _parse_keys(raw: str | None) -> list[bytes]:
@@ -86,16 +104,24 @@ def _purge_expired_locked(now: float) -> None:
         del _pending_nonces[nonce]
 
 
-def issue_oauth_state(device_id: uuid.UUID, provider: str, *, ttl_seconds: int | None = None) -> str:
+def issue_oauth_state(
+    device_id: uuid.UUID,
+    provider: str,
+    *,
+    locale: str | None = None,
+    ttl_seconds: int | None = None,
+) -> str:
     """Cree un `state` OAuth signe (Fernet) et enregistre le nonce cote serveur."""
     settings = get_settings()
     ttl = ttl_seconds if ttl_seconds is not None else settings.oauth_state_ttl_seconds
     nonce = secrets.token_urlsafe(32)
     expires_at = time.time() + max(1, ttl)
+    ui_locale = normalize_oauth_locale(locale)
     payload = {
         "nonce": nonce,
         "device_id": str(device_id),
         "provider": provider,
+        "locale": ui_locale,
         "exp": expires_at,
     }
     try:
@@ -105,12 +131,14 @@ def issue_oauth_state(device_id: uuid.UUID, provider: str, *, ttl_seconds: int |
 
     with _pending_lock:
         _purge_expired_locked(time.time())
-        _pending_nonces[nonce] = _PendingOAuth(device_id=device_id, provider=provider, expires_at=expires_at)
+        _pending_nonces[nonce] = _PendingOAuth(
+            device_id=device_id, provider=provider, expires_at=expires_at, locale=ui_locale
+        )
     return state
 
 
-def consume_oauth_state(state: str, device_id: uuid.UUID) -> str:
-    """Valide et consomme un `state` (usage unique). Retourne le provider.
+def consume_oauth_state(state: str, device_id: uuid.UUID) -> OAuthStateInfo:
+    """Valide et consomme un `state` (usage unique). Retourne provider + locale.
 
     Leve `CryptoError` si le state est absent, expire, rejoue, ou ne
     correspond pas au `device_id` de l'URL.
@@ -127,6 +155,7 @@ def consume_oauth_state(state: str, device_id: uuid.UUID) -> str:
     provider = payload.get("provider")
     exp = payload.get("exp")
     state_device_id = payload.get("device_id")
+    locale = normalize_oauth_locale(payload.get("locale") if isinstance(payload.get("locale"), str) else None)
     if not isinstance(nonce, str) or not isinstance(provider, str) or not isinstance(exp, (int, float)):
         raise CryptoError("state OAuth invalide")
     if state_device_id != str(device_id):
@@ -145,4 +174,4 @@ def consume_oauth_state(state: str, device_id: uuid.UUID) -> str:
     if pending.expires_at <= time.time():
         raise CryptoError("state OAuth expire")
 
-    return provider
+    return OAuthStateInfo(provider=provider, locale=pending.locale or locale)

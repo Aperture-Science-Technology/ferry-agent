@@ -48,6 +48,36 @@ async def create_gateway(
     return gateway, pairing_token, gateway_key
 
 
+async def recreate_gateway_credentials(
+    db: AsyncSession,
+    gateway: Gateway,
+    ttl_minutes: int,
+) -> tuple[Gateway, str, str]:
+    """Regenere les deux secrets pour un acces non encore connecte (ou revoque).
+
+    Les codes ne sont affiches qu'une fois a la creation : apres expiration ou
+    perte, l'utilisateur doit pouvoir repartir sans supprimer l'acces. Un acces
+    deja ``paired`` doit d'abord etre revoque.
+    """
+    if gateway.pairing_status == PairingStatus.paired:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="acces deja connecte — revoquez-le avant de recreer les codes",
+        )
+
+    pairing_token = secrets.token_urlsafe(32)
+    gateway_key = secrets.token_urlsafe(48)
+    gateway.api_key_hash = hash_secret(gateway_key)
+    gateway.pairing_token_hash = hash_secret(pairing_token)
+    gateway.pairing_expires_at = utcnow() + timedelta(minutes=ttl_minutes)
+    gateway.pairing_used = False
+    gateway.pairing_status = PairingStatus.pending
+    gateway.last_seen_at = None
+    await db.commit()
+    await db.refresh(gateway)
+    return gateway, pairing_token, gateway_key
+
+
 async def pair_gateway(db: AsyncSession, token: str) -> Gateway:
     query = (
         select(Gateway)

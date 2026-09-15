@@ -20,6 +20,7 @@ from ferry_agent.models import (
     DeviceBrand,
     LibraryItem,
     ShortCode,
+    User,
 )
 from ferry_agent.schemas import DeliveryCreate
 from ferry_agent.services import delivery, tierc
@@ -119,28 +120,77 @@ async def test_deliver_tier_c_creates_session_and_marks_sent(monkeypatch: pytest
     monkeypatch.setattr(
         tierc, "get_settings", lambda: SimpleNamespace(public_base_url="https://ferry.example.test")
     )
+    user = User(id=uuid.uuid4(), email="reader@example.test", default_format="epub")
     item = LibraryItem(
         id=uuid.uuid4(),
-        user_id=uuid.uuid4(),
+        user_id=user.id,
         title="Dune",
         author="Herbert",
         original_format="epub",
         storage_path="/tmp/fake-library/book.epub",
     )
+    device = Device(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        brand=DeviceBrand.kobo,
+        delivery_tier=DeliveryTier.C,
+    )
     job = DeliveryJob(
         id=uuid.uuid4(),
         library_item_id=item.id,
-        device_id=uuid.uuid4(),
+        device_id=device.id,
         status=DeliveryStatus.queued,
         method=DeliveryMethod.email,
     )
     db = FakeSession([None])  # verification d'unicite du code
 
-    url = await delivery._deliver_tier_c(db, job, item)
+    url = await delivery._deliver_tier_c(db, job, item, device, user)
 
     assert job.status == DeliveryStatus.sent
     assert job.method == DeliveryMethod.browser_code
+    assert job.target_format == "epub"
     assert url.startswith("https://ferry.example.test/c/")
+
+
+async def test_deliver_tier_c_fails_when_requested_format_cannot_be_produced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Pas de succes tier C si le format demande ne peut pas etre produit."""
+
+    async def raising_pdf(*_args, **_kwargs):
+        raise RuntimeError("conversion boom")
+
+    monkeypatch.setattr(delivery.converters, "epub_to_pdf", raising_pdf)
+
+    user = User(id=uuid.uuid4(), email="reader@example.test", default_format="epub")
+    item = LibraryItem(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        title="Dune",
+        author="Herbert",
+        original_format="epub",
+        storage_path="/tmp/fake-library/book.epub",
+    )
+    device = Device(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        brand=DeviceBrand.kobo,
+        delivery_tier=DeliveryTier.C,
+    )
+    job = DeliveryJob(
+        id=uuid.uuid4(),
+        library_item_id=item.id,
+        device_id=device.id,
+        status=DeliveryStatus.queued,
+        method=DeliveryMethod.browser_code,
+    )
+    db = FakeSession()
+
+    url = await delivery._deliver_tier_c(db, job, item, device, user, requested_format="pdf")
+
+    assert url is None
+    assert job.status == DeliveryStatus.failed
+    assert job.error == delivery.converters.CONVERSION_FAILED_USER_MESSAGE
 
 
 async def test_create_delivery_returns_download_url_for_tier_c(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -148,6 +198,7 @@ async def test_create_delivery_returns_download_url_for_tier_c(monkeypatch: pyte
         tierc, "get_settings", lambda: SimpleNamespace(public_base_url="https://ferry.example.test")
     )
     user_id = uuid.uuid4()
+    user = User(id=user_id, email="reader@example.test", default_format="epub")
     item = LibraryItem(
         id=uuid.uuid4(),
         user_id=user_id,
@@ -158,8 +209,8 @@ async def test_create_delivery_returns_download_url_for_tier_c(monkeypatch: pyte
     )
     device = Device(id=uuid.uuid4(), user_id=user_id, brand=DeviceBrand.kobo, delivery_tier=DeliveryTier.C)
     # create_delivery valide item+device, puis delivery.deliver() les
-    # re-resout lui-meme avant de creer la session de telechargement.
-    db = FakeSession([item, device, item, device, None])
+    # re-resout (item, device, user) avant de creer la session.
+    db = FakeSession([item, device, item, device, user, None])
 
     payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.browser_code)
     result = await deliveries.create_delivery(
@@ -215,25 +266,33 @@ def test_download_streams_file_decrements_and_expires(tmp_path) -> None:
     book = tmp_path / "book.epub"
     book.write_bytes(b"fake-epub-bytes")
 
+    user_id = uuid.uuid4()
     item = LibraryItem(
         id=uuid.uuid4(),
-        user_id=uuid.uuid4(),
+        user_id=user_id,
         title="Dune",
         author="Herbert",
         original_format="epub",
         storage_path=str(book),
     )
+    device = Device(
+        id=uuid.uuid4(),
+        user_id=user_id,
+        brand=DeviceBrand.kobo,
+        delivery_tier=DeliveryTier.C,
+    )
     job = DeliveryJob(
         id=uuid.uuid4(),
         library_item_id=item.id,
-        device_id=uuid.uuid4(),
+        device_id=device.id,
         status=DeliveryStatus.sent,
         method=DeliveryMethod.browser_code,
+        target_format="epub",
     )
     short_code = make_short_code(code="DLCODE99", delivery_job_id=job.id, downloads_left=1)
 
     sessions = [
-        FakeSession([short_code, job, item]),  # premier telechargement : OK
+        FakeSession([short_code, job, item, device]),  # premier telechargement : OK
         FakeSession([short_code]),  # second essai : downloads_left epuise -> 404
     ]
     app.dependency_overrides[get_db] = override_db(sessions)

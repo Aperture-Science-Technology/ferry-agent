@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -42,6 +42,9 @@ export function NewDeviceDialog({
   const t = useTranslations("newDevice");
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
+  const nameId = useId();
+  const brandId = useId();
+  const modelId = useId();
   const [name, setName] = useState("");
   const [brand, setBrand] = useState<Device["brand"]>("kindle");
   const [model, setModel] = useState("");
@@ -58,7 +61,13 @@ export function NewDeviceDialog({
     setModel("");
   }
 
+  function handleOpenChange(next: boolean) {
+    if (submitting) return;
+    onOpenChange(next);
+  }
+
   async function submit() {
+    if (submitting) return;
     setSubmitting(true);
     try {
       const payload: DeviceCreate = {
@@ -85,7 +94,7 @@ export function NewDeviceDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
@@ -93,16 +102,25 @@ export function NewDeviceDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>{t("nameOptional")}</Label>
-            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("namePlaceholder")} />
+            <Label htmlFor={nameId}>{t("nameOptional")}</Label>
+            <Input
+              id={nameId}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("namePlaceholder")}
+              disabled={submitting}
+            />
           </div>
           <div className="space-y-2">
-            <Label>{t("brand")}</Label>
+            <Label htmlFor={brandId}>{t("brand")}</Label>
             <Select
               value={brand}
-              onValueChange={(value) => value && handleBrandChange(value as Device["brand"])}
+              onValueChange={(value) =>
+                value && handleBrandChange(value as Device["brand"])
+              }
+              disabled={submitting}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger id={brandId} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -115,10 +133,14 @@ export function NewDeviceDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>{t("modelOptional")}</Label>
+            <Label htmlFor={modelId}>{t("modelOptional")}</Label>
             {modelOptions ? (
-              <Select value={model} onValueChange={(value) => setModel(value ?? "")}>
-                <SelectTrigger className="w-full">
+              <Select
+                value={model}
+                onValueChange={(value) => setModel(value ?? "")}
+                disabled={submitting}
+              >
+                <SelectTrigger id={modelId} className="w-full">
                   <SelectValue placeholder={t("modelPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -130,17 +152,30 @@ export function NewDeviceDialog({
                 </SelectContent>
               </Select>
             ) : (
-              <Input value={model} onChange={(event) => setModel(event.target.value)} />
+              <Input
+                id={modelId}
+                value={model}
+                onChange={(event) => setModel(event.target.value)}
+                disabled={submitting}
+              />
             )}
           </div>
-          <ConversionProfileField value={conversionProfile} onChange={setConversionProfile} />
+          <ConversionProfileField
+            value={conversionProfile}
+            onChange={setConversionProfile}
+            disabled={submitting}
+          />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={submitting}
+          >
             {tCommon("cancel")}
           </Button>
-          <Button onClick={submit} disabled={submitting}>
-            {submitting && <Loader2 className="animate-spin" />}
+          <Button onClick={() => void submit()} disabled={submitting}>
+            {submitting ? <Loader2 className="animate-spin" /> : null}
             {tCommon("create")}
           </Button>
         </DialogFooter>

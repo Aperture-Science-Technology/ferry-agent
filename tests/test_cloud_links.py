@@ -373,9 +373,43 @@ async def test_deliver_tier_b_fails_when_calibre_unavailable(
     assert uploaded == {}
 
 
-async def test_deliver_tier_b_marks_failed_on_upload_error(
+async def test_deliver_tier_b_uploads_requested_pdf_not_silent_epub(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """Demander PDF depuis un EPUB : upload PDF, jamais d'EPUB en succes."""
+    book = tmp_path / "book.epub"
+    book.write_bytes(b"epub-bytes")
+    pdf = tmp_path / "book.pdf"
+    pdf.write_bytes(b"pdf-bytes-padded" + b"\x00" * 1024)
+
+    converted = {}
+    uploaded = {}
+
+    async def fake_epub_to_pdf(epub_path, pdf_path=None):
+        converted["called_with"] = epub_path
+        return str(pdf)
+
+    async def fake_upload_job_file(link_ref_json, filename, file_bytes):
+        uploaded.update(filename=filename, file_bytes=file_bytes)
+        return "/book.pdf"
+
+    monkeypatch.setattr(delivery.converters, "epub_to_pdf", fake_epub_to_pdf)
+    monkeypatch.setattr(delivery.cloud_links, "upload_job_file", fake_upload_job_file)
+
+    user = make_user(default_format="epub")
+    device = make_device()
+    item = make_item(storage_path=str(book))
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_b(db, job, item, device, user, requested_format="pdf")
+
+    assert converted["called_with"] == str(book)
+    assert uploaded["filename"] == "book.pdf"
+    assert uploaded["file_bytes"].startswith(b"pdf-bytes-padded")
+    assert job.status == DeliveryStatus.delivered
+    assert job.target_format == "pdf"
+
     book = tmp_path / "book.epub"
     book.write_bytes(b"epub-bytes")
 

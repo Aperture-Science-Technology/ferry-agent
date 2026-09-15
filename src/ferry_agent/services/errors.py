@@ -16,3 +16,11 @@ class QuotaExceededError(ValueError):
 QUOTA_EXCEEDED_MESSAGE = (
     "Votre espace est plein. Supprimez des livres ou choisissez un fichier plus léger."
 )
+
+INVALID_KINDLE_EMAIL_MESSAGE = "Cette adresse email n'est pas valide."
+
+INVALID_DEFAULT_FORMAT_MESSAGE = (
+    "Format non pris en charge. Choisissez EPUB, MOBI, AZW3 ou PDF."
+)
+
+SUPPORTED_DEFAULT_FORMATS: frozenset[str] = frozenset({"epub", "mobi", "azw3", "pdf"})

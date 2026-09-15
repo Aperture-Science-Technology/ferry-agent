@@ -243,6 +243,10 @@ export interface paths {
          * @description Callback OAuth public (navigateur) : valide `state`, echange `code`,
          *     redirige vers le dashboard. Sans auth Clerk — le `state` signe + store
          *     serveur prouve l'intention de liaison.
+         *
+         *     Les echecs (refus fournisseur, state absent/invalide, device supprime,
+         *     echange refuse) redirigent toujours vers le dashboard avec
+         *     `cloud_link=error` — jamais une page d'erreur API dans le navigateur.
          */
         get: operations["link_callback_get_api_v1_devices__device_id__link_callback_get"];
         put?: never;
@@ -436,6 +440,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/gateways/{gateway_id}/recreate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recreate Gateway
+         * @description Regenere le code de connexion et la cle d'acces (affichage unique).
+         */
+        post: operations["recreate_gateway_api_v1_gateways__gateway_id__recreate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/opds/tokens": {
         parameters: {
             query?: never;
@@ -519,7 +543,13 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Patch Me */
+        /**
+         * Patch Me
+         * @description Mise a jour partielle : champ absent = inchange ; ``null`` = efface.
+         *
+         *     Le corps est valide manuellement pour renvoyer un ``detail`` 422 en texte
+         *     simple (charte non-tech), au lieu du tableau pydantic brut.
+         */
         patch: operations["patch_me_api_v1_users_me_patch"];
         trace?: never;
     };
@@ -669,7 +699,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Opds Cover */
+        /**
+         * Opds Cover
+         * @description Sert la couverture via le meme proxy allowliste que `/api/v1/covers`.
+         */
         get: operations["opds_cover_opds__token__cover__item_id__get"];
         put?: never;
         post?: never;
@@ -753,18 +786,12 @@ export interface components {
     schemas: {
         /** Body_submit_fetch_result_api_v1_gateways_jobs__job_id__fetch_result_post */
         Body_submit_fetch_result_api_v1_gateways_jobs__job_id__fetch_result_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** Body_upload_book_api_v1_books_upload_post */
         Body_upload_book_api_v1_books_upload_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** DeliveryCreate */
@@ -822,6 +849,8 @@ export interface components {
             library_item_id?: string | null;
             method: components["schemas"]["DeliveryMethod"];
             status: components["schemas"]["DeliveryStatus"];
+            /** Target Format */
+            target_format?: string | null;
         };
         /**
          * DeliveryStatus
@@ -1323,15 +1352,12 @@ export interface components {
             /** Kindle Email */
             kindle_email: string | null;
         };
-        /** UserPatch */
-        UserPatch: {
-            /** Default Format */
-            default_format?: ("epub" | "mobi" | "azw3" | "pdf") | null;
-            /** Kindle Email */
-            kindle_email?: string | null;
-        };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -1904,6 +1930,7 @@ export interface operations {
         parameters: {
             query: {
                 provider: string;
+                locale?: string | null;
             };
             header?: {
                 authorization?: string | null;
@@ -1941,6 +1968,7 @@ export interface operations {
             query?: {
                 code?: string | null;
                 state?: string | null;
+                error?: string | null;
             };
             header?: never;
             path: {
@@ -2386,6 +2414,40 @@ export interface operations {
             };
         };
     };
+    recreate_gateway_api_v1_gateways__gateway_id__recreate_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-Dev-User"?: string | null;
+            };
+            path: {
+                gateway_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GatewayCredentials"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_opds_tokens_api_v1_opds_tokens_get: {
         parameters: {
             query?: never;
@@ -2604,7 +2666,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UserPatch"];
+                "application/json": Record<string, never>;
             };
         };
         responses: {

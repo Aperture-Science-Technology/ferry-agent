@@ -117,10 +117,12 @@ export function DeliverDialog({
   item,
   devices,
   onOpenChange,
+  onDelivered,
 }: {
   item: LibraryItem | null;
   devices: Device[];
   onOpenChange: (open: boolean) => void;
+  onDelivered?: (job: DeliveryJob) => void;
 }) {
   const t = useTranslations("deliverDialog");
   const tCommon = useTranslations("common");
@@ -172,6 +174,7 @@ export function DeliverDialog({
       } else {
         toast.success(t("toastStarted", { status: job.status }));
       }
+      onDelivered?.(job);
       onOpenChange(false);
     } catch (error) {
       if (error instanceof ApiError && error.status === 400) {
@@ -188,7 +191,10 @@ export function DeliverDialog({
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t("title", { title: item?.title ?? "" })}</DialogTitle>
+          <div className="mb-1 h-px w-14 bg-gradient-to-r from-chart-1 via-chart-2 to-transparent" />
+          <DialogTitle className="font-heading tracking-tight">
+            {t("title", { title: item?.title ?? "" })}
+          </DialogTitle>
           <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

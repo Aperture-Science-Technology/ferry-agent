@@ -1,22 +1,30 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { PageHeader } from "@/components/app/page-header";
 import { LibraryView } from "@/components/app/library/library-view";
+import { mergeLibraryFetch } from "@/components/app/library/library-collection";
 import { safeApiFetch } from "@/lib/api";
 import type { Device, LibraryItem, PaginatedLibraryItems } from "@/lib/types";
 
-async function fetchAllLibraryItems(): Promise<LibraryItem[] | null> {
+async function fetchAllLibraryItems(): Promise<{
+  items: LibraryItem[];
+  unavailable: boolean;
+  partial: boolean;
+}> {
   const first = await safeApiFetch<PaginatedLibraryItems>("/api/v1/books?page=1&limit=200");
-  if (first === null) return null;
-  const items = [...first.items];
-  const totalPages = Math.max(1, Math.ceil(first.total / first.limit));
+  if (first === null) {
+    return mergeLibraryFetch<LibraryItem>(null, []);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(first.total / Math.max(1, first.limit)));
+  const rest: Array<PaginatedLibraryItems | null> = [];
   for (let page = 2; page <= totalPages; page += 1) {
     const next = await safeApiFetch<PaginatedLibraryItems>(
       `/api/v1/books?page=${page}&limit=200`
     );
+    rest.push(next);
     if (next === null) break;
-    items.push(...next.items);
   }
-  return items;
+
+  return mergeLibraryFetch(first, rest);
 }
 
 export default async function BibliothequePage({
@@ -28,19 +36,26 @@ export default async function BibliothequePage({
   setRequestLocale(locale);
   const t = await getTranslations("pages.library");
 
-  const [items, devices] = await Promise.all([
+  const [library, devices] = await Promise.all([
     fetchAllLibraryItems(),
     safeApiFetch<Device[]>("/api/v1/devices"),
   ]);
 
   return (
-    <div>
-      <PageHeader title={t("title")} description={t("description")} />
-      <LibraryView
-        initialItems={items ?? []}
-        itemsUnavailable={items === null}
-        devices={devices ?? []}
-      />
-    </div>
+    <LibraryView
+      key={[
+        library.unavailable ? "u" : "a",
+        library.partial ? "p" : "c",
+        library.items.length,
+        library.items[0]?.id ?? "empty",
+        library.items[library.items.length - 1]?.id ?? "empty",
+      ].join(":")}
+      title={t("title")}
+      description={t("description")}
+      initialItems={library.items}
+      itemsUnavailable={library.unavailable}
+      itemsPartial={library.partial}
+      devices={devices ?? []}
+    />
   );
 }

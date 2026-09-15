@@ -1,11 +1,9 @@
 """Tests du croisement "deja possede" (POST /api/v1/books/search -> owned).
 
-Identite titre + auteur + provider : un resultat est marque `owned` quand son
-titre et son auteur normalises correspondent a un LibraryItem possede par
-l'utilisateur ET que les deux partagent le meme provider (source). Le
-provider est la dimension discriminante ajoutee pour eviter les faux
-positifs entre editions differentes (ex. Gutenberg vs PocketBook) partageant
-titre et auteur. Un isbn identique reste un critere bonus independant.
+Matching en couches : `source_ref` exact (`gutenberg:1342`), puis ISBN
+normalise, puis titre + auteur + provider. Le provider evite les faux
+positifs entre editions differentes (ex. Gutenberg vs autre catalogue)
+partageant titre et auteur.
 """
 
 import uuid
@@ -172,6 +170,54 @@ class TestOwnedMatchingTitleAuthorProvider:
             title="Something else",
             result_id="999",
             author="Herbert",
+        )
+
+        data = _run_search(owned, [result])
+
+        assert len(data) == 1
+        assert data[0]["owned"] is False
+
+
+class TestOwnedMatchingSourceRef:
+    def test_matching_source_ref_marks_owned_despite_divergent_title(self):
+        owned = [
+            (
+                _fake_owned_item(
+                    title="some_book_title",
+                    author="",
+                    source_ref="gutenberg:1342",
+                ),
+                SourceType.gutenberg,
+            )
+        ]
+        result = Result(
+            source="gutenberg",
+            title="Pride and Prejudice",
+            result_id="1342",
+            author="Jane Austen",
+        )
+
+        data = _run_search(owned, [result])
+
+        assert len(data) == 1
+        assert data[0]["owned"] is True
+
+    def test_different_source_ref_is_not_owned_without_other_match(self):
+        owned = [
+            (
+                _fake_owned_item(
+                    title="Dune",
+                    author="Herbert",
+                    source_ref="gutenberg:1",
+                ),
+                SourceType.gutenberg,
+            )
+        ]
+        result = Result(
+            source="gutenberg",
+            title="Something else",
+            result_id="999",
+            author="Someone Else",
         )
 
         data = _run_search(owned, [result])

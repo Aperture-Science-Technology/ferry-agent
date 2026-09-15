@@ -210,7 +210,7 @@ async def convert_with_profile_cache(
     """Convertit en passant par le cache (library_item_id, profil, format).
 
     Retourne `(chemin, from_cache)`.
-    `convert_kind` : `to_epub` | `epub_to_mobi` | `epub_to_azw3`.
+    `convert_kind` : `to_epub` | `epub_to_mobi` | `epub_to_azw3` | `epub_to_pdf`.
     """
     cached = conversion_profiles.get_cached(library_item_id, preset, target_format)
     if cached is not None:
@@ -226,7 +226,78 @@ async def convert_with_profile_cache(
         path = await epub_to_mobi(src_path, str(out), extra_args=extra_args)
     elif convert_kind == "epub_to_azw3":
         path = await epub_to_azw3(src_path, str(out), extra_args=extra_args)
+    elif convert_kind == "epub_to_pdf":
+        # PyMuPDF ignore les args Calibre ; le cache reste cle par preset.
+        path = await epub_to_pdf(src_path, str(out))
     else:
         raise ValueError(f"convert_kind inconnu: {convert_kind}")
 
     return path, False
+
+
+_SUPPORTED_FORMATS = frozenset({"epub", "mobi", "azw3", "pdf"})
+_EPUB_TO_KIND = {
+    "mobi": "epub_to_mobi",
+    "azw3": "epub_to_azw3",
+    "pdf": "epub_to_pdf",
+}
+
+
+async def materialize_target_format(
+    *,
+    library_item_id: uuid.UUID,
+    src_path: str,
+    original_format: str,
+    target_format: str,
+    preset: conversion_profiles.ConversionPreset | None,
+) -> tuple[str, bool]:
+    """Produit un fichier au format exact demande.
+
+    Pas de fallback silencieux : si la conversion est impossible, leve une
+    exception (l'appelant marque la livraison en echec).
+    Retourne `(chemin, from_cache)`.
+    """
+    original = original_format.lower().lstrip(".")
+    target = target_format.lower().lstrip(".")
+    if target not in _SUPPORTED_FORMATS:
+        raise ValueError(f"format cible non supporté: {target}")
+    if original == target:
+        return src_path, False
+
+    working_path = src_path
+    working_format = original
+    from_cache = False
+
+    if working_format != "epub" and target != "epub":
+        working_path, from_cache = await convert_with_profile_cache(
+            library_item_id=library_item_id,
+            src_path=working_path,
+            target_format="epub",
+            preset=preset,
+            convert_kind="to_epub",
+        )
+        working_format = "epub"
+
+    if working_format == target:
+        return working_path, from_cache
+
+    if target == "epub":
+        return await convert_with_profile_cache(
+            library_item_id=library_item_id,
+            src_path=working_path,
+            target_format="epub",
+            preset=preset,
+            convert_kind="to_epub",
+        )
+
+    convert_kind = _EPUB_TO_KIND.get(target)
+    if working_format != "epub" or convert_kind is None:
+        raise RuntimeError(f"conversion {working_format} → {target} impossible")
+
+    return await convert_with_profile_cache(
+        library_item_id=library_item_id,
+        src_path=working_path,
+        target_format=target,
+        preset=preset,
+        convert_kind=convert_kind,
+    )

@@ -164,16 +164,21 @@ async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
     assert list(library_dir.glob("*.mobi")) == []
 
 
-async def test_deliver_tier_a_skips_conversion_for_non_kindle_device(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_deliver_tier_a_converts_requested_format_even_if_brand_is_not_kindle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Le format demande prime : pas de succes silencieux dans le format d'origine."""
+    converted = {}
     sent = {}
 
-    async def fail_convert(*_args, **_kwargs):
-        raise AssertionError("la conversion ne doit pas etre appelee pour un device non-kindle")
+    async def fake_epub_to_mobi(epub_path, mobi_path=None, extra_args=None):
+        converted["called_with"] = epub_path
+        return str(Path(epub_path).with_suffix(".mobi"))
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename)
 
-    monkeypatch.setattr(delivery.converters, "epub_to_mobi", fail_convert)
+    monkeypatch.setattr(delivery.converters, "epub_to_mobi", fake_epub_to_mobi)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
 
@@ -185,8 +190,71 @@ async def test_deliver_tier_a_skips_conversion_for_non_kindle_device(monkeypatch
 
     await delivery._deliver_tier_a(db, job, item, device, user)
 
-    assert sent["file_path"] == item.storage_path
+    assert converted["called_with"] == item.storage_path
+    assert sent["filename"] == "book.mobi"
     assert job.status == DeliveryStatus.delivered
+    assert job.target_format == "mobi"
+
+
+async def test_deliver_tier_a_converts_epub_to_pdf_when_requested(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    converted = {}
+    sent = {}
+
+    async def fake_epub_to_pdf(epub_path, pdf_path=None):
+        converted["called_with"] = epub_path
+        return str(Path(epub_path).with_suffix(".pdf"))
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(file_path=file_path, filename=filename)
+
+    monkeypatch.setattr(delivery.converters, "epub_to_pdf", fake_epub_to_pdf)
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(default_format="epub")
+    device = make_device()
+    item = make_item()
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user, requested_format="pdf")
+
+    assert converted["called_with"] == item.storage_path
+    assert sent["filename"] == "book.pdf"
+    assert job.status == DeliveryStatus.delivered
+    assert job.target_format == "pdf"
+
+
+async def test_deliver_tier_a_fails_when_requested_format_cannot_be_produced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Demander MOBI depuis un PDF sans Calibre : echec, jamais d'envoi PDF."""
+    sent = {}
+
+    async def raising_to_epub(*_args, **_kwargs):
+        raise RuntimeError("ebook-convert indisponible: conversion vers EPUB impossible")
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(file_path=file_path, filename=filename)
+
+    monkeypatch.setattr(delivery.converters, "convert_to_epub", raising_to_epub)
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(default_format="epub")
+    device = make_device()
+    item = make_item(original_format="pdf", storage_path="/tmp/fake-library/book.pdf")
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user, requested_format="mobi")
+
+    assert job.status == DeliveryStatus.failed
+    assert job.error == delivery.converters.CONVERSION_FAILED_USER_MESSAGE
+    assert sent == {}
+    assert job.delivered_at is None
 
 
 async def test_deliver_tier_a_fails_without_kindle_email(monkeypatch: pytest.MonkeyPatch) -> None:

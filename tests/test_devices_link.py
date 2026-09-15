@@ -273,6 +273,7 @@ async def test_link_callback_502_on_exchange_error(monkeypatch: pytest.MonkeyPat
 
 
 def test_link_callback_get_rejects_missing_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    """State absent → redirect dashboard error (parcours navigateur, pas 400 API)."""
     _patch_settings(monkeypatch)
     from ferry_agent.main import app
 
@@ -286,7 +287,8 @@ def test_link_callback_get_rejects_missing_state(monkeypatch: pytest.MonkeyPatch
     try:
         with TestClient(app, follow_redirects=False) as client:
             response = client.get(f"/api/v1/devices/{device.id}/link/callback?code=abc")
-        assert response.status_code == 400
+        assert response.status_code == 302
+        assert response.headers["location"].endswith("/fr/app/appareils?cloud_link=error")
     finally:
         clear_app_deps()
 
@@ -308,7 +310,77 @@ def test_link_callback_get_rejects_invalid_state(monkeypatch: pytest.MonkeyPatch
             response = client.get(
                 f"/api/v1/devices/{device.id}/link/callback?code=abc&state=not-a-valid-state"
             )
-        assert response.status_code == 400
+        assert response.status_code == 302
+        assert response.headers["location"].endswith("/fr/app/appareils?cloud_link=error")
+    finally:
+        clear_app_deps()
+
+
+def test_link_callback_get_refused_oauth_redirects_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Refus fournisseur (`error=access_denied`) → cloud_link=error, state consomme."""
+    settings = _patch_settings(monkeypatch)
+    from ferry_agent.db import get_db
+    from ferry_agent.main import app
+
+    device = make_device()
+    state = crypto.issue_oauth_state(
+        device.id, "dropbox", locale="en", ttl_seconds=settings.oauth_state_ttl_seconds
+    )
+
+    async def fake_db():
+        db = AsyncMock()
+        yield db
+
+    app.dependency_overrides[get_db] = fake_db
+    try:
+        with TestClient(app, follow_redirects=False) as client:
+            response = client.get(
+                f"/api/v1/devices/{device.id}/link/callback",
+                params={"error": "access_denied", "state": state},
+            )
+        assert response.status_code == 302
+        assert response.headers["location"].endswith("/en/app/appareils?cloud_link=error")
+        # State a usage unique : rejeu impossible
+        with TestClient(app, follow_redirects=False) as client:
+            replay = client.get(
+                f"/api/v1/devices/{device.id}/link/callback",
+                params={"code": "auth-code", "state": state},
+            )
+        assert replay.status_code == 302
+        assert replay.headers["location"].endswith("/fr/app/appareils?cloud_link=error")
+    finally:
+        clear_app_deps()
+
+
+def test_link_callback_get_deleted_device_redirects_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = _patch_settings(monkeypatch)
+    from ferry_agent.db import get_db
+    from ferry_agent.main import app
+
+    device = make_device()
+    state = crypto.issue_oauth_state(
+        device.id, "dropbox", ttl_seconds=settings.oauth_state_ttl_seconds
+    )
+
+    async def fake_db():
+        db = AsyncMock()
+
+        class FakeResult:
+            def scalar_one_or_none(self):
+                return None
+
+        db.execute = AsyncMock(return_value=FakeResult())
+        yield db
+
+    app.dependency_overrides[get_db] = fake_db
+    try:
+        with TestClient(app, follow_redirects=False) as client:
+            response = client.get(
+                f"/api/v1/devices/{device.id}/link/callback",
+                params={"code": "auth-code", "state": state},
+            )
+        assert response.status_code == 302
+        assert response.headers["location"].endswith("/fr/app/appareils?cloud_link=error")
     finally:
         clear_app_deps()
 
@@ -319,7 +391,9 @@ def test_link_callback_get_exchanges_and_redirects(monkeypatch: pytest.MonkeyPat
     from ferry_agent.main import app
 
     device = make_device()
-    state = crypto.issue_oauth_state(device.id, "dropbox", ttl_seconds=settings.oauth_state_ttl_seconds)
+    state = crypto.issue_oauth_state(
+        device.id, "dropbox", locale="en", ttl_seconds=settings.oauth_state_ttl_seconds
+    )
 
     async def fake_exchange(code, client_id, client_secret, redirect_uri):
         assert code == "auth-code"
@@ -347,9 +421,65 @@ def test_link_callback_get_exchanges_and_redirects(monkeypatch: pytest.MonkeyPat
                 params={"code": "auth-code", "state": state},
             )
         assert response.status_code == 302
-        assert response.headers["location"].endswith("/fr/app/appareils?cloud_link=ok")
+        assert response.headers["location"].endswith("/en/app/appareils?cloud_link=ok")
         assert device.link_ref is not None
         assert "dbx-access-tok" not in device.link_ref
         assert cloud_links.parse_link_ref(device.link_ref)["token"] == "dbx-access-tok"
     finally:
         clear_app_deps()
+
+
+def test_link_callback_get_exchange_failure_redirects_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = _patch_settings(monkeypatch)
+    from ferry_agent.db import get_db
+    from ferry_agent.main import app
+
+    device = make_device()
+    state = crypto.issue_oauth_state(
+        device.id, "dropbox", ttl_seconds=settings.oauth_state_ttl_seconds
+    )
+
+    async def raising_exchange(*_args, **_kwargs):
+        raise cloud_links.CloudLinkError("echange de code Dropbox echoue (400): invalid_grant")
+
+    monkeypatch.setattr(cloud_links, "exchange_dropbox_code", raising_exchange)
+
+    async def fake_db():
+        db = AsyncMock()
+
+        class FakeResult:
+            def scalar_one_or_none(self):
+                return device
+
+        db.execute = AsyncMock(return_value=FakeResult())
+        yield db
+
+    app.dependency_overrides[get_db] = fake_db
+    try:
+        with TestClient(app, follow_redirects=False) as client:
+            response = client.get(
+                f"/api/v1/devices/{device.id}/link/callback",
+                params={"code": "bad-code", "state": state},
+            )
+        assert response.status_code == 302
+        assert response.headers["location"].endswith("/fr/app/appareils?cloud_link=error")
+        assert device.link_ref is None
+    finally:
+        clear_app_deps()
+
+
+async def test_get_link_url_embeds_locale_in_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    _patch_settings(monkeypatch)
+    device = make_device()
+    user = CurrentUser(id=device.user_id, email="reader@example.test")
+    db = FakeSession([device])
+
+    out = await devices.get_link_url(device.id, "dropbox", user, db, locale="en")
+    assert "state=" in out.url
+    # Extraire le state de l'URL et verifier la locale embarquee
+    from urllib.parse import parse_qs, urlparse
+
+    state = parse_qs(urlparse(out.url).query)["state"][0]
+    info = crypto.consume_oauth_state(state, device.id)
+    assert info.provider == "dropbox"
+    assert info.locale == "en"

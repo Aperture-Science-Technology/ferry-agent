@@ -26,7 +26,7 @@ from ferry_agent.schemas import (
 )
 from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services import library
-from ferry_agent.services.errors import FileTooLargeError, UnknownFormatError
+from ferry_agent.services.errors import FileTooLargeError, QuotaExceededError, UnknownFormatError
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 from ferry_agent.services.virustotal import is_known_malicious
 
@@ -62,6 +62,33 @@ async def pair_gateway(
 ) -> GatewayId:
     gateway = await gateway_service.pair_gateway(db, payload.token)
     return GatewayId(gateway_id=gateway.id)
+
+
+@router.post("/{gateway_id}/recreate", response_model=GatewayCredentials)
+async def recreate_gateway(
+    gateway_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> GatewayCredentials:
+    """Regenere le code de connexion et la cle d'acces (affichage unique)."""
+    settings = get_settings()
+    result = await db.execute(
+        select(Gateway).where(Gateway.id == gateway_id, Gateway.user_id == user.id)
+    )
+    gateway = result.scalar_one_or_none()
+    if gateway is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="gateway introuvable")
+    gateway, pairing_token, gateway_key = await gateway_service.recreate_gateway_credentials(
+        db, gateway, settings.pairing_token_ttl_minutes
+    )
+    return GatewayCredentials(
+        gateway_id=gateway.id,
+        pairing_token=pairing_token,
+        gateway_key=gateway_key,
+        pairing_expires_at=gateway.pairing_expires_at,
+        pairing_token_ttl_minutes=settings.pairing_token_ttl_minutes,
+        gateway_online_seconds=settings.gateway_online_seconds,
+    )
 
 
 @router.get("", response_model=list[GatewayOut])
@@ -189,16 +216,24 @@ async def submit_fetch_result(
     if detected_format == "mobi" and Path(filename).suffix.lower() == ".azw3":
         detected_format = "azw3"
     metadata = job.payload.get("result", {})
-    item = await library.import_from_gateway(
-        db,
-        gateway.user_id,
-        gateway.id,
-        job.id,
-        filename,
-        content,
-        detected_format,
-        metadata,
-    )
+    try:
+        item = await library.import_from_gateway(
+            db,
+            gateway.user_id,
+            gateway.id,
+            job.id,
+            filename,
+            content,
+            detected_format,
+            metadata,
+        )
+    except QuotaExceededError as exc:
+        job.status = GatewayJobStatus.failed
+        job.result_ref = str(exc)
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_507_INSUFFICIENT_STORAGE, detail=str(exc)
+        ) from exc
     job.status = GatewayJobStatus.done
     job.result_ref = str(item.id)
     await db.commit()

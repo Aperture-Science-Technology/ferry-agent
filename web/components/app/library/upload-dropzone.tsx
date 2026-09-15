@@ -2,9 +2,10 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { Upload } from "lucide-react";
+import { CheckCircle2, CircleAlert, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import type { LibraryItem } from "@/lib/types";
 
@@ -177,6 +178,7 @@ export function UploadDropzone({
       <div
         role="button"
         tabIndex={0}
+        aria-label={t("uploadChooseFile")}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -202,13 +204,20 @@ export function UploadDropzone({
           void processFiles(event.dataTransfer.files);
         }}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-card/20 px-4 py-10 text-center transition-colors",
-          dragOver && "border-primary/50 bg-muted/40"
+          "relative flex cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-dashed border-border/70 bg-card/30 px-4 py-10 text-center transition-colors",
+          dragOver && "border-chart-1/60 bg-accent/40"
         )}
       >
-        <Upload className="size-8 text-muted-foreground" />
-        <p className="text-sm font-medium">{t("uploadDropHint")}</p>
-        <p className="text-xs text-muted-foreground">{t("uploadFormatsHint")}</p>
+        <div className="flex size-12 items-center justify-center rounded-xl bg-muted/70 ring-1 ring-border/60">
+          <Upload className="size-5 text-chart-1" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium">{t("uploadDropHint")}</p>
+          <p className="text-xs text-muted-foreground">{t("uploadFormatsHint")}</p>
+        </div>
+        <span className="inline-flex h-10 items-center justify-center rounded-lg border border-border/70 bg-background/60 px-4 text-sm font-medium">
+          {t("uploadChooseFile")}
+        </span>
         <input
           ref={inputRef}
           type="file"
@@ -222,30 +231,40 @@ export function UploadDropzone({
       </div>
 
       {rows.length > 0 && (
-        <ul className="space-y-2">
+        <ul className="space-y-2" aria-live="polite">
           {rows.map((row) => (
-            <li key={row.id} className="rounded-md border border-border/50 px-3 py-2">
-              <div className="flex items-center justify-between gap-2 text-sm">
+            <li
+              key={row.id}
+              className="rounded-lg border border-border/60 bg-card/50 px-3 py-2.5"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2 text-sm">
                 <span className="truncate font-medium">{row.name}</span>
-                <span className="shrink-0 text-muted-foreground">
+                <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
                   {row.status === "uploading" && `${row.progress}%`}
-                  {row.status === "done" && t("uploadDone")}
-                  {row.status === "error" && t("uploadFailed")}
+                  {row.status === "done" && (
+                    <>
+                      <CheckCircle2 className="size-3.5 text-chart-1" />
+                      {t("uploadDone")}
+                    </>
+                  )}
+                  {row.status === "error" && (
+                    <>
+                      <CircleAlert className="size-3.5 text-destructive" />
+                      {t("uploadFailed")}
+                    </>
+                  )}
                 </span>
               </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-[width] duration-150",
-                    row.status === "error" ? "bg-destructive" : "bg-primary"
-                  )}
-                  style={{
-                    width: `${row.status === "error" ? 100 : row.progress}%`,
-                  }}
-                />
-              </div>
+              <Progress
+                value={row.status === "error" ? 100 : row.progress}
+                className={cn(
+                  "gap-0",
+                  row.status === "error" &&
+                    "**:data-[slot=progress-indicator]:bg-destructive"
+                )}
+              />
               {row.error && (
-                <p className="mt-1 text-xs text-destructive">{row.error}</p>
+                <p className="mt-1.5 text-xs text-destructive">{row.error}</p>
               )}
             </li>
           ))}

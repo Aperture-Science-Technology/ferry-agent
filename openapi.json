@@ -4,7 +4,7 @@
       "Body_submit_fetch_result_api_v1_gateways_jobs__job_id__fetch_result_post": {
         "properties": {
           "file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
           }
@@ -18,7 +18,7 @@
       "Body_upload_book_api_v1_books_upload_post": {
         "properties": {
           "file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
           }
@@ -182,6 +182,17 @@
           },
           "status": {
             "$ref": "#/components/schemas/DeliveryStatus"
+          },
+          "target_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Format"
           }
         },
         "required": [
@@ -1591,43 +1602,15 @@
         "title": "UserOut",
         "type": "object"
       },
-      "UserPatch": {
-        "properties": {
-          "default_format": {
-            "anyOf": [
-              {
-                "enum": [
-                  "epub",
-                  "mobi",
-                  "azw3",
-                  "pdf"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Default Format"
-          },
-          "kindle_email": {
-            "anyOf": [
-              {
-                "format": "email",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Kindle Email"
-          }
-        },
-        "title": "UserPatch",
-        "type": "object"
-      },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -2914,6 +2897,22 @@
             }
           },
           {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Locale"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -2976,7 +2975,7 @@
     },
     "/api/v1/devices/{device_id}/link/callback": {
       "get": {
-        "description": "Callback OAuth public (navigateur) : valide `state`, echange `code`,\nredirige vers le dashboard. Sans auth Clerk \u2014 le `state` signe + store\nserveur prouve l'intention de liaison.",
+        "description": "Callback OAuth public (navigateur) : valide `state`, echange `code`,\nredirige vers le dashboard. Sans auth Clerk \u2014 le `state` signe + store\nserveur prouve l'intention de liaison.\n\nLes echecs (refus fournisseur, state absent/invalide, device supprime,\nechange refuse) redirigent toujours vers le dashboard avec\n`cloud_link=error` \u2014 jamais une page d'erreur API dans le navigateur.",
         "operationId": "link_callback_get_api_v1_devices__device_id__link_callback_get",
         "parameters": [
           {
@@ -3019,6 +3018,22 @@
                 }
               ],
               "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
             }
           }
         ],
@@ -3906,6 +3921,82 @@
         ]
       }
     },
+    "/api/v1/gateways/{gateway_id}/recreate": {
+      "post": {
+        "description": "Regenere le code de connexion et la cle d'acces (affichage unique).",
+        "operationId": "recreate_gateway_api_v1_gateways__gateway_id__recreate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gateway_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Gateway Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Dev-User",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GatewayCredentials"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recreate Gateway",
+        "tags": [
+          "gateways"
+        ]
+      }
+    },
     "/api/v1/opds/tokens": {
       "get": {
         "operationId": "list_opds_tokens_api_v1_opds_tokens_get",
@@ -4349,6 +4440,7 @@
         ]
       },
       "patch": {
+        "description": "Mise a jour partielle : champ absent = inchange ; ``null`` = efface.\n\nLe corps est valide manuellement pour renvoyer un ``detail`` 422 en texte\nsimple (charte non-tech), au lieu du tableau pydantic brut.",
         "operationId": "patch_me_api_v1_users_me_patch",
         "parameters": [
           {
@@ -4388,7 +4480,8 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UserPatch"
+                "title": "Body",
+                "type": "object"
               }
             }
           },
@@ -4744,6 +4837,7 @@
     },
     "/opds/{token}/cover/{item_id}": {
       "get": {
+        "description": "Sert la couverture via le meme proxy allowliste que `/api/v1/covers`.",
         "operationId": "opds_cover_opds__token__cover__item_id__get",
         "parameters": [
           {

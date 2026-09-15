@@ -10,8 +10,9 @@ import uuid
 from pathlib import Path
 from urllib.parse import urlencode
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +21,7 @@ from ferry_agent.db import get_db
 from ferry_agent.models import LibraryItem, OpdsToken
 from ferry_agent.schemas import OpdsTokenCreate, OpdsTokenCreated, OpdsTokenOut, OpdsTokenRevoke
 from ferry_agent.services import opds as opds_service
+from ferry_agent.services.covers import fetch_cover_to_cache, validate_cover_url
 from ferry_agent.services.file_validation import content_type_for_filename
 from ferry_agent.services.rate_limit import opds_rate_limiter
 
@@ -291,6 +293,7 @@ async def opds_cover(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> Response:
+    """Sert la couverture via le meme proxy allowliste que `/api/v1/covers`."""
     _enforce_rate_limit(request)
     row = await _require_token(token, db)
     result = await db.execute(
@@ -304,7 +307,14 @@ async def opds_cover(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="introuvable")
     cover = item.cover_url
     if cover.startswith("http://") or cover.startswith("https://"):
-        return RedirectResponse(url=cover, status_code=status.HTTP_302_FOUND)
+        cover_url = validate_cover_url(cover)
+        if cover_url is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="introuvable")
+        try:
+            path, media_type = await fetch_cover_to_cache(str(item.id), cover_url)
+        except (httpx.HTTPError, ValueError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="introuvable")
+        return FileResponse(path, media_type=media_type)
     path = Path(cover)
     if path.is_file():
         return FileResponse(path, media_type=content_type_for_filename(path.name))

@@ -76,6 +76,24 @@ async def test_update_device_can_clear_name_to_null() -> None:
     assert out.name is None
 
 
+async def test_update_device_can_clear_model_and_conversion_profile_to_null() -> None:
+    device = make_device(model="Clara", name="Salon")
+    # Simuler un profil deja stocke (forme API apres resolve)
+    device.conversion_profile = {"preset": "reader_6in"}
+    user = CurrentUser(id=device.user_id, email="reader@example.test")
+    db = FakeSession([device])
+
+    out = await devices.update_device(
+        device.id,
+        DevicePatch(model=None, conversion_profile=None),
+        user,
+        db,
+    )
+
+    assert out.model is None
+    assert out.conversion_profile is None
+    assert device.conversion_profile is None
+
 async def test_update_device_leaves_tier_unchanged_when_brand_and_model_unset() -> None:
     device = make_device(brand=DeviceBrand.kobo, model="Clara", delivery_tier=DeliveryTier.C)
     user = CurrentUser(id=device.user_id, email="reader@example.test")
