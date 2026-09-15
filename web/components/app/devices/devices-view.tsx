@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Tablet,
@@ -10,8 +10,9 @@ import {
   Trash2,
   Pencil,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -40,17 +40,27 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/app/empty-state";
 import { SectionHeader } from "@/components/app/section-header";
-import { StatePanel } from "@/components/app/state-panel";
 import { NewDeviceDialog } from "@/components/app/devices/new-device-dialog";
 import { EditDeviceDialog } from "@/components/app/devices/edit-device-dialog";
 import { CloudLinkDialog } from "@/components/app/devices/cloud-link-dialog";
 import { BrandBadge } from "@/components/app/devices/brand-badge";
 import { conversionProfileLabel } from "@/components/app/devices/conversion-profile-field";
+import {
+  applyDeviceFetchResult,
+  deviceDisplayName,
+} from "@/components/app/devices/devices-state";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
 const CLOUD_LINK_MESSAGE = "ferry-cloud-link";
+
+function formatAppDate(iso: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(iso));
+}
 
 function DeviceIdentity({
   device,
@@ -113,6 +123,7 @@ function DeviceActions({
   editLabel,
   linkLabel,
   deleteLabel,
+  disabled,
 }: {
   device: Device;
   onEdit: () => void;
@@ -121,20 +132,26 @@ function DeviceActions({
   editLabel: string;
   linkLabel: string;
   deleteLabel: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button size="sm" variant="outline" onClick={onEdit}>
+      <Button size="sm" variant="outline" onClick={onEdit} disabled={disabled}>
         <Pencil />
         {editLabel}
       </Button>
       {device.delivery_tier === "B" ? (
-        <Button size="sm" variant="outline" onClick={onLink}>
+        <Button size="sm" variant="outline" onClick={onLink} disabled={disabled}>
           <Link2 />
           {linkLabel}
         </Button>
       ) : null}
-      <Button size="sm" variant="destructive" onClick={onDelete}>
+      <Button
+        size="sm"
+        variant="destructive"
+        onClick={onDelete}
+        disabled={disabled}
+      >
         <Trash2 />
         {deleteLabel}
       </Button>
@@ -154,24 +171,61 @@ export function DevicesView({
   const t = useTranslations("devices");
   const tCloud = useTranslations("cloudLink");
   const tEditDevice = useTranslations("editDevice");
+  const tNewDevice = useTranslations("newDevice");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const { call } = useApiClient();
   const [devices, setDevices] = useState(initialDevices);
+  const [unavailable, setUnavailable] = useState(
+    devicesUnavailable && initialDevices.length === 0
+  );
+  const [refreshError, setRefreshError] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Device | null>(null);
   const [linkTarget, setLinkTarget] = useState<Device | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const refreshingRef = useRef(false);
+  const cloudLinkHandled = useRef(false);
+
+  const refresh = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (refreshingRef.current) return;
+      refreshingRef.current = true;
+      if (!opts?.silent) setRefreshing(true);
+      try {
+        const fresh = await call<Device[]>("/api/v1/devices");
+        setDevices((prev) => applyDeviceFetchResult(prev, fresh).items);
+        setUnavailable(false);
+        setRefreshError(false);
+      } catch {
+        let keptEmpty = true;
+        setDevices((prev) => {
+          const outcome = applyDeviceFetchResult(prev, null);
+          keptEmpty = outcome.items.length === 0;
+          return outcome.items;
+        });
+        if (keptEmpty) setUnavailable(true);
+        else setRefreshError(true);
+      } finally {
+        refreshingRef.current = false;
+        setRefreshing(false);
+      }
+    },
+    [call]
+  );
 
   useEffect(() => {
     if (!cloudLinkStatus) return;
+    if (cloudLinkHandled.current) return;
+    cloudLinkHandled.current = true;
 
     // Popup OAuth : notifier la fenetre d'origine puis se fermer.
     if (window.opener && !window.opener.closed) {
       window.opener.postMessage(
         { type: CLOUD_LINK_MESSAGE, status: cloudLinkStatus },
-        window.location.origin,
+        window.location.origin
       );
       window.close();
       return;
@@ -179,24 +233,30 @@ export function DevicesView({
 
     if (cloudLinkStatus === "ok") {
       toast.success(tCloud("toastLinked"));
-      setRefreshing(true);
       void call<Device[]>("/api/v1/devices")
-        .then((fresh) => setDevices(fresh))
-        .catch(() => {
-          /* liste initiale deja affichee */
+        .then((fresh) => {
+          setDevices((prev) => applyDeviceFetchResult(prev, fresh).items);
+          setUnavailable(false);
+          setRefreshError(false);
         })
-        .finally(() => setRefreshing(false));
+        .catch(() => {
+          setRefreshError(true);
+        });
     } else {
       toast.error(tCloud("toastFailed"));
     }
 
     const url = new URL(window.location.href);
     url.searchParams.delete("cloud_link");
-    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    window.history.replaceState(
+      {},
+      "",
+      `${url.pathname}${url.search}${url.hash}`
+    );
   }, [cloudLinkStatus, call, tCloud]);
 
   async function confirmDelete() {
-    if (!deleteTarget) return;
+    if (!deleteTarget || deleting) return;
     setDeleting(true);
     try {
       await call(`/api/v1/devices/${deleteTarget.id}`, { method: "DELETE" });
@@ -210,6 +270,10 @@ export function DevicesView({
     }
   }
 
+  function brandLabel(brand: Device["brand"]) {
+    return tNewDevice(`brands.${brand}`);
+  }
+
   const createAction = (
     <Button onClick={() => setCreateOpen(true)}>
       <Plus />
@@ -217,33 +281,73 @@ export function DevicesView({
     </Button>
   );
 
+  const headerActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => void refresh()}
+        disabled={refreshing}
+        aria-busy={refreshing}
+      >
+        {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+        {t("refresh")}
+      </Button>
+      {createAction}
+    </div>
+  );
+
+  const deleteName = deleteTarget
+    ? deviceDisplayName(deleteTarget, brandLabel(deleteTarget.brand))
+    : "";
+
   return (
     <div className="space-y-6">
       <Reveal>
         <SectionHeader
           title={t("sectionTitle")}
           description={
-            devices.length > 0 ? t("countLabel", { count: devices.length }) : undefined
+            devices.length > 0
+              ? t("countLabel", { count: devices.length })
+              : t("sectionDescription")
           }
-          action={createAction}
+          action={headerActions}
         />
 
-        {refreshing ? (
-          <StatePanel className="py-10">
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin text-chart-1" />
-              {t("refreshing")}
-            </div>
-            <div className="mt-4 grid w-full gap-3">
-              <Skeleton className="h-20 w-full rounded-lg" />
-              <Skeleton className="h-20 w-full rounded-lg" />
-            </div>
-          </StatePanel>
-        ) : devicesUnavailable && devices.length === 0 ? (
-          <Alert>
+        {refreshError && devices.length > 0 ? (
+          <Alert className="mb-4" role="status">
+            <AlertTitle>{t("refreshFailedTitle")}</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>{t("refreshFailedDescription")}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void refresh()}
+                disabled={refreshing}
+              >
+                {refreshing ? <Loader2 className="animate-spin" /> : null}
+                {t("retry")}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {unavailable && devices.length === 0 ? (
+          <Alert role="alert">
             <Tablet />
-            <AlertTitle>{t("emptyTitle")}</AlertTitle>
-            <AlertDescription>{t("emptyUnavailable")}</AlertDescription>
+            <AlertTitle>{t("unavailableTitle")}</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>{t("emptyUnavailable")}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void refresh()}
+                disabled={refreshing}
+              >
+                {refreshing ? <Loader2 className="animate-spin" /> : null}
+                {t("retry")}
+              </Button>
+            </AlertDescription>
           </Alert>
         ) : devices.length === 0 ? (
           <EmptyState
@@ -253,9 +357,8 @@ export function DevicesView({
             action={createAction}
           />
         ) : (
-          <>
-            {/* Mobile / narrow: cards */}
-            <RevealGroup className="grid gap-3 md:hidden">
+          <div aria-busy={refreshing}>
+            <RevealGroup className="grid gap-3 lg:hidden">
               {devices.map((device) => (
                 <RevealItem key={device.id}>
                   <Card size="sm" className="bg-card/60">
@@ -278,12 +381,17 @@ export function DevicesView({
                       </div>
 
                       <p className="line-clamp-2 text-xs text-muted-foreground break-words">
-                        {conversionProfileLabel(device.conversion_profile, tEditDevice)}
+                        {conversionProfileLabel(
+                          device.conversion_profile,
+                          tEditDevice
+                        )}
                       </p>
 
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Badge variant="secondary" className="max-w-full">
-                          <span className="truncate">{t(`tiers.${device.delivery_tier}`)}</span>
+                          <span className="truncate">
+                            {t(`tiers.${device.delivery_tier}`)}
+                          </span>
                         </Badge>
                         <CloudStatus
                           device={device}
@@ -296,7 +404,7 @@ export function DevicesView({
 
                       <p className="text-xs text-muted-foreground">
                         {device.last_synced_at
-                          ? new Date(device.last_synced_at).toLocaleString()
+                          ? formatAppDate(device.last_synced_at, locale)
                           : tCommon("never")}
                       </p>
 
@@ -308,6 +416,7 @@ export function DevicesView({
                         editLabel={t("edit")}
                         linkLabel={t("linkCloud")}
                         deleteLabel={t("delete")}
+                        disabled={deleting}
                       />
                     </CardContent>
                   </Card>
@@ -315,8 +424,7 @@ export function DevicesView({
               ))}
             </RevealGroup>
 
-            {/* Desktop: table */}
-            <Reveal className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+            <Reveal className="hidden overflow-hidden rounded-xl border border-border/60 lg:block">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -334,14 +442,22 @@ export function DevicesView({
                       <TableCell className="font-medium">
                         <div className="min-w-0 space-y-1">
                           {device.name ? (
-                            <span className="line-clamp-2 break-words">{device.name}</span>
+                            <span className="line-clamp-2 break-words">
+                              {device.name}
+                            </span>
                           ) : null}
-                          <DeviceIdentity device={device} muted={Boolean(device.name)} />
+                          <DeviceIdentity
+                            device={device}
+                            muted={Boolean(device.name)}
+                          />
                         </div>
                       </TableCell>
                       <TableCell className="max-w-48">
                         <span className="line-clamp-2 text-sm text-muted-foreground break-words">
-                          {conversionProfileLabel(device.conversion_profile, tEditDevice)}
+                          {conversionProfileLabel(
+                            device.conversion_profile,
+                            tEditDevice
+                          )}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -362,7 +478,7 @@ export function DevicesView({
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {device.last_synced_at
-                          ? new Date(device.last_synced_at).toLocaleString()
+                          ? formatAppDate(device.last_synced_at, locale)
                           : tCommon("never")}
                       </TableCell>
                       <TableCell className="text-right">
@@ -374,6 +490,7 @@ export function DevicesView({
                           editLabel={t("edit")}
                           linkLabel={t("linkCloud")}
                           deleteLabel={t("delete")}
+                          disabled={deleting}
                         />
                       </TableCell>
                     </TableRow>
@@ -381,7 +498,7 @@ export function DevicesView({
                 </TableBody>
               </Table>
             </Reveal>
-          </>
+          </div>
         )}
       </Reveal>
 
@@ -391,17 +508,22 @@ export function DevicesView({
         onCreated={(device) => setDevices((prev) => [device, ...prev])}
       />
       <EditDeviceDialog
+        key={editTarget?.id ?? "closed"}
         device={editTarget}
         onOpenChange={(open) => !open && setEditTarget(null)}
         onUpdated={(device) =>
-          setDevices((prev) => prev.map((d) => (d.id === device.id ? device : d)))
+          setDevices((prev) =>
+            prev.map((d) => (d.id === device.id ? device : d))
+          )
         }
       />
       <CloudLinkDialog
         device={linkTarget}
         onOpenChange={(open) => !open && setLinkTarget(null)}
         onLinked={(device) =>
-          setDevices((prev) => prev.map((d) => (d.id === device.id ? device : d)))
+          setDevices((prev) =>
+            prev.map((d) => (d.id === device.id ? device : d))
+          )
         }
       />
 
@@ -412,17 +534,24 @@ export function DevicesView({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("deleteConfirmTitle")}</DialogTitle>
-            <DialogDescription>{t("deleteConfirmDescription")}</DialogDescription>
+            <DialogDescription>
+              {t("deleteConfirmDescriptionNamed", { name: deleteName })}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setDeleteTarget(null)}
               disabled={deleting}
+              autoFocus
             >
               {tCommon("cancel")}
             </Button>
-            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
+            <Button
+              variant="destructive"
+              onClick={() => void confirmDelete()}
+              disabled={deleting}
+            >
               {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
               {t("delete")}
             </Button>

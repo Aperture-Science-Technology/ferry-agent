@@ -543,7 +543,13 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Patch Me */
+        /**
+         * Patch Me
+         * @description Mise a jour partielle : champ absent = inchange ; ``null`` = efface.
+         *
+         *     Le corps est valide manuellement pour renvoyer un ``detail`` 422 en texte
+         *     simple (charte non-tech), au lieu du tableau pydantic brut.
+         */
         patch: operations["patch_me_api_v1_users_me_patch"];
         trace?: never;
     };
@@ -693,7 +699,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Opds Cover */
+        /**
+         * Opds Cover
+         * @description Sert la couverture via le meme proxy allowliste que `/api/v1/covers`.
+         */
         get: operations["opds_cover_opds__token__cover__item_id__get"];
         put?: never;
         post?: never;
@@ -777,18 +786,12 @@ export interface components {
     schemas: {
         /** Body_submit_fetch_result_api_v1_gateways_jobs__job_id__fetch_result_post */
         Body_submit_fetch_result_api_v1_gateways_jobs__job_id__fetch_result_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** Body_upload_book_api_v1_books_upload_post */
         Body_upload_book_api_v1_books_upload_post: {
-            /**
-             * File
-             * Format: binary
-             */
+            /** File */
             file: string;
         };
         /** DeliveryCreate */
@@ -1349,15 +1352,12 @@ export interface components {
             /** Kindle Email */
             kindle_email: string | null;
         };
-        /** UserPatch */
-        UserPatch: {
-            /** Default Format */
-            default_format?: ("epub" | "mobi" | "azw3" | "pdf") | null;
-            /** Kindle Email */
-            kindle_email?: string | null;
-        };
         /** ValidationError */
         ValidationError: {
+            /** Context */
+            ctx?: Record<string, never>;
+            /** Input */
+            input?: unknown;
             /** Location */
             loc: (string | number)[];
             /** Message */
@@ -2666,7 +2666,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UserPatch"];
+                "application/json": Record<string, never>;
             };
         };
         responses: {

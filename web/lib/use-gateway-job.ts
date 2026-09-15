@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useApiClient } from "@/lib/api-client";
-import type { GatewayJobStatus, GatewayJobStatusOut } from "@/lib/types";
+import {
+  resolveGatewayJobView,
+  type GatewayJobPollSnapshot,
+} from "@/lib/gateway-job-state";
+import type { GatewayJobStatusOut } from "@/lib/types";
+
+export type { GatewayJobPollStatus } from "@/lib/gateway-job-state";
 
 const POLL_INTERVAL_MS = 3_000;
 const TIMEOUT_MS = 20 * 60 * 1_000;
-
-export type GatewayJobPollStatus = GatewayJobStatus | "timeout" | null;
 
 /**
  * Polls GET /api/v1/gateways/jobs/{id} every 3s until done/failed or 20 min.
@@ -15,23 +19,15 @@ export type GatewayJobPollStatus = GatewayJobStatus | "timeout" | null;
  */
 export function useGatewayJob(jobId: string | null) {
   const { call } = useApiClient();
-  const [status, setStatus] = useState<GatewayJobPollStatus>(null);
-  const [libraryItemId, setLibraryItemId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [attempts, setAttempts] = useState(0);
+  const [snapshot, setSnapshot] = useState<GatewayJobPollSnapshot | null>(null);
 
   useEffect(() => {
-    if (!jobId) {
-      setStatus(null);
-      setLibraryItemId(null);
-      setError(null);
-      setAttempts(0);
-      return;
-    }
+    if (!jobId) return;
 
     let cancelled = false;
     let intervalId: ReturnType<typeof setInterval> | undefined;
     const startedAt = Date.now();
+    const trackedId = jobId;
 
     const stop = () => {
       if (intervalId !== undefined) {
@@ -41,22 +37,33 @@ export function useGatewayJob(jobId: string | null) {
     };
 
     const apply = (data: GatewayJobStatusOut) => {
-      setStatus(data.status);
-      setLibraryItemId(data.library_item_id ?? null);
-      setError(data.error ?? null);
-      setAttempts(data.attempts ?? 0);
+      setSnapshot({
+        jobId: trackedId,
+        status: data.status,
+        libraryItemId: data.library_item_id ?? null,
+        error: data.error ?? null,
+        attempts: data.attempts ?? 0,
+      });
       return data.status === "done" || data.status === "failed";
     };
 
     const tick = async () => {
       if (cancelled) return;
       if (Date.now() - startedAt >= TIMEOUT_MS) {
-        setStatus("timeout");
+        setSnapshot((prev) => ({
+          jobId: trackedId,
+          status: "timeout",
+          libraryItemId: prev?.jobId === trackedId ? prev.libraryItemId : null,
+          error: prev?.jobId === trackedId ? prev.error : null,
+          attempts: prev?.jobId === trackedId ? prev.attempts : 0,
+        }));
         stop();
         return;
       }
       try {
-        const data = await call<GatewayJobStatusOut>(`/api/v1/gateways/jobs/${jobId}`);
+        const data = await call<GatewayJobStatusOut>(
+          `/api/v1/gateways/jobs/${trackedId}`
+        );
         if (cancelled) return;
         if (apply(data)) stop();
       } catch {
@@ -75,5 +82,5 @@ export function useGatewayJob(jobId: string | null) {
     };
   }, [jobId, call]);
 
-  return { status, libraryItemId, error, attempts };
+  return resolveGatewayJobView(jobId, snapshot);
 }

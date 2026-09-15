@@ -4,11 +4,14 @@ import { StatePanel } from "@/components/app/state-panel";
 
 export function EmptyState({
   icon,
+  visual,
   title,
   description,
   action,
 }: {
-  icon: LucideIcon;
+  icon?: LucideIcon;
+  /** Optional illustration (e.g. EmptyLibraryIllustration); decorative when title carries meaning. */
+  visual?: ReactNode;
   title: string;
   description?: string;
   action?: ReactNode;
@@ -16,6 +19,7 @@ export function EmptyState({
   return (
     <StatePanel
       icon={icon}
+      visual={visual}
       title={title}
       description={description}
       action={action}

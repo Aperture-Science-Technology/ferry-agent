@@ -19,11 +19,10 @@ export default async function SourcesPage({
   return (
     <div>
       <PageHeader title={t("title")} description={t("description")} />
-      <div className="mx-auto max-w-2xl">
-        <SectionHeader
-          title={tSources("sectionTitle")}
-          description={tSources("intro")}
-        />
+      <div className="mx-auto max-w-2xl space-y-6">
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {tSources("intro")}
+        </p>
         <SourcesManager
           initialSources={sources ?? []}
           sourcesUnavailable={sources === null}

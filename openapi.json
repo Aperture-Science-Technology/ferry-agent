@@ -4,7 +4,7 @@
       "Body_submit_fetch_result_api_v1_gateways_jobs__job_id__fetch_result_post": {
         "properties": {
           "file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
           }
@@ -18,7 +18,7 @@
       "Body_upload_book_api_v1_books_upload_post": {
         "properties": {
           "file": {
-            "format": "binary",
+            "contentMediaType": "application/octet-stream",
             "title": "File",
             "type": "string"
           }
@@ -1602,43 +1602,15 @@
         "title": "UserOut",
         "type": "object"
       },
-      "UserPatch": {
-        "properties": {
-          "default_format": {
-            "anyOf": [
-              {
-                "enum": [
-                  "epub",
-                  "mobi",
-                  "azw3",
-                  "pdf"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Default Format"
-          },
-          "kindle_email": {
-            "anyOf": [
-              {
-                "format": "email",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Kindle Email"
-          }
-        },
-        "title": "UserPatch",
-        "type": "object"
-      },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
@@ -4468,6 +4440,7 @@
         ]
       },
       "patch": {
+        "description": "Mise a jour partielle : champ absent = inchange ; ``null`` = efface.\n\nLe corps est valide manuellement pour renvoyer un ``detail`` 422 en texte\nsimple (charte non-tech), au lieu du tableau pydantic brut.",
         "operationId": "patch_me_api_v1_users_me_patch",
         "parameters": [
           {
@@ -4507,7 +4480,8 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UserPatch"
+                "title": "Body",
+                "type": "object"
               }
             }
           },
@@ -4863,6 +4837,7 @@
     },
     "/opds/{token}/cover/{item_id}": {
       "get": {
+        "description": "Sert la couverture via le meme proxy allowliste que `/api/v1/covers`.",
         "operationId": "opds_cover_opds__token__cover__item_id__get",
         "parameters": [
           {

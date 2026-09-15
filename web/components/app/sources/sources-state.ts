@@ -1,0 +1,106 @@
+/**
+ * Pure helpers for Sources presentation and toggle updates.
+ * Kept free of React so they can be regression-tested with node:test.
+ */
+
+export type KnownSourceType =
+  | "gutenberg"
+  | "standard_ebooks"
+  | "upload"
+  | "torrent_gateway";
+
+export type SourceLike = {
+  id: string;
+  type: string;
+  enabled: boolean;
+};
+
+export type SourceGroup = "openAccess" | "local";
+
+export type SourceRowKind = "toggleable" | "upload" | "gateway_local";
+
+/**
+ * Confirmed activation when the API returned the source.
+ * "unknown" when the list failed or a toggleable type is missing from the payload —
+ * never invent "enabled".
+ */
+export type SourceAvailability =
+  | "enabled"
+  | "disabled"
+  | "unknown"
+  | "always_on"
+  | "gateway";
+
+export const OPEN_ACCESS_TYPES: readonly KnownSourceType[] = [
+  "gutenberg",
+  "standard_ebooks",
+];
+
+export const LOCAL_TYPES: readonly KnownSourceType[] = [
+  "upload",
+  "torrent_gateway",
+];
+
+export function sourceGroup(type: KnownSourceType): SourceGroup {
+  return OPEN_ACCESS_TYPES.includes(type) ? "openAccess" : "local";
+}
+
+export function sourceRowKind(type: KnownSourceType): SourceRowKind {
+  if (type === "upload") return "upload";
+  if (type === "torrent_gateway") return "gateway_local";
+  return "toggleable";
+}
+
+export function findSourceByType<T extends SourceLike>(
+  sources: T[],
+  type: KnownSourceType
+): T | null {
+  return sources.find((source) => source.type === type) ?? null;
+}
+
+export function sourceAvailability(
+  type: KnownSourceType,
+  sources: SourceLike[],
+  sourcesUnavailable: boolean
+): SourceAvailability {
+  const kind = sourceRowKind(type);
+  if (kind === "upload") return "always_on";
+  if (kind === "gateway_local") return "gateway";
+
+  if (sourcesUnavailable) return "unknown";
+
+  const source = findSourceByType(sources, type);
+  if (!source) return "unknown";
+  return source.enabled ? "enabled" : "disabled";
+}
+
+export function canToggleSource(
+  type: KnownSourceType,
+  sources: SourceLike[],
+  sourcesUnavailable: boolean
+): boolean {
+  if (sourceRowKind(type) !== "toggleable") return false;
+  if (sourcesUnavailable) return false;
+  return findSourceByType(sources, type) !== null;
+}
+
+/**
+ * Apply a successful PATCH without inventing rows for other types.
+ */
+export function applySourceToggleSuccess<T extends SourceLike>(
+  previous: T[],
+  updated: T
+): T[] {
+  const index = previous.findIndex((source) => source.id === updated.id);
+  if (index === -1) {
+    return [...previous, updated];
+  }
+  return previous.map((source) => (source.id === updated.id ? updated : source));
+}
+
+/**
+ * A failed toggle must leave the previous list untouched (no optimistic flip).
+ */
+export function applySourceToggleFailure<T extends SourceLike>(previous: T[]): T[] {
+  return previous;
+}

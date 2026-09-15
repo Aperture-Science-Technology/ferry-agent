@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Pencil, Send, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,7 +19,7 @@ import { DeliverDialog } from "@/components/app/library/deliver-dialog";
 import { BookEditDialog } from "@/components/app/library/book-edit-dialog";
 import { LibraryCoverImage } from "@/components/app/library/cover-image";
 import { useApiClient } from "@/lib/api-client";
-import type { Device, DeliveryJob, DeliveryStatus, LibraryItem } from "@/lib/types";
+import type { Device, DeliveryJob, DeliveryMethod, DeliveryStatus, LibraryItem } from "@/lib/types";
 
 const STATUS_VARIANT: Record<DeliveryStatus, "default" | "secondary" | "destructive" | "outline"> = {
   queued: "secondary",
@@ -27,6 +27,12 @@ const STATUS_VARIANT: Record<DeliveryStatus, "default" | "secondary" | "destruct
   delivered: "default",
   failed: "destructive",
 };
+
+function formatAppDate(iso: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "short",
+  }).format(new Date(iso));
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -56,6 +62,8 @@ export function BookDetailDialog({
   const t = useTranslations("bookDetail");
   const tCommon = useTranslations("common");
   const tDeliveries = useTranslations("deliveries");
+  const tMethods = useTranslations("deliverDialog");
+  const locale = useLocale();
   const { call } = useApiClient();
 
   const [deliverOpen, setDeliverOpen] = useState(false);
@@ -166,7 +174,7 @@ export function BookDetailDialog({
                     </>
                   )}
                   <dt className="text-muted-foreground">{t("added")}</dt>
-                  <dd>{new Date(item.added_at).toLocaleDateString()}</dd>
+                  <dd>{formatAppDate(item.added_at, locale)}</dd>
                 </dl>
 
                 {item.description && (
@@ -214,13 +222,16 @@ export function BookDetailDialog({
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate">
                         {job.device_label ?? tCommon("dash")}
-                        <span className="text-muted-foreground"> · {job.method}</span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {tMethods(`methods.${job.method as DeliveryMethod}`)}
+                        </span>
                       </span>
                       <Badge variant={STATUS_VARIANT[job.status]}>
                         {tDeliveries(`statuses.${job.status}`)}
                       </Badge>
                       <span className="shrink-0 text-muted-foreground">
-                        {new Date(job.delivered_at ?? job.created_at).toLocaleDateString()}
+                        {formatAppDate(job.delivered_at ?? job.created_at, locale)}
                       </span>
                     </div>
                     {job.error ? (

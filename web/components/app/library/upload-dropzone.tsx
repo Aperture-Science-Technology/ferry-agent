@@ -178,6 +178,7 @@ export function UploadDropzone({
       <div
         role="button"
         tabIndex={0}
+        aria-label={t("uploadChooseFile")}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -203,14 +204,10 @@ export function UploadDropzone({
           void processFiles(event.dataTransfer.files);
         }}
         className={cn(
-          "relative flex cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-dashed border-border/70 bg-card/30 px-4 py-12 text-center transition-colors",
+          "relative flex cursor-pointer flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border border-dashed border-border/70 bg-card/30 px-4 py-10 text-center transition-colors",
           dragOver && "border-chart-1/60 bg-accent/40"
         )}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-chart-1/40 to-transparent"
-        />
         <div className="flex size-12 items-center justify-center rounded-xl bg-muted/70 ring-1 ring-border/60">
           <Upload className="size-5 text-chart-1" />
         </div>
@@ -218,6 +215,9 @@ export function UploadDropzone({
           <p className="text-sm font-medium">{t("uploadDropHint")}</p>
           <p className="text-xs text-muted-foreground">{t("uploadFormatsHint")}</p>
         </div>
+        <span className="inline-flex h-10 items-center justify-center rounded-lg border border-border/70 bg-background/60 px-4 text-sm font-medium">
+          {t("uploadChooseFile")}
+        </span>
         <input
           ref={inputRef}
           type="file"
@@ -231,7 +231,7 @@ export function UploadDropzone({
       </div>
 
       {rows.length > 0 && (
-        <ul className="space-y-2">
+        <ul className="space-y-2" aria-live="polite">
           {rows.map((row) => (
             <li
               key={row.id}

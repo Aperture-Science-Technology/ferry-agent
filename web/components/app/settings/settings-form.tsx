@@ -18,11 +18,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SectionHeader } from "@/components/app/section-header";
-import { SourcesManager } from "@/components/app/sources/sources-manager";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
+import {
+  buildSettingsPatchPayload,
+  settingsAreDirty,
+} from "@/components/app/settings/settings-state";
 import { Reveal } from "@/components/motion/reveal";
 import { ApiError, useApiClient } from "@/lib/api-client";
-import type { OpdsToken, Source } from "@/lib/types";
+import type { OpdsToken } from "@/lib/types";
 
 const FORMATS = ["epub", "mobi", "azw3", "pdf"] as const;
 
@@ -53,8 +56,6 @@ export function SettingsForm({
   initialKindleEmail,
   initialDefaultFormat,
   settingsUnavailable,
-  initialSources,
-  sourcesUnavailable,
   initialOpdsTokens,
   opdsTokensUnavailable,
 }: {
@@ -62,8 +63,6 @@ export function SettingsForm({
   initialKindleEmail: string;
   initialDefaultFormat: string;
   settingsUnavailable: boolean;
-  initialSources: Source[];
-  sourcesUnavailable: boolean;
   initialOpdsTokens: OpdsToken[];
   opdsTokensUnavailable: boolean;
 }) {
@@ -73,7 +72,34 @@ export function SettingsForm({
   const { call } = useApiClient();
   const [kindleEmail, setKindleEmail] = useState(initialKindleEmail);
   const [defaultFormat, setDefaultFormat] = useState(initialDefaultFormat);
+  const [saved, setSaved] = useState({
+    kindleEmail: initialKindleEmail,
+    defaultFormat: initialDefaultFormat,
+  });
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [baseline, setBaseline] = useState({
+    kindleEmail: initialKindleEmail,
+    defaultFormat: initialDefaultFormat,
+  });
+  // After router.refresh(), SSR props become the source of truth again.
+  if (
+    initialKindleEmail !== baseline.kindleEmail ||
+    initialDefaultFormat !== baseline.defaultFormat
+  ) {
+    setBaseline({
+      kindleEmail: initialKindleEmail,
+      defaultFormat: initialDefaultFormat,
+    });
+    setKindleEmail(initialKindleEmail);
+    setDefaultFormat(initialDefaultFormat);
+    setSaved({
+      kindleEmail: initialKindleEmail,
+      defaultFormat: initialDefaultFormat,
+    });
+  }
+
+  const dirty = settingsAreDirty(kindleEmail, defaultFormat, saved);
 
   // Apres router.refresh(), les props SSR redeviennent la source de verite.
   useEffect(() => {
@@ -83,29 +109,31 @@ export function SettingsForm({
 
   async function save() {
     setSaving(true);
+    setSaveError(null);
     try {
-      const saved = await call<SavedSettings>("/api/v1/users/me", {
+      const savedRemote = await call<SavedSettings>("/api/v1/users/me", {
         method: "PATCH",
-        body: JSON.stringify({
-          kindle_email: kindleEmail.trim() ? kindleEmail.trim() : null,
-          default_format: defaultFormat,
-        }),
+        body: JSON.stringify(
+          buildSettingsPatchPayload(kindleEmail, defaultFormat)
+        ),
       });
-      setKindleEmail(saved.kindle_email ?? "");
-      setDefaultFormat(saved.default_format);
+      const nextKindle = savedRemote.kindle_email ?? "";
+      const nextFormat = savedRemote.default_format;
+      setKindleEmail(nextKindle);
+      setDefaultFormat(nextFormat);
+      setSaved({ kindleEmail: nextKindle, defaultFormat: nextFormat });
       toast.success(t("toastSaved"));
       router.refresh();
     } catch (error) {
+      let message = t("toastFailed");
       if (error instanceof ApiError) {
         const detail = parseApiDetail(error.message);
         if (error.status === 422 && detail) {
-          toast.error(detail);
-        } else {
-          toast.error(t("toastFailed"));
+          message = detail;
         }
-      } else {
-        toast.error(t("toastFailed"));
       }
+      setSaveError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -115,7 +143,7 @@ export function SettingsForm({
     <div className="mx-auto max-w-2xl space-y-10">
       {settingsUnavailable ? (
         <Alert>
-          <Settings2 />
+          <Settings2 aria-hidden />
           <AlertTitle>{t("unavailableTitle")}</AlertTitle>
           <AlertDescription>{t("unavailable")}</AlertDescription>
         </Alert>
@@ -130,7 +158,12 @@ export function SettingsForm({
           <CardContent className="space-y-5 pt-6">
             <div className="space-y-2">
               <Label htmlFor="settings-account-email">{t("email")}</Label>
-              <Input id="settings-account-email" value={initialEmail} readOnly disabled />
+              <Input
+                id="settings-account-email"
+                value={initialEmail}
+                readOnly
+                disabled
+              />
               <p className="text-xs text-muted-foreground">{t("emailHint")}</p>
             </div>
 
@@ -153,7 +186,7 @@ export function SettingsForm({
                   onClick={() => setKindleEmail("")}
                   className="shrink-0"
                 >
-                  <Eraser />
+                  <Eraser aria-hidden />
                   {t("clearKindleEmail")}
                 </Button>
               </div>
@@ -161,40 +194,79 @@ export function SettingsForm({
             </div>
 
             <div className="space-y-2">
-              <Label>{t("defaultFormat")}</Label>
+              <Label htmlFor="settings-default-format">{t("defaultFormat")}</Label>
               <Select
                 value={defaultFormat}
                 onValueChange={(value) => setDefaultFormat(value ?? "epub")}
                 disabled={settingsUnavailable}
               >
-                <SelectTrigger className="w-full uppercase">
+                <SelectTrigger
+                  id="settings-default-format"
+                  className="w-full uppercase"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {FORMATS.map((format) => (
-                    <SelectItem key={format} value={format} className="uppercase">
+                    <SelectItem
+                      key={format}
+                      value={format}
+                      className="uppercase"
+                    >
                       {format}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">{t("defaultFormatHint")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("defaultFormatHint")}
+              </p>
             </div>
 
-            <Button type="button" onClick={save} disabled={saving || settingsUnavailable}>
-              {saving ? <Loader2 className="animate-spin" /> : null}
-              {tCommon("save")}
-            </Button>
+            {saveError ? (
+              <Alert variant="destructive" role="alert">
+                <Settings2 aria-hidden />
+                <AlertTitle>{t("saveErrorTitle")}</AlertTitle>
+                <AlertDescription>{saveError}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground" aria-live="polite">
+                {dirty ? t("unsavedChanges") : t("allSaved")}
+              </p>
+              <Button
+                type="button"
+                onClick={() => void save()}
+                disabled={saving || settingsUnavailable || !dirty}
+              >
+                {saving ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                {tCommon("save")}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </Reveal>
 
       <Reveal>
-        <SectionHeader title={t("sourcesTitle")} description={t("sourcesDescription")} />
-        <SourcesManager
-          initialSources={initialSources}
-          sourcesUnavailable={sourcesUnavailable}
+        <SectionHeader
+          title={t("sourcesTitle")}
+          description={t("sourcesDescription")}
         />
+        <Card size="sm" className="border-border/60 bg-card/60">
+          <CardContent className="space-y-3 pt-4">
+            <p className="text-sm text-muted-foreground">{t("sourcesSummary")}</p>
+            <Button
+              variant="outline"
+              render={
+                <Link href="/app/sources">
+                  {t("sourcesCta")}
+                  <ArrowRight aria-hidden />
+                </Link>
+              }
+            />
+          </CardContent>
+        </Card>
       </Reveal>
 
       <Reveal>
@@ -209,7 +281,10 @@ export function SettingsForm({
       </Reveal>
 
       <Reveal>
-        <SectionHeader title={t("devicesTitle")} description={t("devicesDescription")} />
+        <SectionHeader
+          title={t("devicesTitle")}
+          description={t("devicesDescription")}
+        />
         <Card size="sm" className="border-border/60 bg-card/60">
           <CardContent className="pt-4">
             <Button
@@ -217,7 +292,7 @@ export function SettingsForm({
               render={
                 <Link href="/app/appareils">
                   {t("devicesCta")}
-                  <ArrowRight />
+                  <ArrowRight aria-hidden />
                 </Link>
               }
             />

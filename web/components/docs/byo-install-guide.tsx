@@ -11,6 +11,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { CloudGatewayIllustration } from "@/components/illustrations";
 
 function Code({ children }: { children: ReactNode }) {
   return (
@@ -20,9 +21,7 @@ function Code({ children }: { children: ReactNode }) {
   );
 }
 
-const GATEWAY_IMAGE_DOWNLOAD_URL =
-  "https://ferry-agent.aperture-agency.org/bundle/ferry-agent-gateway.tar";
-
+/** Existing public MCP endpoint — not an install archive URL. */
 const MCP_URL = "https://ferry-agent.aperture-agency.org/mcp";
 
 export function ByoInstallGuide() {
@@ -37,8 +36,8 @@ export function ByoInstallGuide() {
   const glossaryItems = [
     { term: t("glossaryAccessTerm"), def: t("glossaryAccessDef") },
     { term: t("glossaryCodesTerm"), def: t("glossaryCodesDef") },
-    { term: t("glossaryProwlarrTerm"), def: t("glossaryProwlarrDef") },
     { term: t("glossaryIndexerTerm"), def: t("glossaryIndexerDef") },
+    { term: t("glossaryProwlarrTerm"), def: t("glossaryProwlarrDef") },
   ];
 
   const steps = [
@@ -57,11 +56,7 @@ export function ByoInstallGuide() {
       action: t("step2Action"),
       extra: (
         <div className="space-y-3">
-          <Button
-            render={
-              <a href={GATEWAY_IMAGE_DOWNLOAD_URL}>{t("step2Cta")}</a>
-            }
-          />
+          <p className="text-sm text-muted-foreground">{t("step2Unverified")}</p>
           <p className="text-muted-foreground">{t("step2UseFile")}</p>
         </div>
       ),
@@ -107,6 +102,28 @@ export function ByoInstallGuide() {
         <p className="max-w-2xl text-sm text-muted-foreground">{t("pathChoice")}</p>
       </header>
 
+      <section className="space-y-4 rounded-xl border border-border/60 bg-card/40 p-5 sm:p-6">
+        <CloudGatewayIllustration className="mx-0 w-[180px]" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <h2 className="font-heading text-lg font-medium tracking-tight">
+              {t("pathOnlineTitle")}
+            </h2>
+            <p className="text-sm text-muted-foreground">{t("pathOnlineBody")}</p>
+            <Button
+              variant="outline"
+              render={<Link href="/app/bibliotheque">{t("pathOnlineCta")}</Link>}
+            />
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-heading text-lg font-medium tracking-tight">
+              {t("pathGatewayTitle")}
+            </h2>
+            <p className="text-sm text-muted-foreground">{t("pathGatewayBody")}</p>
+          </div>
+        </div>
+      </section>
+
       <section className="space-y-4">
         <h2 className="font-heading text-2xl font-medium tracking-tight">
           {t("checklistTitle")}
@@ -122,9 +139,12 @@ export function ByoInstallGuide() {
       </section>
 
       <section className="space-y-6">
-        <h2 className="font-heading text-2xl font-medium tracking-tight">
-          {t("stepsTitle")}
-        </h2>
+        <div className="space-y-2">
+          <h2 className="font-heading text-2xl font-medium tracking-tight">
+            {t("stepsTitle")}
+          </h2>
+          <p className="text-sm text-muted-foreground">{t("pathChoice")}</p>
+        </div>
         <ol className="space-y-8">
           {steps.map((step) => (
             <li
@@ -202,6 +222,7 @@ export function ByoInstallGuide() {
               <p className="text-muted-foreground">{t("troubleshootExpired")}</p>
               <p className="text-muted-foreground">{t("troubleshootOffline")}</p>
               <p className="text-muted-foreground">{t("troubleshootBothCodes")}</p>
+              <p className="text-muted-foreground">{t("troubleshootProwlarr")}</p>
             </AccordionContent>
           </AccordionItem>
 

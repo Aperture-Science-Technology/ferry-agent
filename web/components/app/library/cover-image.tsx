@@ -24,20 +24,26 @@ export function LibraryCoverImage({
   iconClassName?: string;
 }) {
   const { getToken } = useAuth();
+  const coverKey = hasCover ? itemId : null;
   const [src, setSrc] = useState<string | null>(null);
+  const [activeKey, setActiveKey] = useState<string | null>(coverKey);
+
+  // Reset when the cover identity changes (React: adjust state during render).
+  if (activeKey !== coverKey) {
+    setActiveKey(coverKey);
+    setSrc(null);
+  }
 
   useEffect(() => {
-    if (!hasCover) {
-      setSrc(null);
-      return;
-    }
+    if (!coverKey) return;
+
     let cancelled = false;
     let objectUrl: string | null = null;
 
     (async () => {
       try {
         const token = await getToken();
-        const res = await fetch(`/api/v1/covers/${itemId}`, {
+        const res = await fetch(`/api/v1/covers/${coverKey}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok || cancelled) return;
@@ -54,7 +60,7 @@ export function LibraryCoverImage({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [itemId, hasCover, getToken]);
+  }, [coverKey, getToken]);
 
   if (!src) {
     return (
