@@ -161,7 +161,7 @@
     },
     "sources": {
       "title": "Sources",
-      "description": "Vos sources de livres en accès libre et celles configurées pour la recherche."
+      "description": "Gérez les catalogues utilisés pour chercher des livres, et vos sources installées chez vous."
     },
     "deliveries": {
       "title": "Envois",
@@ -169,7 +169,7 @@
     },
     "settings": {
       "title": "Réglages",
-      "description": "Vos préférences d'envoi."
+      "description": "Préférences d'envoi, catalogue pour votre liseuse, et renvois utiles."
     }
   },
   "library": {
@@ -545,7 +545,11 @@
   },
   "sources": {
     "sectionTitle": "Vos sources",
-    "intro": "Vos sources de livres en accès libre : activez ou désactivez celles utilisées lors d'une recherche.",
+    "intro": "Ferry Agent cherche dans les catalogues que vous activez ici. Les fichiers importés et les sources locales passent par la bibliothèque en ligne ou le Gateway installé chez vous.",
+    "openAccessTitle": "Sources en accès libre",
+    "openAccessDescription": "Catalogues publics utilisés lors d'une recherche dans les sources.",
+    "localTitle": "Vos fichiers et sources locales",
+    "localDescription": "Import depuis vos fichiers, et résultats via le Gateway installé chez vous.",
     "providers": {
       "gutenberg": {
         "name": "Gutenberg",
@@ -560,21 +564,28 @@
         "description": "Les livres que vous importez vous-même depuis vos fichiers."
       },
       "torrentGateway": {
-        "name": "Accès torrent",
-        "description": "Les résultats trouvés via votre accès personnel, installé chez vous."
+        "name": "Sources locales (Gateway)",
+        "description": "Résultats trouvés via le module installé chez vous, puis ajoutés à votre bibliothèque en ligne."
       }
     },
     "enabled": "Activée",
     "disabled": "Désactivée",
-    "enabledByDefault": "Activée par défaut",
-    "alwaysActive": "Toujours active",
+    "unknown": "État inconnu",
+    "unknownHint": "L'état de cette source n'a pas pu être confirmé. Réessayez plus tard.",
+    "alwaysActive": "Toujours disponible",
+    "gatewayLocal": "Via le Gateway",
+    "gatewayHint": "Cette source dépend du Gateway installé chez vous. Elle n'indique pas à elle seule s'il est connecté.",
+    "prowlarrNote": "Prowlarr, s'il est utilisé, reste configuré côté Gateway — pas comme une rubrique principale ici.",
+    "gatewayCta": "Ouvrir Gateway",
+    "uploadCta": "Ajouter des livres dans la bibliothèque",
     "enableAria": "Activer {name}",
     "disableAria": "Désactiver {name}",
     "toastEnabled": "Source activée.",
     "toastDisabled": "Source désactivée.",
     "toastUpdateFailed": "Impossible de mettre à jour cette source. Réessayez.",
+    "updateErrorTitle": "Mise à jour impossible",
     "unavailableTitle": "Sources indisponibles",
-    "unavailableNote": "Impossible de charger l'état de vos sources pour le moment. Gutenberg et Standard Ebooks restent utilisables depuis la recherche."
+    "unavailableNote": "Impossible de charger l'état de vos sources pour le moment. Aucune activation n'est confirmée tant que la liste n'est pas disponible."
   },
   "deliveries": {
     "sectionTitle": "Vos envois",
@@ -640,8 +651,6 @@
     "unavailable": "Impossible de charger vos réglages pour le moment. Les valeurs affichées peuvent être incomplètes.",
     "deliveryPreferencesTitle": "Préférences d'envoi",
     "deliveryPreferencesDescription": "Votre compte et la façon dont les livres partent vers votre liseuse.",
-    "accountTitle": "Mon compte",
-    "accountDescription": "Vos informations et vos préférences d'envoi.",
     "email": "Email",
     "emailHint": "Géré par votre fournisseur de connexion.",
     "kindleEmail": "Votre email Kindle",
@@ -650,10 +659,10 @@
     "clearKindleEmail": "Effacer",
     "defaultFormat": "Format par défaut",
     "defaultFormatHint": "Format utilisé par défaut lors d'un envoi.",
-    "sourcesTitle": "Vos sources",
-    "sourcesDescription": "Activez ou désactivez les sources utilisées lors d'une recherche.",
+    "sourcesTitle": "Sources",
+    "sourcesDescription": "La gestion des catalogues se fait dans Sources.",
     "readerCatalogTitle": "Catalogue pour votre liseuse",
-    "readerCatalogDescription": "Un lien unique pour afficher toute votre bibliothèque dans KOReader, Moon+, Marvin ou Kobo.",
+    "readerCatalogDescription": "Un lien pour afficher votre bibliothèque en ligne dans KOReader, Moon+, Marvin ou Kobo.",
     "readerCatalog": {
       "warningTitle": "Accès à toute votre bibliothèque",
       "warning": "Chaque lien donne accès à toute votre bibliothèque. Annulez un lien dès que vous n'en avez plus besoin.",
@@ -686,16 +695,27 @@
       "oneTimeTitle": "À conserver maintenant",
       "oneTimeWarning": "Une fois cette fenêtre fermée, le lien ne sera plus réaffiché. Copiez-le ou scannez le QR avant de continuer.",
       "urlLabel": "Lien catalogue",
-      "qrHint": "Scannez depuis la liseuse pour ajouter le catalogue.",
+      "qrHint": "Scannez depuis la liseuse pour ajouter le catalogue. Si le QR échoue, utilisez le lien ci-dessus.",
       "toastCreateFailed": "Impossible de créer le lien. Réessayez.",
       "toastRevoked": "Lien annulé.",
-      "toastRevokeFailed": "Impossible d'annuler ce lien. Réessayez."
+      "toastRevokeFailed": "Impossible d'annuler ce lien. Réessayez.",
+      "copyUrlAria": "Copier le lien catalogue",
+      "qrLoading": "Préparation du QR…",
+      "qrError": "QR indisponible. Utilisez le lien ci-dessus.",
+      "qrAlt": "Code QR du lien catalogue",
+      "createErrorTitle": "Création impossible",
+      "revokeErrorTitle": "Annulation impossible"
     },
     "devicesTitle": "Appareils",
     "devicesDescription": "Gérez vos liseuses et la façon dont les livres y arrivent.",
     "devicesCta": "Ouvrir Appareils",
     "toastSaved": "Réglages enregistrés.",
-    "toastFailed": "Impossible d'enregistrer pour le moment. Réessayez."
+    "toastFailed": "Impossible d'enregistrer pour le moment. Réessayez.",
+    "unsavedChanges": "Modifications non enregistrées.",
+    "allSaved": "Tout est à jour.",
+    "saveErrorTitle": "Enregistrement impossible",
+    "sourcesSummary": "Activez Gutenberg ou Standard Ebooks, et retrouvez l'import et le Gateway depuis la page Sources.",
+    "sourcesCta": "Ouvrir Sources"
   },
   "docs": {
     "metaTitle": "Guide | Ferry Agent",

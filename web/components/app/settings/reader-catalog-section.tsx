@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 import { Ban, BookOpen, Copy, Loader2, Plus, TriangleAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,20 +31,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CatalogQrCode } from "@/components/app/settings/catalog-qr-code";
+import { formatTokenLastUsed } from "@/components/app/settings/settings-state";
 import { EmptyState } from "@/components/app/empty-state";
 import { SectionHeader } from "@/components/app/section-header";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { copyTextToClipboard } from "@/components/app/gateways/gateways-state";
 import { useApiClient } from "@/lib/api-client";
 import type { OpdsToken, OpdsTokenCreated } from "@/lib/types";
-
-function formatLastUsed(value: string | null, neverLabel: string): string {
-  if (!value) return neverLabel;
-  try {
-    return new Date(value).toLocaleString();
-  } catch {
-    return neverLabel;
-  }
-}
 
 export function ReaderCatalogSection({
   initialTokens,
@@ -55,29 +48,31 @@ export function ReaderCatalogSection({
 }) {
   const t = useTranslations("settings.readerCatalog");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const { call } = useApiClient();
   const [tokens, setTokens] = useState(initialTokens);
   const [createOpen, setCreateOpen] = useState(false);
   const [label, setLabel] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<OpdsTokenCreated | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<OpdsToken | null>(null);
   const [revoking, setRevoking] = useState(false);
-
-  useEffect(() => {
-    setTokens(initialTokens);
-  }, [initialTokens]);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   const displayLabel = label.trim() || t("defaultLabel");
 
   async function submit() {
     setSubmitting(true);
+    setCreateError(null);
     try {
       const result = await call<OpdsTokenCreated>("/api/v1/opds/tokens", {
         method: "POST",
         body: JSON.stringify({ label: displayLabel }),
       });
       setCreated(result);
+      setCopyFailed(false);
       setTokens((prev) => [
         {
           id: result.id,
@@ -88,6 +83,7 @@ export function ReaderCatalogSection({
         ...prev,
       ]);
     } catch {
+      setCreateError(t("toastCreateFailed"));
       toast.error(t("toastCreateFailed"));
     } finally {
       setSubmitting(false);
@@ -99,6 +95,8 @@ export function ReaderCatalogSection({
     if (!nextOpen) {
       setCreated(null);
       setLabel("");
+      setCreateError(null);
+      setCopyFailed(false);
     }
     setCreateOpen(nextOpen);
   }
@@ -110,9 +108,21 @@ export function ReaderCatalogSection({
     }
   }
 
+  async function handleCopyUrl(url: string) {
+    const ok = await copyTextToClipboard(url);
+    if (ok) {
+      setCopyFailed(false);
+      toast.success(tCommon("copied"));
+    } else {
+      setCopyFailed(true);
+      toast.error(tCommon("copyFailed"));
+    }
+  }
+
   async function confirmRevoke() {
     if (!revokeTarget) return;
     setRevoking(true);
+    setRevokeError(null);
     try {
       await call("/api/v1/opds/tokens/revoke", {
         method: "POST",
@@ -122,6 +132,7 @@ export function ReaderCatalogSection({
       toast.success(t("toastRevoked"));
       setRevokeTarget(null);
     } catch {
+      setRevokeError(t("toastRevokeFailed"));
       toast.error(t("toastRevokeFailed"));
     } finally {
       setRevoking(false);
@@ -130,7 +141,7 @@ export function ReaderCatalogSection({
 
   const createAction = (
     <Button type="button" onClick={() => setCreateOpen(true)}>
-      <Plus />
+      <Plus aria-hidden />
       {t("createCta")}
     </Button>
   );
@@ -138,7 +149,7 @@ export function ReaderCatalogSection({
   return (
     <div className="space-y-4">
       <Alert>
-        <TriangleAlert />
+        <TriangleAlert aria-hidden />
         <AlertTitle>{t("warningTitle")}</AlertTitle>
         <AlertDescription>{t("warning")}</AlertDescription>
       </Alert>
@@ -155,7 +166,7 @@ export function ReaderCatalogSection({
 
       {tokensUnavailable ? (
         <Alert>
-          <BookOpen />
+          <BookOpen aria-hidden />
           <AlertTitle>{t("unavailableTitle")}</AlertTitle>
           <AlertDescription>{t("unavailable")}</AlertDescription>
         </Alert>
@@ -166,11 +177,11 @@ export function ReaderCatalogSection({
         description={
           tokens.length > 0 ? t("countLabel", { count: tokens.length }) : undefined
         }
-        action={createAction}
+        action={tokensUnavailable ? undefined : createAction}
         className="mb-3"
       />
 
-      {tokens.length === 0 ? (
+      {tokensUnavailable ? null : tokens.length === 0 ? (
         <EmptyState
           icon={BookOpen}
           title={t("emptyTitle")}
@@ -179,7 +190,7 @@ export function ReaderCatalogSection({
         />
       ) : (
         <>
-          <RevealGroup className="grid gap-3 md:hidden">
+          <RevealGroup className="grid gap-3 lg:hidden">
             {tokens.map((token) => (
               <RevealItem key={token.id}>
                 <Card size="sm" className="bg-card/60">
@@ -189,16 +200,23 @@ export function ReaderCatalogSection({
                         {token.label}
                       </CardTitle>
                       <CardDescription>
-                        {formatLastUsed(token.last_used_at, t("neverUsed"))}
+                        {formatTokenLastUsed(
+                          token.last_used_at,
+                          locale,
+                          t("neverUsed")
+                        )}
                       </CardDescription>
                     </div>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setRevokeTarget(token)}
+                      onClick={() => {
+                        setRevokeError(null);
+                        setRevokeTarget(token);
+                      }}
                     >
-                      <Ban />
+                      <Ban aria-hidden />
                       {t("revoke")}
                     </Button>
                   </CardContent>
@@ -207,7 +225,7 @@ export function ReaderCatalogSection({
             ))}
           </RevealGroup>
 
-          <Reveal className="hidden overflow-hidden rounded-xl border border-border/60 md:block">
+          <Reveal className="hidden overflow-hidden rounded-xl border border-border/60 lg:block">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -223,16 +241,23 @@ export function ReaderCatalogSection({
                       <span className="line-clamp-2 break-words">{token.label}</span>
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">
-                      {formatLastUsed(token.last_used_at, t("neverUsed"))}
+                      {formatTokenLastUsed(
+                        token.last_used_at,
+                        locale,
+                        t("neverUsed")
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setRevokeTarget(token)}
+                        onClick={() => {
+                          setRevokeError(null);
+                          setRevokeTarget(token);
+                        }}
                       >
-                        <Ban />
+                        <Ban aria-hidden />
                         {t("revoke")}
                       </Button>
                     </TableCell>
@@ -260,27 +285,31 @@ export function ReaderCatalogSection({
                       id="catalog-created-url"
                       readOnly
                       value={created.url}
-                      className="font-mono text-xs"
+                      className="font-mono text-xs break-all"
+                      onFocus={(event) => event.currentTarget.select()}
                     />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(created.url);
-                        toast.success(tCommon("copied"));
-                      }}
+                      aria-label={t("copyUrlAria")}
+                      onClick={() => void handleCopyUrl(created.url)}
                     >
-                      <Copy />
+                      <Copy aria-hidden />
                     </Button>
                   </div>
+                  {copyFailed ? (
+                    <p className="text-xs text-destructive" role="alert">
+                      {tCommon("copyFailed")}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <CatalogQrCode url={created.url} />
                   <p className="text-xs text-muted-foreground">{t("qrHint")}</p>
                 </div>
                 <Alert>
-                  <TriangleAlert />
+                  <TriangleAlert aria-hidden />
                   <AlertTitle>{t("oneTimeTitle")}</AlertTitle>
                   <AlertDescription>{t("oneTimeWarning")}</AlertDescription>
                 </Alert>
@@ -308,12 +337,20 @@ export function ReaderCatalogSection({
                   disabled={submitting}
                 />
               </div>
+              {createError ? (
+                <Alert variant="destructive" role="alert">
+                  <BookOpen aria-hidden />
+                  <AlertTitle>{t("createErrorTitle")}</AlertTitle>
+                  <AlertDescription>{createError}</AlertDescription>
+                </Alert>
+              ) : null}
               <DialogFooter>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => closeCreate(false)}
                   disabled={submitting}
+                  autoFocus
                 >
                   {tCommon("cancel")}
                 </Button>
@@ -322,7 +359,9 @@ export function ReaderCatalogSection({
                   onClick={() => void submit()}
                   disabled={submitting || !displayLabel}
                 >
-                  {submitting ? <Loader2 className="animate-spin" /> : null}
+                  {submitting ? (
+                    <Loader2 className="animate-spin" aria-hidden />
+                  ) : null}
                   {tCommon("create")}
                 </Button>
               </DialogFooter>
@@ -340,12 +379,20 @@ export function ReaderCatalogSection({
             <DialogTitle>{t("revokeConfirmTitle")}</DialogTitle>
             <DialogDescription>{t("revokeConfirmDescription")}</DialogDescription>
           </DialogHeader>
+          {revokeError ? (
+            <Alert variant="destructive" role="alert">
+              <Ban aria-hidden />
+              <AlertTitle>{t("revokeErrorTitle")}</AlertTitle>
+              <AlertDescription>{revokeError}</AlertDescription>
+            </Alert>
+          ) : null}
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => setRevokeTarget(null)}
               disabled={revoking}
+              autoFocus
             >
               {tCommon("cancel")}
             </Button>
@@ -355,7 +402,11 @@ export function ReaderCatalogSection({
               onClick={() => void confirmRevoke()}
               disabled={revoking}
             >
-              {revoking ? <Loader2 className="animate-spin" /> : <Ban />}
+              {revoking ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <Ban aria-hidden />
+              )}
               {t("revoke")}
             </Button>
           </DialogFooter>

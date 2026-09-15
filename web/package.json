@@ -11,7 +11,8 @@
     "check:i18n": "node ./scripts/check-i18n-keys.mjs",
     "test:library": "node --experimental-strip-types --test components/app/library/library-collection.test.ts",
     "test:delivery-devices": "node --experimental-strip-types --test components/app/deliveries/deliveries-state.test.ts components/app/devices/devices-state.test.ts",
-    "test:gateways": "node --experimental-strip-types --test components/app/gateways/gateways-state.test.ts"
+    "test:gateways": "node --experimental-strip-types --test components/app/gateways/gateways-state.test.ts",
+    "test:sources-settings": "node --experimental-strip-types --test components/app/sources/sources-state.test.ts components/app/settings/settings-state.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

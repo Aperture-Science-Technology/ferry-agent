@@ -161,7 +161,7 @@
     },
     "sources": {
       "title": "Sources",
-      "description": "Your free book sources and those set up for search."
+      "description": "Manage the catalogs used to search for books, and your sources installed at home."
     },
     "deliveries": {
       "title": "Deliveries",
@@ -169,7 +169,7 @@
     },
     "settings": {
       "title": "Settings",
-      "description": "Your delivery preferences."
+      "description": "Delivery preferences, catalog for your e-reader, and useful shortcuts."
     }
   },
   "library": {
@@ -545,7 +545,11 @@
   },
   "sources": {
     "sectionTitle": "Your sources",
-    "intro": "Your open-access book sources: turn the ones used during search on or off.",
+    "intro": "Ferry Agent searches the catalogs you enable here. Imported files and local sources go through your online library or the Gateway installed at home.",
+    "openAccessTitle": "Open-access sources",
+    "openAccessDescription": "Public catalogs used when searching sources.",
+    "localTitle": "Your files and local sources",
+    "localDescription": "Import from your files, and results through the Gateway installed at home.",
     "providers": {
       "gutenberg": {
         "name": "Gutenberg",
@@ -560,21 +564,28 @@
         "description": "The books you import yourself from your own files."
       },
       "torrentGateway": {
-        "name": "Torrent access",
-        "description": "Results found through your personal access, installed at home."
+        "name": "Local sources (Gateway)",
+        "description": "Results found through the module installed at home, then added to your online library."
       }
     },
     "enabled": "Enabled",
     "disabled": "Disabled",
-    "enabledByDefault": "Enabled by default",
-    "alwaysActive": "Always active",
+    "unknown": "Unknown state",
+    "unknownHint": "This source's state could not be confirmed. Please try again later.",
+    "alwaysActive": "Always available",
+    "gatewayLocal": "Via Gateway",
+    "gatewayHint": "This source depends on the Gateway installed at home. It alone does not mean the Gateway is connected.",
+    "prowlarrNote": "Prowlarr, if you use it, stays configured on the Gateway — not as a main section here.",
+    "gatewayCta": "Open Gateway",
+    "uploadCta": "Add books in the library",
     "enableAria": "Enable {name}",
     "disableAria": "Disable {name}",
     "toastEnabled": "Source enabled.",
     "toastDisabled": "Source disabled.",
     "toastUpdateFailed": "Couldn't update this source. Please try again.",
+    "updateErrorTitle": "Update failed",
     "unavailableTitle": "Sources unavailable",
-    "unavailableNote": "Couldn't load the state of your sources right now. Gutenberg and Standard Ebooks still work from search."
+    "unavailableNote": "Couldn't load the state of your sources right now. No activation is confirmed until the list is available."
   },
   "deliveries": {
     "sectionTitle": "Your deliveries",
@@ -640,8 +651,6 @@
     "unavailable": "Couldn't load your settings right now. The values shown may be incomplete.",
     "deliveryPreferencesTitle": "Delivery preferences",
     "deliveryPreferencesDescription": "Your account and how books are sent to your e-reader.",
-    "accountTitle": "My account",
-    "accountDescription": "Your information and delivery preferences.",
     "email": "Email",
     "emailHint": "Managed by your sign-in provider.",
     "kindleEmail": "Your Kindle email",
@@ -650,10 +659,10 @@
     "clearKindleEmail": "Clear",
     "defaultFormat": "Default format",
     "defaultFormatHint": "Format used by default when sending a book.",
-    "sourcesTitle": "Your sources",
-    "sourcesDescription": "Turn the sources used during search on or off.",
+    "sourcesTitle": "Sources",
+    "sourcesDescription": "Catalog management lives on the Sources page.",
     "readerCatalogTitle": "Catalog for your e-reader",
-    "readerCatalogDescription": "One link to show your whole library in KOReader, Moon+, Marvin, or Kobo.",
+    "readerCatalogDescription": "One link to show your online library in KOReader, Moon+, Marvin, or Kobo.",
     "readerCatalog": {
       "warningTitle": "Access to your whole library",
       "warning": "Each link gives access to your entire library. Revoke a link as soon as you no longer need it.",
@@ -686,16 +695,27 @@
       "oneTimeTitle": "Save it now",
       "oneTimeWarning": "Once you close this window, the link will not be shown again. Copy it or scan the QR before continuing.",
       "urlLabel": "Catalog link",
-      "qrHint": "Scan from the e-reader to add the catalog.",
+      "qrHint": "Scan from the e-reader to add the catalog. If the QR fails, use the link above.",
       "toastCreateFailed": "Couldn't create the link. Please try again.",
       "toastRevoked": "Link revoked.",
-      "toastRevokeFailed": "Couldn't revoke this link. Please try again."
+      "toastRevokeFailed": "Couldn't revoke this link. Please try again.",
+      "copyUrlAria": "Copy catalog link",
+      "qrLoading": "Preparing QR…",
+      "qrError": "QR unavailable. Use the link above.",
+      "qrAlt": "QR code for the catalog link",
+      "createErrorTitle": "Couldn't create",
+      "revokeErrorTitle": "Couldn't revoke"
     },
     "devicesTitle": "Devices",
     "devicesDescription": "Manage your e-readers and how books arrive on them.",
     "devicesCta": "Open Devices",
     "toastSaved": "Settings saved.",
-    "toastFailed": "Couldn't save right now. Please try again."
+    "toastFailed": "Couldn't save right now. Please try again.",
+    "unsavedChanges": "Unsaved changes.",
+    "allSaved": "Everything is up to date.",
+    "saveErrorTitle": "Couldn't save",
+    "sourcesSummary": "Enable Gutenberg or Standard Ebooks, and find import and Gateway from the Sources page.",
+    "sourcesCta": "Open Sources"
   },
   "docs": {
     "metaTitle": "Guide | Ferry Agent",
