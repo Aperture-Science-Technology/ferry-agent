@@ -87,8 +87,10 @@ export function DeliveryDetailDialog({
 
   useEffect(() => {
     if (!jobId) {
-      setJob(null);
-      setFailedId(null);
+      // Reset the previous request state when the dialog closes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFetchedJob(null);
+      setFailed(false);
       return;
     }
     let cancelled = false;
