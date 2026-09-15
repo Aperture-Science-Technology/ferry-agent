@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { BrandLogo } from "@/components/brand-logo";
 
 export function SiteHeader() {
   const t = useTranslations("header");
@@ -12,8 +13,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="font-heading text-lg font-semibold tracking-tight">
-          Ferry Agent
+        <Link href="/" className="inline-flex items-center">
+          <BrandLogo />
         </Link>
         <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
           <Link href="/#how-it-works" className="transition hover:text-foreground">

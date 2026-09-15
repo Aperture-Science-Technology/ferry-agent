@@ -21,6 +21,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { BrandLogo } from "@/components/brand-logo";
 
 const NAV = [
   { href: "/app/bibliotheque", labelKey: "library", icon: Library },
@@ -39,9 +40,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <Link href="/" className="flex items-center gap-2 px-2 py-1.5">
-          <span className="font-heading text-lg font-semibold tracking-tight">
-            Ferry Agent
-          </span>
+          <BrandLogo markClassName="size-6" />
         </Link>
       </SidebarHeader>
       <SidebarContent>

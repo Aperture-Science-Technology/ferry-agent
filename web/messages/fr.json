@@ -18,6 +18,10 @@
     "dash": "—",
     "loading": "Chargement…"
   },
+  "brand": {
+    "name": "Ferry Agent",
+    "logoAlt": "Logo Ferry Agent"
+  },
   "header": {
     "howItWorks": "Comment ça marche",
     "delivered": "Sur votre liseuse",
