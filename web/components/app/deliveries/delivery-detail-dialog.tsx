@@ -87,8 +87,8 @@ export function DeliveryDetailDialog({
 
   useEffect(() => {
     if (!jobId) {
-      setJob(null);
-      setFailedId(null);
+      setFetchedJob(null);
+      setFailed(false);
       return;
     }
     let cancelled = false;
