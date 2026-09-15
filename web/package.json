@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "gen:types": "bash ../scripts/gen-api-types.sh",
-    "check:i18n": "node ./scripts/check-i18n-keys.mjs"
+    "check:i18n": "node ./scripts/check-i18n-keys.mjs",
+    "test:library": "node --experimental-strip-types --test components/app/library/library-collection.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

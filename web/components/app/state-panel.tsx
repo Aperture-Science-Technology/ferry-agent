@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
  */
 export function StatePanel({
   icon: Icon,
+  visual,
   title,
   description,
   action,
@@ -14,6 +15,8 @@ export function StatePanel({
   children,
 }: {
   icon?: LucideIcon;
+  /** Prefer over icon for branded empty states; keep decorative (alt="") when title is present. */
+  visual?: ReactNode;
   title?: string;
   description?: string;
   action?: ReactNode;
@@ -32,7 +35,8 @@ export function StatePanel({
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-chart-1/50 to-transparent"
       />
       <div className="relative mx-auto flex max-w-md flex-col items-center gap-3">
-        {Icon ? (
+        {visual ? <div className="mb-1">{visual}</div> : null}
+        {!visual && Icon ? (
           <div className="flex size-12 items-center justify-center rounded-xl bg-muted/60 ring-1 ring-border/50">
             <Icon className="size-5 text-chart-1" />
           </div>
