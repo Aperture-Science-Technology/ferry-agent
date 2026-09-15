@@ -152,7 +152,7 @@
     },
     "devices": {
       "title": "Devices",
-      "description": "Your e-readers and how books arrive on them (email, cloud, browser code, USB)."
+      "description": "Your e-readers and how books arrive on them from Ferry Agent."
     },
     "access": {
       "title": "Access",
@@ -164,7 +164,7 @@
     },
     "deliveries": {
       "title": "Deliveries",
-      "description": "Track your deliveries to your devices."
+      "description": "Track deliveries from your online library to your devices."
     },
     "settings": {
       "title": "Settings",
@@ -333,7 +333,7 @@
     "colProfile": "Conversion profile",
     "refreshing": "Updating the list…",
     "emptyTitle": "No devices",
-    "emptyDescription": "Add your first e-reader to start receiving books.",
+    "emptyDescription": "Add your first e-reader to send books from your library.",
     "emptyUnavailable": "Your devices couldn't be loaded right now. Please try again later.",
     "colDevice": "Device",
     "colDelivery": "How it arrives",
@@ -348,7 +348,7 @@
     "edit": "Edit",
     "delete": "Delete",
     "deleteConfirmTitle": "Delete this device?",
-    "deleteConfirmDescription": "After deletion, books will no longer be sent to this device.",
+    "deleteConfirmDescription": "“{name}” will be removed. Books will no longer be sent to this device.",
     "toastDeleted": "Device deleted.",
     "toastDeleteFailed": "Couldn't delete this device. Please try again.",
     "tiers": {
@@ -356,7 +356,14 @@
       "B": "Arrives via the cloud",
       "C": "Code in the browser",
       "D": "USB transfer"
-    }
+    },
+    "sectionDescription": "Add your e-readers to choose how books arrive on them.",
+    "unavailableTitle": "Devices unavailable",
+    "refresh": "Refresh",
+    "retry": "Try again",
+    "refreshFailedTitle": "Refresh incomplete",
+    "refreshFailedDescription": "The list couldn't be updated. Your known devices stay visible.",
+    "deleteConfirmDescriptionNamed": "“{name}” will be removed. Books will no longer be sent to this device."
   },
   "editDevice": {
     "title": "Edit device",
@@ -431,13 +438,21 @@
   "cloudLink": {
     "title": "Link a cloud account",
     "description": "A window opens so you can authorize Ferry. Come back here afterwards.",
-    "waiting": "A window opens so you can authorize Ferry. Come back here afterwards.",
+    "opening": "Opening the authorization window…",
+    "waiting": "Finish the connection in the other window, then come back here.",
+    "waitingOtherWindow": "Finish the connection in the other window, then come back here.",
     "waitingShort": "Waiting for the link…",
     "provider": "Provider",
     "openAuth": "Authorize with provider",
+    "reopenAuth": "Open authorization again",
+    "popupBlockedTitle": "Window blocked",
+    "popupBlockedDescription": "Your browser blocked the window. Allow pop-ups for this site, then try again.",
+    "uncertainTitle": "Result needs a check",
+    "uncertainDescription": "Linking seems advanced, but the status could not be confirmed. Refresh the device list.",
     "toastNotConfigured": "{provider} isn't set up yet.",
     "toastLinked": "Linking succeeded.",
-    "toastFailed": "Linking did not complete. Please try again."
+    "toastFailed": "Linking did not complete. Please try again.",
+    "toastUncertain": "Linking could not be confirmed. Refresh the list."
   },
   "access": {
     "createLink": "Add access",
@@ -543,26 +558,37 @@
   },
   "deliveries": {
     "sectionTitle": "Your deliveries",
+    "sectionDescription": "Each send from your library appears here with its status.",
     "countLabel": "{count} deliveries",
     "emptyTitle": "No deliveries",
     "emptyDescription": "Send a book from your library to track your deliveries here.",
+    "unavailableTitle": "Deliveries unavailable",
     "emptyUnavailable": "Your deliveries couldn't be loaded right now. Please try again later.",
+    "refresh": "Refresh",
+    "retry": "Try again",
+    "refreshFailedTitle": "Refresh incomplete",
+    "refreshFailedDescription": "The list couldn't be updated. Your last known deliveries stay visible.",
+    "statusHintDelivered": "The send operation finished. This does not confirm that the book was opened on the e-reader.",
+    "statusHintDeliveredShort": "Send finished — not confirmed reading",
+    "failedHint": "This send did not complete. Open tracking for more detail.",
     "colBook": "Book",
     "colDevice": "E-reader",
     "colStatus": "Status",
     "colMethod": "Delivery mode",
     "colFormat": "Format",
-    "colCreated": "Sent",
-    "colDelivered": "Arrived",
+    "colCreated": "Requested",
+    "colDelivered": "Finished",
     "colError": "Failed",
     "colAction": "Action",
     "track": "Track",
+    "trackAria": "Track delivery of {title}",
     "openDownload": "Open file",
     "statuses": {
-      "queued": "Waiting",
-      "sent": "Sending",
-      "delivered": "Arrived",
-      "failed": "Failed"
+      "queued": "Requested",
+      "sent": "In progress",
+      "delivered": "Finished",
+      "failed": "Failed",
+      "unknown": "Unknown"
     }
   },
   "deliveryDetail": {
@@ -574,14 +600,20 @@
     "status": "Status",
     "method": "Delivery mode",
     "format": "Format",
-    "created": "Created",
-    "delivered": "Arrived",
+    "created": "Requested",
+    "delivered": "Finished",
     "error": "Problem",
+    "errorFallback": "This send did not complete. Try again later from your library.",
     "download": "Open file",
     "loading": "Loading tracking…",
     "loadErrorTitle": "Tracking unavailable",
-    "loadErrorDescription": "This delivery's details couldn't be shown right now. Please try again later.",
-    "toastLoadFailed": "Couldn't load tracking for this delivery."
+    "loadErrorDescription": "This delivery's details couldn't be shown right now.",
+    "retry": "Try again",
+    "toastLoadFailed": "Couldn't load tracking for this delivery.",
+    "statusHintDelivered": "The send finished on Ferry Agent. This does not confirm reading on the e-reader.",
+    "statusHintQueued": "Your request is recorded and waiting its turn.",
+    "statusHintSent": "The send is in progress to the chosen destination.",
+    "statusHintUnknown": "The status received is unrecognized. Refresh to check again."
   },
   "settings": {
     "unavailableTitle": "Settings unavailable",

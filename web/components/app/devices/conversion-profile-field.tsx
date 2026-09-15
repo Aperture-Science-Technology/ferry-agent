@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { useTranslations } from "next-intl";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,24 +26,33 @@ export function conversionProfileLabel(
 export function ConversionProfileField({
   value,
   onChange,
+  disabled = false,
 }: {
   value: ConversionPreset | null;
   onChange: (value: ConversionPreset | null) => void;
+  disabled?: boolean;
 }) {
   const t = useTranslations("editDevice");
+  const selectId = useId();
+  const hintId = useId();
   const selectValue = value ?? PROFILE_AUTO;
 
   return (
     <div className="space-y-2">
-      <Label>{t("conversionProfile")}</Label>
+      <Label htmlFor={selectId}>{t("conversionProfile")}</Label>
       <Select
         value={selectValue}
         onValueChange={(next) => {
           if (!next) return;
           onChange(next === PROFILE_AUTO ? null : (next as ConversionPreset));
         }}
+        disabled={disabled}
       >
-        <SelectTrigger className="w-full">
+        <SelectTrigger
+          id={selectId}
+          className="w-full"
+          aria-describedby={selectValue === PROFILE_AUTO ? hintId : undefined}
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -55,7 +65,9 @@ export function ConversionProfileField({
         </SelectContent>
       </Select>
       {selectValue === PROFILE_AUTO ? (
-        <p className="text-muted-foreground text-xs">{t("conversionProfileAutoHint")}</p>
+        <p id={hintId} className="text-muted-foreground text-xs">
+          {t("conversionProfileAutoHint")}
+        </p>
       ) : null}
     </div>
   );

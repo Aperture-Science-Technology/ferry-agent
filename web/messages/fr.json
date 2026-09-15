@@ -152,7 +152,7 @@
     },
     "devices": {
       "title": "Appareils",
-      "description": "Vos liseuses et la façon dont les livres y arrivent (email, cloud, code navigateur, USB)."
+      "description": "Vos liseuses et la façon dont les livres y arrivent depuis Ferry Agent."
     },
     "access": {
       "title": "Accès",
@@ -164,7 +164,7 @@
     },
     "deliveries": {
       "title": "Envois",
-      "description": "Le suivi de vos envois vers vos appareils."
+      "description": "Suivez vos envois depuis la bibliothèque en ligne vers vos appareils."
     },
     "settings": {
       "title": "Réglages",
@@ -333,7 +333,7 @@
     "colProfile": "Profil de conversion",
     "refreshing": "Mise à jour de la liste…",
     "emptyTitle": "Aucun appareil",
-    "emptyDescription": "Ajoutez votre première liseuse pour commencer à recevoir des livres.",
+    "emptyDescription": "Ajoutez votre première liseuse pour envoyer des livres depuis votre bibliothèque.",
     "emptyUnavailable": "Impossible de charger vos appareils pour le moment. Réessayez un peu plus tard.",
     "colDevice": "Appareil",
     "colDelivery": "Mode d'arrivée",
@@ -348,7 +348,7 @@
     "edit": "Modifier",
     "delete": "Supprimer",
     "deleteConfirmTitle": "Supprimer cet appareil ?",
-    "deleteConfirmDescription": "Après suppression, les livres ne seront plus envoyés vers cet appareil.",
+    "deleteConfirmDescription": "« {name} » sera retiré. Les livres ne seront plus envoyés vers cet appareil.",
     "toastDeleted": "Appareil supprimé.",
     "toastDeleteFailed": "Impossible de supprimer cet appareil. Réessayez.",
     "tiers": {
@@ -356,7 +356,14 @@
       "B": "Arrive via le cloud",
       "C": "Code dans le navigateur",
       "D": "Transfert USB"
-    }
+    },
+    "sectionDescription": "Ajoutez vos liseuses pour choisir comment les livres y arrivent.",
+    "unavailableTitle": "Appareils indisponibles",
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "refreshFailedTitle": "Actualisation incomplète",
+    "refreshFailedDescription": "La liste affichée n’a pas pu être mise à jour. Vos appareils connus restent visibles.",
+    "deleteConfirmDescriptionNamed": "« {name} » sera retiré. Les livres ne seront plus envoyés vers cet appareil."
   },
   "editDevice": {
     "title": "Modifier l'appareil",
@@ -430,14 +437,22 @@
   },
   "cloudLink": {
     "title": "Lier un compte cloud",
-    "description": "Une fenêtre s'ouvre pour autoriser Ferry. Revenez ici ensuite.",
-    "waiting": "Une fenêtre s'ouvre pour autoriser Ferry. Revenez ici ensuite.",
+    "description": "Une fenêtre s’ouvre pour autoriser Ferry. Revenez ici ensuite.",
+    "opening": "Ouverture de la fenêtre d’autorisation…",
+    "waiting": "Terminez la connexion dans l’autre fenêtre, puis revenez ici.",
+    "waitingOtherWindow": "Terminez la connexion dans l’autre fenêtre, puis revenez ici.",
     "waitingShort": "En attente de la liaison…",
     "provider": "Fournisseur",
     "openAuth": "Autoriser avec le fournisseur",
-    "toastNotConfigured": "{provider} n'est pas encore configuré.",
+    "reopenAuth": "Rouvrir l’autorisation",
+    "popupBlockedTitle": "Fenêtre bloquée",
+    "popupBlockedDescription": "Votre navigateur a bloqué la fenêtre. Autorisez les fenêtres pour ce site, puis réessayez.",
+    "uncertainTitle": "Résultat à vérifier",
+    "uncertainDescription": "La liaison semble avancée, mais l’état n’a pas pu être confirmé. Actualisez la liste des appareils.",
+    "toastNotConfigured": "{provider} n’est pas encore configuré.",
     "toastLinked": "La liaison a réussi.",
-    "toastFailed": "La liaison n'a pas abouti. Réessayez."
+    "toastFailed": "La liaison n’a pas abouti. Réessayez.",
+    "toastUncertain": "La liaison n’a pas pu être confirmée. Actualisez la liste."
   },
   "access": {
     "createLink": "Ajouter un accès",
@@ -543,45 +558,62 @@
   },
   "deliveries": {
     "sectionTitle": "Vos envois",
+    "sectionDescription": "Chaque envoi depuis votre bibliothèque apparaît ici avec son statut.",
     "countLabel": "{count} envois",
     "emptyTitle": "Aucun envoi",
     "emptyDescription": "Envoyez un livre depuis votre bibliothèque pour suivre vos envois ici.",
+    "unavailableTitle": "Envois indisponibles",
     "emptyUnavailable": "Impossible de charger vos envois pour le moment. Réessayez un peu plus tard.",
+    "refresh": "Actualiser",
+    "retry": "Réessayer",
+    "refreshFailedTitle": "Actualisation incomplète",
+    "refreshFailedDescription": "La liste affichée n’a pas pu être mise à jour. Vos derniers envois connus restent visibles.",
+    "statusHintDelivered": "L’opération d’envoi est terminée. Cela ne confirme pas que le livre a été ouvert sur la liseuse.",
+    "statusHintDeliveredShort": "Envoi terminé — pas une lecture confirmée",
+    "failedHint": "L’envoi n’a pas abouti. Ouvrez le suivi pour plus de détail.",
     "colBook": "Livre",
     "colDevice": "Liseuse",
     "colStatus": "Statut",
-    "colMethod": "Mode d'envoi",
+    "colMethod": "Mode d’envoi",
     "colFormat": "Format",
-    "colCreated": "Envoyé",
-    "colDelivered": "Arrivé",
+    "colCreated": "Demandé",
+    "colDelivered": "Terminé",
     "colError": "Échec",
     "colAction": "Action",
     "track": "Suivre",
+    "trackAria": "Suivre l’envoi de {title}",
     "openDownload": "Ouvrir le fichier",
     "statuses": {
-      "queued": "En attente",
-      "sent": "En cours d'envoi",
-      "delivered": "Arrivé",
-      "failed": "Échec"
+      "queued": "Demandé",
+      "sent": "En cours",
+      "delivered": "Terminé",
+      "failed": "Échoué",
+      "unknown": "Inconnu"
     }
   },
   "deliveryDetail": {
-    "title": "Suivi de l'envoi",
+    "title": "Suivi de l’envoi",
     "description": "Statut et détails de cet envoi.",
     "book": "Livre",
     "author": "Auteur",
     "device": "Liseuse",
     "status": "Statut",
-    "method": "Mode d'envoi",
+    "method": "Mode d’envoi",
     "format": "Format",
-    "created": "Créé",
-    "delivered": "Arrivé",
+    "created": "Demandé",
+    "delivered": "Terminé",
     "error": "Problème",
+    "errorFallback": "L’envoi n’a pas abouti. Réessayez plus tard depuis la bibliothèque.",
     "download": "Ouvrir le fichier",
     "loading": "Chargement du suivi…",
     "loadErrorTitle": "Suivi indisponible",
-    "loadErrorDescription": "Impossible d'afficher le détail de cet envoi pour le moment. Réessayez un peu plus tard.",
-    "toastLoadFailed": "Impossible de charger le suivi de cet envoi."
+    "loadErrorDescription": "Impossible d’afficher le détail de cet envoi pour le moment.",
+    "retry": "Réessayer",
+    "toastLoadFailed": "Impossible de charger le suivi de cet envoi.",
+    "statusHintDelivered": "L’envoi est terminé côté Ferry Agent. Cela ne confirme pas une lecture sur la liseuse.",
+    "statusHintQueued": "La demande est enregistrée et attend son tour.",
+    "statusHintSent": "L’envoi est en cours vers la destination choisie.",
+    "statusHintUnknown": "Le statut reçu n’est pas reconnu. Actualisez pour vérifier."
   },
   "settings": {
     "unavailableTitle": "Réglages indisponibles",

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,68 +14,146 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  isActiveDeliveryStatus,
+  mergeDeliveryJobs,
+  normalizeDeliveryStatus,
+} from "@/components/app/deliveries/deliveries-state";
 import { StatePanel } from "@/components/app/state-panel";
 import { useApiClient } from "@/lib/api-client";
 import type { DeliveryJob, DeliveryStatus } from "@/lib/types";
 
+const DETAIL_POLL_MS = 5000;
+const DETAIL_POLL_MAX_MS = 5 * 60 * 1000;
+
 const STATUS_VARIANT: Record<
-  DeliveryStatus,
+  DeliveryStatus | "unknown",
   "default" | "secondary" | "destructive" | "outline"
 > = {
   queued: "secondary",
   sent: "outline",
   delivered: "default",
   failed: "destructive",
+  unknown: "outline",
 };
+
+function formatAppDate(iso: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(iso));
+}
 
 export function DeliveryDetailDialog({
   jobId,
+  seedJob,
   onOpenChange,
+  onJobUpdated,
 }: {
   jobId: string | null;
+  seedJob?: DeliveryJob | null;
   onOpenChange: (open: boolean) => void;
+  onJobUpdated?: (job: DeliveryJob) => void;
 }) {
   const t = useTranslations("deliveryDetail");
   const tDeliveries = useTranslations("deliveries");
   const tMethods = useTranslations("deliverDialog");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const { call } = useApiClient();
-  const [job, setJob] = useState<DeliveryJob | null>(null);
-  const [failedId, setFailedId] = useState<string | null>(null);
+  const [fetchedJob, setFetchedJob] = useState<DeliveryJob | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
+  const pollStartedAt = useRef<number | null>(null);
+
+  const displayJob = useMemo(() => {
+    if (!jobId) return null;
+    const seed = seedJob?.id === jobId ? seedJob : null;
+    const fetched = fetchedJob?.id === jobId ? fetchedJob : null;
+    if (fetched && seed) return mergeDeliveryJobs([seed], [fetched])[0]!;
+    return fetched ?? seed;
+  }, [jobId, seedJob, fetchedJob]);
+
+  const loadFailed = Boolean(jobId) && failed && !displayJob;
+  const loading = Boolean(jobId) && displayJob === null && !loadFailed;
+
+  const notifyUpdated = useCallback(
+    (job: DeliveryJob) => {
+      onJobUpdated?.(job);
+    },
+    [onJobUpdated]
+  );
 
   useEffect(() => {
-    if (!jobId) {
-      setJob(null);
-      setFailedId(null);
-      return;
-    }
+    if (!jobId) return;
     let cancelled = false;
-    setFailedId(null);
-    call<DeliveryJob>(`/api/v1/deliveries/${jobId}`)
+    void call<DeliveryJob>(`/api/v1/deliveries/${jobId}`)
       .then((result) => {
         if (cancelled) return;
-        setJob(result);
+        setFetchedJob(result);
+        setFailed(false);
+        notifyUpdated(result);
       })
       .catch(() => {
         if (cancelled) return;
-        setJob(null);
-        setFailedId(jobId);
+        setFailed(true);
         toast.error(t("toastLoadFailed"));
       });
     return () => {
       cancelled = true;
     };
-  }, [jobId, call, t]);
+    // Parent may pass a new onJobUpdated each render; load only on id/retry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- notifyUpdated intentionally omitted
+  }, [jobId, call, t, retryToken]);
 
-  const displayJob = job?.id === jobId ? job : null;
-  const loadFailed = jobId !== null && failedId === jobId;
-  const loading = jobId !== null && displayJob === null && !loadFailed;
+  useEffect(() => {
+    if (!jobId || !displayJob) return;
+    if (!isActiveDeliveryStatus(displayJob.status)) {
+      pollStartedAt.current = null;
+      return;
+    }
+    if (pollStartedAt.current === null) {
+      pollStartedAt.current = Date.now();
+    }
+    const id = window.setInterval(() => {
+      if (
+        pollStartedAt.current !== null &&
+        Date.now() - pollStartedAt.current > DETAIL_POLL_MAX_MS
+      ) {
+        return;
+      }
+      void call<DeliveryJob>(`/api/v1/deliveries/${jobId}`)
+        .then((result) => {
+          setFetchedJob(result);
+          setFailed(false);
+          notifyUpdated(result);
+        })
+        .catch(() => {
+          /* keep last known detail during silent poll failure */
+        });
+    }, DETAIL_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [jobId, displayJob, call, notifyUpdated]);
+
+  async function handleRetry() {
+    if (!jobId) return;
+    setRetrying(true);
+    setFailed(false);
+    setRetryToken((value) => value + 1);
+    setRetrying(false);
+  }
+
+  function statusLabel(status: string) {
+    const normalized = normalizeDeliveryStatus(status);
+    if (normalized === "unknown") return tDeliveries("statuses.unknown");
+    return tDeliveries(`statuses.${normalized}`);
+  }
 
   return (
     <Dialog open={jobId !== null} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <div className="mb-1 h-px w-14 bg-gradient-to-r from-chart-1 via-chart-2 to-transparent" />
           <DialogTitle className="font-heading text-xl tracking-tight">
             {t("title")}
           </DialogTitle>
@@ -84,8 +162,11 @@ export function DeliveryDetailDialog({
 
         {loading ? (
           <StatePanel className="py-8">
-            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin text-chart-1" />
+            <div
+              className="flex items-center justify-center gap-2 text-sm text-muted-foreground"
+              aria-busy="true"
+            >
+              <Loader2 className="size-4 animate-spin text-chart-1 motion-reduce:animate-none" />
               {t("loading")}
             </div>
             <div className="mt-4 w-full space-y-2">
@@ -94,33 +175,67 @@ export function DeliveryDetailDialog({
               <Skeleton className="h-8 w-3/4 rounded-lg" />
             </div>
           </StatePanel>
-        ) : loadFailed || !displayJob ? (
+        ) : loadFailed ? (
           <StatePanel
             className="py-10"
             title={t("loadErrorTitle")}
             description={t("loadErrorDescription")}
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void handleRetry()}
+                disabled={retrying}
+              >
+                {retrying ? <Loader2 className="animate-spin" /> : null}
+                {t("retry")}
+              </Button>
+            }
           />
-        ) : (
+        ) : displayJob ? (
           <div className="space-y-5 text-sm">
             <div className="min-w-0 space-y-1">
               <p className="font-heading text-base font-medium tracking-tight">
-                <span className="line-clamp-2">
+                <span className="line-clamp-3 break-words">
                   {displayJob.item_title ?? tCommon("dash")}
                 </span>
               </p>
-              <p className="line-clamp-1 text-muted-foreground">
+              <p className="line-clamp-2 text-muted-foreground break-words">
                 {displayJob.item_author ?? tCommon("dash")}
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-1.5">
-              <Badge variant={STATUS_VARIANT[displayJob.status]}>
-                {tDeliveries(`statuses.${displayJob.status}`)}
-              </Badge>
-              {displayJob.target_format ? (
-                <Badge variant="secondary" className="uppercase">
-                  {displayJob.target_format}
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                <Badge
+                  variant={
+                    STATUS_VARIANT[normalizeDeliveryStatus(displayJob.status)]
+                  }
+                >
+                  {statusLabel(displayJob.status)}
                 </Badge>
+                {displayJob.target_format ? (
+                  <Badge variant="secondary" className="uppercase">
+                    {displayJob.target_format}
+                  </Badge>
+                ) : null}
+              </div>
+              {normalizeDeliveryStatus(displayJob.status) === "delivered" ? (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t("statusHintDelivered")}
+                </p>
+              ) : normalizeDeliveryStatus(displayJob.status) === "queued" ? (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t("statusHintQueued")}
+                </p>
+              ) : normalizeDeliveryStatus(displayJob.status) === "sent" ? (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t("statusHintSent")}
+                </p>
+              ) : normalizeDeliveryStatus(displayJob.status) === "unknown" ? (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t("statusHintUnknown")}
+                </p>
               ) : null}
             </div>
 
@@ -142,25 +257,29 @@ export function DeliveryDetailDialog({
 
               <dt className="text-muted-foreground">{t("created")}</dt>
               <dd className="text-right sm:text-left">
-                {new Date(displayJob.created_at).toLocaleString()}
+                {formatAppDate(displayJob.created_at, locale)}
               </dd>
 
               {displayJob.delivered_at ? (
                 <>
                   <dt className="text-muted-foreground">{t("delivered")}</dt>
                   <dd className="text-right sm:text-left">
-                    {new Date(displayJob.delivered_at).toLocaleString()}
+                    {formatAppDate(displayJob.delivered_at, locale)}
                   </dd>
                 </>
               ) : null}
             </dl>
 
-            {displayJob.error ? (
+            {displayJob.status === "failed" ? (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5">
                 <p className="mb-1 font-heading text-xs font-medium tracking-tight text-destructive">
                   {t("error")}
                 </p>
-                <p className="break-words text-destructive">{displayJob.error}</p>
+                <p className="break-words text-destructive">
+                  {displayJob.error?.trim()
+                    ? displayJob.error
+                    : t("errorFallback")}
+                </p>
               </div>
             ) : null}
 
@@ -179,13 +298,16 @@ export function DeliveryDetailDialog({
                     </a>
                   }
                 />
-                <p className="truncate text-xs text-muted-foreground" title={displayJob.download_url}>
+                <p
+                  className="truncate text-xs text-muted-foreground"
+                  title={displayJob.download_url}
+                >
                   {displayJob.download_url}
                 </p>
               </div>
             ) : null}
           </div>
-        )}
+        ) : null}
       </DialogContent>
     </Dialog>
   );

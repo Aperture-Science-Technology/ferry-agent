@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,6 +26,12 @@ import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
 type Provider = "dropbox" | "drive";
+type LinkPhase =
+  | "idle"
+  | "opening"
+  | "waiting"
+  | "popup_blocked"
+  | "success_uncertain";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
@@ -44,9 +51,9 @@ export function CloudLinkDialog({
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const { call } = useApiClient();
+  const providerId = useId();
   const [provider, setProvider] = useState<Provider>("dropbox");
-  const [waiting, setWaiting] = useState(false);
-  const [loadingUrl, setLoadingUrl] = useState(false);
+  const [phase, setPhase] = useState<LinkPhase>("idle");
   const pollCancelled = useRef(false);
   const waitingDeviceId = useRef<string | null>(null);
 
@@ -54,10 +61,13 @@ export function CloudLinkDialog({
   const [lastResetKey, setLastResetKey] = useState(resetKey);
   if (resetKey !== lastResetKey) {
     setLastResetKey(resetKey);
-    setWaiting(false);
+    setPhase("idle");
+  }
+
+  useEffect(() => {
     pollCancelled.current = true;
     waitingDeviceId.current = null;
-  }
+  }, [resetKey]);
 
   useEffect(() => {
     return () => {
@@ -81,19 +91,19 @@ export function CloudLinkDialog({
             onLinked(updated);
             toast.success(t("toastLinked"));
             onOpenChange(false);
-            setWaiting(false);
+            setPhase("idle");
             waitingDeviceId.current = null;
           })
           .catch(() => {
-            toast.error(t("toastFailed"));
-            setWaiting(false);
+            setPhase("success_uncertain");
+            toast.error(t("toastUncertain"));
             waitingDeviceId.current = null;
           });
         return;
       }
 
       toast.error(t("toastFailed"));
-      setWaiting(false);
+      setPhase("idle");
       waitingDeviceId.current = null;
     }
 
@@ -119,7 +129,7 @@ export function CloudLinkDialog({
 
   async function startLink() {
     if (!device) return;
-    setLoadingUrl(true);
+    setPhase("opening");
     pollCancelled.current = false;
     waitingDeviceId.current = device.id;
     try {
@@ -128,9 +138,13 @@ export function CloudLinkDialog({
       );
       // Pas de noopener/noreferrer : le callback doit pouvoir postMessage
       // vers window.opener pour arreter le polling sans attendre 5 min.
-      window.open(url, "_blank");
-      setWaiting(true);
-      setLoadingUrl(false);
+      const popup = window.open(url, "_blank");
+      if (!popup) {
+        setPhase("popup_blocked");
+        waitingDeviceId.current = null;
+        return;
+      }
+      setPhase("waiting");
       const linked = await pollUntilLinked(device.id);
       if (pollCancelled.current) return;
       if (linked) {
@@ -139,9 +153,10 @@ export function CloudLinkDialog({
         onLinked(linked);
         toast.success(t("toastLinked"));
         onOpenChange(false);
+        setPhase("idle");
       } else {
         toast.error(t("toastFailed"));
-        setWaiting(false);
+        setPhase("idle");
         waitingDeviceId.current = null;
       }
     } catch {
@@ -150,8 +165,7 @@ export function CloudLinkDialog({
           provider: provider === "dropbox" ? "Dropbox" : "Google Drive",
         })
       );
-      setWaiting(false);
-      setLoadingUrl(false);
+      setPhase("idle");
       waitingDeviceId.current = null;
     }
   }
@@ -159,30 +173,52 @@ export function CloudLinkDialog({
   function handleOpenChange(open: boolean) {
     if (!open) {
       pollCancelled.current = true;
-      setWaiting(false);
+      setPhase("idle");
       waitingDeviceId.current = null;
     }
     onOpenChange(open);
   }
+
+  const busy = phase === "opening" || phase === "waiting";
+  const description =
+    phase === "waiting"
+      ? t("waitingOtherWindow")
+      : phase === "opening"
+        ? t("opening")
+        : phase === "popup_blocked"
+          ? t("popupBlockedDescription")
+          : phase === "success_uncertain"
+            ? t("uncertainDescription")
+            : t("description");
 
   return (
     <Dialog open={device !== null} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription>
-            {waiting ? t("waiting") : t("description")}
-          </DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {phase === "popup_blocked" ? (
+            <Alert role="alert">
+              <AlertTitle>{t("popupBlockedTitle")}</AlertTitle>
+              <AlertDescription>{t("popupBlockedDescription")}</AlertDescription>
+            </Alert>
+          ) : null}
+          {phase === "success_uncertain" ? (
+            <Alert role="status">
+              <AlertTitle>{t("uncertainTitle")}</AlertTitle>
+              <AlertDescription>{t("uncertainDescription")}</AlertDescription>
+            </Alert>
+          ) : null}
           <div className="space-y-2">
-            <Label>{t("provider")}</Label>
+            <Label htmlFor={providerId}>{t("provider")}</Label>
             <Select
               value={provider}
               onValueChange={(value) => value && setProvider(value as Provider)}
-              disabled={waiting || loadingUrl}
+              disabled={busy}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger id={providerId} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -193,19 +229,23 @@ export function CloudLinkDialog({
           </div>
           <Button
             variant="outline"
-            onClick={startLink}
-            disabled={loadingUrl || waiting}
+            onClick={() => void startLink()}
+            disabled={busy}
             className="w-full"
           >
-            {loadingUrl || waiting ? <Loader2 className="animate-spin" /> : <ExternalLink />}
-            {waiting ? t("waitingShort") : t("openAuth")}
+            {busy ? <Loader2 className="animate-spin" /> : <ExternalLink />}
+            {phase === "waiting"
+              ? t("waitingShort")
+              : phase === "popup_blocked"
+                ? t("reopenAuth")
+                : t("openAuth")}
           </Button>
         </div>
         <DialogFooter>
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            disabled={loadingUrl}
+            disabled={phase === "opening"}
           >
             {tCommon("cancel")}
           </Button>
