@@ -307,14 +307,14 @@ function PendingWaitState({
   const presentation = gatewayConnectionPresentation(gateway, now);
   const expired = presentation === "expired";
   const minutesLeft = minutesUntil(gateway.pairing_expires_at, now);
-  const expired = minutesLeft !== null && minutesLeft <= 0;
+  const timerExpired = minutesLeft !== null && minutesLeft <= 0;
 
   let expiryMessage: string;
   if (minutesLeft === null) {
     expiryMessage = t("codeExpiresIn", {
       minutes: gateway.pairing_token_ttl_minutes ?? 15,
     });
-  } else if (expired) {
+  } else if (timerExpired) {
     expiryMessage = t("codeExpired");
   } else if (minutesLeft === 1) {
     expiryMessage = t("codeExpiresSoon");
