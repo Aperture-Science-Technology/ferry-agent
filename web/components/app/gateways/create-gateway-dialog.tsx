@@ -15,26 +15,39 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { copyTextToClipboard } from "@/components/app/gateways/gateways-state";
 import { useApiClient } from "@/lib/api-client";
 import type { Gateway, GatewayCredentials } from "@/lib/types";
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const t = useTranslations("createAccess");
   const tCommon = useTranslations("common");
+
+  async function handleCopy() {
+    const ok = await copyTextToClipboard(value);
+    if (ok) {
+      toast.success(tCommon("copied"));
+    } else {
+      toast.error(tCommon("copyFailed"));
+    }
+  }
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       <div className="flex gap-2">
-        <Input readOnly value={value} className="font-mono text-xs break-all" />
+        <Input
+          readOnly
+          value={value}
+          className="font-mono text-xs break-all"
+          onFocus={(event) => event.currentTarget.select()}
+        />
         <Button
           type="button"
           variant="outline"
           size="icon"
           aria-label={t("copyAction")}
-          onClick={() => {
-            void navigator.clipboard.writeText(value);
-            toast.success(tCommon("copied"));
-          }}
+          onClick={() => void handleCopy()}
         >
           <Copy />
         </Button>
@@ -56,6 +69,15 @@ export function GatewayCredentialsPanel({
   const tCommon = useTranslations("common");
   const block = bothSecretsBlock(credentials);
 
+  async function handleCopyBoth() {
+    const ok = await copyTextToClipboard(block);
+    if (ok) {
+      toast.success(tCommon("copied"));
+    } else {
+      toast.error(tCommon("copyFailed"));
+    }
+  }
+
   return (
     <div className="space-y-4">
       <CopyField label={t("pairingToken")} value={credentials.pairing_token} />
@@ -64,7 +86,10 @@ export function GatewayCredentialsPanel({
         <Label>{t("bothSecrets")}</Label>
         <p className="text-sm text-muted-foreground">{t("bothSecretsHint")}</p>
         <div className="flex gap-2">
-          <pre className="max-h-28 flex-1 overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap break-all">
+          <pre
+            tabIndex={0}
+            className="max-h-28 flex-1 overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap break-all select-all"
+          >
             {block}
           </pre>
           <Button
@@ -72,15 +97,13 @@ export function GatewayCredentialsPanel({
             variant="outline"
             size="icon"
             className="shrink-0"
-            aria-label={t("copyAction")}
-            onClick={() => {
-              void navigator.clipboard.writeText(block);
-              toast.success(tCommon("copied"));
-            }}
+            aria-label={t("copyBothAction")}
+            onClick={() => void handleCopyBoth()}
           >
             <Copy />
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground">{t("copyFallbackHint")}</p>
       </div>
     </div>
   );
@@ -199,6 +222,7 @@ export function CreateGatewayDialog({
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
                 disabled={submitting}
+                autoFocus
               >
                 {tCommon("cancel")}
               </Button>
