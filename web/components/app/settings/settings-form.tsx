@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Eraser, Loader2, Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -100,12 +100,6 @@ export function SettingsForm({
   }
 
   const dirty = settingsAreDirty(kindleEmail, defaultFormat, saved);
-
-  // Apres router.refresh(), les props SSR redeviennent la source de verite.
-  useEffect(() => {
-    setKindleEmail(initialKindleEmail);
-    setDefaultFormat(initialDefaultFormat);
-  }, [initialKindleEmail, initialDefaultFormat]);
 
   async function save() {
     setSaving(true);

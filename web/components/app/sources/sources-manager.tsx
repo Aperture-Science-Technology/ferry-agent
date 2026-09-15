@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   BookOpen,
@@ -84,10 +84,6 @@ export function SourcesManager({
         return t("unknown");
     }
   }
-
-  useEffect(() => {
-    setSources(initialSources);
-  }, [initialSources]);
 
   async function toggle(source: Source) {
     setPendingIds((prev) => new Set(prev).add(source.id));

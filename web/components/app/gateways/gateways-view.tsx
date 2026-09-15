@@ -184,7 +184,6 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    setJobs(null);
     call<GatewayJobStatusOut[]>(`/api/v1/gateways/${gatewayId}/jobs?limit=20`)
       .then((data) => {
         if (!cancelled) setOutcome(applyActivityFetchResult(data));
@@ -195,7 +194,7 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [gatewayId, call, refreshKey]);
+  }, [gatewayId, call]);
 
   function typeLabel(type: GatewayJobType) {
     return type === "search" ? t("jobTypeSearch") : t("jobTypeFetch");
@@ -307,14 +306,13 @@ function PendingWaitState({
   const presentation = gatewayConnectionPresentation(gateway, now);
   const expired = presentation === "expired";
   const minutesLeft = minutesUntil(gateway.pairing_expires_at, now);
-  const timerExpired = minutesLeft !== null && minutesLeft <= 0;
 
   let expiryMessage: string;
   if (minutesLeft === null) {
     expiryMessage = t("codeExpiresIn", {
       minutes: gateway.pairing_token_ttl_minutes ?? 15,
     });
-  } else if (timerExpired) {
+  } else if (expired) {
     expiryMessage = t("codeExpired");
   } else if (minutesLeft === 1) {
     expiryMessage = t("codeExpiresSoon");

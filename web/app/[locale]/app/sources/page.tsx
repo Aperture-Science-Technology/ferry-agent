@@ -1,6 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/app/page-header";
-import { SectionHeader } from "@/components/app/section-header";
 import { SourcesManager } from "@/components/app/sources/sources-manager";
 import { safeApiFetch } from "@/lib/api";
 import type { Source } from "@/lib/types";

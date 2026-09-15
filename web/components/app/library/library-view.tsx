@@ -61,7 +61,6 @@ import { EmptyLibraryIllustration } from "@/components/illustrations";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { ApiError, useApiClient } from "@/lib/api-client";
 import { useGatewayJob } from "@/lib/use-gateway-job";
-import { cn } from "@/lib/utils";
 import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@/lib/types";
 
 type ViewMode = "grid" | "list";
@@ -71,15 +70,6 @@ function formatAppDate(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
   }).format(new Date(iso));
-}
-
-/** Upload = pas de `source_ref` ; accès personnel = ref `gateway:…`. */
-function isManualLibraryItem(item: LibraryItem): boolean {
-  return !item.source_ref;
-}
-
-function isLinkedLibraryItem(item: LibraryItem): boolean {
-  return Boolean(item.source_ref?.startsWith("gateway:"));
 }
 
 function mapFetchError(
