@@ -1,19 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" fill="none" role="img">
   <title>Empty library</title>
   <desc>A quiet open book on a calm shelf, suggesting an empty online library ready to be filled.</desc>
-  <!-- Ground plane -->
-  <ellipse cx="80" cy="98" rx="52" ry="8" fill="#192830"/>
-  <!-- Shelf edge -->
-  <rect x="28" y="88" width="104" height="6" rx="2" fill="#34474E"/>
-  <!-- Closed books leaning (muted) -->
-  <rect x="36" y="58" width="12" height="30" rx="2" fill="#22343D" transform="rotate(-8 42 73)"/>
-  <rect x="50" y="62" width="11" height="26" rx="2" fill="#34474E" transform="rotate(6 55 75)"/>
-  <!-- Open book (center, invitation) -->
-  <path fill="#EDF3F1" fill-opacity=".92" d="M68 46c0-1.2.8-2.2 1.9-2.5 6.2-1.6 12.2.4 14.1 2.2.3.3.5.7.5 1.1v28.4c0 1.2-1.1 2-2.2 1.7-4.2-1.1-8.3-.4-12.1 1.6-.8.4-1.7-.2-1.7-1.1V46Z"/>
-  <path fill="#EDF3F1" fill-opacity=".78" d="M100 46c0-1.2-.8-2.2-1.9-2.5-6.2-1.6-12.2.4-14.1 2.2-.3.3-.5.7-.5 1.1v28.4c0 1.2 1.1 2 2.2 1.7 4.2-1.1 8.3-.4 12.1 1.6.8.4 1.7-.2 1.7-1.1V46Z"/>
-  <path fill="#B0C0C0" fill-opacity=".35" d="M82.2 46.5h3.6v29h-3.6z"/>
-  <!-- Soft passage hint -->
-  <path fill="none" stroke="#93D3C7" stroke-width="2" stroke-linecap="round" d="M74 58c2.8-3.2 5.8-4.6 8-4.6s5.2 1.4 8 4.6"/>
-  <circle cx="74" cy="58" r="1.6" fill="#93D3C7"/>
-  <circle cx="90" cy="58" r="1.6" fill="#93D3C7"/>
+  <ellipse cx="80" cy="98" rx="52" ry="8" fill="#E8DFD2"/>
+  <rect x="28" y="88" width="104" height="6" rx="2" fill="#C9B8A4"/>
+  <rect x="36" y="58" width="12" height="30" rx="2" fill="#5C4F45" transform="rotate(-8 42 73)"/>
+  <rect x="50" y="62" width="11" height="26" rx="2" fill="#8A7362" transform="rotate(6 55 75)"/>
+  <path fill="#FFFBF5" fill-opacity=".95" d="M68 46c0-1.2.8-2.2 1.9-2.5 6.2-1.6 12.2.4 14.1 2.2.3.3.5.7.5 1.1v28.4c0 1.2-1.1 2-2.2 1.7-4.2-1.1-8.3-.4-12.1 1.6-.8.4-1.7-.2-1.7-1.1V46Z"/>
+  <path fill="#FFFBF5" fill-opacity=".82" d="M100 46c0-1.2-.8-2.2-1.9-2.5-6.2-1.6-12.2.4-14.1 2.2-.3.3-.5.7-.5 1.1v28.4c0 1.2 1.1 2 2.2 1.7 4.2-1.1 8.3-.4 12.1 1.6.8.4 1.7-.2 1.7-1.1V46Z"/>
+  <path fill="#C9B8A4" fill-opacity=".45" d="M82.2 46.5h3.6v29h-3.6z"/>
+  <path fill="none" stroke="#B85C38" stroke-width="2" stroke-linecap="round" d="M74 58c2.8-3.2 5.8-4.6 8-4.6s5.2 1.4 8 4.6"/>
+  <circle cx="74" cy="58" r="1.6" fill="#B85C38"/>
+  <circle cx="90" cy="58" r="1.6" fill="#B85C38"/>
 </svg>

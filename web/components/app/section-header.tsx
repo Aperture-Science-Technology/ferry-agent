@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { PassageRule } from "@/components/passage-rule";
 
 /**
- * Section title with the Ferry “passage” accent (teal→sky liseré).
+ * Section title with the Ferry “passage” accent (ink rule).
  * Reusable across app screens.
  */
 export function SectionHeader({
@@ -24,7 +25,7 @@ export function SectionHeader({
       )}
     >
       <div className="min-w-0 flex-1">
-        <div className="mb-2 h-px w-16 bg-gradient-to-r from-chart-1 via-chart-2 to-transparent" />
+        <PassageRule className="mb-2" />
         <h2 className="font-heading text-lg font-medium tracking-tight text-balance">
           {title}
         </h2>

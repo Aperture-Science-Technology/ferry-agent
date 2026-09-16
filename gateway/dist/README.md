@@ -57,3 +57,15 @@ docker compose -f compose.yaml up -d
 Le dossier `./watch` (monté sur `/watch`) reçoit les fichiers à importer : posez un fichier dedans, il arrive tout seul dans votre bibliothèque.
 
 Les **tarballs d’image** ne sont **jamais** servis sous `/bundle` (trop volumineux) : les télécharger depuis GitHub Releases. Aucun `ferry-agent-bundle.tar.gz` n’est publié.
+
+## Contrat web (`/[locale]/docs`)
+
+Le guide construit les URLs via `web/lib/gateway-release.ts` à partir de
+`NEXT_PUBLIC_GATEWAY_RELEASE_VERSION` (= `${VERSION}` sans `v`) :
+
+```
+https://github.com/aperture-science-technology/ferry-agent/releases/download/v${VERSION}/ferry-gateway-${VERSION}-{amd64|arm64}.tar.gz
+```
+
+Si la variable est vide, le guide affiche un fallback explicite vers la page
+Releases — jamais une URL d’archive inventée ni un fichier `/bundle` obsolète.
