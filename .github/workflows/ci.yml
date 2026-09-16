@@ -313,7 +313,6 @@ jobs:
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
             NEXT_PUBLIC_APP_URL=https://ferry-agent.aperture-agency.org
             NEXT_PUBLIC_BACKEND_BASE=https://ferry-agent.aperture-agency.org/api/v1
-            NEXT_PUBLIC_GATEWAY_RELEASE_VERSION=${{ vars.GATEWAY_RELEASE_VERSION || '0.1.0' }}
           cache-from: |
             type=gha,scope=web
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web:buildcache
@@ -426,12 +425,11 @@ jobs:
 
   # W-20 — docker-format per-arch tarballs + integrity + GitHub Release.
   # Does not publish until a v* tag is pushed (after GLaDOS validation).
-  # Asset contract (consumed by web/lib/gateway-release.ts + /docs):
+  # Operator/release assets (not the public /docs CTA):
   #   ferry-gateway-${VERSION}-amd64.tar.gz
   #   ferry-gateway-${VERSION}-arm64.tar.gz
   #   SHA256SUMS (+ .sig), compose.yaml, install.sh
-  # After the first successful release, set repo variable GATEWAY_RELEASE_VERSION
-  # to ${VERSION} (no leading v) so the web guide can render download buttons.
+  # Public guide download remains the canonical /bundle/ferry-agent-gateway.tar.
   release-gateway-artifacts:
     name: Release gateway artifacts
     needs: [build-push-gateway]

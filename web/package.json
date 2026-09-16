@@ -14,7 +14,7 @@
     "test:gateways": "node --experimental-strip-types --test components/app/gateways/gateways-state.test.ts",
     "test:sources-settings": "node --experimental-strip-types --test components/app/sources/sources-state.test.ts components/app/settings/settings-state.test.ts",
     "test:final": "node --experimental-strip-types --test lib/gateway-job-state.test.ts",
-    "test:product-truth": "node --experimental-strip-types --test lib/gateway-release.test.ts lib/product-truth.test.ts"
+    "test:product-truth": "node --experimental-strip-types --test lib/gateway-image.test.ts lib/product-truth.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

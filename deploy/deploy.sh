@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploy ferry-agent stack and sync small /bundle text assets from the latest
-# GitHub Release (W-20). Never copy image tarballs into the nginx dist tree.
+# GitHub Release (W-20). Preserve canonical ferry-agent-gateway.tar when present.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -81,11 +81,11 @@ else
   printf 'warn: no v* GitHub Release found — /bundle uses gateway/dist/ only\n' >&2
 fi
 
-# Purge the lie: never serve ferry-agent-bundle or image tarballs under /bundle.
+# Purge ghost bundle + versioned release tarballs. Keep the canonical guide
+# archive ferry-agent-gateway.tar if present under /bundle.
 rm -f "${DIST_DIR}/ferry-agent-bundle.tar.gz"
 rm -f "${DIST_DIR}"/ferry-gateway-*.tar \
       "${DIST_DIR}"/ferry-gateway-*.tar.gz \
-      "${DIST_DIR}"/ferry-agent-gateway.tar \
       "${DIST_DIR}"/ferry-agent-gateway.tar.gz
 
 COMPOSE=(docker compose -f deploy/docker-compose.yml)

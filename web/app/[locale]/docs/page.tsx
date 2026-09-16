@@ -3,7 +3,6 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { ByoInstallGuide } from "@/components/docs/byo-install-guide";
-import { getConfiguredGatewayReleaseVersion } from "@/lib/gateway-release";
 
 export async function generateMetadata({
   params,
@@ -25,13 +24,12 @@ export default async function DocsPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const releaseVersion = getConfiguredGatewayReleaseVersion();
 
   return (
     <div className="flex flex-1 flex-col">
       <SiteHeader />
       <main className="flex-1">
-        <ByoInstallGuide releaseVersion={releaseVersion} />
+        <ByoInstallGuide />
       </main>
       <SiteFooter />
     </div>

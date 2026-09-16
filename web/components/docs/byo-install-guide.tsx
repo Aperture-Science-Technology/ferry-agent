@@ -12,8 +12,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { CloudGatewayIllustration } from "@/components/illustrations";
-import { GatewayDownloadPanel } from "@/components/docs/gateway-download";
 import { PassageRule } from "@/components/passage-rule";
+import { GATEWAY_IMAGE_DOWNLOAD_URL } from "@/lib/gateway-image";
 
 function Code({ children }: { children: ReactNode }) {
   return (
@@ -26,12 +26,7 @@ function Code({ children }: { children: ReactNode }) {
 /** Existing public MCP endpoint — not an install archive URL. */
 const MCP_URL = "https://ferry-agent.aperture-agency.org/mcp";
 
-export function ByoInstallGuide({
-  releaseVersion,
-}: {
-  /** From NEXT_PUBLIC_GATEWAY_RELEASE_VERSION (server-resolved). */
-  releaseVersion: string | null;
-}) {
+export function ByoInstallGuide() {
   const t = useTranslations("docs");
 
   const checklistItems = [
@@ -63,7 +58,13 @@ export function ByoInstallGuide({
       action: t("step2Action"),
       extra: (
         <div className="space-y-3">
-          <GatewayDownloadPanel version={releaseVersion} />
+          <Button
+            render={
+              <a href={GATEWAY_IMAGE_DOWNLOAD_URL} rel="noopener noreferrer">
+                {t("step2Cta")}
+              </a>
+            }
+          />
           <p className="text-muted-foreground">{t("step2UseFile")}</p>
         </div>
       ),
