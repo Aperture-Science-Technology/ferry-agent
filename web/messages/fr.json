@@ -148,7 +148,14 @@
     "access": "Gateway",
     "sources": "Sources",
     "deliveries": "Envois",
-    "settings": "Réglages"
+    "settings": "Réglages",
+    "more": "Plus",
+    "docs": "Guide",
+    "account": "Compte",
+    "groupTransfer": "Transfert",
+    "groupLocal": "Chez vous",
+    "moreMenu": "Menu",
+    "moreDescription": "Gateway, sources, réglages et compte."
   },
   "pages": {
     "library": {
