@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Ferry Agent",
-    "description": "Get your books onto your e-reader. Runs at home, free book sources, delivery to Kindle, Kobo, Tolino and more."
+    "description": "Get your books onto your e-reader. Online library, free book sources, delivery to Kindle, Kobo, Tolino and more. Optional Gateway for your local sources."
   },
   "locale": {
     "switch": "Language",
@@ -44,27 +44,27 @@
     "dashboard": "Workspace"
   },
   "hero": {
-    "badge": "At home, for your e-reader",
+    "badge": "Online, for your e-reader",
     "titleBefore": "Ferry Agent.",
     "titleHighlight": "Find, prepare, send.",
-    "subtitle": "Search for a book, add it to your library, send it to your device — simply.",
+    "subtitle": "Search for a book, add it to your online library, send it to your device — simply.",
     "ctaDashboard": "Open the workspace",
     "ctaHow": "How it works"
   },
   "valueProps": {
     "eyebrow": "Why Ferry Agent",
     "items": {
-      "selfHosted": {
-        "title": "Runs at home.",
-        "body": "Your books stay on your machine. Nothing is stored with us."
+      "cloudFirst": {
+        "title": "Your library, online.",
+        "body": "Books, devices, settings, and delivery history are hosted in Ferry Agent. Access them from anywhere with your account."
       },
       "legal": {
         "title": "Open-access books.",
-        "body": "Gutenberg, Standard Ebooks, your own files… Search once, send wherever you want."
+        "body": "Gutenberg, Standard Ebooks, your own files… Search once, send wherever you want. On the platform: legal open-access sources."
       },
-      "detached": {
-        "title": "Your access, at home.",
-        "body": "The Access program runs on your computer. It never goes through our servers."
+      "gatewayOptional": {
+        "title": "Gateway, only when needed.",
+        "body": "An optional module installed on your machine to connect local sources or downloads. That is not where your library lives."
       }
     }
   },
@@ -91,17 +91,17 @@
   },
   "howItWorks": {
     "title": "How it works.",
-    "subtitle": "Three steps: find a book, prepare it in your library, send it to your e-reader.",
+    "subtitle": "Three steps: find a book, prepare it in your online library, send it to your e-reader.",
     "steps": {
       "find": {
         "number": "01",
         "title": "Find a book",
-        "body": "Search by title or author. Open-access sources and your personal access, in one search."
+        "body": "Search by title or author. Open-access sources on the platform, and local sources through the Gateway if you install it."
       },
       "prepare": {
         "number": "02",
         "title": "Prepare it in your library",
-        "body": "Add the book. It stays on your side, ready to send."
+        "body": "Add the book to your online library. It is ready to send to your e-reader."
       },
       "send": {
         "number": "03",
@@ -113,19 +113,19 @@
   "mcpSpotlight": {
     "eyebrow": "For AI assistants too",
     "title": "Your library, also from a conversation",
-    "body": "Search, add, and send your books from an AI assistant (Claude, ChatGPT…), with the same connection as the workspace.",
+    "body": "Search, add, and send your books from an AI assistant (Claude, ChatGPT…), with the same connection as the online workspace.",
     "cta": "See the guide"
   },
   "faq": {
     "title": "Questions. Answers.",
     "items": {
-      "selfHosted": {
-        "q": "Does this run on my machine?",
-        "a": "Yes. The essentials and your library stay on your machine. Nothing is stored on servers we control."
+      "cloudFirst": {
+        "q": "Where are my books and settings?",
+        "a": "In Ferry Agent online: library, devices, settings, and delivery history are hosted on our infrastructure. Only the Gateway, if you install it, runs on your machine."
       },
       "gatewayNeeded": {
-        "q": "Do I need personal access to get started?",
-        "a": "Not for open-access books (Gutenberg, Standard Ebooks) and your own files. Personal access is only for sources set up on your machine."
+        "q": "Do I need the Gateway to get started?",
+        "a": "Not for open-access books (Gutenberg, Standard Ebooks) and your own uploaded files. The Gateway is for sources and downloads handled on your machine."
       },
       "readers": {
         "q": "Which e-readers are supported?",
@@ -133,7 +133,7 @@
       },
       "myData": {
         "q": "Do I own my data?",
-        "a": "Yes. Your library, your devices, your delivery history — everything stays with you."
+        "a": "Yes. You manage your account, library, and devices. They are stored in Ferry Agent online; you can view and change them anytime."
       },
       "agent": {
         "q": "Can I automate deliveries?",
@@ -743,13 +743,24 @@
     "step1Action": "Open the Gateway page, then click Add a Gateway. When it is created, note the connection code and the access key. Use the “Both codes together” block to copy everything at once — they will never be shown again.",
     "step1Cta": "Open Gateway",
     "step1Success": "Both codes appear once, with the “Both codes together” block.",
-    "step2Title": "Get the install file",
-    "step2Action": "Each Gateway release provides an install file that matches your computer. Then import that file into Docker Desktop or OrbStack.",
-    "step2Unverified": "A direct download link from this page is not confirmed here. Use the file provided with the release for your machine, without inventing an address.",
-    "step2UseFile": "Keep the file you obtained handy for the next step.",
+    "step2Title": "Download the install file",
+    "step2Action": "Choose the file that matches your computer. It comes from an official Ferry Gateway release (same filename as in the release).",
+    "step2DownloadTitle": "Install files",
+    "step2DownloadIntro": "Each file is an image ready to import into Docker Desktop or OrbStack (Docker format, one architecture per file).",
+    "step2VersionLabel": "Version {version}",
+    "step2DownloadAmd64": "Download for PC (amd64)",
+    "step2DownloadArm64": "Download for Apple Silicon Mac (arm64)",
+    "step2DownloadAmd64Hint": "Windows, most Linux PCs, and Intel Macs.",
+    "step2DownloadArm64Hint": "Macs with Apple silicon (M1, M2, M3…).",
+    "step2Checksums": "Verify checksums (SHA256SUMS)",
+    "step2FilenameHint": "File: {filename}",
+    "step2Unavailable": "No Gateway release is linked to this guide yet.",
+    "step2UnavailableHint": "When a version is published, download buttons will appear here. Until then, open the releases page to check whether a file already exists.",
+    "step2ReleasesPage": "Open Gateway releases",
+    "step2UseFile": "After downloading, keep the file handy for the next step.",
     "step2Success": "You have the install file that matches your computer.",
     "step3Title": "Import the file in Docker Desktop or OrbStack",
-    "step3Action": "Open Docker Desktop or OrbStack. Import the file you just obtained, then wait until import finishes.",
+    "step3Action": "Open Docker Desktop or OrbStack. Import the downloaded .tar.gz file (Images → Import / Load), then wait until import finishes. This matches the release format: one Docker image per architecture.",
     "step3Success": "The Gateway image appears in the Images list in Docker Desktop or OrbStack.",
     "step4Title": "Start with both codes",
     "step4Action": "In Docker Desktop or OrbStack, start the imported image. Paste exactly the “Both codes together” block from Gateway (PAIRING_TOKEN and GATEWAY_KEY) into the startup settings that ask for them. Do not invent values, and do not leave blanks to fill in.",

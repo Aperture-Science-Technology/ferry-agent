@@ -32,7 +32,7 @@ export function StatePanel({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-chart-1/50 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-primary/40"
       />
       <div className="relative mx-auto flex max-w-md flex-col items-center gap-3">
         {visual ? <div className="mb-1">{visual}</div> : null}

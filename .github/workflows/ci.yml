@@ -129,6 +129,7 @@ jobs:
         run: ruff format --check .
 
   # W-34 — OpenAPI→TS freshness + i18n key symmetry (fr/en).
+  # Node 22+: test:product-truth uses --experimental-strip-types (unavailable on 20).
   types-freshness:
     name: Types freshness + i18n
     runs-on: ubuntu-latest
@@ -147,7 +148,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
@@ -165,6 +166,10 @@ jobs:
       - name: Check i18n key symmetry (fr/en)
         working-directory: web
         run: npm run check:i18n
+
+      - name: Product truth + gateway download URL contract
+        working-directory: web
+        run: npm run test:product-truth
 
   secrets-scan:
     name: Secrets scan (gitleaks)
@@ -308,6 +313,7 @@ jobs:
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
             NEXT_PUBLIC_APP_URL=https://ferry-agent.aperture-agency.org
             NEXT_PUBLIC_BACKEND_BASE=https://ferry-agent.aperture-agency.org/api/v1
+            NEXT_PUBLIC_GATEWAY_RELEASE_VERSION=${{ vars.GATEWAY_RELEASE_VERSION }}
           cache-from: |
             type=gha,scope=web
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web:buildcache
@@ -420,6 +426,12 @@ jobs:
 
   # W-20 — docker-format per-arch tarballs + integrity + GitHub Release.
   # Does not publish until a v* tag is pushed (after GLaDOS validation).
+  # Asset contract (consumed by web/lib/gateway-release.ts + /docs):
+  #   ferry-gateway-${VERSION}-amd64.tar.gz
+  #   ferry-gateway-${VERSION}-arm64.tar.gz
+  #   SHA256SUMS (+ .sig), compose.yaml, install.sh
+  # After the first successful release, set repo variable GATEWAY_RELEASE_VERSION
+  # to ${VERSION} (no leading v) so the web guide can render download buttons.
   release-gateway-artifacts:
     name: Release gateway artifacts
     needs: [build-push-gateway]

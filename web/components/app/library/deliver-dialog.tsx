@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PassageRule } from "@/components/passage-rule";
 import { ApiError, useApiClient } from "@/lib/api-client";
 import type { Device, DeliveryJob, DeliveryMethod, LibraryItem, MethodAvailability } from "@/lib/types";
 
@@ -191,7 +192,7 @@ export function DeliverDialog({
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <div className="mb-1 h-px w-14 bg-gradient-to-r from-chart-1 via-chart-2 to-transparent" />
+          <PassageRule className="mb-1" />
           <DialogTitle className="font-heading tracking-tight">
             {t("title", { title: item?.title ?? "" })}
           </DialogTitle>

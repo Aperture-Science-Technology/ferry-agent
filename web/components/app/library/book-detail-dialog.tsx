@@ -18,6 +18,7 @@ import {
 import { DeliverDialog } from "@/components/app/library/deliver-dialog";
 import { BookEditDialog } from "@/components/app/library/book-edit-dialog";
 import { LibraryCoverImage } from "@/components/app/library/cover-image";
+import { PassageRule } from "@/components/passage-rule";
 import { useApiClient } from "@/lib/api-client";
 import type { Device, DeliveryJob, DeliveryMethod, DeliveryStatus, LibraryItem } from "@/lib/types";
 
@@ -119,7 +120,7 @@ export function BookDetailDialog({
       <Dialog open={item !== null} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <div className="mb-1 h-px w-14 bg-gradient-to-r from-chart-1 via-chart-2 to-transparent" />
+            <PassageRule className="mb-1" />
             <DialogTitle className="font-heading text-xl tracking-tight">
               {item?.title ?? ""}
             </DialogTitle>

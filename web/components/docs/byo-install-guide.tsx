@@ -12,6 +12,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { CloudGatewayIllustration } from "@/components/illustrations";
+import { GatewayDownloadPanel } from "@/components/docs/gateway-download";
+import { PassageRule } from "@/components/passage-rule";
 
 function Code({ children }: { children: ReactNode }) {
   return (
@@ -24,7 +26,12 @@ function Code({ children }: { children: ReactNode }) {
 /** Existing public MCP endpoint — not an install archive URL. */
 const MCP_URL = "https://ferry-agent.aperture-agency.org/mcp";
 
-export function ByoInstallGuide() {
+export function ByoInstallGuide({
+  releaseVersion,
+}: {
+  /** From NEXT_PUBLIC_GATEWAY_RELEASE_VERSION (server-resolved). */
+  releaseVersion: string | null;
+}) {
   const t = useTranslations("docs");
 
   const checklistItems = [
@@ -56,7 +63,7 @@ export function ByoInstallGuide() {
       action: t("step2Action"),
       extra: (
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">{t("step2Unverified")}</p>
+          <GatewayDownloadPanel version={releaseVersion} />
           <p className="text-muted-foreground">{t("step2UseFile")}</p>
         </div>
       ),
@@ -90,37 +97,46 @@ export function ByoInstallGuide() {
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-12 px-6 py-16">
-      <header className="space-y-3">
-        <p className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-14 px-6 py-16">
+      <header className="space-y-4">
+        <PassageRule />
+        <p className="text-sm font-medium tracking-[0.14em] text-muted-foreground uppercase">
           {t("eyebrow")}
         </p>
-        <h1 className="font-heading text-4xl font-medium tracking-tight text-balance">
+        <h1 className="font-heading text-4xl font-medium tracking-tight text-balance sm:text-5xl">
           {t("title")}
         </h1>
-        <p className="max-w-2xl text-muted-foreground">{t("intro")}</p>
-        <p className="max-w-2xl text-sm text-muted-foreground">{t("pathChoice")}</p>
+        <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
+          {t("intro")}
+        </p>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          {t("pathChoice")}
+        </p>
       </header>
 
-      <section className="space-y-4 rounded-xl border border-border/60 bg-card/40 p-5 sm:p-6">
-        <CloudGatewayIllustration className="mx-0 w-[180px]" />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <h2 className="font-heading text-lg font-medium tracking-tight">
-              {t("pathOnlineTitle")}
-            </h2>
-            <p className="text-sm text-muted-foreground">{t("pathOnlineBody")}</p>
-            <Button
-              variant="outline"
-              render={<Link href="/app/bibliotheque">{t("pathOnlineCta")}</Link>}
-            />
-          </div>
-          <div className="space-y-2">
-            <h2 className="font-heading text-lg font-medium tracking-tight">
-              {t("pathGatewayTitle")}
-            </h2>
-            <p className="text-sm text-muted-foreground">{t("pathGatewayBody")}</p>
-          </div>
+      <section className="grid gap-8 border-y border-border py-8 sm:grid-cols-2">
+        <div className="space-y-3 sm:col-span-2">
+          <CloudGatewayIllustration className="mx-0 w-[180px]" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="font-heading text-xl font-medium tracking-tight">
+            {t("pathOnlineTitle")}
+          </h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {t("pathOnlineBody")}
+          </p>
+          <Button
+            variant="outline"
+            render={<Link href="/app/bibliotheque">{t("pathOnlineCta")}</Link>}
+          />
+        </div>
+        <div className="space-y-2">
+          <h2 className="font-heading text-xl font-medium tracking-tight">
+            {t("pathGatewayTitle")}
+          </h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {t("pathGatewayBody")}
+          </p>
         </div>
       </section>
 
@@ -131,7 +147,7 @@ export function ByoInstallGuide() {
         <ul className="space-y-2">
           {checklistItems.map((item) => (
             <li key={item} className="flex items-start gap-2 text-sm">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
               <span>{item}</span>
             </li>
           ))}
@@ -140,26 +156,29 @@ export function ByoInstallGuide() {
 
       <section className="space-y-6">
         <div className="space-y-2">
+          <PassageRule tone="ink" />
           <h2 className="font-heading text-2xl font-medium tracking-tight">
             {t("stepsTitle")}
           </h2>
           <p className="text-sm text-muted-foreground">{t("pathChoice")}</p>
         </div>
-        <ol className="space-y-8">
+        <ol className="space-y-10">
           {steps.map((step) => (
             <li
               key={step.number}
-              className="border-t border-border/60 pt-6 first:border-t-0 first:pt-0"
+              className="border-t border-border pt-8 first:border-t-0 first:pt-0"
             >
               <div className="space-y-4">
                 <div>
-                  <span className="font-heading text-sm text-muted-foreground">
+                  <span className="font-heading text-sm tracking-[0.12em] text-primary uppercase">
                     {step.number}
                   </span>
                   <h3 className="mt-2 font-heading text-xl font-medium">
                     {step.title}
                   </h3>
-                  <p className="mt-2 text-muted-foreground">{step.action}</p>
+                  <p className="mt-2 leading-relaxed text-muted-foreground">
+                    {step.action}
+                  </p>
                 </div>
                 {"cta" in step && step.cta ? <div>{step.cta}</div> : null}
                 {"hint" in step && step.hint ? (
@@ -180,12 +199,12 @@ export function ByoInstallGuide() {
         </ol>
       </section>
 
-      <section className="space-y-3 border-t border-border/60 pt-8">
+      <section className="space-y-3 border-t border-border pt-8">
         <h2 className="font-heading text-2xl font-medium tracking-tight">
           {t("afterTitle")}
         </h2>
-        <p className="text-muted-foreground">{t("afterBody")}</p>
-        <p className="text-muted-foreground">
+        <p className="leading-relaxed text-muted-foreground">{t("afterBody")}</p>
+        <p className="leading-relaxed text-muted-foreground">
           {t("afterMcp")} <Code>{MCP_URL}</Code>
         </p>
         <p className="font-heading text-lg font-medium text-balance">

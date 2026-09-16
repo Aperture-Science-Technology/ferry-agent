@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Ferry Agent",
-    "description": "Mettez vos livres sur votre liseuse. Tourne chez vous, sources en accès libre, envoi vers Kindle, Kobo, Tolino et plus."
+    "description": "Mettez vos livres sur votre liseuse. Bibliothèque en ligne, sources en accès libre, envoi vers Kindle, Kobo, Tolino et plus. Gateway optionnel pour vos sources locales."
   },
   "locale": {
     "switch": "Langue",
@@ -44,27 +44,27 @@
     "dashboard": "Espace"
   },
   "hero": {
-    "badge": "Chez vous, pour votre liseuse",
+    "badge": "En ligne, pour votre liseuse",
     "titleBefore": "Ferry Agent.",
     "titleHighlight": "Trouver, préparer, envoyer.",
-    "subtitle": "Cherchez un livre, ajoutez-le à votre bibliothèque, envoyez-le sur votre appareil — simplement.",
+    "subtitle": "Cherchez un livre, ajoutez-le à votre bibliothèque en ligne, envoyez-le sur votre appareil — simplement.",
     "ctaDashboard": "Ouvrir l'espace",
     "ctaHow": "Comment ça marche"
   },
   "valueProps": {
     "eyebrow": "Pourquoi Ferry Agent",
     "items": {
-      "selfHosted": {
-        "title": "Tourne chez vous.",
-        "body": "Vos livres restent sur votre machine. Rien n'est stocké chez nous."
+      "cloudFirst": {
+        "title": "Votre bibliothèque en ligne.",
+        "body": "Livres, appareils, réglages et historique d'envois sont hébergés dans Ferry Agent. Vous y accédez depuis n'importe où, avec votre compte."
       },
       "legal": {
         "title": "Des livres en accès libre.",
-        "body": "Gutenberg, Standard Ebooks, vos fichiers… Cherchez une fois, envoyez où vous voulez."
+        "body": "Gutenberg, Standard Ebooks, vos fichiers… Cherchez une fois, envoyez où vous voulez. Sur la plateforme : sources légales en accès libre."
       },
-      "detached": {
-        "title": "Votre accès, chez vous.",
-        "body": "Le programme Accès tourne sur votre ordinateur. Il ne passe jamais par nos serveurs."
+      "gatewayOptional": {
+        "title": "Gateway, seulement si besoin.",
+        "body": "Un module optionnel installé chez vous pour relier des sources ou téléchargements locaux. Ce n'est pas là que vit votre bibliothèque."
       }
     }
   },
@@ -91,17 +91,17 @@
   },
   "howItWorks": {
     "title": "Comment ça marche.",
-    "subtitle": "Trois gestes : trouver un livre, le préparer dans votre bibliothèque, l'envoyer à votre liseuse.",
+    "subtitle": "Trois gestes : trouver un livre, le préparer dans votre bibliothèque en ligne, l'envoyer à votre liseuse.",
     "steps": {
       "find": {
         "number": "01",
         "title": "Trouvez un livre",
-        "body": "Cherchez par titre ou auteur. Sources en accès libre et votre accès personnel, en une seule recherche."
+        "body": "Cherchez par titre ou auteur. Sources en accès libre sur la plateforme, et sources locales via le Gateway si vous l'installez."
       },
       "prepare": {
         "number": "02",
         "title": "Préparez-le dans votre bibliothèque",
-        "body": "Ajoutez le livre. Il reste chez vous, prêt pour l'envoi."
+        "body": "Ajoutez le livre à votre bibliothèque en ligne. Il est prêt pour l'envoi vers votre liseuse."
       },
       "send": {
         "number": "03",
@@ -113,19 +113,19 @@
   "mcpSpotlight": {
     "eyebrow": "Pour les assistants IA aussi",
     "title": "Votre bibliothèque, aussi depuis une conversation",
-    "body": "Cherchez, ajoutez et envoyez vos livres depuis un assistant IA (Claude, ChatGPT…), avec la même connexion que l'espace.",
+    "body": "Cherchez, ajoutez et envoyez vos livres depuis un assistant IA (Claude, ChatGPT…), avec la même connexion que l'espace en ligne.",
     "cta": "Voir le guide"
   },
   "faq": {
     "title": "Questions. Réponses.",
     "items": {
-      "selfHosted": {
-        "q": "Est-ce que ça tourne chez moi ?",
-        "a": "Oui. L'essentiel et votre bibliothèque restent sur votre machine. Rien n'est stocké sur des serveurs que nous contrôlons."
+      "cloudFirst": {
+        "q": "Où sont mes livres et mes réglages ?",
+        "a": "Dans Ferry Agent en ligne : bibliothèque, appareils, réglages et historique d'envois sont hébergés sur notre infrastructure. Seul le Gateway, s'il est installé, tourne sur votre machine."
       },
       "gatewayNeeded": {
-        "q": "Ai-je besoin d'un accès personnel pour commencer ?",
-        "a": "Non pour les livres en accès libre (Gutenberg, Standard Ebooks) et vos propres fichiers. L'accès personnel sert pour les sources installées chez vous."
+        "q": "Ai-je besoin du Gateway pour commencer ?",
+        "a": "Non pour les livres en accès libre (Gutenberg, Standard Ebooks) et vos propres fichiers importés. Le Gateway sert pour les sources et téléchargements gérés sur votre machine."
       },
       "readers": {
         "q": "Quelles liseuses sont prises en charge ?",
@@ -133,7 +133,7 @@
       },
       "myData": {
         "q": "Mes données m'appartiennent-elles ?",
-        "a": "Oui. Votre bibliothèque, vos appareils, l'historique de vos envois — tout reste chez vous."
+        "a": "Oui. Vous gérez votre compte, votre bibliothèque et vos appareils. Ils sont stockés dans Ferry Agent en ligne ; vous pouvez les consulter et les modifier à tout moment."
       },
       "agent": {
         "q": "Puis-je automatiser les envois ?",
@@ -743,13 +743,24 @@
     "step1Action": "Ouvrez la page Gateway, puis cliquez sur Ajouter un Gateway. À la création, notez le code de connexion et la clé d’accès. Utilisez le bloc « Les deux codes ensemble » pour tout copier d’un coup — ils ne seront plus jamais réaffichés.",
     "step1Cta": "Ouvrir Gateway",
     "step1Success": "Les deux codes s’affichent une fois, avec le bloc « Les deux codes ensemble ».",
-    "step2Title": "Obtenez le fichier d’installation",
-    "step2Action": "Chaque publication du Gateway fournit un fichier d’installation adapté à votre ordinateur. Importez ensuite ce fichier dans Docker Desktop ou OrbStack.",
-    "step2Unverified": "Un lien de téléchargement direct depuis cette page n’est pas confirmé ici. Utilisez le fichier fourni avec la publication pour votre machine, sans inventer d’adresse.",
-    "step2UseFile": "Gardez le fichier obtenu à portée de main pour l’étape suivante.",
+    "step2Title": "Téléchargez le fichier d’installation",
+    "step2Action": "Choisissez le fichier qui correspond à votre ordinateur. Ce fichier vient d’une publication officielle Ferry Gateway (même nom que dans la publication).",
+    "step2DownloadTitle": "Fichiers d’installation",
+    "step2DownloadIntro": "Chaque fichier est une image prête à importer dans Docker Desktop ou OrbStack (format Docker, une architecture par fichier).",
+    "step2VersionLabel": "Version {version}",
+    "step2DownloadAmd64": "Télécharger pour PC (amd64)",
+    "step2DownloadArm64": "Télécharger pour Mac Apple Silicon (arm64)",
+    "step2DownloadAmd64Hint": "Windows, la plupart des PC Linux, et les Mac Intel.",
+    "step2DownloadArm64Hint": "Mac avec puce Apple (M1, M2, M3…).",
+    "step2Checksums": "Vérifier les sommes (SHA256SUMS)",
+    "step2FilenameHint": "Fichier : {filename}",
+    "step2Unavailable": "Aucune publication Gateway n’est encore liée à ce guide.",
+    "step2UnavailableHint": "Dès qu’une version est publiée, les boutons de téléchargement apparaîtront ici. En attendant, ouvrez la page des publications pour vérifier s’il existe déjà un fichier.",
+    "step2ReleasesPage": "Ouvrir les publications Gateway",
+    "step2UseFile": "Après le téléchargement, gardez le fichier à portée de main pour l’étape suivante.",
     "step2Success": "Vous avez le fichier d’installation correspondant à votre ordinateur.",
     "step3Title": "Importez le fichier dans Docker Desktop ou OrbStack",
-    "step3Action": "Ouvrez Docker Desktop ou OrbStack. Importez le fichier que vous venez d’obtenir, puis attendez la fin de l’import.",
+    "step3Action": "Ouvrez Docker Desktop ou OrbStack. Importez le fichier .tar.gz téléchargé (Images → Import / Load), puis attendez la fin de l’import. C’est le même format que produit la publication : une image Docker par architecture.",
     "step3Success": "L’image du Gateway apparaît dans la liste Images de Docker Desktop ou OrbStack.",
     "step4Title": "Démarrez avec les deux codes",
     "step4Action": "Dans Docker Desktop ou OrbStack, démarrez l’image importée. Collez exactement le bloc « Les deux codes ensemble » depuis Gateway (PAIRING_TOKEN et GATEWAY_KEY) dans les réglages demandés au démarrage. N’inventez pas de valeurs, et ne laissez pas de trous à remplir.",
