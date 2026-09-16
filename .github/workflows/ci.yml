@@ -129,6 +129,7 @@ jobs:
         run: ruff format --check .
 
   # W-34 — OpenAPI→TS freshness + i18n key symmetry (fr/en).
+  # Node 22+: test:product-truth uses --experimental-strip-types (unavailable on 20).
   types-freshness:
     name: Types freshness + i18n
     runs-on: ubuntu-latest
@@ -147,7 +148,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
