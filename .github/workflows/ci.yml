@@ -313,7 +313,7 @@ jobs:
             NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
             NEXT_PUBLIC_APP_URL=https://ferry-agent.aperture-agency.org
             NEXT_PUBLIC_BACKEND_BASE=https://ferry-agent.aperture-agency.org/api/v1
-            NEXT_PUBLIC_GATEWAY_RELEASE_VERSION=${{ vars.GATEWAY_RELEASE_VERSION }}
+            NEXT_PUBLIC_GATEWAY_RELEASE_VERSION=${{ vars.GATEWAY_RELEASE_VERSION || '0.1.0' }}
           cache-from: |
             type=gha,scope=web
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web:buildcache
