@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "motion/react";
 import {
+  ChevronLeft,
+  ChevronRight,
   LayoutGrid,
   List,
   Loader2,
@@ -41,7 +43,12 @@ import { StatePanel } from "@/components/app/state-panel";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
 import { DeliverDialog } from "@/components/app/library/deliver-dialog";
 import {
+  buildCollectionHighlights,
   filterAndSortLibraryItems,
+  hasActiveLibraryFilters,
+  LIBRARY_COLLECTION_PAGE_SIZE,
+  pageAfterLibraryCriteriaChange,
+  paginateLibraryItems,
   type SortBy,
   type SourceFilter,
 } from "@/components/app/library/library-collection";
@@ -58,7 +65,7 @@ import { cn } from "@/lib/utils";
 import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@/lib/types";
 
 type ViewMode = "grid" | "list";
-type AddTab = "import" | "search";
+type AddTab = "search" | "import";
 
 function formatAppDate(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
@@ -222,6 +229,7 @@ export function LibraryView({
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
   const addSectionRef = useRef<HTMLElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -235,14 +243,23 @@ export function LibraryView({
 
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortBy, setSortBy] = useState<SortBy>("added");
+  const [collectionQuery, setCollectionQuery] = useState("");
   const [languageFilter, setLanguageFilter] = useState("all");
   const [formatFilter, setFormatFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
 
   const [addOpen, setAddOpen] = useState(initialItems.length === 0 && !itemsUnavailable);
-  const [addTab, setAddTab] = useState<AddTab>("import");
+  const [addTab, setAddTab] = useState<AddTab>("search");
 
   const canDeliver = devices.length > 0;
+
+  useEffect(() => {
+    if (!addOpen || addTab !== "search") return;
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [addOpen, addTab]);
 
   const languages = useMemo(
     () => Array.from(new Set(items.map((item) => item.language).filter((v): v is string => !!v))),
@@ -253,18 +270,70 @@ export function LibraryView({
     [items]
   );
 
+  const filtersActive = hasActiveLibraryFilters({
+    textQuery: collectionQuery,
+    languageFilter,
+    formatFilter,
+    sourceFilter,
+  });
+
+  const filterCriteriaKey = `${collectionQuery}\0${languageFilter}\0${formatFilter}\0${sourceFilter}\0${sortBy}`;
+  const [pageState, setPageState] = useState({
+    criteriaKey: filterCriteriaKey,
+    page: 1,
+  });
+
+  if (pageState.criteriaKey !== filterCriteriaKey) {
+    setPageState({
+      criteriaKey: filterCriteriaKey,
+      page: pageAfterLibraryCriteriaChange(),
+    });
+  }
+
+  const collectionPage =
+    pageState.criteriaKey === filterCriteriaKey ? pageState.page : pageAfterLibraryCriteriaChange();
+
   const displayedItems = useMemo(
     () =>
       filterAndSortLibraryItems(items, {
+        textQuery: collectionQuery,
         languageFilter,
         formatFilter,
         sourceFilter,
         sortBy,
       }),
-    [items, languageFilter, formatFilter, sourceFilter, sortBy]
+    [items, collectionQuery, languageFilter, formatFilter, sourceFilter, sortBy]
   );
 
-  function openAdd(tab: AddTab = "import") {
+  const highlights = useMemo(
+    () =>
+      buildCollectionHighlights(items, displayedItems.length, {
+        filtersActive,
+        deviceCount: devices.length,
+      }),
+    [items, displayedItems.length, filtersActive, devices.length]
+  );
+
+  const pageSlice = useMemo(
+    () => paginateLibraryItems(displayedItems, collectionPage, LIBRARY_COLLECTION_PAGE_SIZE),
+    [displayedItems, collectionPage]
+  );
+
+  if (
+    pageState.criteriaKey === filterCriteriaKey &&
+    pageSlice.page !== pageState.page
+  ) {
+    setPageState({ criteriaKey: filterCriteriaKey, page: pageSlice.page });
+  }
+
+  function setCollectionPage(nextPage: number) {
+    setPageState({
+      criteriaKey: filterCriteriaKey,
+      page: nextPage,
+    });
+  }
+
+  function openAdd(tab: AddTab = "search") {
     setAddTab(tab);
     setAddOpen(true);
     requestAnimationFrame(() => {
@@ -399,6 +468,7 @@ export function LibraryView({
   }
 
   function resetFilters() {
+    setCollectionQuery("");
     setLanguageFilter("all");
     setFormatFilter("all");
     setSourceFilter("all");
@@ -410,114 +480,248 @@ export function LibraryView({
   }
 
   const filterControls = (
-    <div
-      className="flex flex-wrap items-end gap-x-4 gap-y-3"
-      role="group"
-      aria-label={t("filtersLabel")}
-    >
-      <div className="space-y-1.5">
-        <Label htmlFor="library-sort" className="text-xs text-muted-foreground">
-          {t("sortLabel")}
+    <div className="space-y-4" role="group" aria-label={t("filtersLabel")}>
+      <div className="space-y-2">
+        <Label htmlFor="library-collection-search" className="text-xs text-muted-foreground">
+          {t("collectionSearchLabel")}
         </Label>
-        <Select value={sortBy} onValueChange={(value) => setSortBy((value as SortBy) ?? "added")}>
-          <SelectTrigger id="library-sort" size="sm" className="min-w-36 border-border/50 bg-background/60">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="added">{t("sortAdded")}</SelectItem>
-            <SelectItem value="title">{t("sortTitle")}</SelectItem>
-            <SelectItem value="author">{t("sortAuthor")}</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="relative max-w-xl">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="library-collection-search"
+            value={collectionQuery}
+            onChange={(event) => setCollectionQuery(event.target.value)}
+            placeholder={t("collectionSearchPlaceholder")}
+            className="h-10 border-border/50 bg-background/60 pl-9"
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+        <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
+          {t("collectionSearchHelp")}
+        </p>
       </div>
 
-      {languages.length > 0 && (
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3 border-t border-border/40 pt-4">
         <div className="space-y-1.5">
-          <Label htmlFor="library-language" className="text-xs text-muted-foreground">
-            {t("filterLanguageLabel")}
+          <Label htmlFor="library-sort" className="text-xs text-muted-foreground">
+            {t("sortLabel")}
           </Label>
-          <Select value={languageFilter} onValueChange={(value) => setLanguageFilter(value ?? "all")}>
-            <SelectTrigger id="library-language" size="sm" className="min-w-32 border-border/50 bg-background/60">
+          <Select value={sortBy} onValueChange={(value) => setSortBy((value as SortBy) ?? "added")}>
+            <SelectTrigger id="library-sort" size="sm" className="min-w-36 border-border/50 bg-background/60">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("filterLanguageAll")}</SelectItem>
-              {languages.map((language) => (
-                <SelectItem key={language} value={language}>
-                  {language}
-                </SelectItem>
-              ))}
+              <SelectItem value="added">{t("sortAdded")}</SelectItem>
+              <SelectItem value="title">{t("sortTitle")}</SelectItem>
+              <SelectItem value="author">{t("sortAuthor")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
-      )}
 
-      {formats.length > 1 && (
+        {languages.length > 0 && (
+          <div className="space-y-1.5">
+            <Label htmlFor="library-language" className="text-xs text-muted-foreground">
+              {t("filterLanguageLabel")}
+            </Label>
+            <Select value={languageFilter} onValueChange={(value) => setLanguageFilter(value ?? "all")}>
+              <SelectTrigger id="library-language" size="sm" className="min-w-32 border-border/50 bg-background/60">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("filterLanguageAll")}</SelectItem>
+                {languages.map((language) => (
+                  <SelectItem key={language} value={language}>
+                    {language}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {formats.length > 1 && (
+          <div className="space-y-1.5">
+            <Label htmlFor="library-format" className="text-xs text-muted-foreground">
+              {t("filterFormatLabel")}
+            </Label>
+            <Select value={formatFilter} onValueChange={(value) => setFormatFilter(value ?? "all")}>
+              <SelectTrigger id="library-format" size="sm" className="min-w-32 border-border/50 bg-background/60">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("filterFormatAll")}</SelectItem>
+                {formats.map((format) => (
+                  <SelectItem key={format} value={format}>
+                    {format.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="space-y-1.5">
-          <Label htmlFor="library-format" className="text-xs text-muted-foreground">
-            {t("filterFormatLabel")}
+          <Label htmlFor="library-source" className="text-xs text-muted-foreground">
+            {t("filterSourceLabel")}
           </Label>
-          <Select value={formatFilter} onValueChange={(value) => setFormatFilter(value ?? "all")}>
-            <SelectTrigger id="library-format" size="sm" className="min-w-32 border-border/50 bg-background/60">
+          <Select
+            value={sourceFilter}
+            onValueChange={(value) => setSourceFilter((value as SourceFilter) ?? "all")}
+          >
+            <SelectTrigger id="library-source" size="sm" className="min-w-36 border-border/50 bg-background/60">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("filterFormatAll")}</SelectItem>
-              {formats.map((format) => (
-                <SelectItem key={format} value={format}>
-                  {format.toUpperCase()}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">{t("filterSourceAll")}</SelectItem>
+              <SelectItem value="linked">{t("sourceLinked")}</SelectItem>
+              <SelectItem value="manual">{t("sourceManual")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
-      )}
 
-      <div className="space-y-1.5">
-        <Label htmlFor="library-source" className="text-xs text-muted-foreground">
-          {t("filterSourceLabel")}
-        </Label>
-        <Select
-          value={sourceFilter}
-          onValueChange={(value) => setSourceFilter((value as SourceFilter) ?? "all")}
+        <div
+          className="ml-auto flex gap-0.5 rounded-lg bg-background/50 p-0.5 ring-1 ring-border/40"
+          role="group"
+          aria-label={t("viewModeLabel")}
         >
-          <SelectTrigger id="library-source" size="sm" className="min-w-36 border-border/50 bg-background/60">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("filterSourceAll")}</SelectItem>
-            <SelectItem value="linked">{t("sourceLinked")}</SelectItem>
-            <SelectItem value="manual">{t("sourceManual")}</SelectItem>
-          </SelectContent>
-        </Select>
+          <Button
+            size="icon-sm"
+            variant={viewMode === "grid" ? "secondary" : "ghost"}
+            onClick={() => setViewMode("grid")}
+            aria-label={t("gridView")}
+            aria-pressed={viewMode === "grid"}
+          >
+            <LayoutGrid />
+          </Button>
+          <Button
+            size="icon-sm"
+            variant={viewMode === "list" ? "secondary" : "ghost"}
+            onClick={() => setViewMode("list")}
+            aria-label={t("listView")}
+            aria-pressed={viewMode === "list"}
+          >
+            <List />
+          </Button>
+        </div>
       </div>
 
-      <div
-        className="ml-auto flex gap-0.5 rounded-lg bg-background/50 p-0.5 ring-1 ring-border/40"
-        role="group"
-        aria-label={t("viewModeLabel")}
-      >
-        <Button
-          size="icon-sm"
-          variant={viewMode === "grid" ? "secondary" : "ghost"}
-          onClick={() => setViewMode("grid")}
-          aria-label={t("gridView")}
-          aria-pressed={viewMode === "grid"}
-        >
-          <LayoutGrid />
-        </Button>
-        <Button
-          size="icon-sm"
-          variant={viewMode === "list" ? "secondary" : "ghost"}
-          onClick={() => setViewMode("list")}
-          aria-label={t("listView")}
-          aria-pressed={viewMode === "list"}
-        >
-          <List />
-        </Button>
-      </div>
+      {filtersActive ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-3">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {t("filtersActive")}
+          </p>
+          <Button variant="outline" size="sm" onClick={resetFilters}>
+            {t("resetFilters")}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
+
+  const collectionInfo = items.length === 0 ? null : (
+    <dl
+      className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-muted-foreground"
+      aria-label={t("infoRegion")}
+    >
+      <div>
+        <dt className="sr-only">{t("infoRegion")}</dt>
+        <dd>
+          {itemsPartial
+            ? t("infoTotalPartial", { count: highlights.totalLoaded })
+            : t("infoTotal", { count: highlights.totalLoaded })}
+        </dd>
+      </div>
+      {highlights.matched !== null ? (
+        <>
+          <span aria-hidden="true" className="text-border">
+            ·
+          </span>
+          <div>
+            <dt className="sr-only">{t("infoMatched", { count: highlights.matched })}</dt>
+            <dd>{t("infoMatched", { count: highlights.matched })}</dd>
+          </div>
+        </>
+      ) : null}
+      {highlights.formatCount !== null ? (
+        <>
+          <span aria-hidden="true" className="text-border">
+            ·
+          </span>
+          <div>
+            <dt className="sr-only">{t("infoFormats", { count: highlights.formatCount })}</dt>
+            <dd>{t("infoFormats", { count: highlights.formatCount })}</dd>
+          </div>
+        </>
+      ) : null}
+      {highlights.sourceKindCount !== null ? (
+        <>
+          <span aria-hidden="true" className="text-border">
+            ·
+          </span>
+          <div>
+            <dt className="sr-only">{t("infoSources", { count: highlights.sourceKindCount })}</dt>
+            <dd>{t("infoSources", { count: highlights.sourceKindCount })}</dd>
+          </div>
+        </>
+      ) : null}
+      {highlights.deviceCount !== null ? (
+        <>
+          <span aria-hidden="true" className="text-border">
+            ·
+          </span>
+          <div>
+            <dt className="sr-only">{t("infoDevices", { count: highlights.deviceCount })}</dt>
+            <dd>{t("infoDevices", { count: highlights.deviceCount })}</dd>
+          </div>
+        </>
+      ) : null}
+    </dl>
+  );
+
+  const paginationControls =
+    displayedItems.length > LIBRARY_COLLECTION_PAGE_SIZE ? (
+      <nav
+        className="flex flex-col gap-3 border-t border-border/40 pt-4 sm:flex-row sm:items-center sm:justify-between"
+        aria-label={t("paginationRegion")}
+      >
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          <span className="sr-only">
+            {t("paginationPage", { page: pageSlice.page, pageCount: pageSlice.pageCount })}
+          </span>
+          {t("paginationRange", {
+            from: pageSlice.rangeStart,
+            to: pageSlice.rangeEnd,
+            total: pageSlice.total,
+          })}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCollectionPage(Math.max(1, pageSlice.page - 1))}
+            disabled={pageSlice.page <= 1}
+            aria-label={t("paginationPrevious")}
+          >
+            <ChevronLeft />
+            <span className="hidden sm:inline">{t("paginationPrevious")}</span>
+          </Button>
+          <span className="min-w-24 text-center text-xs text-muted-foreground tabular-nums">
+            {t("paginationPage", { page: pageSlice.page, pageCount: pageSlice.pageCount })}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCollectionPage(Math.min(pageSlice.pageCount, pageSlice.page + 1))}
+            disabled={pageSlice.page >= pageSlice.pageCount}
+            aria-label={t("paginationNext")}
+          >
+            <span className="hidden sm:inline">{t("paginationNext")}</span>
+            <ChevronRight />
+          </Button>
+        </div>
+      </nav>
+    ) : null;
 
   const collectionCountLabel =
     items.length === 0
@@ -540,52 +744,56 @@ export function LibraryView({
       />
       <Tabs
         value={addTab}
-        onValueChange={(value) => setAddTab((value as AddTab) ?? "import")}
+        onValueChange={(value) => setAddTab((value as AddTab) ?? "search")}
       >
         <TabsList variant="line" className="mb-5 w-full max-w-md sm:w-auto">
-          <TabsTrigger value="import">{t("importTab")}</TabsTrigger>
           <TabsTrigger value="search">{t("searchSourcesTab")}</TabsTrigger>
+          <TabsTrigger value="import">{t("importTab")}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="import" className="space-y-3">
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            {t("uploadHelp")}
-          </p>
-          <UploadDropzone
-            onUploaded={(item) => {
-              setItems((prev) => [item, ...prev]);
-            }}
-          />
-        </TabsContent>
+        <TabsContent value="search" className="space-y-6">
+          <div className="max-w-2xl space-y-2">
+            <h3 className="font-heading text-lg font-medium tracking-tight text-balance sm:text-xl">
+              {t("searchSourcesTab")}
+            </h3>
+            <p className="text-base leading-relaxed text-muted-foreground">
+              {t("searchHelp")}
+            </p>
+          </div>
 
-        <TabsContent value="search" className="space-y-4">
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            {t("searchHelp")}
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <div className="relative min-w-0 flex-1 space-y-1.5">
-              <Label htmlFor="library-source-search">{t("searchSourcesLabel")}</Label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="library-source-search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  onKeyDown={(event) => event.key === "Enter" && void runSearch()}
-                  placeholder={t("searchPlaceholder")}
-                  className="h-10 border-border/50 bg-background/70 pl-9"
-                  disabled={searching}
-                />
+          <div className="rounded-2xl bg-background/70 p-4 ring-1 ring-border/50 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="relative min-w-0 flex-1 space-y-2">
+                <Label
+                  htmlFor="library-source-search"
+                  className="text-sm font-medium"
+                >
+                  {t("searchSourcesLabel")}
+                </Label>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    ref={searchInputRef}
+                    id="library-source-search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    onKeyDown={(event) => event.key === "Enter" && void runSearch()}
+                    placeholder={t("searchPlaceholder")}
+                    className="h-12 border-border/50 bg-background pl-11 text-base"
+                    disabled={searching}
+                  />
+                </div>
               </div>
+              <Button
+                size="lg"
+                onClick={() => void runSearch()}
+                disabled={searching || !query.trim()}
+                className="h-12 sm:min-w-36 sm:shrink-0"
+              >
+                {searching ? <Loader2 className="animate-spin" /> : <Search />}
+                {t("search")}
+              </Button>
             </div>
-            <Button
-              onClick={() => void runSearch()}
-              disabled={searching || !query.trim()}
-              className="sm:shrink-0"
-            >
-              {searching ? <Loader2 className="animate-spin" /> : <Search />}
-              {t("search")}
-            </Button>
           </div>
 
           {searching && (
@@ -599,14 +807,14 @@ export function LibraryView({
               aria-busy="true"
               aria-live="polite"
             >
-              <StatePanel className="border-transparent bg-background/40 py-10">
+              <StatePanel className="border-transparent bg-background/50 py-12 ring-1 ring-border/40">
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="size-4 animate-spin text-chart-1" />
                   {t("searching")}
                 </div>
                 <div className="mt-4 grid w-full gap-3 sm:grid-cols-2">
-                  <Skeleton className="h-20 w-full rounded-lg" />
-                  <Skeleton className="h-20 w-full rounded-lg" />
+                  <Skeleton className="h-24 w-full rounded-lg" />
+                  <Skeleton className="h-24 w-full rounded-lg" />
                 </div>
               </StatePanel>
             </motion.div>
@@ -621,8 +829,8 @@ export function LibraryView({
                   description={t("searchHelpMatch")}
                 />
               ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground" role="status">
+                <div className="space-y-4 rounded-2xl bg-background/60 p-4 ring-1 ring-border/50 sm:p-5">
+                  <p className="text-sm font-medium text-foreground" role="status">
                     {t("resultsFound", { count: results.length })}
                   </p>
 
@@ -633,7 +841,7 @@ export function LibraryView({
                       return (
                         <article
                           key={resultKey}
-                          className="flex gap-3 rounded-xl bg-background/50 p-3 ring-1 ring-border/40"
+                          className="flex gap-3 rounded-xl bg-muted/30 p-3 ring-1 ring-border/40"
                         >
                           <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/40">
                             <SearchCoverImage
@@ -680,7 +888,7 @@ export function LibraryView({
                     })}
                   </div>
 
-                  <div className="hidden overflow-hidden rounded-xl bg-background/40 ring-1 ring-border/40 lg:block">
+                  <div className="hidden overflow-hidden rounded-xl bg-muted/20 ring-1 ring-border/40 lg:block">
                     <Table>
                       <TableHeader>
                         <TableRow className="hover:bg-transparent">
@@ -750,6 +958,17 @@ export function LibraryView({
             </Reveal>
           )}
         </TabsContent>
+
+        <TabsContent value="import" className="space-y-3">
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            {t("uploadHelp")}
+          </p>
+          <UploadDropzone
+            onUploaded={(item) => {
+              setItems((prev) => [item, ...prev]);
+            }}
+          />
+        </TabsContent>
       </Tabs>
     </section>
   );
@@ -790,7 +1009,7 @@ export function LibraryView({
         </div>
         <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
           <Button
-            onClick={() => (addOpen ? setAddOpen(false) : openAdd(addTab))}
+            onClick={() => (addOpen ? setAddOpen(false) : openAdd("search"))}
             variant={addOpen ? "outline" : "default"}
             aria-expanded={addOpen}
             aria-controls="library-add-panel"
@@ -841,34 +1060,33 @@ export function LibraryView({
               description={t("emptyDescription")}
               action={
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-                  <Button onClick={() => openAdd("import")}>{t("importTab")}</Button>
-                  <Button variant="outline" onClick={() => openAdd("search")}>
-                    {t("searchSourcesTab")}
+                  <Button onClick={() => openAdd("search")}>{t("searchSourcesTab")}</Button>
+                  <Button variant="outline" onClick={() => openAdd("import")}>
+                    {t("importTab")}
                   </Button>
                 </div>
               }
             />
           ) : (
             <>
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="font-heading text-xl font-medium tracking-tight text-balance">
-                      {t("myLibrary")}
-                    </h2>
-                  </div>
+              <div className="space-y-5">
+                <div className="space-y-3">
+                  <h2 className="font-heading text-xl font-medium tracking-tight text-balance">
+                    {t("myLibrary")}
+                  </h2>
+                  {collectionInfo}
                 </div>
 
-                <div className="hidden rounded-xl bg-muted/25 px-4 py-3 lg:block">
+                <div className="hidden space-y-0 border-y border-border/40 py-4 lg:block">
                   {filterControls}
                 </div>
 
-                <details className="group rounded-xl bg-muted/25 px-4 py-3 lg:hidden">
+                <details className="group border-y border-border/40 py-3 lg:hidden">
                   <summary className="cursor-pointer list-none text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
                     <span className="flex items-center justify-between gap-3">
                       {t("filtersSummary")}
                       <span className="text-xs font-normal text-muted-foreground group-open:hidden">
-                        {t("filtersLabel")}
+                        {filtersActive ? t("filtersActive") : t("filtersLabel")}
                       </span>
                     </span>
                   </summary>
@@ -888,57 +1106,60 @@ export function LibraryView({
                   }
                 />
               ) : viewMode === "grid" ? (
-                <RevealGroup
-                  className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-4"
-                  stagger={prefersReducedMotion ? 0 : 0.04}
-                >
-                  {displayedItems.map((item) => (
-                    <RevealItem key={item.id}>
-                      <article className="group flex h-full flex-col gap-3.5">
-                        <div
-                          className={cn(
-                            "relative aspect-3/4 overflow-hidden rounded-lg bg-muted",
-                            "shadow-[0_18px_36px_-18px_rgba(0,0,0,0.65)] ring-1 ring-border/30",
-                            "motion-safe:transition-transform motion-safe:duration-200",
-                            "motion-safe:group-hover:-translate-y-1"
-                          )}
-                        >
-                          <LibraryCoverImage
-                            itemId={item.id}
-                            hasCover={Boolean(item.cover_url)}
-                            alt={item.title}
+                <div className="space-y-6">
+                  <RevealGroup
+                    className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4"
+                    stagger={prefersReducedMotion ? 0 : 0.04}
+                  >
+                    {pageSlice.items.map((item) => (
+                      <RevealItem key={item.id}>
+                        <article className="group flex h-full flex-col gap-3">
+                          <div
+                            className={cn(
+                              "relative aspect-3/4 overflow-hidden rounded-lg bg-muted",
+                              "shadow-[0_18px_36px_-18px_rgba(0,0,0,0.65)] ring-1 ring-border/30",
+                              "motion-safe:transition-transform motion-safe:duration-200",
+                              "motion-safe:group-hover:-translate-y-1"
+                            )}
+                          >
+                            <LibraryCoverImage
+                              itemId={item.id}
+                              hasCover={Boolean(item.cover_url)}
+                              alt={item.title}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <h3 className="line-clamp-2 text-[15px] leading-snug font-medium">
+                              {item.title}
+                            </h3>
+                            <p className="line-clamp-1 text-sm text-muted-foreground">
+                              {item.author || tCommon("dash")}
+                            </p>
+                            <p className="pt-0.5 text-xs tracking-wide text-muted-foreground/90 uppercase">
+                              {item.original_format}
+                              <span className="mx-1.5 text-border">·</span>
+                              {sourceBadgeLabel(item)}
+                            </p>
+                          </div>
+                          <BookActions
+                            item={item}
+                            canDeliver={canDeliver}
+                            onDetails={setDetailItem}
+                            onDeliver={setDeliverItem}
+                            t={t}
+                            fullWidth
                           />
-                        </div>
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <h3 className="line-clamp-2 text-[15px] leading-snug font-medium">
-                            {item.title}
-                          </h3>
-                          <p className="line-clamp-1 text-sm text-muted-foreground">
-                            {item.author || tCommon("dash")}
-                          </p>
-                          <p className="pt-0.5 text-xs tracking-wide text-muted-foreground/90 uppercase">
-                            {item.original_format}
-                            <span className="mx-1.5 text-border">·</span>
-                            {sourceBadgeLabel(item)}
-                          </p>
-                        </div>
-                        <BookActions
-                          item={item}
-                          canDeliver={canDeliver}
-                          onDetails={setDetailItem}
-                          onDeliver={setDeliverItem}
-                          t={t}
-                          fullWidth
-                        />
-                      </article>
-                    </RevealItem>
-                  ))}
-                </RevealGroup>
+                        </article>
+                      </RevealItem>
+                    ))}
+                  </RevealGroup>
+                  {paginationControls}
+                </div>
               ) : (
-                <>
+                <div className="space-y-6">
                   <div className="grid gap-4 lg:hidden">
-                    {displayedItems.map((item) => (
-                      <article key={item.id} className="flex gap-4">
+                    {pageSlice.items.map((item) => (
+                      <article key={item.id} className="flex gap-4 border-b border-border/30 pb-4 last:border-b-0 last:pb-0">
                         <div
                           className={cn(
                             "relative aspect-3/4 w-20 shrink-0 overflow-hidden rounded-md bg-muted",
@@ -977,7 +1198,7 @@ export function LibraryView({
                       </article>
                     ))}
                   </div>
-                  <div className="hidden overflow-hidden rounded-xl bg-muted/20 ring-1 ring-border/40 lg:block">
+                  <div className="hidden overflow-x-auto lg:block">
                     <Table>
                       <TableHeader>
                         <TableRow className="hover:bg-transparent">
@@ -985,13 +1206,14 @@ export function LibraryView({
                           <TableHead>{t("title")}</TableHead>
                           <TableHead>{t("author")}</TableHead>
                           <TableHead>{t("format")}</TableHead>
-                          <TableHead>{t("language")}</TableHead>
-                          <TableHead>{t("added")}</TableHead>
+                          <TableHead className="hidden xl:table-cell">{t("source")}</TableHead>
+                          <TableHead className="hidden xl:table-cell">{t("language")}</TableHead>
+                          <TableHead className="hidden 2xl:table-cell">{t("added")}</TableHead>
                           <TableHead className="text-right">{t("action")}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {displayedItems.map((item) => (
+                        {pageSlice.items.map((item) => (
                           <TableRow key={item.id} className="hover:bg-muted/30">
                             <TableCell>
                               <div className="relative size-12 overflow-hidden rounded-md bg-muted shadow-sm ring-1 ring-border/40">
@@ -1003,19 +1225,22 @@ export function LibraryView({
                                 />
                               </div>
                             </TableCell>
-                            <TableCell className="font-medium">
+                            <TableCell className="max-w-56 font-medium">
                               <span className="line-clamp-2">{item.title}</span>
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {item.author || tCommon("dash")}
+                            <TableCell className="max-w-40 text-muted-foreground">
+                              <span className="line-clamp-1">{item.author || tCommon("dash")}</span>
                             </TableCell>
                             <TableCell className="text-muted-foreground uppercase">
                               {item.original_format}
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="hidden text-muted-foreground xl:table-cell">
+                              {sourceBadgeLabel(item)}
+                            </TableCell>
+                            <TableCell className="hidden text-muted-foreground xl:table-cell">
                               {item.language ?? tCommon("dash")}
                             </TableCell>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="hidden text-muted-foreground 2xl:table-cell">
                               {formatAppDate(item.added_at, locale)}
                             </TableCell>
                             <TableCell className="text-right">
@@ -1034,7 +1259,8 @@ export function LibraryView({
                       </TableBody>
                     </Table>
                   </div>
-                </>
+                  {paginationControls}
+                </div>
               )}
             </>
           )}
