@@ -154,6 +154,7 @@ function Sidebar({
   side = "left",
   variant = "sidebar",
   collapsible = "offcanvas",
+  enableMobileSheet = true,
   className,
   children,
   dir,
@@ -162,6 +163,8 @@ function Sidebar({
   side?: "left" | "right"
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
+  /** When false, mobile uses an external nav (e.g. bottom bar) instead of the sheet. */
+  enableMobileSheet?: boolean
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
   const t = useTranslations("common")
@@ -182,6 +185,9 @@ function Sidebar({
   }
 
   if (isMobile) {
+    if (!enableMobileSheet) {
+      return null
+    }
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetContent
