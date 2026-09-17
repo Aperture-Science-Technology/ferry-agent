@@ -3,10 +3,11 @@ name: CI
 on:
   push:
     branches:
-      - "**"
-    tags:
-      - "v*"
+      - main
   pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -223,7 +224,7 @@ jobs:
   build-push-core:
     name: Build & push core image
     needs: [python-tests, web-build, lint, gateway-tests]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -249,7 +250,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/core
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
             type=sha,format=short
 
       - name: Build & push core image
@@ -271,7 +271,7 @@ jobs:
   build-push-web:
     name: Build & push web image
     needs: [python-tests, web-build, lint, gateway-tests]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -297,7 +297,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
             type=sha,format=short
 
       - name: Build & push web image
@@ -323,7 +322,7 @@ jobs:
   build-push-mcp-server:
     name: Build & push mcp-server image
     needs: [python-tests, web-build, lint, gateway-tests]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -349,7 +348,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/mcp-server
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
             type=sha,format=short
 
       - name: Build & push mcp-server image
@@ -373,7 +371,6 @@ jobs:
     needs: [python-tests, web-build, lint, gateway-tests]
     if: >-
       github.ref == 'refs/heads/main' ||
-      github.ref == 'refs/heads/develop' ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -403,7 +400,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/gateway
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
             type=semver,pattern={{version}}
             type=sha,format=short
 
