@@ -60,15 +60,23 @@ function DeliveryActions({
   trackLabel,
   downloadLabel,
   trackAria,
+  align = "end",
 }: {
   job: DeliveryJob;
   onTrack: () => void;
   trackLabel: string;
   downloadLabel: string;
   trackAria: string;
+  align?: "start" | "end";
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div
+      className={
+        align === "start"
+          ? "flex flex-wrap items-center justify-start gap-2"
+          : "flex flex-wrap items-center justify-end gap-2"
+      }
+    >
       {job.download_url ? (
         <Button
           size="sm"
@@ -280,53 +288,55 @@ export function DeliveriesView({
                 <RevealItem key={job.id}>
                   <Card size="sm" className="bg-card/60">
                     <CardContent className="space-y-3">
-                      <div className="min-w-0">
-                        <CardTitle className="line-clamp-2 text-sm break-words">
-                          {job.item_title ?? tCommon("dash")}
-                        </CardTitle>
-                        <CardDescription className="line-clamp-1">
-                          {job.item_author ?? tCommon("dash")}
-                        </CardDescription>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-1">
+                          <CardTitle className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words">
+                            {job.item_title ?? tCommon("dash")}
+                          </CardTitle>
+                          <CardDescription className="line-clamp-2 break-words">
+                            {job.item_author ?? tCommon("dash")}
+                          </CardDescription>
+                          <p className="line-clamp-2 text-sm text-muted-foreground break-words">
+                            {job.device_label ?? tCommon("dash")}
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          <DeliveryStatusBadge
+                            status={job.status}
+                            label={statusLabel(job.status)}
+                          />
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <DeliveryStatusBadge
-                          status={job.status}
-                          label={statusLabel(job.status)}
-                        />
                         {job.target_format ? (
                           <Badge variant="secondary" className="uppercase">
                             {job.target_format}
                           </Badge>
                         ) : null}
-                        <Badge variant="outline" className="max-w-40 truncate">
+                        <Badge variant="outline" className="max-w-full truncate">
                           {methodLabel(job.method)}
                         </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {formatAppDate(job.created_at, locale)}
+                        </span>
                       </div>
 
                       {normalizeDeliveryStatus(job.status) === "delivered" ? (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs leading-relaxed text-muted-foreground break-words">
                           {t("statusHintDelivered")}
                         </p>
                       ) : null}
 
-                      <div className="space-y-1 text-sm text-muted-foreground">
-                        <p className="truncate">
-                          {job.device_label ?? tCommon("dash")}
-                        </p>
-                        <p className="text-xs">
-                          {formatAppDate(job.created_at, locale)}
-                        </p>
-                      </div>
-
                       {job.status === "failed" ? (
-                        <p className="line-clamp-2 text-xs text-destructive">
+                        <p className="line-clamp-2 text-xs leading-relaxed text-destructive break-words">
                           {t("failedHint")}
                         </p>
                       ) : null}
 
                       <DeliveryActions
                         job={job}
+                        align="start"
                         onTrack={() => setDetailId(job.id)}
                         trackLabel={t("track")}
                         downloadLabel={t("openDownload")}
@@ -356,32 +366,34 @@ export function DeliveriesView({
                 <TableBody>
                   {deliveries.map((job) => (
                     <TableRow key={job.id}>
-                      <TableCell className="font-medium">
-                        <div className="min-w-0">
-                          <span className="line-clamp-2 break-words">
+                      <TableCell className="align-middle font-medium">
+                        <div className="min-w-0 space-y-1">
+                          <span className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words">
                             {job.item_title ?? tCommon("dash")}
                           </span>
                           {job.item_author ? (
-                            <div className="line-clamp-1 text-xs font-normal text-muted-foreground">
+                            <div className="line-clamp-2 text-xs font-normal text-muted-foreground break-words">
                               {job.item_author}
                             </div>
                           ) : null}
                           {job.status === "failed" ? (
-                            <div className="mt-1 line-clamp-1 text-xs font-normal text-destructive">
+                            <div className="line-clamp-2 text-xs font-normal text-destructive break-words">
                               {t("failedHint")}
                             </div>
                           ) : null}
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-36 truncate text-muted-foreground">
-                        {job.device_label ?? tCommon("dash")}
+                      <TableCell className="max-w-40 align-middle text-sm text-muted-foreground">
+                        <span className="line-clamp-2 break-words">
+                          {job.device_label ?? tCommon("dash")}
+                        </span>
                       </TableCell>
-                      <TableCell>
-                        <span className="line-clamp-1 text-sm">
+                      <TableCell className="align-middle">
+                        <span className="line-clamp-2 text-sm text-muted-foreground break-words">
                           {methodLabel(job.method)}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-middle">
                         {job.target_format ? (
                           <Badge variant="secondary" className="uppercase">
                             {job.target_format}
@@ -392,7 +404,7 @@ export function DeliveriesView({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-middle">
                         <div className="space-y-1">
                           <DeliveryStatusBadge
                             status={job.status}
@@ -400,16 +412,16 @@ export function DeliveriesView({
                           />
                           {normalizeDeliveryStatus(job.status) ===
                           "delivered" ? (
-                            <p className="max-w-40 text-xs text-muted-foreground">
+                            <p className="max-w-40 text-xs leading-relaxed text-muted-foreground break-words">
                               {t("statusHintDeliveredShort")}
                             </p>
                           ) : null}
                         </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                      <TableCell className="align-middle whitespace-nowrap text-muted-foreground">
                         {formatAppDate(job.created_at, locale)}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="align-middle text-right">
                         <DeliveryActions
                           job={job}
                           onTrack={() => setDetailId(job.id)}
