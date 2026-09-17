@@ -73,13 +73,15 @@ function DeviceIdentity({
     <div
       className={
         muted
-          ? "flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-          : "flex min-w-0 flex-wrap items-center gap-1.5 text-sm"
+          ? "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-muted-foreground"
+          : "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-medium"
       }
     >
-      <BrandBadge brand={device.brand} className="min-w-0" />
+      <BrandBadge brand={device.brand} className="min-w-0 max-w-full" />
       {device.model ? (
-        <span className="min-w-0 truncate">— {device.model}</span>
+        <span className="min-w-0 max-w-full break-words whitespace-normal">
+          — {device.model}
+        </span>
       ) : null}
     </div>
   );
@@ -366,7 +368,7 @@ export function DevicesView({
                       <div className="min-w-0 space-y-1">
                         {device.name ? (
                           <>
-                            <CardTitle className="line-clamp-2 text-sm break-words">
+                            <CardTitle className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words">
                               {device.name}
                             </CardTitle>
                             <CardDescription className="min-w-0">
@@ -374,7 +376,7 @@ export function DevicesView({
                             </CardDescription>
                           </>
                         ) : (
-                          <CardTitle className="text-sm font-medium">
+                          <CardTitle className="min-w-0 text-sm font-medium">
                             <DeviceIdentity device={device} muted={false} />
                           </CardTitle>
                         )}
@@ -439,10 +441,10 @@ export function DevicesView({
                 <TableBody>
                   {devices.map((device) => (
                     <TableRow key={device.id}>
-                      <TableCell className="font-medium">
+                      <TableCell className="max-w-56 whitespace-normal font-medium">
                         <div className="min-w-0 space-y-1">
                           {device.name ? (
-                            <span className="line-clamp-2 break-words">
+                            <span className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words whitespace-normal">
                               {device.name}
                             </span>
                           ) : null}
