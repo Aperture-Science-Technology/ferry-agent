@@ -3,9 +3,11 @@ name: CI
 on:
   push:
     branches:
+      - develop
       - main
   pull_request:
     branches:
+      - develop
       - main
   workflow_dispatch:
 
@@ -47,6 +49,10 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://ferry:ferry@localhost:5432/ferry_test
         run: pytest -q
+
+      # Policy suite lives under .github/tests (outside testpaths=["tests"]).
+      - name: Run CI PR-gates policy tests
+        run: pytest .github/tests/test_ci_pr_gates_policy.py -q
 
       - name: Run integration tests
         env:
