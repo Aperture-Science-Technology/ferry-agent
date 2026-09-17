@@ -368,28 +368,28 @@ export function DeliveriesView({
                     <TableRow key={job.id}>
                       <TableCell className="align-middle font-medium">
                         <div className="min-w-0 space-y-1">
-                          <span className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words">
+                          <span className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words whitespace-normal">
                             {job.item_title ?? tCommon("dash")}
                           </span>
                           {job.item_author ? (
-                            <div className="line-clamp-2 text-xs font-normal text-muted-foreground break-words">
+                            <div className="line-clamp-2 text-xs font-normal text-muted-foreground break-words whitespace-normal">
                               {job.item_author}
                             </div>
                           ) : null}
                           {job.status === "failed" ? (
-                            <div className="line-clamp-2 text-xs font-normal text-destructive break-words">
+                            <div className="line-clamp-2 text-xs font-normal text-destructive break-words whitespace-normal">
                               {t("failedHint")}
                             </div>
                           ) : null}
                         </div>
                       </TableCell>
                       <TableCell className="max-w-40 align-middle text-sm text-muted-foreground">
-                        <span className="line-clamp-2 break-words">
+                        <span className="line-clamp-2 break-words whitespace-normal">
                           {job.device_label ?? tCommon("dash")}
                         </span>
                       </TableCell>
                       <TableCell className="align-middle">
-                        <span className="line-clamp-2 text-sm text-muted-foreground break-words">
+                        <span className="line-clamp-2 text-sm text-muted-foreground break-words whitespace-normal">
                           {methodLabel(job.method)}
                         </span>
                       </TableCell>
