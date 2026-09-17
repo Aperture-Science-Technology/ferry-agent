@@ -7,6 +7,10 @@ semantics and evaluates the publish `if` expressions used in this repo.
 The pre-change policy (PR/push bases = main only) fails these contracts;
 the post-change policy (develop + main) must pass. Publish must stay off
 for develop and feature refs.
+
+`publish_if_allows` only understands a narrow subset of GitHub `if`
+expressions. Unknown or partially understood clauses raise — they are never
+silently treated as "deny".
 """
 
 from __future__ import annotations
@@ -31,6 +35,12 @@ FORBIDDEN_PUBLISH_REFS = (
     "refs/heads/feature/anything",
 )
 
+# Pull-request merge / head refs must never satisfy publish guards.
+PR_PUBLISH_REFS = (
+    "refs/pull/1/merge",
+    "refs/pull/42/head",
+)
+
 PUBLISH_JOBS = (
     "build-push-core",
     "build-push-web",
@@ -38,11 +48,32 @@ PUBLISH_JOBS = (
     "build-push-gateway",
 )
 
+# Expressions the evaluator fully understands (equality / startsWith only).
+_KNOWN_EQ_REFS = (
+    "refs/heads/main",
+    "refs/heads/develop",
+)
+_KNOWN_STARTSWITH_PREFIXES = ("refs/tags/v",)
+
+# Dangerous OR that a partial evaluator would mishandle (Astra regression).
+DANGEROUS_PARTIAL_OR = (
+    "github.ref == 'refs/heads/main' || github.ref != 'refs/heads/release'"
+)
+
+
+class UnknownPublishIfError(ValueError):
+    """Raised when an `if:` clause is outside the supported subset."""
+
 
 class _GHActionsLoader(SafeLoader):
     """PyYAML 1.1 treats `on`/`off` as bools; keep workflow keys as strings."""
 
 
+# Copy SafeLoader resolvers before filtering so yaml.safe_load stays intact.
+_GHActionsLoader.yaml_implicit_resolvers = {
+    ch: list(resolvers)
+    for ch, resolvers in SafeLoader.yaml_implicit_resolvers.items()
+}
 for _ch in list(_GHActionsLoader.yaml_implicit_resolvers):
     _GHActionsLoader.yaml_implicit_resolvers[_ch] = [
         (tag, regexp)
@@ -96,29 +127,42 @@ def triggers_on_pull_request(on: dict, base_branch: str) -> bool:
     return any(_fnmatch_branch(base_branch, p) for p in branches)
 
 
+def _eval_known_clause(part: str, ref: str) -> bool:
+    """Evaluate one top-level OR clause, or raise if not fully understood."""
+    for target in _KNOWN_EQ_REFS:
+        for quote in ("'", '"'):
+            if part == f"github.ref == {quote}{target}{quote}":
+                return ref == target
+
+    for prefix in _KNOWN_STARTSWITH_PREFIXES:
+        for quote in ("'", '"'):
+            needle = f"startsWith(github.ref, {quote}{prefix}{quote})"
+            if part == needle:
+                return ref.startswith(prefix)
+
+    raise UnknownPublishIfError(f"unknown publish if clause: {part!r}")
+
+
 def publish_if_allows(expr: str | None, ref: str) -> bool:
-    """Evaluate the narrow subset of `if:` expressions used by publish jobs."""
+    """Evaluate the narrow subset of `if:` expressions used by publish jobs.
+
+    Raises UnknownPublishIfError if any top-level || clause is unknown or only
+    partially understood (e.g. `!=`, `&&`, or other operators). Callers must
+    not treat unknown expressions as an implicit deny.
+    """
     if expr is None or str(expr).strip() == "":
         return True
     text = " ".join(str(expr).split())
+    if "&&" in text:
+        raise UnknownPublishIfError(
+            f"unsupported && in publish if expression: {text!r}"
+        )
     # Split on top-level || (jobs here only use ||, not &&).
+    # Evaluate every clause first so a known-true left side cannot mask an
+    # unknown right side (e.g. `== main || != release`).
     parts = [p.strip() for p in text.split("||")]
-    for part in parts:
-        if part == f"github.ref == 'refs/heads/main'" and ref == "refs/heads/main":
-            return True
-        if part == f'github.ref == "refs/heads/main"' and ref == "refs/heads/main":
-            return True
-        if part == f"github.ref == 'refs/heads/develop'" and ref == "refs/heads/develop":
-            return True
-        if part.startswith("startsWith(github.ref, 'refs/tags/v')") and ref.startswith(
-            "refs/tags/v"
-        ):
-            return True
-        if part.startswith('startsWith(github.ref, "refs/tags/v")') and ref.startswith(
-            "refs/tags/v"
-        ):
-            return True
-    return False
+    results = [_eval_known_clause(part, ref) for part in parts]
+    return any(results)
 
 
 @pytest.fixture(scope="module")
@@ -160,11 +204,55 @@ def test_publish_jobs_skip_develop_and_feature(ci: dict, job: str, ref: str) -> 
 
 
 @pytest.mark.parametrize("job", PUBLISH_JOBS)
+@pytest.mark.parametrize("ref", PR_PUBLISH_REFS)
+def test_publish_jobs_skip_pr_refs(ci: dict, job: str, ref: str) -> None:
+    spec = ci["jobs"][job]
+    assert not publish_if_allows(spec.get("if"), ref), (
+        f"{job} must not publish for PR ref={ref!r} (got if={spec.get('if')!r})"
+    )
+
+
+@pytest.mark.parametrize("job", PUBLISH_JOBS)
 def test_publish_jobs_still_allow_main(ci: dict, job: str) -> None:
     spec = ci["jobs"][job]
     assert publish_if_allows(spec.get("if"), "refs/heads/main"), (
         f"{job} must remain publishable from main"
     )
+
+
+def test_release_gateway_artifacts_only_on_version_tags(ci: dict) -> None:
+    """Observable contract: release job `if` is tag-only, not branch push."""
+    spec = ci["jobs"]["release-gateway-artifacts"]
+    expr = spec.get("if")
+    assert not publish_if_allows(expr, "refs/heads/main")
+    assert not publish_if_allows(expr, "refs/heads/develop")
+    assert not publish_if_allows(expr, "refs/pull/7/merge")
+    assert publish_if_allows(expr, "refs/tags/v1.2.3")
+
+
+@pytest.mark.parametrize(
+    "ref",
+    (
+        "refs/heads/main",
+        "refs/heads/develop",
+        "refs/pull/1/merge",
+        "refs/tags/v0.1.0",
+    ),
+)
+def test_publish_if_refuses_dangerous_partial_or(ref: str) -> None:
+    """Partial OR with `!=` must fail closed — never silently allow/deny."""
+    with pytest.raises(UnknownPublishIfError):
+        publish_if_allows(DANGEROUS_PARTIAL_OR, ref)
+
+
+def test_gh_actions_loader_does_not_pollute_safe_load() -> None:
+    """Subclass must copy resolvers; SafeLoader bool parsing stays intact."""
+    loaded = yaml.safe_load("flag: true")
+    assert loaded == {"flag": True}
+    assert loaded["flag"] is True
+    # Workflow loader still keeps `on` as a string key/value, not a bool.
+    wf = yaml.load("on: push\n", Loader=_GHActionsLoader)
+    assert wf == {"on": "push"}
 
 
 def test_ci_push_filter_is_not_unrestricted_glob(ci: dict) -> None:
