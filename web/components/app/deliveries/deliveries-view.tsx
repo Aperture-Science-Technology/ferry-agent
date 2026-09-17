@@ -412,7 +412,7 @@ export function DeliveriesView({
                           />
                           {normalizeDeliveryStatus(job.status) ===
                           "delivered" ? (
-                            <p className="max-w-40 text-xs leading-relaxed text-muted-foreground break-words">
+                            <p className="max-w-40 text-xs leading-relaxed text-muted-foreground break-words whitespace-normal">
                               {t("statusHintDeliveredShort")}
                             </p>
                           ) : null}
