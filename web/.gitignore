@@ -7,3 +7,5 @@ next-env.d.ts
 .env*.local
 .clerk/
 *.keyless.json
+coverage/
+.vitest/
