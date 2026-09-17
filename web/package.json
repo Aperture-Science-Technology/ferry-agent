@@ -14,7 +14,8 @@
     "test:gateways": "node --experimental-strip-types --test components/app/gateways/gateways-state.test.ts",
     "test:sources-settings": "node --experimental-strip-types --test components/app/sources/sources-state.test.ts components/app/settings/settings-state.test.ts",
     "test:final": "node --experimental-strip-types --test lib/gateway-job-state.test.ts",
-    "test:product-truth": "node --experimental-strip-types --test lib/gateway-image.test.ts lib/product-truth.test.ts"
+    "test:product-truth": "node --experimental-strip-types --test lib/gateway-image.test.ts lib/product-truth.test.ts",
+    "test:ui-harness": "vitest run --config vitest.config.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -36,14 +37,18 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "happy-dom": "^20.14.5",
     "openapi-typescript": "^7.13.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }
