@@ -169,7 +169,7 @@
     },
     "access": {
       "title": "Gateway",
-      "description": "The module installed on your machine for local sources and downloads."
+      "description": "Optional local module — complements the cloud."
     },
     "sources": {
       "title": "Sources",
@@ -495,8 +495,8 @@
     "sectionTitle": "Your Gateways",
     "sectionEmptyHint": "No local module yet.",
     "countLabel": "{count, plural, one {# Gateway} other {# Gateways}}",
-    "cloudLocalTitle": "Online library, module at home",
-    "cloudLocalBody": "Ferry Agent is an online app. The Gateway is an optional module installed on your machine: it mainly handles torrent downloads and talking to your local sources.",
+    "cloudLocalTitle": "Gateway",
+    "cloudLocalBody": "Optional local module — complements the cloud (torrents / machine sources).",
     "cloudLabel": "Online",
     "cloudHint": "your library, devices, and deliveries",
     "localLabel": "At home",
