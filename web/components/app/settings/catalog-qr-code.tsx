@@ -29,7 +29,8 @@ export function CatalogQrCode({
       width: size,
       margin: 1,
       errorCorrectionLevel: "M",
-      color: { dark: "#111C23", light: "#FFFFFF" },
+      // Ink on paper — avoid dark-teal QR fills.
+      color: { dark: "#271d16", light: "#FFFFFF" },
     })
       .then((value) => {
         if (!cancelled) {
@@ -49,13 +50,16 @@ export function CatalogQrCode({
   }, [url, size]);
 
   const state = resolveQrRenderState(dataUrl, failed);
+  const boxClass =
+    "flex size-[180px] max-w-full shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/40 px-3 text-center text-xs leading-relaxed break-words whitespace-normal text-muted-foreground";
 
   if (state === "loading") {
     return (
       <div
-        className="flex size-[180px] items-center justify-center rounded-md border border-border/60 bg-muted/30 text-xs text-muted-foreground"
+        className={boxClass}
         role="status"
         aria-live="polite"
+        data-qr-state="loading"
       >
         {t("qrLoading")}
       </div>
@@ -64,10 +68,7 @@ export function CatalogQrCode({
 
   if (state === "error" || !dataUrl) {
     return (
-      <div
-        className="flex size-[180px] items-center justify-center rounded-md border border-border/60 bg-muted/30 px-3 text-center text-xs text-muted-foreground"
-        role="alert"
-      >
+      <div className={boxClass} role="alert" data-qr-state="error">
         {t("qrError")}
       </div>
     );
@@ -80,7 +81,8 @@ export function CatalogQrCode({
       alt={t("qrAlt")}
       width={size}
       height={size}
-      className="size-[180px] rounded-md border border-border/60 bg-white p-1"
+      className="size-[180px] max-w-full shrink-0 rounded-md border border-border/70 bg-white p-1"
+      data-qr-state="ready"
     />
   );
 }
