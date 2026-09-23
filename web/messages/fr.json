@@ -173,7 +173,8 @@
     },
     "sources": {
       "title": "Sources",
-      "description": "Catalogues cloud et module local (Gateway)."
+      "description": "Catalogues cloud et module local (Gateway).",
+      "descriptionMobile": "Catalogues cloud et Gateway"
     },
     "deliveries": {
       "title": "Livraisons",
@@ -613,6 +614,7 @@
     "unknownHint": "L'état de cette source n'a pas pu être confirmé. Réessayez plus tard.",
     "alwaysActive": "Toujours disponible",
     "gatewayLocal": "Local via Gateway",
+    "gatewayLocalShort": "Via Gateway",
     "gatewayHint": "Cette source dépend du Gateway installé chez vous. Elle n'indique pas à elle seule s'il est connecté.",
     "prowlarrNote": "Prowlarr, s'il est utilisé, reste configuré côté Gateway — pas comme une rubrique principale ici.",
     "gatewayCta": "Ouvrir Gateway",

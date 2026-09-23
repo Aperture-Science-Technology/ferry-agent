@@ -5,7 +5,7 @@ import { usePathname } from "@/i18n/navigation";
 
 /**
  * Shell strip for routes that do not own Header/PageTitle.
- * Library / Gateway render their own Pen title — no double heading.
+ * Library / Gateway / Sources render their own Pen title — no double heading.
  */
 export function DashboardHeader() {
   const pathname = usePathname();
@@ -14,7 +14,8 @@ export function DashboardHeader() {
 
   if (
     pathname?.startsWith("/app/bibliotheque") ||
-    pathname?.startsWith("/app/gateways")
+    pathname?.startsWith("/app/gateways") ||
+    pathname?.startsWith("/app/sources")
   ) {
     return null;
   }
@@ -24,7 +25,6 @@ export function DashboardHeader() {
     title = tPages("deliveries.title");
   else if (pathname?.startsWith("/app/appareils"))
     title = tPages("devices.title");
-  else if (pathname?.startsWith("/app/sources")) title = tPages("sources.title");
   else if (pathname?.startsWith("/app/reglages"))
     title = tPages("settings.title");
 

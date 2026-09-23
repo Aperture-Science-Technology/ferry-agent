@@ -173,7 +173,8 @@
     },
     "sources": {
       "title": "Sources",
-      "description": "Cloud catalogs and local module (Gateway)."
+      "description": "Cloud catalogs and local module (Gateway).",
+      "descriptionMobile": "Cloud catalogs and Gateway"
     },
     "deliveries": {
       "title": "Deliveries",
@@ -613,6 +614,7 @@
     "unknownHint": "This source's state could not be confirmed. Please try again later.",
     "alwaysActive": "Always available",
     "gatewayLocal": "Local via Gateway",
+    "gatewayLocalShort": "Via Gateway",
     "gatewayHint": "This source depends on the Gateway installed at home. It alone does not mean the Gateway is connected.",
     "prowlarrNote": "Prowlarr, if you use it, stays configured on the Gateway — not as a main section here.",
     "gatewayCta": "Open Gateway",
