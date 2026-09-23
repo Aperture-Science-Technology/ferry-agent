@@ -182,7 +182,8 @@
     },
     "settings": {
       "title": "Réglages",
-      "description": "Préférences d'envoi, catalogue pour votre liseuse, et renvois utiles."
+      "description": "Préférences d’envoi et catalogue lecteur (OPDS)",
+      "descriptionMobile": "Envoi et catalogue OPDS"
     }
   },
   "library": {
@@ -685,11 +686,11 @@
   "settings": {
     "unavailableTitle": "Réglages indisponibles",
     "unavailable": "Impossible de charger vos réglages pour le moment. Les valeurs affichées peuvent être incomplètes.",
-    "deliveryPreferencesTitle": "Préférences d'envoi",
-    "deliveryPreferencesDescription": "Votre compte et la façon dont les livres partent vers votre liseuse.",
-    "email": "Email",
+    "deliveryPreferencesTitle": "Préférences d’envoi",
+    "deliveryPreferencesDescription": "Compte et destination d’envoi vers votre liseuse.",
+    "email": "Email du compte",
     "emailHint": "Géré par votre fournisseur de connexion.",
-    "kindleEmail": "Votre email Kindle",
+    "kindleEmail": "Email Kindle",
     "kindleEmailPlaceholder": "votre-nom@kindle.com",
     "kindleEmailHint": "Utilisée comme destination lors d'un envoi vers Kindle par email.",
     "clearKindleEmail": "Effacer",
@@ -697,8 +698,8 @@
     "defaultFormatHint": "Format utilisé par défaut lors d'un envoi.",
     "sourcesTitle": "Sources",
     "sourcesDescription": "La gestion des catalogues se fait dans Sources.",
-    "readerCatalogTitle": "Catalogue pour votre liseuse",
-    "readerCatalogDescription": "Un lien pour afficher votre bibliothèque en ligne dans KOReader, Moon+, Marvin ou Kobo.",
+    "readerCatalogTitle": "Catalogue lecteur (OPDS)",
+    "readerCatalogDescription": "Liens pour afficher votre bibliothèque sur une liseuse.",
     "readerCatalog": {
       "warningTitle": "Accès à toute votre bibliothèque",
       "warning": "Chaque lien donne accès à toute votre bibliothèque. Révoquez un lien dès que vous n'en avez plus besoin.",
@@ -720,12 +721,12 @@
       "columnActions": "Actions",
       "neverUsed": "Jamais",
       "revoke": "Révoquer",
-      "revokeConfirmTitle": "Révoquer ce lien ?",
-      "revokeConfirmDescription": "Après révocation, ce lien ne fonctionnera plus sur la liseuse. Il faudra en créer un nouveau pour reconnecter l'appareil.",
+      "revokeConfirmTitle": "Révoquer l’accès OPDS ?",
+      "revokeConfirmDescription": "Le jeton et le QR associés ne fonctionneront plus. Vous pourrez en créer un nouveau.",
       "defaultLabel": "Liseuse",
       "createTitle": "Créer un lien catalogue",
       "createDescription": "Donnez un nom à ce lien pour le retrouver facilement (ex. Kobo, KOReader).",
-      "labelField": "Libellé",
+      "labelField": "Libellé du jeton OPDS",
       "createdTitle": "Lien prêt",
       "createdDescription": "Ce lien ne sera plus jamais réaffiché. Copiez-le ou scannez le QR maintenant.",
       "oneTimeTitle": "À conserver maintenant",
@@ -740,7 +741,13 @@
       "qrError": "QR indisponible. Utilisez le lien ci-dessus.",
       "qrAlt": "Code QR du lien catalogue",
       "createErrorTitle": "Création impossible",
-      "revokeErrorTitle": "Révocation impossible"
+      "revokeErrorTitle": "Révocation impossible",
+      "tokenTitle": "Jeton « {label} »",
+      "actionsHint": "QR · Copier l’URL · Révoquer",
+      "actionsHintMobile": "QR · Copier · Révoquer",
+      "actionsHintList": "Révoquer",
+      "labelHint": "Affiché dans Réglages · Catalogue lecteur",
+      "qrPlaceholder": "QR"
     },
     "devicesTitle": "Appareils",
     "devicesDescription": "Gérez vos liseuses et la façon dont les livres y arrivent.",

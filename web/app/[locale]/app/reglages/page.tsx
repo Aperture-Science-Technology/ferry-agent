@@ -1,5 +1,4 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { PageHeader } from "@/components/app/page-header";
 import { SettingsForm } from "@/components/app/settings/settings-form";
 import { safeApiFetch } from "@/lib/api";
 import type { OpdsToken } from "@/lib/types";
@@ -24,16 +23,16 @@ export default async function ReglagesPage({
   ]);
 
   return (
-    <div className="min-w-0">
-      <PageHeader title={t("title")} description={t("description")} />
-      <SettingsForm
-        initialEmail={settings?.email ?? ""}
-        initialKindleEmail={settings?.kindle_email ?? ""}
-        initialDefaultFormat={settings?.default_format ?? "epub"}
-        settingsUnavailable={settings === null}
-        initialOpdsTokens={opdsTokens ?? []}
-        opdsTokensUnavailable={opdsTokens === null}
-      />
-    </div>
+    <SettingsForm
+      title={t("title")}
+      description={t("description")}
+      descriptionMobile={t("descriptionMobile")}
+      initialEmail={settings?.email ?? ""}
+      initialKindleEmail={settings?.kindle_email ?? ""}
+      initialDefaultFormat={settings?.default_format ?? "epub"}
+      settingsUnavailable={settings === null}
+      initialOpdsTokens={opdsTokens ?? []}
+      opdsTokensUnavailable={opdsTokens === null}
+    />
   );
 }

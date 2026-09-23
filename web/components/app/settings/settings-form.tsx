@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { ArrowRight, Eraser, Loader2, Settings2 } from "lucide-react";
+import { Eraser, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SectionHeader } from "@/components/app/section-header";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
 import {
   buildSettingsPatchPayload,
@@ -24,6 +22,7 @@ import {
 } from "@/components/app/settings/settings-state";
 import { Reveal } from "@/components/motion/reveal";
 import { ApiError, useApiClient } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import type { OpdsToken } from "@/lib/types";
 
 const FORMATS = ["epub", "mobi", "azw3", "pdf"] as const;
@@ -32,6 +31,68 @@ type SavedSettings = {
   kindle_email: string | null;
   default_format: string;
 };
+
+/** Pen Form/Field — label 12/500 muted + input surface-2 pad 12 radius-md + optional hint. */
+function SettingsField({
+  id,
+  label,
+  hint,
+  className,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      data-testid="settings-field"
+      className={cn("flex min-w-0 flex-col gap-1.5", className)}
+    >
+      <Label
+        htmlFor={id}
+        className="text-xs font-medium break-words whitespace-normal text-muted-foreground"
+      >
+        {label}
+      </Label>
+      {children}
+      {hint ? (
+        <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function SoftNotice({
+  title,
+  description,
+  role = "status",
+}: {
+  title: string;
+  description: string;
+  role?: "status" | "alert";
+}) {
+  return (
+    <div
+      role={role}
+      className="flex flex-col gap-1 border border-border bg-muted/40 px-4 py-3"
+    >
+      <p className="font-heading text-sm font-medium tracking-tight break-words whitespace-normal">
+        {title}
+      </p>
+      <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+const fieldControlClass =
+  "h-auto min-h-0 w-full rounded-md border-border bg-muted px-3 py-3 text-sm font-medium text-foreground shadow-none";
 
 function parseApiDetail(raw: string): string | null {
   try {
@@ -51,6 +112,9 @@ function parseApiDetail(raw: string): string | null {
 }
 
 export function SettingsForm({
+  title,
+  description,
+  descriptionMobile,
   initialEmail,
   initialKindleEmail,
   initialDefaultFormat,
@@ -58,6 +122,9 @@ export function SettingsForm({
   initialOpdsTokens,
   opdsTokensUnavailable,
 }: {
+  title: string;
+  description: string;
+  descriptionMobile: string;
   initialEmail: string;
   initialKindleEmail: string;
   initialDefaultFormat: string;
@@ -66,6 +133,7 @@ export function SettingsForm({
   opdsTokensUnavailable: boolean;
 }) {
   const t = useTranslations("settings");
+  const tBrand = useTranslations("brand");
   const tCommon = useTranslations("common");
   const router = useRouter();
   const { call } = useApiClient();
@@ -141,53 +209,62 @@ export function SettingsForm({
 
   return (
     <div
-      className="min-w-0 max-w-2xl space-y-10 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      className={cn(
+        "flex min-w-0 flex-col gap-6",
+        "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      )}
+      data-testid="settings-pen-layout"
       data-settings-state={settingsState}
     >
+      {/* Pen Header/PageTitle Hd0003 + mobile Top mF0050 */}
+      <header className="flex min-h-[72px] flex-col justify-center gap-2">
+        <p className="font-heading text-sm font-medium text-muted-foreground md:hidden">
+          {tBrand("name")}
+        </p>
+        <h1 className="font-heading text-[22px] font-medium text-foreground md:text-[28px]">
+          {title}
+        </h1>
+        <p className="text-xs font-medium text-muted-foreground md:text-sm">
+          <span className="md:hidden">{descriptionMobile}</span>
+          <span className="hidden md:inline">{description}</span>
+        </p>
+      </header>
+
       {settingsUnavailable ? (
-        <Alert>
-          <Settings2 aria-hidden />
-          <AlertTitle className="break-words whitespace-normal">
-            {t("unavailableTitle")}
-          </AlertTitle>
-          <AlertDescription className="break-words whitespace-normal">
-            {t("unavailable")}
-          </AlertDescription>
-        </Alert>
+        <SoftNotice
+          title={t("unavailableTitle")}
+          description={t("unavailable")}
+          role="alert"
+        />
       ) : null}
 
       <Reveal>
-        <SectionHeader
-          title={t("deliveryPreferencesTitle")}
-          description={t("deliveryPreferencesDescription")}
-        />
-        <div className="min-w-0 space-y-5">
-          <div className="min-w-0 space-y-2">
-            <Label
-              htmlFor="settings-account-email"
-              className="break-words whitespace-normal"
-            >
-              {t("email")}
-            </Label>
+        <section className="flex min-w-0 flex-col gap-6" data-testid="settings-delivery">
+          <h2 className="font-heading text-base font-medium text-foreground">
+            {t("deliveryPreferencesTitle")}
+          </h2>
+
+          {/* Pen desktop: account email; mobile Top/Body omits it */}
+          <SettingsField
+            id="settings-account-email"
+            label={t("email")}
+            hint={t("emailHint")}
+            className="hidden md:flex"
+          >
             <Input
               id="settings-account-email"
               value={initialEmail}
               readOnly
               disabled
-              className="min-w-0"
+              className={fieldControlClass}
             />
-            <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
-              {t("emailHint")}
-            </p>
-          </div>
+          </SettingsField>
 
-          <div className="min-w-0 space-y-2">
-            <Label
-              htmlFor="settings-kindle-email"
-              className="break-words whitespace-normal"
-            >
-              {t("kindleEmail")}
-            </Label>
+          <SettingsField
+            id="settings-kindle-email"
+            label={t("kindleEmail")}
+            hint={t("kindleEmailHint")}
+          >
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               <Input
                 id="settings-kindle-email"
@@ -196,7 +273,7 @@ export function SettingsForm({
                 onChange={(event) => setKindleEmail(event.target.value)}
                 placeholder={t("kindleEmailPlaceholder")}
                 disabled={settingsUnavailable}
-                className="min-w-0 flex-1"
+                className={cn(fieldControlClass, "min-w-0 flex-1")}
                 autoComplete="email"
               />
               <Button
@@ -210,18 +287,13 @@ export function SettingsForm({
                 {t("clearKindleEmail")}
               </Button>
             </div>
-            <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
-              {t("kindleEmailHint")}
-            </p>
-          </div>
+          </SettingsField>
 
-          <div className="min-w-0 space-y-2">
-            <Label
-              htmlFor="settings-default-format"
-              className="break-words whitespace-normal"
-            >
-              {t("defaultFormat")}
-            </Label>
+          <SettingsField
+            id="settings-default-format"
+            label={t("defaultFormat")}
+            hint={t("defaultFormatHint")}
+          >
             <Select
               value={defaultFormat}
               onValueChange={(value) => setDefaultFormat(value ?? "epub")}
@@ -229,7 +301,7 @@ export function SettingsForm({
             >
               <SelectTrigger
                 id="settings-default-format"
-                className="w-full min-w-0 uppercase"
+                className={cn(fieldControlClass, "uppercase")}
               >
                 <SelectValue />
               </SelectTrigger>
@@ -245,26 +317,19 @@ export function SettingsForm({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
-              {t("defaultFormatHint")}
-            </p>
-          </div>
+          </SettingsField>
 
           {saveError ? (
-            <Alert variant="destructive" role="alert">
-              <Settings2 aria-hidden />
-              <AlertTitle className="break-words whitespace-normal">
-                {t("saveErrorTitle")}
-              </AlertTitle>
-              <AlertDescription className="break-words whitespace-normal">
-                {saveError}
-              </AlertDescription>
-            </Alert>
+            <SoftNotice
+              title={t("saveErrorTitle")}
+              description={saveError}
+              role="alert"
+            />
           ) : null}
 
-          <div className="flex min-w-0 flex-col gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p
-              className="min-w-0 text-xs leading-relaxed break-words whitespace-normal text-muted-foreground"
+              className="min-w-0 text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground"
               aria-live="polite"
               data-settings-dirty={dirty ? "true" : "false"}
             >
@@ -280,59 +345,24 @@ export function SettingsForm({
               {tCommon("save")}
             </Button>
           </div>
-        </div>
+        </section>
       </Reveal>
 
       <Reveal>
-        <SectionHeader
-          title={t("sourcesTitle")}
-          description={t("sourcesDescription")}
-        />
-        <div className="min-w-0 space-y-3 border-y border-border/70 py-4">
-          <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
-            {t("sourcesSummary")}
-          </p>
-          <Button
-            variant="outline"
-            className="w-full whitespace-normal sm:w-auto"
-            render={
-              <Link href="/app/sources">
-                {t("sourcesCta")}
-                <ArrowRight aria-hidden />
-              </Link>
-            }
+        <section className="flex min-w-0 flex-col gap-4" data-testid="settings-opds">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 className="font-heading text-base font-medium text-foreground">
+              {t("readerCatalogTitle")}
+            </h2>
+            <p className="text-xs font-medium text-muted-foreground md:text-sm">
+              {t("readerCatalogDescription")}
+            </p>
+          </div>
+          <ReaderCatalogSection
+            initialTokens={initialOpdsTokens}
+            tokensUnavailable={opdsTokensUnavailable}
           />
-        </div>
-      </Reveal>
-
-      <Reveal>
-        <SectionHeader
-          title={t("readerCatalogTitle")}
-          description={t("readerCatalogDescription")}
-        />
-        <ReaderCatalogSection
-          initialTokens={initialOpdsTokens}
-          tokensUnavailable={opdsTokensUnavailable}
-        />
-      </Reveal>
-
-      <Reveal>
-        <SectionHeader
-          title={t("devicesTitle")}
-          description={t("devicesDescription")}
-        />
-        <div className="min-w-0 border-y border-border/70 py-4">
-          <Button
-            variant="outline"
-            className="w-full whitespace-normal sm:w-auto"
-            render={
-              <Link href="/app/appareils">
-                {t("devicesCta")}
-                <ArrowRight aria-hidden />
-              </Link>
-            }
-          />
-        </div>
+        </section>
       </Reveal>
     </div>
   );
