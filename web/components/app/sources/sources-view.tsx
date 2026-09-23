@@ -4,20 +4,26 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
   BookOpen,
+  CircleAlert,
   Feather,
   Library,
-  Loader2,
   Share2,
+  TriangleAlert,
   Upload,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Switch } from "@/components/ui/switch";
-import { EmptyState } from "@/components/app/empty-state";
+import {
+  SourcesEmpty,
+  SourcesFeedback,
+} from "@/components/app/sources/source-feedback";
+import {
+  SourceRow,
+  SourceToggle,
+} from "@/components/app/sources/source-row";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
 import type { Source } from "@/lib/types";
 import {
   applySourceToggleFailure,
@@ -42,76 +48,6 @@ const PROVIDER_META: Record<
   upload: { key: "upload", icon: Upload },
   torrent_gateway: { key: "torrentGateway", icon: Share2 },
 };
-
-function SoftNotice({
-  title,
-  description,
-  role = "status",
-}: {
-  title: string;
-  description: string;
-  role?: "status" | "alert";
-}) {
-  return (
-    <div
-      role={role}
-      className="flex flex-col gap-1 border border-border bg-muted/40 px-4 py-3"
-    >
-      <p className="font-heading text-sm font-medium tracking-tight break-words whitespace-normal">
-        {title}
-      </p>
-      <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
-        {description}
-      </p>
-    </div>
-  );
-}
-
-/** Pen Source/SourceRow Ny3Dd — icon 18 + title 16/500 + sub 12/500, pad 12 0, bottom border. */
-function SourceRow({
-  type,
-  availability,
-  title,
-  meta,
-  trailing,
-  footer,
-}: {
-  type: KnownSourceType;
-  availability: SourceAvailability;
-  title: string;
-  meta: ReactNode;
-  trailing?: ReactNode;
-  footer?: ReactNode;
-}) {
-  const Icon = PROVIDER_META[type].icon;
-  return (
-    <article
-      data-testid="source-row"
-      data-source-type={type}
-      data-source-availability={availability}
-      className="flex min-w-0 flex-col gap-2 border-b border-border py-3 last:border-b-0"
-    >
-      <div className="flex min-w-0 items-center gap-4">
-        <Icon
-          className="size-[18px] shrink-0 text-foreground"
-          aria-hidden
-        />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2 className="min-w-0 text-base font-medium break-words whitespace-normal text-foreground">
-            {title}
-          </h2>
-          <div className="min-w-0 text-xs font-medium break-words whitespace-normal text-muted-foreground">
-            {meta}
-          </div>
-        </div>
-        {trailing ? (
-          <div className="flex shrink-0 items-center gap-2">{trailing}</div>
-        ) : null}
-      </div>
-      {footer}
-    </article>
-  );
-}
 
 export function SourcesView({
   title,
@@ -247,24 +183,16 @@ export function SourcesView({
 
     const trailing =
       toggleable && source ? (
-        <>
-          {pending ? (
-            <Loader2
-              className="size-4 shrink-0 animate-spin text-muted-foreground"
-              aria-hidden
-            />
-          ) : null}
-          <Switch
-            checked={enabled}
-            disabled={pending}
-            onCheckedChange={() => void toggle(source)}
-            aria-label={
-              enabled
-                ? t("disableAria", { name })
-                : t("enableAria", { name })
-            }
-          />
-        </>
+        <SourceToggle
+          checked={enabled}
+          pending={pending}
+          onToggle={() => void toggle(source)}
+          ariaLabel={
+            enabled
+              ? t("disableAria", { name })
+              : t("enableAria", { name })
+          }
+        />
       ) : undefined;
 
     const footer =
@@ -279,6 +207,7 @@ export function SourcesView({
         <SourceRow
           type={type}
           availability={availability}
+          icon={meta.icon}
           title={name}
           meta={rowMeta(type, availability)}
           trailing={trailing}
@@ -288,45 +217,68 @@ export function SourcesView({
     );
   }
 
+  const rows = (
+    <Reveal>
+      <div data-testid="sources-rows">
+        <RevealGroup className="flex min-w-0 flex-col gap-3 md:gap-0">
+          {SOURCE_DISPLAY_TYPES.map((type) => renderRow(type))}
+        </RevealGroup>
+      </div>
+    </Reveal>
+  );
+
   return (
     <div
-      className={cn(
-        "flex min-w-0 flex-col gap-6",
-        "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
-      )}
+      className="flex min-w-0 flex-col gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:gap-6"
       data-testid="sources-pen-layout"
       data-sources-state={surfaceState}
     >
-      {/* Pen Header/PageTitle Hd0003 (28/14) + mobile Top mF0050 (brand/22/12) */}
-      <header className="flex min-h-[72px] flex-col justify-center gap-2">
-        <p className="font-heading text-sm font-medium text-muted-foreground md:hidden">
-          {tBrand("name")}
-        </p>
-        <h1 className="font-heading text-[22px] font-medium text-foreground md:text-[28px]">
-          {title}
-        </h1>
-        <p className="text-xs font-medium text-muted-foreground md:text-sm">
-          <span className="md:hidden">{descriptionMobile}</span>
-          <span className="hidden md:inline">{description}</span>
-        </p>
-      </header>
+      {/* Title stacks are dedicated (mF0050 Top vs Hd0003); no shared DashboardHeader. */}
+      <div className="flex flex-col gap-2 md:min-h-[72px]">
+        <header
+          data-testid="sources-header-mobile"
+          className="flex flex-col gap-2 md:hidden"
+        >
+          <p className="font-heading text-sm font-medium text-muted-foreground">
+            {tBrand("name")}
+          </p>
+          <h1 className="font-heading text-[22px] font-medium text-foreground">
+            {title}
+          </h1>
+          <p className="text-xs font-medium text-muted-foreground">
+            {descriptionMobile}
+          </p>
+        </header>
 
-      <p className="max-w-3xl text-sm font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+        <header
+          data-testid="sources-header-desktop"
+          className="hidden min-w-0 flex-1 flex-col gap-2 md:flex"
+        >
+          <h1 className="font-heading text-[28px] font-medium text-foreground">
+            {title}
+          </h1>
+          <p className="text-sm font-medium text-muted-foreground">
+            {description}
+          </p>
+        </header>
+      </div>
+
+      {/* Pen Hint oXf2k — desktop only (absent from mF0050 Body). */}
+      <p className="hidden max-w-3xl text-sm font-medium leading-relaxed break-words whitespace-normal text-muted-foreground md:block">
         {t("supportedHint")}
       </p>
 
       {sourcesUnavailable ? (
-        <div role="alert">
-          <EmptyState
-            icon={Library}
-            title={t("unavailableTitle")}
-            description={t("unavailableNote")}
-          />
-        </div>
+        <SourcesEmpty
+          role="alert"
+          icon={Library}
+          title={t("unavailableTitle")}
+          description={t("unavailableNote")}
+        />
       ) : null}
 
       {!sourcesUnavailable && sources.length === 0 ? (
-        <EmptyState
+        <SourcesEmpty
           icon={Library}
           title={t("emptyTitle")}
           description={t("emptyDescription")}
@@ -334,24 +286,24 @@ export function SourcesView({
       ) : null}
 
       {partial ? (
-        <SoftNotice title={t("partialTitle")} description={t("partialNote")} />
-      ) : null}
-
-      {updateError ? (
-        <SoftNotice
-          title={t("updateErrorTitle")}
-          description={updateError}
-          role="alert"
+        <SourcesFeedback
+          icon={CircleAlert}
+          title={t("partialTitle")}
+          description={t("partialNote")}
         />
       ) : null}
 
-      <Reveal>
-        <div data-testid="sources-rows">
-          <RevealGroup className="flex min-w-0 flex-col">
-            {SOURCE_DISPLAY_TYPES.map((type) => renderRow(type))}
-          </RevealGroup>
-        </div>
-      </Reveal>
+      {updateError ? (
+        <SourcesFeedback
+          role="alert"
+          icon={TriangleAlert}
+          title={t("updateErrorTitle")}
+          description={updateError}
+        />
+      ) : null}
+
+      {/* Pen Body — mobile gap 12 (mF0050); desktop Rows stack (EYiIt). */}
+      <div data-testid="sources-body">{rows}</div>
     </div>
   );
 }
