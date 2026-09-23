@@ -51,7 +51,7 @@ const PRIMARY: NavItem[] = [
   { href: "/app/appareils", labelKey: "devices", icon: Tablet },
 ];
 
-/** Chez vous — Gateway uses cable (Pen), not radio. */
+/** Chez vous — Gateway uses cable (Pen). */
 const LOCAL: NavItem[] = [
   { href: "/app/gateways", labelKey: "access", icon: Cable },
   { href: "/app/sources", labelKey: "sources", icon: Database },
@@ -116,13 +116,14 @@ function NavCluster({
 
 function CopperMark() {
   return (
-    <span
-      className="size-5 shrink-0 rounded-sm bg-primary"
-      aria-hidden
-    />
+    <span className="size-5 shrink-0 rounded-[6px] bg-primary" aria-hidden />
   );
 }
 
+/**
+ * Pen Shell/Sidebar DQYhS — 240×fill, pad [24,16], gap 24.
+ * Desktop only (ui/sidebar hides below md when enableMobileSheet=false).
+ */
 export function AppSidebar() {
   const t = useTranslations("nav");
   const tBrand = useTranslations("brand");
@@ -152,8 +153,12 @@ export function AppSidebar() {
         <NavCluster items={LOCAL} label={t("groupLocal")} />
       </SidebarContent>
 
-      <SidebarFooter className="gap-3 border-0 px-4 pb-6">
-        <div className="flex min-w-0 items-center gap-2.5 rounded-md bg-muted px-3 py-3">
+      <SidebarFooter className="gap-2 border-0 px-4 pb-6">
+        {/* Locale is not in Pen account card; keep compact control for i18n without altering Account geometry. */}
+        <div className="flex justify-end px-1">
+          <LocaleSwitcher compact />
+        </div>
+        <div className="flex min-w-0 items-center gap-2.5 rounded-md bg-ferry-surface-2 p-3">
           <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-primary">
             <UserButton
               appearance={{
@@ -172,7 +177,6 @@ export function AppSidebar() {
               {t("account")}
             </p>
           </div>
-          <LocaleSwitcher compact />
         </div>
       </SidebarFooter>
     </Sidebar>

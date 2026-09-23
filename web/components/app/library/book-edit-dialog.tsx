@@ -16,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PassageRule } from "@/components/passage-rule";
 import { useApiClient } from "@/lib/api-client";
 import type { LibraryItem } from "@/lib/types";
 
@@ -101,7 +100,6 @@ export function BookEditDialog({
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="min-w-0">
-          <PassageRule className="mb-1" />
           <DialogTitle className="font-heading tracking-tight break-words whitespace-normal">
             {t("title", { title: item?.title ?? "" })}
           </DialogTitle>

@@ -8,19 +8,19 @@ import {
   Cable,
   Database,
   Ellipsis,
+  Languages,
   Library,
   Settings,
   Tablet,
   Truck,
+  User,
 } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { buttonVariants } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -59,6 +59,11 @@ const MORE_LINKS = [
     labelKey: "settings" as const,
     icon: Settings,
   },
+  {
+    href: "/docs" as const,
+    labelKey: "docs" as const,
+    icon: BookOpen,
+  },
 ];
 
 function useKeyboardOpen() {
@@ -85,6 +90,10 @@ function useKeyboardOpen() {
   return open;
 }
 
+/**
+ * Pen Shell/MobileBottomNav SC5Ea + MobileMoreSheet f8zN3 / SL12k.
+ * Fixed bottom tabs; Plus opens full-height sheet (no compressed sidebar).
+ */
 export function AppMobileNav() {
   const pathname = usePathname();
   const t = useTranslations("nav");
@@ -100,12 +109,13 @@ export function AppMobileNav() {
       <nav
         aria-label={t("dashboard")}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur-md md:hidden",
+          "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card md:hidden",
           "pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out",
           "motion-reduce:transition-none",
           keyboardOpen && "translate-y-full"
         )}
       >
+        {/* Pen SC5Ea: h 72, gap 4, pad [8,8,16,8] */}
         <ul className="grid h-[72px] grid-cols-4 gap-1 px-2 pt-2">
           {PRIMARY.map((item) => {
             const active = Boolean(pathname?.startsWith(item.href));
@@ -115,11 +125,10 @@ export function AppMobileNav() {
                 <Link
                   href={item.href}
                   className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    "h-auto w-full min-w-0 flex-col gap-1 rounded-sm px-1 py-2 text-[0.6875rem] font-medium",
+                    "flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 rounded-sm px-1 py-2 text-[11px] font-medium",
                     active
-                      ? "bg-sidebar-accent text-foreground"
-                      : "text-muted-foreground"
+                      ? "bg-accent text-muted-foreground"
+                      : "bg-transparent text-muted-foreground"
                   )}
                   aria-current={active ? "page" : undefined}
                 >
@@ -133,11 +142,10 @@ export function AppMobileNav() {
             <button
               type="button"
               className={cn(
-                buttonVariants({ variant: "ghost" }),
-                "h-auto w-full min-w-0 flex-col gap-1 rounded-sm px-1 py-2 text-[0.6875rem] font-medium",
+                "flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 rounded-sm px-1 py-2 text-[11px] font-medium",
                 moreActive || moreOpen
-                  ? "bg-sidebar-accent text-foreground"
-                  : "text-muted-foreground"
+                  ? "bg-accent text-muted-foreground"
+                  : "bg-transparent text-muted-foreground"
               )}
               aria-expanded={moreOpen}
               aria-controls="app-mobile-more"
@@ -155,20 +163,24 @@ export function AppMobileNav() {
         <SheetContent
           id="app-mobile-more"
           side="bottom"
-          className="flex h-[100dvh] max-h-[100dvh] flex-col gap-0 rounded-none p-0"
+          className="flex h-[100dvh] max-h-[100dvh] flex-col gap-2 rounded-none border-border bg-card p-0 [&>button]:hidden"
         >
-          <SheetHeader className="shrink-0 border-b border-border px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4 text-left">
-            <SheetTitle className="font-heading text-xl font-medium">
+          {/* Pen f8zN3: pad [24,24,40,24], gap 8 */}
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-6 pt-6 pb-10">
+            <div className="flex justify-center pb-2">
+              <span
+                className="h-1 w-10 rounded-[2px] bg-border"
+                aria-hidden
+              />
+            </div>
+            <SheetTitle className="font-heading text-[22px] font-medium text-foreground">
               {t("moreMenu")}
             </SheetTitle>
-            <SheetDescription>{t("moreDescription")}</SheetDescription>
-          </SheetHeader>
+            <SheetDescription className="sr-only">
+              {t("moreDescription")}
+            </SheetDescription>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-4">
-            <p className="mb-2 px-3 text-[11px] font-medium text-muted-foreground">
-              {t("groupLocal")}
-            </p>
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col gap-2 pt-2">
               {MORE_LINKS.map((item) => {
                 const active = Boolean(pathname?.startsWith(item.href));
                 const Icon = item.icon;
@@ -178,63 +190,52 @@ export function AppMobileNav() {
                       href={item.href}
                       onClick={() => setMoreOpen(false)}
                       className={cn(
-                        buttonVariants({ variant: "ghost" }),
-                        "h-auto w-full min-w-0 justify-start gap-2.5 rounded-sm px-3 py-2.5 text-sm font-medium",
-                        active && "bg-sidebar-accent text-foreground"
+                        "flex w-full min-w-0 items-center gap-3 rounded-sm px-3 py-3.5 text-base font-medium text-foreground",
+                        active && "bg-accent"
                       )}
                       aria-current={active ? "page" : undefined}
                     >
-                      <Icon className="size-4 shrink-0" aria-hidden />
+                      <Icon className="size-[18px] shrink-0" aria-hidden />
                       <span className="min-w-0 truncate">{t(item.labelKey)}</span>
                     </Link>
                   </li>
                 );
               })}
-            </ul>
 
-            <div className="my-4 h-px bg-border" />
-
-            <ul className="flex flex-col gap-1">
               <li>
-                <Link
-                  href="/docs"
-                  onClick={() => setMoreOpen(false)}
-                  className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    "h-auto w-full min-w-0 justify-start gap-2.5 rounded-sm px-3 py-2.5 text-sm font-medium",
-                    pathname?.startsWith("/docs") &&
-                      "bg-sidebar-accent text-foreground"
-                  )}
-                  aria-current={
-                    pathname?.startsWith("/docs") ? "page" : undefined
-                  }
-                >
-                  <BookOpen className="size-4 shrink-0" aria-hidden />
-                  <span className="min-w-0 truncate">{t("docs")}</span>
-                </Link>
+                <div className="flex w-full min-w-0 items-center gap-3 rounded-sm px-3 py-3.5">
+                  <Languages
+                    className="size-[18px] shrink-0 text-foreground"
+                    aria-hidden
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col gap-2">
+                    <span className="text-base font-medium text-foreground">
+                      {t("language")}
+                    </span>
+                    <LocaleSwitcher />
+                  </div>
+                </div>
+              </li>
+
+              <li>
+                <div className="flex w-full min-w-0 items-center gap-3 rounded-sm px-3 py-3.5">
+                  <User
+                    className="size-[18px] shrink-0 text-foreground"
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">
+                    {t("account")}
+                  </span>
+                  <UserButton
+                    appearance={{
+                      elements: {
+                        avatarBox: "size-7",
+                      },
+                    }}
+                  />
+                </div>
               </li>
             </ul>
-
-            <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-border px-2 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground">
-                  {t("language")}
-                </span>
-                <LocaleSwitcher />
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">
-                  {t("account")}
-                </span>
-                <UserButton
-                  appearance={{
-                    elements: {
-                      avatarBox: "size-7",
-                    },
-                  }}
-                />
-              </div>
-            </div>
           </div>
         </SheetContent>
       </Sheet>

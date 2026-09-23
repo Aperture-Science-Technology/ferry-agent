@@ -18,11 +18,12 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider defaultOpen>
+      {/* Desktop: persistent 240px sidebar (DQYhS). Mobile: bottom nav only — no compressed sidebar. */}
       <AppSidebar />
       <SidebarInset className="min-w-0 overflow-x-hidden bg-background">
         <DashboardHeader />
-        {/* Pen Main: padding 32 vertical / 40 horizontal; mobile tighter. */}
-        <div className="flex w-full min-w-0 flex-1 flex-col px-5 py-6 pb-[max(7rem,calc(5.5rem+env(safe-area-inset-bottom)))] md:gap-6 md:px-10 md:py-8 md:pb-8">
+        {/* Pen Main a0ck4H: gap 24, pad 32 vertical / 40 horizontal; mobile keeps pb for SC5Ea. */}
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-6 px-5 pt-6 pb-[max(7rem,calc(4.5rem+env(safe-area-inset-bottom)))] md:gap-6 md:px-10 md:py-8 md:pb-8">
           {children}
         </div>
       </SidebarInset>

@@ -209,8 +209,8 @@
     "add": "Ajouter",
     "deliver": "Envoyer",
     "deliverOf": "Envoyer « {title} »",
-    "emptyTitle": "Votre bibliothèque commence ici",
-    "emptyDescription": "Cherchez un livre dans les sources pour commencer, ou importez un fichier depuis votre appareil.",
+    "emptyTitle": "Aucun livre pour l'instant",
+    "emptyDescription": "Importez depuis une source ou ajoutez un fichier.",
     "emptyUnavailable": "La lecture n'a pas abouti. Réessayez pour recharger vos livres — votre collection n'a pas disparu.",
     "emptyUnavailableTitle": "Impossible d'afficher votre bibliothèque",
     "retryLoad": "Réessayer",
@@ -298,7 +298,9 @@
     "modeSources": "Chercher dans les sources",
     "browseModeLabel": "Parcourir la bibliothèque",
     "recentSection": "Récents",
-    "searchSourcesPlaceholder": "Chercher dans les sources"
+    "searchSourcesPlaceholder": "Chercher dans les sources",
+    "feedbackLoadingTitle": "Chargement…",
+    "feedbackLoadingBody": "Récupération de la bibliothèque."
   },
   "deliverDialog": {
     "title": "Envoyer « {title} »",

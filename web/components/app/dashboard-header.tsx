@@ -4,8 +4,8 @@ import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
 
 /**
- * Shell strip for routes that do not own Header/PageTitle.
- * Library / Gateway / Sources / Settings render their own Pen title — no double heading.
+ * Shell strip for routes that do not own Header/Page.
+ * Library owns ePLzB / mF0028 titles — never double the heading.
  */
 export function DashboardHeader() {
   const pathname = usePathname();

@@ -209,8 +209,8 @@
     "add": "Add",
     "deliver": "Send",
     "deliverOf": "Send “{title}”",
-    "emptyTitle": "Your library starts here",
-    "emptyDescription": "Search the sources for a book to get started, or import a file from your device.",
+    "emptyTitle": "No books yet",
+    "emptyDescription": "Import from a source or add a file.",
     "emptyUnavailable": "Loading didn't succeed. Try again to reload your books — your collection hasn't disappeared.",
     "emptyUnavailableTitle": "Couldn't show your library",
     "retryLoad": "Try again",
@@ -298,7 +298,9 @@
     "modeSources": "Search sources",
     "browseModeLabel": "Browse the library",
     "recentSection": "Recent",
-    "searchSourcesPlaceholder": "Search sources"
+    "searchSourcesPlaceholder": "Search sources",
+    "feedbackLoadingTitle": "Loading…",
+    "feedbackLoadingBody": "Fetching your library."
   },
   "deliverDialog": {
     "title": "Send “{title}”",
