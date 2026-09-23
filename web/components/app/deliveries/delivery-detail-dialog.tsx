@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Download, Loader2 } from "lucide-react";
+import { CircleAlert, Download, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,8 +18,11 @@ import {
   mergeDeliveryJobs,
   normalizeDeliveryStatus,
 } from "@/components/app/deliveries/deliveries-state";
+import {
+  DeliveryEmpty,
+  DeliveryFeedback,
+} from "@/components/app/deliveries/delivery-feedback";
 import { DeliveryStatusBadge } from "@/components/app/deliveries/delivery-status-badge";
-import { StatePanel } from "@/components/app/state-panel";
 import { useApiClient } from "@/lib/api-client";
 import type { DeliveryJob } from "@/lib/types";
 
@@ -162,23 +165,18 @@ export function DeliveryDetailDialog({
         </DialogHeader>
 
         {loading ? (
-          <StatePanel className="py-8">
-            <div
-              className="flex items-center justify-center gap-2 text-sm text-muted-foreground"
-              aria-busy="true"
-            >
+          <div className="flex flex-col gap-3 py-6" aria-busy="true">
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin text-chart-1 motion-reduce:animate-none" />
               {t("loading")}
             </div>
-            <div className="mt-4 w-full space-y-2">
-              <Skeleton className="h-8 w-full rounded-lg" />
-              <Skeleton className="h-8 w-full rounded-lg" />
-              <Skeleton className="h-8 w-3/4 rounded-lg" />
-            </div>
-          </StatePanel>
+            <Skeleton className="h-8 w-full rounded-md" />
+            <Skeleton className="h-8 w-full rounded-md" />
+            <Skeleton className="h-8 w-3/4 rounded-md" />
+          </div>
         ) : loadFailed ? (
-          <StatePanel
-            className="py-10"
+          <DeliveryEmpty
+            icon={CircleAlert}
             title={t("loadErrorTitle")}
             description={t("loadErrorDescription")}
             action={
@@ -187,7 +185,7 @@ export function DeliveryDetailDialog({
                 variant="outline"
                 onClick={() => void handleRetry()}
                 disabled={retrying}
-                className="whitespace-normal"
+                className="whitespace-normal rounded-md"
               >
                 {retrying ? <Loader2 className="animate-spin" /> : null}
                 {t("retry")}
@@ -281,26 +279,23 @@ export function DeliveryDetailDialog({
             </dl>
 
             {displayJob.status === "failed" ? (
-              <div
+              <DeliveryFeedback
                 role="alert"
-                className="border border-destructive/30 bg-destructive/10 px-3 py-2.5"
-              >
-                <p className="mb-1 font-heading text-xs font-medium tracking-tight text-destructive">
-                  {t("error")}
-                </p>
-                <p className="break-words whitespace-normal text-destructive">
-                  {displayJob.error?.trim()
+                title={t("error")}
+                description={
+                  displayJob.error?.trim()
                     ? displayJob.error
-                    : t("errorFallback")}
-                </p>
-              </div>
+                    : t("errorFallback")
+                }
+                className="border-destructive/30 bg-destructive/10"
+              />
             ) : null}
 
             {displayJob.download_url ? (
-              <div className="min-w-0 space-y-2 border-t border-border/50 pt-4">
+              <div className="min-w-0 space-y-2 border-t border-border pt-4">
                 <Button
                   size="sm"
-                  className="whitespace-normal"
+                  className="whitespace-normal rounded-md"
                   render={
                     <a
                       href={displayJob.download_url}

@@ -6,7 +6,6 @@ import { ExternalLink, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DeviceFormField,
+  deviceFormControlClass,
+} from "@/components/app/devices/device-form-field";
 import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
@@ -37,11 +40,6 @@ const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
 const CLOUD_LINK_MESSAGE = "ferry-cloud-link";
-
-const fieldClass = "flex flex-col gap-1.5";
-const labelClass = "text-xs font-medium text-muted-foreground";
-const controlClass =
-  "h-auto min-h-10 w-full rounded-lg border-border bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
 
 export function CloudLinkDialog({
   device,
@@ -220,16 +218,13 @@ export function CloudLinkDialog({
               <AlertDescription>{t("uncertainDescription")}</AlertDescription>
             </Alert>
           ) : null}
-          <div className={fieldClass}>
-            <Label htmlFor={providerId} className={labelClass}>
-              {t("provider")}
-            </Label>
+          <DeviceFormField label={t("provider")} htmlFor={providerId}>
             <Select
               value={provider}
               onValueChange={(value) => value && setProvider(value as Provider)}
               disabled={busy}
             >
-              <SelectTrigger id={providerId} className={controlClass}>
+              <SelectTrigger id={providerId} className={deviceFormControlClass}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -237,12 +232,12 @@ export function CloudLinkDialog({
                 <SelectItem value="drive">Google Drive</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </DeviceFormField>
           <Button
             variant="outline"
             onClick={() => void startLink()}
             disabled={busy}
-            className="w-full whitespace-normal"
+            className="w-full whitespace-normal rounded-md"
           >
             {busy ? <Loader2 className="animate-spin" /> : <ExternalLink />}
             {phase === "waiting"
@@ -257,7 +252,7 @@ export function CloudLinkDialog({
             variant="outline"
             onClick={() => handleOpenChange(false)}
             disabled={phase === "opening"}
-            className="whitespace-normal"
+            className="whitespace-normal rounded-md"
           >
             {tCommon("cancel")}
           </Button>

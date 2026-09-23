@@ -1,11 +1,18 @@
 "use client";
 
-import { useState, type KeyboardEvent, type ReactNode } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { toast } from "sonner";
-import { Ban, BookOpen, Copy, Loader2, Plus } from "lucide-react";
+import {
+  Ban,
+  BookOpen,
+  CircleAlert,
+  Copy,
+  Loader2,
+  Plus,
+  TriangleAlert,
+} from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -16,74 +23,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CatalogQrCode } from "@/components/app/settings/catalog-qr-code";
+import { OpdsTokenCard } from "@/components/app/settings/opds-token-card";
+import {
+  SettingsEmpty,
+  SettingsFeedback,
+} from "@/components/app/settings/settings-feedback";
+import {
+  SettingsFormField,
+  settingsFormControlClass,
+} from "@/components/app/settings/settings-form-field";
 import { formatTokenLastUsed } from "@/components/app/settings/settings-state";
-import { EmptyState } from "@/components/app/empty-state";
 import { RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { copyTextToClipboard } from "@/components/app/gateways/gateways-state";
 import { useApiClient } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { OpdsToken, OpdsTokenCreated } from "@/lib/types";
-
-const fieldControlClass =
-  "h-auto min-h-0 w-full rounded-md border-border bg-muted px-3 py-3 text-sm font-medium text-foreground shadow-none";
-
-function SoftNotice({
-  title,
-  description,
-  role = "status",
-}: {
-  title: string;
-  description: string;
-  role?: "status" | "alert";
-}) {
-  return (
-    <div
-      role={role}
-      className="flex flex-col gap-1 border border-border bg-muted/40 px-4 py-3"
-    >
-      <p className="font-heading text-sm font-medium tracking-tight break-words whitespace-normal">
-        {title}
-      </p>
-      <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
-        {description}
-      </p>
-    </div>
-  );
-}
-
-/** Pen OPDS card — surface + border radius-md, title 14 + meta 12 + optional QR 96. */
-function OpdsTokenCard({
-  tokenId,
-  title,
-  meta,
-  actions,
-  qr,
-}: {
-  tokenId?: string;
-  title: string;
-  meta: string;
-  actions?: ReactNode;
-  qr?: ReactNode;
-}) {
-  return (
-    <article
-      data-testid="opds-token-card"
-      data-token-id={tokenId}
-      className="flex min-w-0 flex-col gap-2.5 rounded-md border border-border bg-card p-3 md:gap-2.5 md:p-4"
-    >
-      <h3 className="text-sm font-medium break-words whitespace-normal text-foreground">
-        {title}
-      </h3>
-      <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
-        {meta}
-      </p>
-      {actions ? (
-        <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>
-      ) : null}
-      {qr}
-    </article>
-  );
-}
 
 export function ReaderCatalogSection({
   initialTokens,
@@ -204,10 +158,14 @@ export function ReaderCatalogSection({
   );
 
   return (
-    <div className="min-w-0 space-y-4" data-catalog-state={catalogState}>
-      <SoftNotice title={t("warningTitle")} description={t("warning")} />
+    <div className="flex min-w-0 flex-col gap-3 md:gap-4" data-catalog-state={catalogState}>
+      <SettingsFeedback
+        icon={CircleAlert}
+        title={t("warningTitle")}
+        description={t("warning")}
+      />
 
-      <div className="min-w-0 space-y-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <p className="font-heading text-sm font-medium tracking-tight break-words whitespace-normal text-foreground">
           {t("guideTitle")}
         </p>
@@ -220,10 +178,11 @@ export function ReaderCatalogSection({
       </div>
 
       {tokensUnavailable ? (
-        <SoftNotice
+        <SettingsEmpty
+          role="alert"
+          icon={BookOpen}
           title={t("unavailableTitle")}
           description={t("unavailable")}
-          role="alert"
         />
       ) : null}
 
@@ -242,7 +201,7 @@ export function ReaderCatalogSection({
       </div>
 
       {tokensUnavailable ? null : tokens.length === 0 ? (
-        <EmptyState
+        <SettingsEmpty
           icon={BookOpen}
           title={t("emptyTitle")}
           description={t("emptyDescription")}
@@ -256,11 +215,28 @@ export function ReaderCatalogSection({
                 <OpdsTokenCard
                   tokenId={token.id}
                   title={t("tokenTitle", { label: token.label })}
-                  meta={`${formatTokenLastUsed(
-                    token.last_used_at,
-                    locale,
-                    t("neverUsed")
-                  )} · ${t("actionsHintList")}`}
+                  meta={
+                    <>
+                      <span className="md:hidden">
+                        {formatTokenLastUsed(
+                          token.last_used_at,
+                          locale,
+                          t("neverUsed")
+                        )}
+                        {" · "}
+                        {t("actionsHintMobile")}
+                      </span>
+                      <span className="hidden md:inline">
+                        {formatTokenLastUsed(
+                          token.last_used_at,
+                          locale,
+                          t("neverUsed")
+                        )}
+                        {" · "}
+                        {t("actionsHint")}
+                      </span>
+                    </>
+                  }
                   actions={
                     <Button
                       type="button"
@@ -288,32 +264,29 @@ export function ReaderCatalogSection({
         onOpenChange={closeCreate}
         disablePointerDismissal={submitting}
       >
-        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-md">
+        <DialogContent className="max-h-[min(90dvh,40rem)] gap-4 overflow-y-auto sm:max-w-md">
           {created ? (
             <>
-              <DialogHeader>
-                <DialogTitle className="break-words whitespace-normal">
+              <DialogHeader className="gap-2">
+                <DialogTitle className="font-heading text-lg font-medium break-words whitespace-normal">
                   {t("createdTitle")}
                 </DialogTitle>
-                <DialogDescription className="break-words whitespace-normal">
+                <DialogDescription className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
                   {t("createdDescription")}
                 </DialogDescription>
               </DialogHeader>
-              <div className="min-w-0 space-y-4" data-catalog-created>
-                <div className="flex min-w-0 flex-col gap-1.5">
-                  <Label
-                    htmlFor="catalog-created-url"
-                    className="text-xs font-medium break-words whitespace-normal text-muted-foreground"
-                  >
-                    {t("urlLabel")}
-                  </Label>
+              <div className="flex min-w-0 flex-col gap-4" data-catalog-created>
+                <SettingsFormField
+                  htmlFor="catalog-created-url"
+                  label={t("urlLabel")}
+                >
                   <div className="flex min-w-0 gap-2">
                     <Input
                       id="catalog-created-url"
                       readOnly
                       value={created.url}
                       className={cn(
-                        fieldControlClass,
+                        settingsFormControlClass,
                         "min-w-0 flex-1 font-mono text-xs break-all"
                       )}
                       onFocus={(event) => event.currentTarget.select()}
@@ -330,15 +303,15 @@ export function ReaderCatalogSection({
                       <Copy aria-hidden />
                     </Button>
                   </div>
-                  {copyFailed ? (
-                    <p
-                      className="text-xs leading-relaxed break-words whitespace-normal text-destructive"
-                      role="alert"
-                    >
-                      {tCommon("copyFailed")}
-                    </p>
-                  ) : null}
-                </div>
+                </SettingsFormField>
+                {copyFailed ? (
+                  <p
+                    className="text-xs leading-relaxed break-words whitespace-normal text-destructive"
+                    role="alert"
+                  >
+                    {tCommon("copyFailed")}
+                  </p>
+                ) : null}
                 <div className="flex min-w-0 flex-col items-start gap-2">
                   <p className="text-xs font-medium text-muted-foreground md:hidden">
                     {t("actionsHintMobile")}
@@ -351,7 +324,8 @@ export function ReaderCatalogSection({
                     {t("qrHint")}
                   </p>
                 </div>
-                <SoftNotice
+                <SettingsFeedback
+                  icon={CircleAlert}
                   title={t("oneTimeTitle")}
                   description={t("oneTimeWarning")}
                 />
@@ -368,22 +342,20 @@ export function ReaderCatalogSection({
             </>
           ) : (
             <>
-              <DialogHeader>
-                <DialogTitle className="break-words whitespace-normal">
+              <DialogHeader className="gap-2">
+                <DialogTitle className="font-heading text-lg font-medium break-words whitespace-normal">
                   {t("createTitle")}
                 </DialogTitle>
-                <DialogDescription className="break-words whitespace-normal">
+                <DialogDescription className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
                   {t("createDescription")}
                 </DialogDescription>
               </DialogHeader>
-              {/* Pen Form/Field */}
-              <div className="flex min-w-0 flex-col gap-1.5">
-                <Label
-                  htmlFor="catalog-link-label"
-                  className="text-xs font-medium break-words whitespace-normal text-muted-foreground"
-                >
-                  {t("labelField")}
-                </Label>
+              {/* Pen Form/Field lz3PJ */}
+              <SettingsFormField
+                htmlFor="catalog-link-label"
+                label={t("labelField")}
+                hint={t("labelHint")}
+              >
                 <Input
                   id="catalog-link-label"
                   value={label}
@@ -391,18 +363,16 @@ export function ReaderCatalogSection({
                   onKeyDown={onCreateKeyDown}
                   placeholder={t("defaultLabel")}
                   disabled={submitting}
-                  className={fieldControlClass}
+                  className={settingsFormControlClass}
                   autoComplete="off"
                 />
-                <p className="text-xs font-medium text-muted-foreground">
-                  {t("labelHint")}
-                </p>
-              </div>
+              </SettingsFormField>
               {createError ? (
-                <SoftNotice
+                <SettingsFeedback
+                  role="alert"
+                  icon={TriangleAlert}
                   title={t("createErrorTitle")}
                   description={createError}
-                  role="alert"
                 />
               ) : null}
               <DialogFooter className="gap-2 sm:gap-2">
@@ -433,7 +403,7 @@ export function ReaderCatalogSection({
         </DialogContent>
       </Dialog>
 
-      {/* Pen Dialog/RevokeOpds */}
+      {/* Pen Dialog/RevokeOpds iUc27 — 400, pad 24, gap 16, r lg */}
       <Dialog
         open={revokeTarget !== null}
         onOpenChange={(open) => !open && !revoking && setRevokeTarget(null)}
@@ -449,10 +419,11 @@ export function ReaderCatalogSection({
             </DialogDescription>
           </DialogHeader>
           {revokeError ? (
-            <SoftNotice
+            <SettingsFeedback
+              role="alert"
+              icon={TriangleAlert}
               title={t("revokeErrorTitle")}
               description={revokeError}
-              role="alert"
             />
           ) : null}
           <DialogFooter className="gap-2 sm:gap-2">

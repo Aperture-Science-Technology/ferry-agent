@@ -1,6 +1,6 @@
 /**
  * Pen Sources rebuild: SourceRows (FXBHb / mF0050), no table/SaaS cards,
- * header Sources + cloud/Gateway subtitle, FR/EN provider identity.
+ * dedicated mobile/desktop headers, FR/EN provider identity.
  * Run: npm run test:ui-harness
  */
 import { render, screen, within } from "@testing-library/react";
@@ -140,15 +140,38 @@ describe("UI harness — Pen sources composition", () => {
     expect(rows[3]!.getAttribute("data-source-availability")).toBe("gateway");
   });
 
-  it("shows Pen page header and supported hint without SaaS section chrome", () => {
+  it("exposes dedicated mobile and desktop headers (mF0050 / Hd0003)", () => {
+    renderSources("fr");
+    const mobile = screen.getByTestId("sources-header-mobile");
+    const desktop = screen.getByTestId("sources-header-desktop");
+    expect(mobile.className).toMatch(/md:hidden/);
+    expect(desktop.className).toMatch(/hidden/);
+    expect(desktop.className).toMatch(/md:flex/);
+    expect(within(mobile).getByText("Ferry Agent")).toBeTruthy();
+    expect(mobile.querySelector("h1")?.textContent).toBe("Sources");
+    expect(desktop.querySelector("h1")?.textContent).toBe("Sources");
+    expect(desktop.querySelector("h1")?.className).toMatch(/text-\[28px\]/);
+    expect(mobile.querySelector("h1")?.className).toMatch(/text-\[22px\]/);
+    expect(within(desktop).queryByText("Ferry Agent")).toBeNull();
+    expect(
+      within(mobile).getByText(messagesFr.pages.sources.descriptionMobile)
+    ).toBeTruthy();
+    expect(
+      within(desktop).getByText(messagesFr.pages.sources.description)
+    ).toBeTruthy();
+  });
+
+  it("shows Pen page header and desktop-only supported hint without SaaS section chrome", () => {
     const { unmount } = renderSources("fr");
     expect(
-      screen.getByRole("heading", { level: 1, name: "Sources" })
-    ).toBeTruthy();
-    expect(
-      screen.getByText(messagesFr.pages.sources.description)
-    ).toBeTruthy();
-    expect(screen.getByText(messagesFr.sources.supportedHint)).toBeTruthy();
+      screen.getByTestId("sources-header-desktop").querySelector("h1")
+        ?.textContent
+    ).toBe("Sources");
+    const hint = screen.getByText(messagesFr.sources.supportedHint, {
+      hidden: true,
+    });
+    expect(hint.className).toMatch(/hidden/);
+    expect(hint.className).toMatch(/md:block/);
     expect(screen.queryByText(messagesFr.sources.sectionTitle)).toBeNull();
     expect(screen.queryByText(messagesFr.sources.openAccessTitle)).toBeNull();
     expect(screen.queryByText(messagesFr.sources.localTitle)).toBeNull();
@@ -156,12 +179,12 @@ describe("UI harness — Pen sources composition", () => {
 
     renderSources("en");
     expect(
-      screen.getByRole("heading", { level: 1, name: "Sources" })
-    ).toBeTruthy();
+      screen.getByTestId("sources-header-desktop").querySelector("h1")
+        ?.textContent
+    ).toBe("Sources");
     expect(
-      screen.getByText(messagesEn.pages.sources.description)
+      screen.getByText(messagesEn.sources.supportedHint, { hidden: true })
     ).toBeTruthy();
-    expect(screen.getByText(messagesEn.sources.supportedHint)).toBeTruthy();
     expect(screen.queryByText(messagesEn.sources.sectionTitle)).toBeNull();
     expect(
       screen.getByRole("heading", {
@@ -173,7 +196,12 @@ describe("UI harness — Pen sources composition", () => {
   it("does not crush into a desktop table markup at mobile density", () => {
     renderSources("fr");
     const layout = screen.getByTestId("sources-pen-layout");
+    expect(layout.className).toMatch(/min-w-0/);
+    expect(screen.getByTestId("sources-body")).toBeTruthy();
     expect(layout.querySelector("table")).toBeNull();
     expect(screen.getAllByTestId("source-row").length).toBe(4);
+    const rows = screen.getByTestId("sources-rows").firstElementChild;
+    expect(rows?.className).toMatch(/gap-3/);
+    expect(rows?.className).toMatch(/md:gap-0/);
   });
 });

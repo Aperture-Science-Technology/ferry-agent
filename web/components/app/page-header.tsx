@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** Pen Header/Page title block — Fraunces 18/500 + optional 12/500 subtitle. */
+/** Pen Header/Page ePLzB title block — Fraunces 18/500 + optional 12/500 subtitle, min-height 72. */
 export function PageHeader({
   title,
   description,

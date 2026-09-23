@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -24,16 +23,15 @@ import {
 } from "@/components/ui/select";
 import { BrandBadge } from "@/components/app/devices/brand-badge";
 import { ConversionProfileField } from "@/components/app/devices/conversion-profile-field";
+import {
+  DeviceFormField,
+  deviceFormControlClass,
+} from "@/components/app/devices/device-form-field";
 import { useApiClient } from "@/lib/api-client";
 import type { ConversionPreset, Device, DevicePatch } from "@/lib/types";
 
 const BRANDS: Device["brand"][] = ["kindle", "kobo", "tolino", "pocketbook", "other"];
 const MODEL_BRANDS = ["kindle", "kobo", "tolino", "pocketbook"] as const;
-
-const fieldClass = "flex flex-col gap-1.5";
-const labelClass = "text-xs font-medium text-muted-foreground";
-const controlClass =
-  "h-auto min-h-10 w-full rounded-lg border-border bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
 
 export function EditDeviceDialog({
   device,
@@ -110,23 +108,17 @@ export function EditDeviceDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
-          <div className={fieldClass}>
-            <Label htmlFor={nameId} className={labelClass}>
-              {tNewDevice("nameOptional")}
-            </Label>
+          <DeviceFormField label={tNewDevice("nameOptional")} htmlFor={nameId}>
             <Input
               id={nameId}
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder={tNewDevice("namePlaceholder")}
               disabled={submitting}
-              className={controlClass}
+              className={deviceFormControlClass}
             />
-          </div>
-          <div className={fieldClass}>
-            <Label htmlFor={brandId} className={labelClass}>
-              {tNewDevice("brand")}
-            </Label>
+          </DeviceFormField>
+          <DeviceFormField label={tNewDevice("brand")} htmlFor={brandId}>
             <Select
               value={brand}
               onValueChange={(value) =>
@@ -134,7 +126,7 @@ export function EditDeviceDialog({
               }
               disabled={submitting}
             >
-              <SelectTrigger id={brandId} className={controlClass}>
+              <SelectTrigger id={brandId} className={deviceFormControlClass}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -145,18 +137,15 @@ export function EditDeviceDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className={fieldClass}>
-            <Label htmlFor={modelId} className={labelClass}>
-              {tNewDevice("modelOptional")}
-            </Label>
+          </DeviceFormField>
+          <DeviceFormField label={tNewDevice("modelOptional")} htmlFor={modelId}>
             {modelOptions ? (
               <Select
                 value={model}
                 onValueChange={(value) => setModel(value ?? "")}
                 disabled={submitting}
               >
-                <SelectTrigger id={modelId} className={controlClass}>
+                <SelectTrigger id={modelId} className={deviceFormControlClass}>
                   <SelectValue placeholder={tNewDevice("modelPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -173,10 +162,10 @@ export function EditDeviceDialog({
                 value={model}
                 onChange={(event) => setModel(event.target.value)}
                 disabled={submitting}
-                className={controlClass}
+                className={deviceFormControlClass}
               />
             )}
-          </div>
+          </DeviceFormField>
           <ConversionProfileField
             value={conversionProfile}
             onChange={setConversionProfile}
@@ -188,14 +177,14 @@ export function EditDeviceDialog({
             variant="outline"
             onClick={() => handleOpenChange(false)}
             disabled={submitting}
-            className="whitespace-normal"
+            className="whitespace-normal rounded-md"
           >
             {tCommon("cancel")}
           </Button>
           <Button
             onClick={() => void submit()}
             disabled={submitting}
-            className="whitespace-normal"
+            className="whitespace-normal rounded-md"
           >
             {submitting ? <Loader2 className="animate-spin" /> : null}
             {tCommon("save")}
