@@ -33,8 +33,11 @@
     "faq": "FAQ",
     "docs": "Guide",
     "signIn": "Connexion",
-    "openDashboard": "Ouvrir l'espace",
-    "dashboard": "Espace"
+    "openDashboard": "Ouvrir la bibliothèque",
+    "dashboard": "Bibliothèque",
+    "primaryNav": "Navigation",
+    "menuOpen": "Ouvrir le menu",
+    "menuClose": "Fermer le menu"
   },
   "footer": {
     "builtBy": "Conçu par Aperture Science Technology",
@@ -44,12 +47,16 @@
     "dashboard": "Espace"
   },
   "hero": {
-    "badge": "En ligne, pour votre liseuse",
-    "titleBefore": "Ferry Agent.",
-    "titleHighlight": "Trouver, préparer, envoyer.",
-    "subtitle": "Cherchez un livre, ajoutez-le à votre bibliothèque en ligne, envoyez-le sur votre appareil — simplement.",
-    "ctaDashboard": "Ouvrir l'espace",
-    "ctaHow": "Comment ça marche"
+    "badge": "Bibliothèque en ligne",
+    "titleBefore": "Votre bibliothèque en ligne.",
+    "titleHighlight": "Vos livres sur votre liseuse.",
+    "subtitle": "Ajoutez un livre, puis choisissez comment l'envoyer à votre liseuse.",
+    "ctaDashboard": "Ouvrir ma bibliothèque",
+    "ctaHow": "Voir les étapes",
+    "sceneLibrary": "Bibliothèque en ligne",
+    "sceneBook": "Livre de démonstration",
+    "sceneReader": "Liseuse",
+    "sceneCaption": "Exemple visuel : un livre passe de la bibliothèque Ferry en ligne vers une liseuse. Ce n’est pas une confirmation d’envoi."
   },
   "valueProps": {
     "eyebrow": "Pourquoi Ferry Agent",
@@ -91,22 +98,22 @@
   },
   "howItWorks": {
     "title": "Comment ça marche.",
-    "subtitle": "Trois gestes : trouver un livre, le préparer dans votre bibliothèque en ligne, l'envoyer à votre liseuse.",
+    "subtitle": "Trois gestes pour envoyer un livre à votre liseuse depuis votre bibliothèque en ligne.",
     "steps": {
-      "find": {
+      "add": {
         "number": "01",
-        "title": "Trouvez un livre",
-        "body": "Cherchez par titre ou auteur. Sources en accès libre sur la plateforme, et sources locales via le Gateway si vous l'installez."
+        "title": "Ajoutez",
+        "body": "Importez un fichier ou cherchez dans les sources proposées. Votre livre rejoint votre bibliothèque en ligne."
       },
-      "prepare": {
+      "choose": {
         "number": "02",
-        "title": "Préparez-le dans votre bibliothèque",
-        "body": "Ajoutez le livre à votre bibliothèque en ligne. Il est prêt pour l'envoi vers votre liseuse."
+        "title": "Choisissez",
+        "body": "Sélectionnez une liseuse et un mode d’envoi compatible avec cet appareil."
       },
       "send": {
         "number": "03",
-        "title": "Envoyez-le à votre liseuse",
-        "body": "Choisissez l'appareil. Ferry Agent s'occupe du format et de l'envoi."
+        "title": "Envoyez",
+        "body": "Lancez l’envoi et suivez son état dans Ferry Agent."
       }
     }
   },

@@ -33,8 +33,11 @@
     "faq": "FAQ",
     "docs": "Guide",
     "signIn": "Sign in",
-    "openDashboard": "Open dashboard",
-    "dashboard": "Dashboard"
+    "openDashboard": "Open the library",
+    "dashboard": "Library",
+    "primaryNav": "Navigation",
+    "menuOpen": "Open menu",
+    "menuClose": "Close menu"
   },
   "footer": {
     "builtBy": "Built by Aperture Science Technology",
@@ -44,12 +47,16 @@
     "dashboard": "Workspace"
   },
   "hero": {
-    "badge": "Online, for your e-reader",
-    "titleBefore": "Ferry Agent.",
-    "titleHighlight": "Find, prepare, send.",
-    "subtitle": "Search for a book, add it to your online library, send it to your device — simply.",
-    "ctaDashboard": "Open the workspace",
-    "ctaHow": "How it works"
+    "badge": "Online library",
+    "titleBefore": "Your online library.",
+    "titleHighlight": "Your books on your e-reader.",
+    "subtitle": "Add a book, then choose how to send it to your e-reader.",
+    "ctaDashboard": "Open my library",
+    "ctaHow": "See the steps",
+    "sceneLibrary": "Online library",
+    "sceneBook": "Demo book",
+    "sceneReader": "E-reader",
+    "sceneCaption": "Visual example: a book moves from the Ferry online library to an e-reader. This is not a delivery confirmation."
   },
   "valueProps": {
     "eyebrow": "Why Ferry Agent",
@@ -91,22 +98,22 @@
   },
   "howItWorks": {
     "title": "How it works.",
-    "subtitle": "Three steps: find a book, prepare it in your online library, send it to your e-reader.",
+    "subtitle": "Three steps to send a book to your e-reader from your online library.",
     "steps": {
-      "find": {
+      "add": {
         "number": "01",
-        "title": "Find a book",
-        "body": "Search by title or author. Open-access sources on the platform, and local sources through the Gateway if you install it."
+        "title": "Add",
+        "body": "Import a file or search the available sources. Your book joins your online library."
       },
-      "prepare": {
+      "choose": {
         "number": "02",
-        "title": "Prepare it in your library",
-        "body": "Add the book to your online library. It is ready to send to your e-reader."
+        "title": "Choose",
+        "body": "Select an e-reader and a delivery mode that works with that device."
       },
       "send": {
         "number": "03",
-        "title": "Send it to your e-reader",
-        "body": "Choose the device. Ferry Agent handles the format and delivery."
+        "title": "Send",
+        "body": "Start the delivery and follow its status in Ferry Agent."
       }
     }
   },

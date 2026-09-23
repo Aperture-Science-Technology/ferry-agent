@@ -1,87 +1,78 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
 import { Show, SignInButton } from "@clerk/nextjs";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { BrandMark } from "@/components/brand-logo";
 import { PassageRule } from "@/components/passage-rule";
+import { PassageScene } from "@/components/marketing/passage-scene";
 
+/**
+ * Public landing hero — centered editorial promise + monumental product scene.
+ * Title, subtitle and primary CTA are plain HTML from first paint (no entrance hide).
+ * Scene motion is local to PassageScene and respects prefers-reduced-motion.
+ */
 export function Hero() {
   const t = useTranslations("hero");
-  const prefersReducedMotion = useReducedMotion();
-  const enterY = prefersReducedMotion ? 0 : 14;
-  const duration = prefersReducedMotion ? 0.01 : 0.55;
-  const delayStep = prefersReducedMotion ? 0 : 0.08;
 
   return (
-    <section className="relative overflow-hidden border-b border-border">
+    <section
+      data-testid="landing-hero"
+      className="relative overflow-hidden border-b border-border"
+    >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,oklch(0.94_0.02_70)_0%,transparent_55%)]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,oklch(0.94_0.02_70)_0%,transparent_58%)]"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-px bg-border"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[70%] bg-[linear-gradient(180deg,oklch(0.97_0.01_75)_0%,transparent_100%)]"
       />
 
-      <div className="mx-auto flex max-w-4xl flex-col items-center px-6 pt-20 pb-24 text-center sm:pt-28">
-        <motion.div
-          initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: prefersReducedMotion ? 0.01 : 0.45 }}
-          className="mb-8 flex flex-col items-center gap-4"
-        >
-          <BrandMark className="size-10 text-primary" />
-          <PassageRule />
-          <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-            {t("badge")}
-          </p>
-        </motion.div>
+      <div className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-16 text-center sm:pt-20 lg:pt-24">
+        <PassageRule className="mb-5" />
+        <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
+          {t("badge")}
+        </p>
 
-        <motion.h1
-          initial={{ opacity: 0, y: enterY }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration, ease: "easeOut" }}
-          className="font-heading text-5xl leading-[1.05] font-medium tracking-tight text-balance sm:text-6xl md:text-7xl"
-        >
+        <h1 className="mt-4 font-heading text-4xl leading-[1.08] font-medium tracking-tight text-balance sm:text-5xl lg:text-6xl">
           <span className="block text-foreground">{t("titleBefore")}</span>
           <span className="mt-2 block text-primary">{t("titleHighlight")}</span>
-        </motion.h1>
+        </h1>
 
-        <motion.p
-          initial={{ opacity: 0, y: enterY }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration, ease: "easeOut", delay: delayStep }}
-          className="mt-7 max-w-xl text-lg leading-relaxed text-muted-foreground"
-        >
+        <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
           {t("subtitle")}
-        </motion.p>
+        </p>
 
-        <motion.div
-          initial={{ opacity: 0, y: enterY }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration, ease: "easeOut", delay: delayStep * 2 }}
-          className="mt-10 flex flex-wrap items-center justify-center gap-3"
-        >
+        <div className="mt-8 flex flex-col items-center gap-4 sm:mt-9">
           <Show when="signed-out">
             <SignInButton>
-              <Button size="lg">{t("ctaDashboard")}</Button>
+              <Button size="lg" className="transition-colors duration-125">
+                {t("ctaDashboard")}
+              </Button>
             </SignInButton>
           </Show>
           <Show when="signed-in">
             <Button
               size="lg"
-              render={<Link href="/app/bibliotheque">{t("ctaDashboard")}</Link>}
+              className="transition-colors duration-125"
+              render={
+                <Link href="/app/bibliotheque">{t("ctaDashboard")}</Link>
+              }
             />
           </Show>
-          <Button
-            variant="outline"
-            size="lg"
-            render={<Link href="/#how-it-works">{t("ctaHow")}</Link>}
-          />
-        </motion.div>
+          <Link
+            href="/#how-it-works"
+            className="text-sm text-muted-foreground underline-offset-4 transition-colors duration-125 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {t("ctaHow")}
+          </Link>
+        </div>
+      </div>
+
+      {/* Monumental scene under copy — partially clipped like a product stage */}
+      <div className="relative mx-auto mt-10 w-full max-w-[88rem] px-3 sm:mt-12 sm:px-5 lg:mt-14 lg:px-8">
+        <PassageScene />
       </div>
     </section>
   );
