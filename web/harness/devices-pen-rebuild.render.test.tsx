@@ -1,6 +1,6 @@
 /**
  * Pen devices rebuild: DeviceRow composition (TJFgO / mF003e), no desktop table,
- * header Appareils + Destinations, FR/EN labels, API tier only.
+ * dedicated mobile header, unique page title, FR/EN labels, API tier only.
  * Run: npm run test:ui-harness
  */
 import { render, screen, within } from "@testing-library/react";
@@ -119,16 +119,37 @@ describe("UI harness — Pen devices composition", () => {
     expect(within(rows[1]!).getByText("Arrive via le cloud")).toBeTruthy();
   });
 
+  it("exposes dedicated mobile and desktop headers (mF003e / Hd0003)", () => {
+    renderDevices("fr");
+    const mobile = screen.getByTestId("devices-header-mobile");
+    const desktop = screen.getByTestId("devices-header-desktop");
+    expect(mobile.className).toMatch(/md:hidden/);
+    expect(desktop.className).toMatch(/hidden/);
+    expect(desktop.className).toMatch(/md:flex/);
+    expect(within(mobile).getByText("Ferry Agent")).toBeTruthy();
+    expect(mobile.querySelector("h1")?.textContent).toBe("Appareils");
+    expect(desktop.querySelector("h1")?.textContent).toBe("Appareils");
+    expect(desktop.querySelector("h1")?.className).toMatch(/text-\[28px\]/);
+    expect(mobile.querySelector("h1")?.className).toMatch(/text-\[22px\]/);
+    expect(within(desktop).queryByText("Ferry Agent")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Actualiser" }).length).toBe(1);
+    expect(screen.getAllByRole("button", { name: "Nouvel appareil" }).length).toBe(1);
+  });
+
   it("shows Pen page header copy in FR and EN without SaaS section chrome", () => {
     const { unmount } = renderDevices("fr");
-    expect(screen.getByRole("heading", { level: 1, name: "Appareils" })).toBeTruthy();
-    expect(screen.getByText("Destinations enregistrées")).toBeTruthy();
+    expect(screen.getByTestId("devices-header-mobile").querySelector("h1")?.textContent).toBe(
+      "Appareils"
+    );
+    expect(screen.getAllByText("Destinations enregistrées").length).toBeGreaterThan(0);
     expect(screen.queryByText("Vos appareils")).toBeNull();
     unmount();
 
     renderDevices("en");
-    expect(screen.getByRole("heading", { level: 1, name: "Devices" })).toBeTruthy();
-    expect(screen.getByText("Registered destinations")).toBeTruthy();
+    expect(screen.getByTestId("devices-header-mobile").querySelector("h1")?.textContent).toBe(
+      "Devices"
+    );
+    expect(screen.getAllByText("Registered destinations").length).toBeGreaterThan(0);
     expect(screen.getByText("Arrives by email (Kindle)")).toBeTruthy();
     expect(screen.getByText("Arrives via the cloud")).toBeTruthy();
     expect(screen.queryByText("Your devices")).toBeNull();
@@ -149,6 +170,7 @@ describe("UI harness — Pen devices composition", () => {
     renderDevices("fr");
     const layout = screen.getByTestId("devices-pen-layout");
     expect(layout.className).toMatch(/min-w-0/);
+    expect(screen.getByTestId("devices-body")).toBeTruthy();
     expect(document.querySelectorAll("[data-testid='device-row']").length).toBe(2);
     expect(document.querySelector("thead")).toBeNull();
   });

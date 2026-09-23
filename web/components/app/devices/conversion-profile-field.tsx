@@ -2,7 +2,6 @@
 
 import { useId } from "react";
 import { useTranslations } from "next-intl";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -10,6 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DeviceFormField,
+  deviceFormControlClass,
+} from "@/components/app/devices/device-form-field";
 import type { ConversionPreset } from "@/lib/types";
 
 const PROFILE_AUTO = "auto";
@@ -38,13 +41,14 @@ export function ConversionProfileField({
   const selectValue = value ?? PROFILE_AUTO;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <Label
-        htmlFor={selectId}
-        className="text-xs font-medium text-muted-foreground"
-      >
-        {t("conversionProfile")}
-      </Label>
+    <DeviceFormField
+      label={t("conversionProfile")}
+      htmlFor={selectId}
+      hintId={hintId}
+      hint={
+        selectValue === PROFILE_AUTO ? t("conversionProfileAutoHint") : undefined
+      }
+    >
       <Select
         value={selectValue}
         onValueChange={(next) => {
@@ -55,7 +59,7 @@ export function ConversionProfileField({
       >
         <SelectTrigger
           id={selectId}
-          className="h-auto min-h-10 w-full rounded-lg border-border bg-ferry-surface-2 px-3 py-3 text-sm font-medium"
+          className={deviceFormControlClass}
           aria-describedby={selectValue === PROFILE_AUTO ? hintId : undefined}
         >
           <SelectValue />
@@ -69,14 +73,6 @@ export function ConversionProfileField({
           ))}
         </SelectContent>
       </Select>
-      {selectValue === PROFILE_AUTO ? (
-        <p
-          id={hintId}
-          className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground"
-        >
-          {t("conversionProfileAutoHint")}
-        </p>
-      ) : null}
-    </div>
+    </DeviceFormField>
   );
 }
