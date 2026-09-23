@@ -59,7 +59,12 @@
     "sceneCaption": "Visual example: a book moves from the Ferry online library to an e-reader. This is not a delivery confirmation."
   },
   "valueProps": {
-    "eyebrow": "Why Ferry Agent",
+    "eyebrow": "The platform",
+    "title": "Why Ferry Agent.",
+    "lead": "A hosted online library, legal open-access sources, and a local module only when your sources need it.",
+    "sceneCloud": "Online",
+    "sceneGateway": "At home",
+    "sceneCaption": "Your library lives online. The Gateway only connects certain local sources.",
     "items": {
       "cloudFirst": {
         "title": "Your library, online.",
@@ -77,22 +82,23 @@
   },
   "delivered": {
     "title": "On your device.",
+    "subtitle": "Four ways to send a book to a supported device. A finished send does not confirm that the book was opened.",
     "items": {
       "kindle": {
         "name": "Kindle",
-        "body": "Arrives by email on its own."
+        "body": "Delivery by email to your device."
       },
       "kobo": {
         "name": "Kobo",
-        "body": "One sync away."
+        "body": "Sync with a cloud-linked device."
       },
       "tolino": {
         "name": "Tolino",
-        "body": "A code in your browser."
+        "body": "A temporary code in the browser."
       },
       "usb": {
         "name": "USB",
-        "body": "Always available by hand."
+        "body": "Manual transfer to a plugged-in e-reader."
       }
     }
   },
@@ -118,9 +124,10 @@
     }
   },
   "mcpSpotlight": {
-    "eyebrow": "For AI assistants too",
-    "title": "Your library, also from a conversation",
-    "body": "Search, add, and send your books from an AI assistant (Claude, ChatGPT…), with the same connection as the online workspace.",
+    "eyebrow": "Conversation",
+    "title": "The same library, also in an assistant.",
+    "body": "Search, add, and send your books from an assistant (Claude, ChatGPT…), with the same connection as the online workspace.",
+    "aside": "Same account, same books — another path for them to travel.",
     "cta": "See the guide"
   },
   "faq": {

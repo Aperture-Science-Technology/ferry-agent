@@ -59,7 +59,12 @@
     "sceneCaption": "Exemple visuel : un livre passe de la bibliothèque Ferry en ligne vers une liseuse. Ce n’est pas une confirmation d’envoi."
   },
   "valueProps": {
-    "eyebrow": "Pourquoi Ferry Agent",
+    "eyebrow": "La plateforme",
+    "title": "Pourquoi Ferry Agent.",
+    "lead": "Une bibliothèque hébergée en ligne, des sources légales en accès libre, et un module local seulement quand vos sources le demandent.",
+    "sceneCloud": "En ligne",
+    "sceneGateway": "Chez vous",
+    "sceneCaption": "Votre bibliothèque vit en ligne. Le Gateway relie seulement certaines sources locales.",
     "items": {
       "cloudFirst": {
         "title": "Votre bibliothèque en ligne.",
@@ -77,22 +82,23 @@
   },
   "delivered": {
     "title": "Sur votre liseuse.",
+    "subtitle": "Quatre façons d’envoyer un livre vers un appareil pris en charge. Un envoi terminé ne confirme pas que le livre a été ouvert.",
     "items": {
       "kindle": {
         "name": "Kindle",
-        "body": "Arrive tout seul par email."
+        "body": "Envoi par email vers votre appareil."
       },
       "kobo": {
         "name": "Kobo",
-        "body": "Synchronisé en un geste."
+        "body": "Synchronisation avec un appareil lié au cloud."
       },
       "tolino": {
         "name": "Tolino",
-        "body": "Un code dans votre navigateur."
+        "body": "Un code temporaire dans le navigateur."
       },
       "usb": {
         "name": "USB",
-        "body": "Toujours possible, à la main."
+        "body": "Transfert manuel sur une liseuse branchée."
       }
     }
   },
@@ -118,9 +124,10 @@
     }
   },
   "mcpSpotlight": {
-    "eyebrow": "Pour les assistants IA aussi",
-    "title": "Votre bibliothèque, aussi depuis une conversation",
-    "body": "Cherchez, ajoutez et envoyez vos livres depuis un assistant IA (Claude, ChatGPT…), avec la même connexion que l'espace en ligne.",
+    "eyebrow": "Conversation",
+    "title": "La même bibliothèque, aussi dans un assistant.",
+    "body": "Cherchez, ajoutez et envoyez vos livres depuis un assistant (Claude, ChatGPT…), avec la même connexion que l’espace en ligne.",
+    "aside": "Même compte, mêmes livres — un autre chemin pour les faire passer.",
     "cta": "Voir le guide"
   },
   "faq": {
