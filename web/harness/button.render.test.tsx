@@ -20,6 +20,6 @@ describe("UI harness — Button", () => {
       .map((node) => node.textContent ?? "")
       .join("\n");
     expect(stylesheetText).toContain("--primary");
-    expect(stylesheetText).toMatch(/oklch/);
+    expect(stylesheetText).toMatch(/#9a4825|oklch\(/);
   });
 });

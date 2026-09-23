@@ -147,15 +147,16 @@
     "devices": "Appareils",
     "access": "Gateway",
     "sources": "Sources",
-    "deliveries": "Envois",
+    "deliveries": "Livraisons",
     "settings": "Réglages",
     "more": "Plus",
     "docs": "Guide",
     "account": "Compte",
-    "groupTransfer": "Transfert",
+    "language": "Langue",
+    "groupPrimary": "Principal",
     "groupLocal": "Chez vous",
     "moreMenu": "Menu",
-    "moreDescription": "Gateway, sources, réglages et compte."
+    "moreDescription": "Gateway, sources, réglages, guide et compte."
   },
   "pages": {
     "library": {
@@ -175,8 +176,8 @@
       "description": "Gérez les catalogues utilisés pour chercher des livres, et vos sources installées chez vous."
     },
     "deliveries": {
-      "title": "Envois",
-      "description": "Suivez vos envois depuis la bibliothèque en ligne vers vos appareils."
+      "title": "Livraisons",
+      "description": "Suivez vos livraisons depuis la bibliothèque en ligne vers vos appareils."
     },
     "settings": {
       "title": "Réglages",

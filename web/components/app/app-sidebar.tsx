@@ -49,30 +49,19 @@ type NavItem = {
   icon: typeof Library;
 };
 
-const PRIMARY: NavItem = {
-  href: "/app/bibliotheque",
-  labelKey: "library",
-  icon: Library,
-};
-
-const TRANSFER: NavItem[] = [
+/** Principal destinations — library, deliveries, devices. */
+const PRIMARY: NavItem[] = [
+  { href: "/app/bibliotheque", labelKey: "library", icon: Library },
   { href: "/app/livraisons", labelKey: "deliveries", icon: Send },
-];
-
-const DEVICES: NavItem[] = [
   { href: "/app/appareils", labelKey: "devices", icon: Tablet },
 ];
 
+/** Local / at-home destinations — gateway, sources, settings. */
 const LOCAL: NavItem[] = [
   { href: "/app/gateways", labelKey: "access", icon: Radio },
   { href: "/app/sources", labelKey: "sources", icon: Database },
+  { href: "/app/reglages", labelKey: "settings", icon: Settings },
 ];
-
-const SETTINGS: NavItem = {
-  href: "/app/reglages",
-  labelKey: "settings",
-  icon: Settings,
-};
 
 function isActivePath(pathname: string | null, href: string) {
   return Boolean(pathname?.startsWith(href));
@@ -83,21 +72,23 @@ function NavLink({ item }: { item: NavItem }) {
   const t = useTranslations("nav");
   const active = isActivePath(pathname, item.href);
   const Icon = item.icon;
+  const label = t(item.labelKey);
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         isActive={active}
-        tooltip={t(item.labelKey)}
+        tooltip={label}
+        aria-current={active ? "page" : undefined}
         className={cn(
-          "relative h-9 gap-3 rounded-md px-2.5 font-normal text-sidebar-foreground/85",
-          "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-foreground",
+          "relative h-9 min-w-0 gap-3 rounded-md px-2.5 font-normal text-sidebar-foreground/85",
+          "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground",
           "data-active:before:absolute data-active:before:inset-y-2 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-sidebar-primary"
         )}
         render={
           <Link href={item.href}>
-            <Icon />
-            <span>{t(item.labelKey)}</span>
+            <Icon aria-hidden />
+            <span className="min-w-0 truncate">{label}</span>
           </Link>
         }
       />
@@ -142,38 +133,34 @@ export function AppSidebar() {
       <SidebarHeader className="gap-3 border-b border-sidebar-border/70 px-3 py-4">
         <Link
           href="/app/bibliotheque"
-          className="flex items-center gap-2.5 rounded-md px-1 py-0.5 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
+          className="flex min-w-0 items-center gap-2.5 rounded-md px-1 py-0.5 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
         >
           <BrandLogo markClassName="size-7" withWordmark={!collapsed} />
         </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-1 py-3">
-        <NavCluster items={[PRIMARY]} />
-        <SidebarSeparator className="my-2 bg-sidebar-border/80" />
-        <NavCluster items={TRANSFER} label={t("groupTransfer")} />
-        <SidebarSeparator className="my-2 bg-sidebar-border/80" />
-        <NavCluster items={DEVICES} />
+        <NavCluster items={PRIMARY} label={t("groupPrimary")} />
         <SidebarSeparator className="my-2 bg-sidebar-border/80" />
         <NavCluster items={LOCAL} label={t("groupLocal")} />
       </SidebarContent>
 
       <SidebarFooter className="gap-3 border-t border-sidebar-border/70 px-2 py-3">
         <SidebarMenu className="gap-0.5">
-          <NavLink item={SETTINGS} />
           <SidebarMenuItem>
             <SidebarMenuButton
               isActive={docsActive}
               tooltip={t("docs")}
+              aria-current={docsActive ? "page" : undefined}
               className={cn(
-                "relative h-9 gap-3 rounded-md px-2.5 font-normal text-sidebar-foreground/85",
-                "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-foreground",
+                "relative h-9 min-w-0 gap-3 rounded-md px-2.5 font-normal text-sidebar-foreground/85",
+                "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground",
                 "data-active:before:absolute data-active:before:inset-y-2 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-sidebar-primary"
               )}
               render={
                 <Link href="/docs">
-                  <BookOpen />
-                  <span>{t("docs")}</span>
+                  <BookOpen aria-hidden />
+                  <span className="min-w-0 truncate">{t("docs")}</span>
                 </Link>
               }
             />
@@ -182,12 +169,12 @@ export function AppSidebar() {
 
         <div
           className={cn(
-            "flex items-center gap-2 px-1",
+            "flex min-w-0 items-center gap-2 px-1",
             collapsed ? "flex-col justify-center" : "justify-between"
           )}
         >
           <LocaleSwitcher compact={collapsed} />
-          <div className="flex size-8 items-center justify-center">
+          <div className="flex size-8 shrink-0 items-center justify-center">
             <UserButton
               appearance={{
                 elements: {

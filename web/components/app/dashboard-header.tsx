@@ -22,13 +22,13 @@ export function DashboardHeader() {
     title = tPages("settings.title");
 
   return (
-    <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border/50 bg-background/90 px-4 backdrop-blur-md md:h-14 md:px-6 lg:px-8">
-      <SidebarTrigger className="hidden md:inline-flex" />
+    <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-3 border-b border-border/50 bg-background/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur-md md:h-14 md:px-6 lg:px-8">
+      <SidebarTrigger className="hidden shrink-0 md:inline-flex" />
       <div className="hidden h-4 items-center md:flex">
         <Separator orientation="vertical" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-muted-foreground">
+        <p className="truncate font-heading text-sm font-medium text-foreground md:text-base">
           <span className="sr-only">{tNav("dashboard")} — </span>
           {title}
         </p>

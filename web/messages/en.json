@@ -152,10 +152,11 @@
     "more": "More",
     "docs": "Guide",
     "account": "Account",
-    "groupTransfer": "Transfer",
+    "language": "Language",
+    "groupPrimary": "Main",
     "groupLocal": "At home",
     "moreMenu": "Menu",
-    "moreDescription": "Gateway, sources, settings, and account."
+    "moreDescription": "Gateway, sources, settings, guide, and account."
   },
   "pages": {
     "library": {

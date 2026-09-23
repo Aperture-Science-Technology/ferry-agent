@@ -111,40 +111,41 @@ export function AppMobileNav() {
             const active = Boolean(pathname?.startsWith(item.href));
             const Icon = item.icon;
             return (
-              <li key={item.href}>
+              <li key={item.href} className="min-w-0">
                 <Link
                   href={item.href}
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
-                    "h-auto w-full flex-col gap-1 rounded-md px-1 py-2 text-[0.6875rem] font-medium",
+                    "h-auto w-full min-w-0 flex-col gap-1 rounded-md px-1 py-2 text-[0.6875rem] font-medium",
                     active
-                      ? "bg-accent text-foreground"
+                      ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground"
                   )}
                   aria-current={active ? "page" : undefined}
                 >
-                  <Icon className="size-5" aria-hidden />
-                  <span className="truncate">{t(item.labelKey)}</span>
+                  <Icon className="size-5 shrink-0" aria-hidden />
+                  <span className="max-w-full truncate">{t(item.labelKey)}</span>
                 </Link>
               </li>
             );
           })}
-          <li>
+          <li className="min-w-0">
             <button
               type="button"
               className={cn(
                 buttonVariants({ variant: "ghost" }),
-                "h-auto w-full flex-col gap-1 rounded-md px-1 py-2 text-[0.6875rem] font-medium",
+                "h-auto w-full min-w-0 flex-col gap-1 rounded-md px-1 py-2 text-[0.6875rem] font-medium",
                 moreActive || moreOpen
-                  ? "bg-accent text-foreground"
+                  ? "bg-accent text-accent-foreground"
                   : "text-muted-foreground"
               )}
               aria-expanded={moreOpen}
               aria-controls="app-mobile-more"
+              aria-haspopup="dialog"
               onClick={() => setMoreOpen(true)}
             >
-              <Ellipsis className="size-5" aria-hidden />
-              <span className="truncate">{t("more")}</span>
+              <Ellipsis className="size-5 shrink-0" aria-hidden />
+              <span className="max-w-full truncate">{t("more")}</span>
             </button>
           </li>
         </ul>
@@ -154,9 +155,9 @@ export function AppMobileNav() {
         <SheetContent
           id="app-mobile-more"
           side="bottom"
-          className="h-[100dvh] max-h-[100dvh] gap-0 rounded-none p-0"
+          className="flex h-[100dvh] max-h-[100dvh] flex-col gap-0 rounded-none p-0"
         >
-          <SheetHeader className="border-b border-border/70 px-5 py-4 text-left">
+          <SheetHeader className="shrink-0 border-b border-border/70 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4 text-left">
             <SheetTitle className="font-heading text-xl">
               {t("moreMenu")}
             </SheetTitle>
@@ -178,13 +179,13 @@ export function AppMobileNav() {
                       onClick={() => setMoreOpen(false)}
                       className={cn(
                         buttonVariants({ variant: "ghost" }),
-                        "h-11 w-full justify-start gap-3 rounded-md px-3 text-sm",
-                        active && "bg-accent font-medium text-foreground"
+                        "h-11 w-full min-w-0 justify-start gap-3 rounded-md px-3 text-sm",
+                        active && "bg-accent font-medium text-accent-foreground"
                       )}
                       aria-current={active ? "page" : undefined}
                     >
-                      <Icon className="size-4" aria-hidden />
-                      {t(item.labelKey)}
+                      <Icon className="size-4 shrink-0" aria-hidden />
+                      <span className="min-w-0 truncate">{t(item.labelKey)}</span>
                     </Link>
                   </li>
                 );
@@ -200,20 +201,28 @@ export function AppMobileNav() {
                   onClick={() => setMoreOpen(false)}
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
-                    "h-11 w-full justify-start gap-3 rounded-md px-3 text-sm",
+                    "h-11 w-full min-w-0 justify-start gap-3 rounded-md px-3 text-sm",
                     pathname?.startsWith("/docs") &&
-                      "bg-accent font-medium text-foreground"
+                      "bg-accent font-medium text-accent-foreground"
                   )}
+                  aria-current={
+                    pathname?.startsWith("/docs") ? "page" : undefined
+                  }
                 >
-                  <BookOpen className="size-4" aria-hidden />
-                  {t("docs")}
+                  <BookOpen className="size-4 shrink-0" aria-hidden />
+                  <span className="min-w-0 truncate">{t("docs")}</span>
                 </Link>
               </li>
             </ul>
 
-            <div className="mt-auto flex items-center justify-between gap-3 border-t border-border/70 px-2 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <LocaleSwitcher />
-              <div className="flex items-center gap-2">
+            <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-border/70 px-2 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-xs text-muted-foreground">
+                  {t("language")}
+                </span>
+                <LocaleSwitcher />
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
                 <span className="text-sm text-muted-foreground">
                   {t("account")}
                 </span>
