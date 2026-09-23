@@ -41,11 +41,13 @@
   },
   "footer": {
     "builtBy": "Conçu par Aperture Science Technology",
+    "nav": "Liens du pied de page",
     "howItWorks": "Comment ça marche",
     "faq": "FAQ",
     "docs": "Guide",
-    "dashboard": "Espace"
+    "dashboard": "Bibliothèque"
   },
+
   "hero": {
     "badge": "Bibliothèque en ligne",
     "titleBefore": "Votre bibliothèque en ligne.",
@@ -131,7 +133,8 @@
     "cta": "Voir le guide"
   },
   "faq": {
-    "title": "Questions. Réponses.",
+    "eyebrow": "Aide",
+    "title": "Questions fréquentes.",
     "items": {
       "cloudFirst": {
         "q": "Où sont mes livres et mes réglages ?",
@@ -151,10 +154,11 @@
       },
       "agent": {
         "q": "Puis-je automatiser les envois ?",
-        "a": "Oui. Un assistant IA peut chercher, ajouter et envoyer à votre place, avec la même connexion que l'espace."
+        "a": "Oui. Un assistant (Claude, ChatGPT…) peut chercher, ajouter et envoyer à votre place, avec la même connexion que la bibliothèque en ligne."
       }
     }
   },
+
   "nav": {
     "dashboard": "Espace",
     "library": "Bibliothèque",

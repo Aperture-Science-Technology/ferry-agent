@@ -41,11 +41,13 @@
   },
   "footer": {
     "builtBy": "Built by Aperture Science Technology",
+    "nav": "Footer links",
     "howItWorks": "How it works",
     "faq": "FAQ",
     "docs": "Guide",
-    "dashboard": "Workspace"
+    "dashboard": "Library"
   },
+
   "hero": {
     "badge": "Online library",
     "titleBefore": "Your online library.",
@@ -131,7 +133,8 @@
     "cta": "See the guide"
   },
   "faq": {
-    "title": "Questions. Answers.",
+    "eyebrow": "Help",
+    "title": "Common questions.",
     "items": {
       "cloudFirst": {
         "q": "Where are my books and settings?",
@@ -151,10 +154,11 @@
       },
       "agent": {
         "q": "Can I automate deliveries?",
-        "a": "Yes. An AI assistant can search, add, and send for you, using the same connection as the workspace."
+        "a": "Yes. An assistant (Claude, ChatGPT…) can search, add, and send for you, using the same connection as the online library."
       }
     }
   },
+
   "nav": {
     "dashboard": "Dashboard",
     "library": "Library",
