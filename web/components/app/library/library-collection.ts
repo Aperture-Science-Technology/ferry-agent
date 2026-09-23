@@ -237,3 +237,34 @@ export function paginateLibraryItems<T>(
 export function pageAfterLibraryCriteriaChange(): 1 {
   return 1;
 }
+
+/**
+ * Client pagination cursor keyed by filter/sort criteria.
+ * When criteria change, always restart at page 1 (never keep a stale page).
+ */
+export function libraryCollectionPageState(
+  prev: { criteriaKey: string; page: number },
+  nextCriteriaKey: string
+): { criteriaKey: string; page: number } {
+  if (prev.criteriaKey === nextCriteriaKey) {
+    return prev;
+  }
+  return {
+    criteriaKey: nextCriteriaKey,
+    page: pageAfterLibraryCriteriaChange(),
+  };
+}
+
+/**
+ * Apply a client-side library refresh.
+ * A failed refresh (`null`) must keep the previous items — never look like an empty library.
+ */
+export function applyLibraryItemsRefreshResult<T>(
+  previous: T[],
+  result: T[] | null
+): { ok: boolean; items: T[]; keptPrevious: boolean } {
+  if (result === null) {
+    return { ok: false, items: previous, keptPrevious: true };
+  }
+  return { ok: true, items: result, keptPrevious: false };
+}

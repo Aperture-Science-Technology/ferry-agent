@@ -190,29 +190,31 @@ export function DeliverDialog({
 
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="min-w-0">
           <PassageRule className="mb-1" />
-          <DialogTitle className="font-heading tracking-tight">
+          <DialogTitle className="font-heading tracking-tight break-words whitespace-normal">
             {t("title", { title: item?.title ?? "" })}
           </DialogTitle>
-          <DialogDescription>{t("description")}</DialogDescription>
+          <DialogDescription className="whitespace-normal">
+            {t("description")}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>{t("device")}</Label>
+            <Label htmlFor="deliver-device">{t("device")}</Label>
             <Select value={deviceId} onValueChange={(value) => handleDeviceChange(value ?? "")}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="deliver-device" className="w-full min-w-0">
                 <SelectValue placeholder={t("devicePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {devices.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                  <div className="px-3 py-2 text-sm whitespace-normal text-muted-foreground">
                     {t("noDevices")}
                   </div>
                 )}
                 {devices.map((device) => (
-                  <SelectItem key={device.id} value={device.id}>
+                  <SelectItem key={device.id} value={device.id} className="whitespace-normal">
                     {device.name || `${device.brand} — ${device.model}`}
                   </SelectItem>
                 ))}
@@ -220,15 +222,15 @@ export function DeliverDialog({
             </Select>
           </div>
           {deviceId && (
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               <Label>{t("methodLabel")}</Label>
               <DeliveryMethodField key={deviceId} deviceId={deviceId} value={method} onChange={setMethod} />
             </div>
           )}
           <div className="space-y-2">
-            <Label>{t("formatOptional")}</Label>
+            <Label htmlFor="deliver-format">{t("formatOptional")}</Label>
             <Select value={format} onValueChange={(value) => value && setFormat(value)}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="deliver-format" className="w-full">
                 <SelectValue placeholder={t("formatPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
@@ -241,7 +243,7 @@ export function DeliverDialog({
             </Select>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {tCommon("cancel")}
           </Button>

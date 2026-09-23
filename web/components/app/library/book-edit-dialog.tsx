@@ -100,12 +100,14 @@ export function BookEditDialog({
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+        <DialogHeader className="min-w-0">
           <PassageRule className="mb-1" />
-          <DialogTitle className="font-heading tracking-tight">
+          <DialogTitle className="font-heading tracking-tight break-words whitespace-normal">
             {t("title", { title: item?.title ?? "" })}
           </DialogTitle>
-          <DialogDescription>{t("description")}</DialogDescription>
+          <DialogDescription className="whitespace-normal">
+            {t("description")}
+          </DialogDescription>
         </DialogHeader>
 
         {form && (
