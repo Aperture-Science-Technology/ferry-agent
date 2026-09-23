@@ -173,7 +173,7 @@
     },
     "sources": {
       "title": "Sources",
-      "description": "Gérez les catalogues utilisés pour chercher des livres, et vos sources installées chez vous."
+      "description": "Catalogues cloud et module local (Gateway)."
     },
     "deliveries": {
       "title": "Livraisons",
@@ -581,13 +581,17 @@
   "sources": {
     "sectionTitle": "Vos sources",
     "intro": "Ferry Agent cherche dans les catalogues que vous activez ici. Les fichiers importés et les sources locales passent par la bibliothèque en ligne ou le Gateway installé chez vous.",
+    "supportedHint": "Sources supportées : Gutenberg, Standard Ebooks, Upload, Torrents (Gateway). Pas de dossier local ni de suppression de source.",
     "openAccessTitle": "Sources en accès libre",
     "openAccessDescription": "Catalogues publics utilisés lors d'une recherche dans les sources.",
     "localTitle": "Vos fichiers et sources locales",
     "localDescription": "Import depuis vos fichiers, et résultats via le Gateway installé chez vous.",
+    "groupOpenAccess": "Accès libre",
+    "groupLocal": "Local",
+    "uploadShelf": "Bibliothèque",
     "providers": {
       "gutenberg": {
-        "name": "Gutenberg",
+        "name": "Project Gutenberg",
         "description": "Des dizaines de milliers de livres du domaine public, en plusieurs langues."
       },
       "standardEbooks": {
@@ -595,11 +599,11 @@
         "description": "Des classiques du domaine public, relus et mis en forme avec soin."
       },
       "upload": {
-        "name": "Ajout manuel",
+        "name": "Fichiers importés",
         "description": "Les livres que vous importez vous-même depuis vos fichiers."
       },
       "torrentGateway": {
-        "name": "Sources locales (Gateway)",
+        "name": "Torrents (Gateway)",
         "description": "Résultats trouvés via le module installé chez vous, puis ajoutés à votre bibliothèque en ligne."
       }
     },
@@ -608,7 +612,7 @@
     "unknown": "État inconnu",
     "unknownHint": "L'état de cette source n'a pas pu être confirmé. Réessayez plus tard.",
     "alwaysActive": "Toujours disponible",
-    "gatewayLocal": "Via le Gateway",
+    "gatewayLocal": "Local via Gateway",
     "gatewayHint": "Cette source dépend du Gateway installé chez vous. Elle n'indique pas à elle seule s'il est connecté.",
     "prowlarrNote": "Prowlarr, s'il est utilisé, reste configuré côté Gateway — pas comme une rubrique principale ici.",
     "gatewayCta": "Ouvrir Gateway",
@@ -620,7 +624,11 @@
     "toastUpdateFailed": "Impossible de mettre à jour cette source. Réessayez.",
     "updateErrorTitle": "Mise à jour impossible",
     "unavailableTitle": "Sources indisponibles",
-    "unavailableNote": "Impossible de charger l'état de vos sources pour le moment. Aucune activation n'est confirmée tant que la liste n'est pas disponible."
+    "unavailableNote": "Impossible de charger l'état de vos sources pour le moment. Aucune activation n'est confirmée tant que la liste n'est pas disponible.",
+    "emptyTitle": "Aucune source renvoyée",
+    "emptyDescription": "La liste a bien répondu, mais aucun catalogue n'a été renvoyé. Réessayez plus tard — aucune activation n'est confirmée.",
+    "partialTitle": "État partiel",
+    "partialNote": "Certaines sources activables n'ont pas pu être confirmées. Celles affichées restent utilisables ; les autres restent en état inconnu."
   },
   "deliveries": {
     "sectionTitle": "Vos envois",

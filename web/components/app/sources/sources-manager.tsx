@@ -14,11 +14,10 @@ import {
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { SectionHeader } from "@/components/app/section-header";
-import { Reveal } from "@/components/motion/reveal";
+import { EmptyState } from "@/components/app/empty-state";
+import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
 import type { Source } from "@/lib/types";
 import {
@@ -26,9 +25,11 @@ import {
   applySourceToggleSuccess,
   canToggleSource,
   findSourceByType,
-  LOCAL_TYPES,
-  OPEN_ACCESS_TYPES,
+  hasPartialSources,
+  SOURCE_DISPLAY_TYPES,
   sourceAvailability,
+  sourceGroup,
+  sourcesSurfaceState,
   type KnownSourceType,
   type SourceAvailability,
 } from "@/components/app/sources/sources-state";
@@ -42,16 +43,6 @@ const PROVIDER_META: Record<
   upload: { key: "upload", icon: Upload },
   torrent_gateway: { key: "torrentGateway", icon: Share2 },
 };
-
-function availabilityBadgeVariant(
-  availability: SourceAvailability
-): "default" | "secondary" | "outline" {
-  if (availability === "enabled" || availability === "always_on") {
-    return "default";
-  }
-  if (availability === "unknown") return "outline";
-  return "secondary";
-}
 
 export function SourcesManager({
   initialSources,
@@ -68,6 +59,13 @@ export function SourcesManager({
   );
   const [updateError, setUpdateError] = useState<string | null>(null);
 
+  const surfaceState = sourcesSurfaceState({
+    sources,
+    sourcesUnavailable,
+    updateError,
+  });
+  const partial = hasPartialSources(sources, sourcesUnavailable);
+
   function availabilityLabel(availability: SourceAvailability): string {
     switch (availability) {
       case "enabled":
@@ -83,6 +81,20 @@ export function SourcesManager({
       default:
         return t("unknown");
     }
+  }
+
+  function metaLine(type: KnownSourceType, availability: SourceAvailability): string {
+    if (type === "upload") {
+      return `${t("alwaysActive")} · ${t("uploadShelf")}`;
+    }
+    if (type === "torrent_gateway") {
+      return t("gatewayLocal");
+    }
+    const group =
+      sourceGroup(type) === "openAccess"
+        ? t("groupOpenAccess")
+        : t("groupLocal");
+    return `${group} · ${availabilityLabel(availability)}`;
   }
 
   async function toggle(source: Source) {
@@ -116,81 +128,116 @@ export function SourcesManager({
     const pending = source ? pendingIds.has(source.id) : false;
     const toggleable = canToggleSource(type, sources, sourcesUnavailable);
     const enabled = availability === "enabled";
+    const name = t(`providers.${meta.key}.name`);
 
     return (
-      <div
-        key={type}
-        className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-      >
-        <div className="flex min-w-0 items-start gap-3">
-          <Icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden />
-          <div className="min-w-0 space-y-1">
-            <p className="font-medium break-words">
-              {t(`providers.${meta.key}.name`)}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {t(`providers.${meta.key}.description`)}
-            </p>
-            {type === "upload" ? (
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto px-0 text-sm"
-                render={<Link href="/app/bibliotheque">{t("uploadCta")}</Link>}
-              />
-            ) : null}
-            {type === "torrent_gateway" ? (
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">
-                  {t("gatewayHint")}
-                </p>
-                <p className="text-xs text-muted-foreground">{t("prowlarrNote")}</p>
+      <RevealItem key={type}>
+        <article
+          data-source-type={type}
+          data-source-availability={availability}
+          className="flex min-w-0 flex-col gap-3 py-3.5 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <Icon
+              className="mt-0.5 size-[18px] shrink-0 text-foreground"
+              aria-hidden
+            />
+            <div className="min-w-0 space-y-1">
+              <h3 className="font-heading text-[15px] leading-snug font-medium tracking-tight break-words whitespace-normal sm:text-base">
+                {name}
+              </h3>
+              <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+                {metaLine(type, availability)}
+              </p>
+              <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+                {t(`providers.${meta.key}.description`)}
+              </p>
+              {type === "upload" ? (
                 <Button
                   variant="link"
                   size="sm"
-                  className="h-auto px-0 text-sm"
-                  render={<Link href="/app/gateways">{t("gatewayCta")}</Link>}
+                  className="h-auto max-w-full px-0 text-sm whitespace-normal"
+                  render={<Link href="/app/bibliotheque">{t("uploadCta")}</Link>}
                 />
-              </div>
-            ) : null}
-            {availability === "unknown" ? (
-              <p className="text-xs text-muted-foreground">{t("unknownHint")}</p>
-            ) : null}
+              ) : null}
+              {type === "torrent_gateway" ? (
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+                    {t("gatewayHint")}
+                  </p>
+                  <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+                    {t("prowlarrNote")}
+                  </p>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto max-w-full px-0 text-sm whitespace-normal"
+                    render={<Link href="/app/gateways">{t("gatewayCta")}</Link>}
+                  />
+                </div>
+              ) : null}
+              {availability === "unknown" ? (
+                <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+                  {t("unknownHint")}
+                </p>
+              ) : null}
+            </div>
           </div>
-        </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 sm:pl-2">
-          <Badge
-            variant={availabilityBadgeVariant(availability)}
-            className="max-w-full"
-          >
-            {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            <span className="truncate">{availabilityLabel(availability)}</span>
-          </Badge>
           {toggleable && source ? (
-            <Switch
-              checked={enabled}
-              disabled={pending}
-              onCheckedChange={() => void toggle(source)}
-              aria-label={
-                enabled
-                  ? t("disableAria", { name: t(`providers.${meta.key}.name`) })
-                  : t("enableAria", { name: t(`providers.${meta.key}.name`) })
-              }
-            />
+            <div className="flex shrink-0 items-center justify-end gap-2 self-end sm:self-center sm:pl-2">
+              {pending ? (
+                <Loader2
+                  className="size-4 shrink-0 animate-spin text-muted-foreground"
+                  aria-hidden
+                />
+              ) : null}
+              <Switch
+                checked={enabled}
+                disabled={pending}
+                onCheckedChange={() => void toggle(source)}
+                aria-label={
+                  enabled
+                    ? t("disableAria", { name })
+                    : t("enableAria", { name })
+                }
+              />
+            </div>
           ) : null}
-        </div>
-      </div>
+        </article>
+      </RevealItem>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-6" data-sources-state={surfaceState}>
+      <p className="max-w-3xl text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+        {t("supportedHint")}
+      </p>
+
       {sourcesUnavailable ? (
+        <div role="alert">
+          <EmptyState
+            icon={Library}
+            title={t("unavailableTitle")}
+            description={t("unavailableNote")}
+          />
+        </div>
+      ) : null}
+
+      {!sourcesUnavailable && sources.length === 0 ? (
+        <EmptyState
+          icon={Library}
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
+        />
+      ) : null}
+
+      {partial ? (
         <Alert>
           <Library aria-hidden />
-          <AlertTitle>{t("unavailableTitle")}</AlertTitle>
-          <AlertDescription>{t("unavailableNote")}</AlertDescription>
+          <AlertTitle>{t("partialTitle")}</AlertTitle>
+          <AlertDescription>{t("partialNote")}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -203,23 +250,9 @@ export function SourcesManager({
       ) : null}
 
       <Reveal>
-        <SectionHeader
-          title={t("openAccessTitle")}
-          description={t("openAccessDescription")}
-        />
-        <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card/60">
-          {OPEN_ACCESS_TYPES.map((type) => renderRow(type))}
-        </div>
-      </Reveal>
-
-      <Reveal>
-        <SectionHeader
-          title={t("localTitle")}
-          description={t("localDescription")}
-        />
-        <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60 bg-card/60">
-          {LOCAL_TYPES.map((type) => renderRow(type))}
-        </div>
+        <RevealGroup className="grid min-w-0 gap-0 divide-y divide-border/70 border-y border-border/70">
+          {SOURCE_DISPLAY_TYPES.map((type) => renderRow(type))}
+        </RevealGroup>
       </Reveal>
     </div>
   );
