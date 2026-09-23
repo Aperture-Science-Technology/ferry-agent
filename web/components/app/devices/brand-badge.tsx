@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import type { DeviceBrand } from "@/lib/types";
 
 const MARK_CLASS =
-  "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted text-foreground";
+  "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-sm bg-ferry-surface text-foreground";
 
 function BrandMark({
   brand,

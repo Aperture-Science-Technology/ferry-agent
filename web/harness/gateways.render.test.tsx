@@ -117,6 +117,8 @@ function renderGateways(
   return render(
     <NextIntlClientProvider locale="fr" messages={messages}>
       <GatewaysView
+        title={messages.pages.access.title}
+        description={messages.pages.access.description}
         initialGateways={props.initialGateways ?? []}
         gatewaysUnavailable={props.gatewaysUnavailable ?? false}
       />
@@ -303,7 +305,7 @@ describe("UI harness — gateways", () => {
     });
   });
 
-  it("renders the cloud/local connection panel", () => {
+  it("renders the Pen ConnectionState panel with honest status", () => {
     renderGateways({
       initialGateways: [baseGateway({ status: "paired" })],
     });
@@ -311,7 +313,11 @@ describe("UI harness — gateways", () => {
     expect(
       screen.getAllByText(messages.access.cloudLocalTitle).length
     ).toBeGreaterThan(0);
-    expect(screen.getByText(messages.access.cloudLabel)).toBeTruthy();
-    expect(screen.getByText(messages.access.localLabel)).toBeTruthy();
+    expect(screen.getByText(messages.access.cloudLocalBody)).toBeTruthy();
+    expect(
+      document.querySelector('[data-connection-summary="connected"]')
+    ).toBeTruthy();
+    expect(screen.queryByText(messages.access.sectionTitle)).toBeNull();
+    expect(document.querySelector("table")).toBeNull();
   });
 });

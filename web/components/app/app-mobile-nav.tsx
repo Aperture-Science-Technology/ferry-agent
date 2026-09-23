@@ -5,13 +5,13 @@ import { UserButton } from "@clerk/nextjs";
 import { useTranslations } from "next-intl";
 import {
   BookOpen,
+  Cable,
   Database,
   Ellipsis,
   Library,
-  Radio,
-  Send,
   Settings,
   Tablet,
+  Truck,
 } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/components/locale-switcher";
@@ -34,7 +34,7 @@ const PRIMARY = [
   {
     href: "/app/livraisons" as const,
     labelKey: "deliveries" as const,
-    icon: Send,
+    icon: Truck,
   },
   {
     href: "/app/appareils" as const,
@@ -47,7 +47,7 @@ const MORE_LINKS = [
   {
     href: "/app/gateways" as const,
     labelKey: "access" as const,
-    icon: Radio,
+    icon: Cable,
   },
   {
     href: "/app/sources" as const,
@@ -100,13 +100,13 @@ export function AppMobileNav() {
       <nav
         aria-label={t("dashboard")}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-40 border-t border-border/70 bg-background/95 backdrop-blur-md md:hidden",
+          "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur-md md:hidden",
           "pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out",
           "motion-reduce:transition-none",
           keyboardOpen && "translate-y-full"
         )}
       >
-        <ul className="grid grid-cols-4 gap-1 px-2 pt-1.5">
+        <ul className="grid h-[72px] grid-cols-4 gap-1 px-2 pt-2">
           {PRIMARY.map((item) => {
             const active = Boolean(pathname?.startsWith(item.href));
             const Icon = item.icon;
@@ -116,9 +116,9 @@ export function AppMobileNav() {
                   href={item.href}
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
-                    "h-auto w-full min-w-0 flex-col gap-1 rounded-md px-1 py-2 text-[0.6875rem] font-medium",
+                    "h-auto w-full min-w-0 flex-col gap-1 rounded-sm px-1 py-2 text-[0.6875rem] font-medium",
                     active
-                      ? "bg-accent text-accent-foreground"
+                      ? "bg-sidebar-accent text-foreground"
                       : "text-muted-foreground"
                   )}
                   aria-current={active ? "page" : undefined}
@@ -134,9 +134,9 @@ export function AppMobileNav() {
               type="button"
               className={cn(
                 buttonVariants({ variant: "ghost" }),
-                "h-auto w-full min-w-0 flex-col gap-1 rounded-md px-1 py-2 text-[0.6875rem] font-medium",
+                "h-auto w-full min-w-0 flex-col gap-1 rounded-sm px-1 py-2 text-[0.6875rem] font-medium",
                 moreActive || moreOpen
-                  ? "bg-accent text-accent-foreground"
+                  ? "bg-sidebar-accent text-foreground"
                   : "text-muted-foreground"
               )}
               aria-expanded={moreOpen}
@@ -157,15 +157,15 @@ export function AppMobileNav() {
           side="bottom"
           className="flex h-[100dvh] max-h-[100dvh] flex-col gap-0 rounded-none p-0"
         >
-          <SheetHeader className="shrink-0 border-b border-border/70 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4 text-left">
-            <SheetTitle className="font-heading text-xl">
+          <SheetHeader className="shrink-0 border-b border-border px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-4 text-left">
+            <SheetTitle className="font-heading text-xl font-medium">
               {t("moreMenu")}
             </SheetTitle>
             <SheetDescription>{t("moreDescription")}</SheetDescription>
           </SheetHeader>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-4">
-            <p className="mb-2 px-2 text-[0.6875rem] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+            <p className="mb-2 px-3 text-[11px] font-medium text-muted-foreground">
               {t("groupLocal")}
             </p>
             <ul className="flex flex-col gap-1">
@@ -179,8 +179,8 @@ export function AppMobileNav() {
                       onClick={() => setMoreOpen(false)}
                       className={cn(
                         buttonVariants({ variant: "ghost" }),
-                        "h-11 w-full min-w-0 justify-start gap-3 rounded-md px-3 text-sm",
-                        active && "bg-accent font-medium text-accent-foreground"
+                        "h-auto w-full min-w-0 justify-start gap-2.5 rounded-sm px-3 py-2.5 text-sm font-medium",
+                        active && "bg-sidebar-accent text-foreground"
                       )}
                       aria-current={active ? "page" : undefined}
                     >
@@ -192,7 +192,7 @@ export function AppMobileNav() {
               })}
             </ul>
 
-            <div className="my-4 h-px bg-border/80" />
+            <div className="my-4 h-px bg-border" />
 
             <ul className="flex flex-col gap-1">
               <li>
@@ -201,9 +201,9 @@ export function AppMobileNav() {
                   onClick={() => setMoreOpen(false)}
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
-                    "h-11 w-full min-w-0 justify-start gap-3 rounded-md px-3 text-sm",
+                    "h-auto w-full min-w-0 justify-start gap-2.5 rounded-sm px-3 py-2.5 text-sm font-medium",
                     pathname?.startsWith("/docs") &&
-                      "bg-accent font-medium text-accent-foreground"
+                      "bg-sidebar-accent text-foreground"
                   )}
                   aria-current={
                     pathname?.startsWith("/docs") ? "page" : undefined
@@ -215,21 +215,21 @@ export function AppMobileNav() {
               </li>
             </ul>
 
-            <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-border/70 px-2 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div className="mt-auto flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-border px-2 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="flex min-w-0 flex-col gap-1">
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs font-medium text-muted-foreground">
                   {t("language")}
                 </span>
                 <LocaleSwitcher />
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm font-medium text-muted-foreground">
                   {t("account")}
                 </span>
                 <UserButton
                   appearance={{
                     elements: {
-                      avatarBox: "size-8",
+                      avatarBox: "size-7",
                     },
                   }}
                 />

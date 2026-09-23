@@ -17,11 +17,12 @@ export default async function DashboardLayout({
   await auth.protect();
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen>
       <AppSidebar />
-      <SidebarInset className="min-w-0 overflow-x-hidden">
+      <SidebarInset className="min-w-0 overflow-x-hidden bg-background">
         <DashboardHeader />
-        <div className="flex w-full min-w-0 flex-1 flex-col px-4 py-6 pb-[max(7rem,calc(5.5rem+env(safe-area-inset-bottom)))] md:px-6 md:pb-8 lg:px-8">
+        {/* Pen Main: padding 32 vertical / 40 horizontal; mobile tighter. */}
+        <div className="flex w-full min-w-0 flex-1 flex-col px-5 py-6 pb-[max(7rem,calc(5.5rem+env(safe-area-inset-bottom)))] md:gap-6 md:px-10 md:py-8 md:pb-8">
           {children}
         </div>
       </SidebarInset>

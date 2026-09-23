@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Ban, BookOpen, Copy, Loader2, Plus, TriangleAlert } from "lucide-react";
+import { Ban, BookOpen, Copy, Loader2, Plus } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -16,22 +15,75 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { CatalogQrCode } from "@/components/app/settings/catalog-qr-code";
 import { formatTokenLastUsed } from "@/components/app/settings/settings-state";
 import { EmptyState } from "@/components/app/empty-state";
-import { SectionHeader } from "@/components/app/section-header";
-import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { copyTextToClipboard } from "@/components/app/gateways/gateways-state";
 import { useApiClient } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import type { OpdsToken, OpdsTokenCreated } from "@/lib/types";
+
+const fieldControlClass =
+  "h-auto min-h-0 w-full rounded-md border-border bg-muted px-3 py-3 text-sm font-medium text-foreground shadow-none";
+
+function SoftNotice({
+  title,
+  description,
+  role = "status",
+}: {
+  title: string;
+  description: string;
+  role?: "status" | "alert";
+}) {
+  return (
+    <div
+      role={role}
+      className="flex flex-col gap-1 border border-border bg-muted/40 px-4 py-3"
+    >
+      <p className="font-heading text-sm font-medium tracking-tight break-words whitespace-normal">
+        {title}
+      </p>
+      <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+/** Pen OPDS card — surface + border radius-md, title 14 + meta 12 + optional QR 96. */
+function OpdsTokenCard({
+  tokenId,
+  title,
+  meta,
+  actions,
+  qr,
+}: {
+  tokenId?: string;
+  title: string;
+  meta: string;
+  actions?: ReactNode;
+  qr?: ReactNode;
+}) {
+  return (
+    <article
+      data-testid="opds-token-card"
+      data-token-id={tokenId}
+      className="flex min-w-0 flex-col gap-2.5 rounded-md border border-border bg-card p-3 md:gap-2.5 md:p-4"
+    >
+      <h3 className="text-sm font-medium break-words whitespace-normal text-foreground">
+        {title}
+      </h3>
+      <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
+        {meta}
+      </p>
+      {actions ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>
+      ) : null}
+      {qr}
+    </article>
+  );
+}
 
 export function ReaderCatalogSection({
   initialTokens,
@@ -152,22 +204,14 @@ export function ReaderCatalogSection({
   );
 
   return (
-    <div className="min-w-0 space-y-5" data-catalog-state={catalogState}>
-      <Alert>
-        <TriangleAlert aria-hidden />
-        <AlertTitle className="break-words whitespace-normal">
-          {t("warningTitle")}
-        </AlertTitle>
-        <AlertDescription className="break-words whitespace-normal">
-          {t("warning")}
-        </AlertDescription>
-      </Alert>
+    <div className="min-w-0 space-y-4" data-catalog-state={catalogState}>
+      <SoftNotice title={t("warningTitle")} description={t("warning")} />
 
       <div className="min-w-0 space-y-2">
         <p className="font-heading text-sm font-medium tracking-tight break-words whitespace-normal text-foreground">
           {t("guideTitle")}
         </p>
-        <ol className="list-decimal space-y-1.5 pl-5 text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+        <ol className="list-decimal space-y-1.5 pl-5 text-sm font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
           <li>{t("guideStep1")}</li>
           <li>{t("guideStep2")}</li>
           <li>{t("guideStep3")}</li>
@@ -176,25 +220,26 @@ export function ReaderCatalogSection({
       </div>
 
       {tokensUnavailable ? (
-        <Alert>
-          <BookOpen aria-hidden />
-          <AlertTitle className="break-words whitespace-normal">
-            {t("unavailableTitle")}
-          </AlertTitle>
-          <AlertDescription className="break-words whitespace-normal">
-            {t("unavailable")}
-          </AlertDescription>
-        </Alert>
+        <SoftNotice
+          title={t("unavailableTitle")}
+          description={t("unavailable")}
+          role="alert"
+        />
       ) : null}
 
-      <SectionHeader
-        title={t("linksTitle")}
-        description={
-          tokens.length > 0 ? t("countLabel", { count: tokens.length }) : undefined
-        }
-        action={tokensUnavailable ? undefined : createAction}
-        className="mb-3"
-      />
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-heading text-sm font-medium text-foreground">
+            {t("linksTitle")}
+          </h3>
+          {tokens.length > 0 ? (
+            <p className="mt-1 text-xs font-medium text-muted-foreground">
+              {t("countLabel", { count: tokens.length })}
+            </p>
+          ) : null}
+        </div>
+        {tokensUnavailable ? null : createAction}
+      </div>
 
       {tokensUnavailable ? null : tokens.length === 0 ? (
         <EmptyState
@@ -204,97 +249,38 @@ export function ReaderCatalogSection({
           action={createAction}
         />
       ) : (
-        <>
-          <RevealGroup className="grid min-w-0 gap-0 divide-y divide-border/70 border-y border-border/70 lg:hidden">
+        <div data-testid="opds-token-cards">
+          <RevealGroup className="flex min-w-0 flex-col gap-3">
             {tokens.map((token) => (
               <RevealItem key={token.id}>
-                <article
-                  className="flex min-w-0 flex-col gap-3 py-3.5 first:pt-0 last:pb-0"
-                  data-token-id={token.id}
-                >
-                  <div className="min-w-0 space-y-1">
-                    <h3 className="font-heading text-[15px] leading-snug font-medium tracking-tight break-words whitespace-normal">
-                      {token.label}
-                    </h3>
-                    <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
-                      {formatTokenLastUsed(
-                        token.last_used_at,
-                        locale,
-                        t("neverUsed")
-                      )}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full whitespace-normal sm:w-auto"
-                    onClick={() => {
-                      setRevokeError(null);
-                      setRevokeTarget(token);
-                    }}
-                  >
-                    <Ban aria-hidden />
-                    {t("revoke")}
-                  </Button>
-                </article>
+                <OpdsTokenCard
+                  tokenId={token.id}
+                  title={t("tokenTitle", { label: token.label })}
+                  meta={`${formatTokenLastUsed(
+                    token.last_used_at,
+                    locale,
+                    t("neverUsed")
+                  )} · ${t("actionsHintList")}`}
+                  actions={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="whitespace-normal"
+                      onClick={() => {
+                        setRevokeError(null);
+                        setRevokeTarget(token);
+                      }}
+                    >
+                      <Ban aria-hidden />
+                      {t("revoke")}
+                    </Button>
+                  }
+                />
               </RevealItem>
             ))}
           </RevealGroup>
-
-          <Reveal className="hidden min-w-0 overflow-x-auto border-y border-border/70 lg:block">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="whitespace-normal">
-                    {t("columnLabel")}
-                  </TableHead>
-                  <TableHead className="whitespace-normal">
-                    {t("columnLastUsed")}
-                  </TableHead>
-                  <TableHead className="text-right whitespace-normal">
-                    {t("columnActions")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tokens.map((token) => (
-                  <TableRow key={token.id} data-token-id={token.id}>
-                    <TableCell className="font-medium">
-                      <span className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words whitespace-normal">
-                        {token.label}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <span className="break-words whitespace-normal sm:whitespace-nowrap">
-                        {formatTokenLastUsed(
-                          token.last_used_at,
-                          locale,
-                          t("neverUsed")
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="whitespace-normal"
-                        onClick={() => {
-                          setRevokeError(null);
-                          setRevokeTarget(token);
-                        }}
-                      >
-                        <Ban aria-hidden />
-                        {t("revoke")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Reveal>
-        </>
+        </div>
       )}
 
       <Dialog
@@ -314,10 +300,10 @@ export function ReaderCatalogSection({
                 </DialogDescription>
               </DialogHeader>
               <div className="min-w-0 space-y-4" data-catalog-created>
-                <div className="min-w-0 space-y-2">
+                <div className="flex min-w-0 flex-col gap-1.5">
                   <Label
                     htmlFor="catalog-created-url"
-                    className="break-words whitespace-normal"
+                    className="text-xs font-medium break-words whitespace-normal text-muted-foreground"
                   >
                     {t("urlLabel")}
                   </Label>
@@ -326,7 +312,10 @@ export function ReaderCatalogSection({
                       id="catalog-created-url"
                       readOnly
                       value={created.url}
-                      className="min-w-0 flex-1 font-mono text-xs break-all"
+                      className={cn(
+                        fieldControlClass,
+                        "min-w-0 flex-1 font-mono text-xs break-all"
+                      )}
                       onFocus={(event) => event.currentTarget.select()}
                       data-catalog-url
                     />
@@ -350,21 +339,22 @@ export function ReaderCatalogSection({
                     </p>
                   ) : null}
                 </div>
-                <div className="flex min-w-0 flex-col items-center gap-2">
-                  <CatalogQrCode url={created.url} />
-                  <p className="max-w-full text-center text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+                <div className="flex min-w-0 flex-col items-start gap-2">
+                  <p className="text-xs font-medium text-muted-foreground md:hidden">
+                    {t("actionsHintMobile")}
+                  </p>
+                  <p className="hidden text-xs font-medium text-muted-foreground md:block">
+                    {t("actionsHint")}
+                  </p>
+                  <CatalogQrCode url={created.url} size={96} />
+                  <p className="max-w-full text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
                     {t("qrHint")}
                   </p>
                 </div>
-                <Alert>
-                  <TriangleAlert aria-hidden />
-                  <AlertTitle className="break-words whitespace-normal">
-                    {t("oneTimeTitle")}
-                  </AlertTitle>
-                  <AlertDescription className="break-words whitespace-normal">
-                    {t("oneTimeWarning")}
-                  </AlertDescription>
-                </Alert>
+                <SoftNotice
+                  title={t("oneTimeTitle")}
+                  description={t("oneTimeWarning")}
+                />
               </div>
               <DialogFooter className="gap-2 sm:gap-2">
                 <Button
@@ -386,10 +376,11 @@ export function ReaderCatalogSection({
                   {t("createDescription")}
                 </DialogDescription>
               </DialogHeader>
-              <div className="min-w-0 space-y-2">
+              {/* Pen Form/Field */}
+              <div className="flex min-w-0 flex-col gap-1.5">
                 <Label
                   htmlFor="catalog-link-label"
-                  className="break-words whitespace-normal"
+                  className="text-xs font-medium break-words whitespace-normal text-muted-foreground"
                 >
                   {t("labelField")}
                 </Label>
@@ -400,20 +391,19 @@ export function ReaderCatalogSection({
                   onKeyDown={onCreateKeyDown}
                   placeholder={t("defaultLabel")}
                   disabled={submitting}
-                  className="min-w-0"
+                  className={fieldControlClass}
                   autoComplete="off"
                 />
+                <p className="text-xs font-medium text-muted-foreground">
+                  {t("labelHint")}
+                </p>
               </div>
               {createError ? (
-                <Alert variant="destructive" role="alert">
-                  <BookOpen aria-hidden />
-                  <AlertTitle className="break-words whitespace-normal">
-                    {t("createErrorTitle")}
-                  </AlertTitle>
-                  <AlertDescription className="break-words whitespace-normal">
-                    {createError}
-                  </AlertDescription>
-                </Alert>
+                <SoftNotice
+                  title={t("createErrorTitle")}
+                  description={createError}
+                  role="alert"
+                />
               ) : null}
               <DialogFooter className="gap-2 sm:gap-2">
                 <Button
@@ -443,30 +433,27 @@ export function ReaderCatalogSection({
         </DialogContent>
       </Dialog>
 
+      {/* Pen Dialog/RevokeOpds */}
       <Dialog
         open={revokeTarget !== null}
         onOpenChange={(open) => !open && !revoking && setRevokeTarget(null)}
         disablePointerDismissal={revoking}
       >
-        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="break-words whitespace-normal">
+        <DialogContent className="max-h-[min(90dvh,40rem)] gap-4 overflow-y-auto sm:max-w-[400px]">
+          <DialogHeader className="gap-2">
+            <DialogTitle className="font-heading text-lg font-medium break-words whitespace-normal">
               {t("revokeConfirmTitle")}
             </DialogTitle>
-            <DialogDescription className="break-words whitespace-normal">
+            <DialogDescription className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
               {t("revokeConfirmDescription")}
             </DialogDescription>
           </DialogHeader>
           {revokeError ? (
-            <Alert variant="destructive" role="alert">
-              <Ban aria-hidden />
-              <AlertTitle className="break-words whitespace-normal">
-                {t("revokeErrorTitle")}
-              </AlertTitle>
-              <AlertDescription className="break-words whitespace-normal">
-                {revokeError}
-              </AlertDescription>
-            </Alert>
+            <SoftNotice
+              title={t("revokeErrorTitle")}
+              description={revokeError}
+              role="alert"
+            />
           ) : null}
           <DialogFooter className="gap-2 sm:gap-2">
             <Button

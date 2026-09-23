@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { useTranslations } from "next-intl";
 import { resolveQrRenderState } from "@/components/app/settings/settings-state";
+import { cn } from "@/lib/utils";
 
-/** QR as a high-contrast data URL for the one-time catalog URL. */
+/** QR as a high-contrast data URL for the one-time catalog URL. Pen OPDS: 96. */
 export function CatalogQrCode({
   url,
-  size = 180,
+  size = 96,
 }: {
   url: string;
   size?: number;
@@ -50,8 +51,12 @@ export function CatalogQrCode({
   }, [url, size]);
 
   const state = resolveQrRenderState(dataUrl, failed);
-  const boxClass =
-    "flex size-[180px] max-w-full shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/40 px-3 text-center text-xs leading-relaxed break-words whitespace-normal text-muted-foreground";
+  // Pen QR placeholder is 96×96 (size-24). Larger sizes only for legacy callers.
+  const sizeClass = size <= 96 ? "size-24" : "size-[180px]";
+  const boxClass = cn(
+    "flex shrink-0 items-center justify-center rounded-sm border border-border bg-muted px-2 text-center text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground",
+    sizeClass
+  );
 
   if (state === "loading") {
     return (
@@ -81,7 +86,10 @@ export function CatalogQrCode({
       alt={t("qrAlt")}
       width={size}
       height={size}
-      className="size-[180px] max-w-full shrink-0 rounded-md border border-border/70 bg-white p-1"
+      className={cn(
+        "max-w-full shrink-0 rounded-sm border border-border bg-white p-1",
+        sizeClass
+      )}
       data-qr-state="ready"
     />
   );

@@ -7,7 +7,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { SourcesManager } from "@/components/app/sources/sources-manager";
+import { SourcesView } from "@/components/app/sources/sources-view";
 import type { Source } from "@/lib/types";
 import messages from "@/messages/fr.json";
 
@@ -89,7 +89,10 @@ function renderSources(
 ) {
   return render(
     <NextIntlClientProvider locale="fr" messages={messages}>
-      <SourcesManager
+      <SourcesView
+        title={messages.pages.sources.title}
+        description={messages.pages.sources.description}
+        descriptionMobile={messages.pages.sources.descriptionMobile}
         initialSources={props.initialSources ?? []}
         sourcesUnavailable={props.sourcesUnavailable ?? false}
       />

@@ -76,6 +76,8 @@ function renderDeliveries(
   return render(
     <NextIntlClientProvider locale="fr" messages={messages}>
       <DeliveriesView
+        title="Livraisons"
+        description="Historique des transferts"
         initialDeliveries={props.initialDeliveries ?? []}
         deliveriesUnavailable={props.deliveriesUnavailable ?? false}
       />

@@ -65,6 +65,26 @@ export type LibrarySourceKind =
 /** Default client-side page size for the collection grid/list. */
 export const LIBRARY_COLLECTION_PAGE_SIZE = 24;
 
+/** Pen “Récents” row count on the filled desktop library (fixture size, not invented data). */
+export const LIBRARY_RECENT_LIMIT = 3;
+
+/**
+ * Most recently added books for the Pen “Récents” section.
+ * Uses real `added_at` order — never invents titles.
+ */
+export function recentLibraryItems<T extends Pick<FilterableLibraryItem, "added_at">>(
+  items: T[],
+  limit: number = LIBRARY_RECENT_LIMIT
+): T[] {
+  const size = Math.max(0, Math.trunc(limit) || 0);
+  if (size === 0 || items.length === 0) return [];
+  return [...items]
+    .sort(
+      (a, b) => new Date(b.added_at).getTime() - new Date(a.added_at).getTime()
+    )
+    .slice(0, size);
+}
+
 export function isManualLibraryItem(item: Pick<FilterableLibraryItem, "source_ref">): boolean {
   return !item.source_ref;
 }

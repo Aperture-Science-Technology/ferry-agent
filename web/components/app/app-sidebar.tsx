@@ -1,18 +1,16 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import { useTranslations } from "next-intl";
 import {
-  BookOpen,
+  Cable,
   Database,
   Library,
-  Radio,
-  Send,
   Settings,
   Tablet,
+  Truck,
 } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
-import { BrandLogo } from "@/components/brand-logo";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import {
   Sidebar,
@@ -25,9 +23,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
-  SidebarSeparator,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -49,16 +44,16 @@ type NavItem = {
   icon: typeof Library;
 };
 
-/** Principal destinations — library, deliveries, devices. */
+/** Principal — Pen Shell/Sidebar DQYhS. */
 const PRIMARY: NavItem[] = [
   { href: "/app/bibliotheque", labelKey: "library", icon: Library },
-  { href: "/app/livraisons", labelKey: "deliveries", icon: Send },
+  { href: "/app/livraisons", labelKey: "deliveries", icon: Truck },
   { href: "/app/appareils", labelKey: "devices", icon: Tablet },
 ];
 
-/** Local / at-home destinations — gateway, sources, settings. */
+/** Chez vous — Gateway uses cable (Pen), not radio. */
 const LOCAL: NavItem[] = [
-  { href: "/app/gateways", labelKey: "access", icon: Radio },
+  { href: "/app/gateways", labelKey: "access", icon: Cable },
   { href: "/app/sources", labelKey: "sources", icon: Database },
   { href: "/app/reglages", labelKey: "settings", icon: Settings },
 ];
@@ -81,13 +76,13 @@ function NavLink({ item }: { item: NavItem }) {
         tooltip={label}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "relative h-9 min-w-0 gap-3 rounded-md px-2.5 font-normal text-sidebar-foreground/85",
-          "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground",
-          "data-active:before:absolute data-active:before:inset-y-2 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-sidebar-primary"
+          "h-auto min-w-0 gap-2.5 rounded-sm px-3 py-2.5 text-sm font-medium text-sidebar-foreground",
+          "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-foreground",
+          "data-active:before:hidden"
         )}
         render={
           <Link href={item.href}>
-            <Icon aria-hidden />
+            <Icon className="size-4 shrink-0" aria-hidden />
             <span className="min-w-0 truncate">{label}</span>
           </Link>
         }
@@ -101,17 +96,15 @@ function NavCluster({
   label,
 }: {
   items: NavItem[];
-  label?: string;
+  label: string;
 }) {
   return (
-    <SidebarGroup className="py-1.5">
-      {label ? (
-        <SidebarGroupLabel className="px-2.5 text-[0.6875rem] font-medium tracking-[0.08em] text-sidebar-foreground/55 uppercase">
-          {label}
-        </SidebarGroupLabel>
-      ) : null}
+    <SidebarGroup className="gap-1 p-0">
+      <SidebarGroupLabel className="h-auto px-3 py-0 text-[11px] font-medium tracking-normal text-muted-foreground normal-case">
+        {label}
+      </SidebarGroupLabel>
       <SidebarGroupContent>
-        <SidebarMenu className="gap-0.5">
+        <SidebarMenu className="gap-1">
           {items.map((item) => (
             <NavLink key={item.href} item={item} />
           ))}
@@ -121,72 +114,67 @@ function NavCluster({
   );
 }
 
+function CopperMark() {
+  return (
+    <span
+      className="size-5 shrink-0 rounded-sm bg-primary"
+      aria-hidden
+    />
+  );
+}
+
 export function AppSidebar() {
-  const pathname = usePathname();
   const t = useTranslations("nav");
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
-  const docsActive = Boolean(pathname?.startsWith("/docs"));
+  const tBrand = useTranslations("brand");
+  const { user } = useUser();
+  const displayName =
+    user?.fullName?.trim() ||
+    user?.firstName?.trim() ||
+    user?.primaryEmailAddress?.emailAddress ||
+    t("account");
 
   return (
-    <Sidebar collapsible="icon" enableMobileSheet={false} variant="sidebar">
-      <SidebarHeader className="gap-3 border-b border-sidebar-border/70 px-3 py-4">
+    <Sidebar collapsible="none" enableMobileSheet={false} variant="sidebar">
+      <SidebarHeader className="gap-0 border-0 px-4 pt-6 pb-0">
         <Link
           href="/app/bibliotheque"
-          className="flex min-w-0 items-center gap-2.5 rounded-md px-1 py-0.5 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-0"
+          className="flex min-w-0 items-center gap-2.5 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
-          <BrandLogo markClassName="size-7" withWordmark={!collapsed} />
+          <CopperMark />
+          <span className="font-heading text-base font-medium text-sidebar-foreground">
+            {tBrand("name")}
+          </span>
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="px-1 py-3">
+      <SidebarContent className="gap-6 px-4 pt-6">
         <NavCluster items={PRIMARY} label={t("groupPrimary")} />
-        <SidebarSeparator className="my-2 bg-sidebar-border/80" />
         <NavCluster items={LOCAL} label={t("groupLocal")} />
       </SidebarContent>
 
-      <SidebarFooter className="gap-3 border-t border-sidebar-border/70 px-2 py-3">
-        <SidebarMenu className="gap-0.5">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={docsActive}
-              tooltip={t("docs")}
-              aria-current={docsActive ? "page" : undefined}
-              className={cn(
-                "relative h-9 min-w-0 gap-3 rounded-md px-2.5 font-normal text-sidebar-foreground/85",
-                "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground",
-                "data-active:before:absolute data-active:before:inset-y-2 data-active:before:left-0 data-active:before:w-0.5 data-active:before:rounded-full data-active:before:bg-sidebar-primary"
-              )}
-              render={
-                <Link href="/docs">
-                  <BookOpen aria-hidden />
-                  <span className="min-w-0 truncate">{t("docs")}</span>
-                </Link>
-              }
-            />
-          </SidebarMenuItem>
-        </SidebarMenu>
-
-        <div
-          className={cn(
-            "flex min-w-0 items-center gap-2 px-1",
-            collapsed ? "flex-col justify-center" : "justify-between"
-          )}
-        >
-          <LocaleSwitcher compact={collapsed} />
-          <div className="flex size-8 shrink-0 items-center justify-center">
+      <SidebarFooter className="gap-3 border-0 px-4 pb-6">
+        <div className="flex min-w-0 items-center gap-2.5 rounded-md bg-muted px-3 py-3">
+          <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-primary">
             <UserButton
               appearance={{
                 elements: {
                   avatarBox: "size-7",
+                  userButtonTrigger: "size-7",
                 },
               }}
             />
-            <span className="sr-only">{t("account")}</span>
           </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-sidebar-foreground">
+              {displayName}
+            </p>
+            <p className="text-xs font-medium text-muted-foreground">
+              {t("account")}
+            </p>
+          </div>
+          <LocaleSwitcher compact />
         </div>
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   );
 }

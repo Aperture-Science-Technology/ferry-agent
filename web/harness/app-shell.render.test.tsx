@@ -15,6 +15,13 @@ const pathnameRef = { current: "/app/bibliotheque" };
 
 vi.mock("@clerk/nextjs", () => ({
   UserButton: () => <div data-testid="user-button" />,
+  useUser: () => ({
+    user: {
+      fullName: "Alex Martin",
+      firstName: "Alex",
+      primaryEmailAddress: { emailAddress: "alex@example.com" },
+    },
+  }),
 }));
 
 vi.mock("@/i18n/navigation", () => ({

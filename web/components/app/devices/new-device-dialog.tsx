@@ -30,6 +30,11 @@ import type { ConversionPreset, Device, DeviceCreate } from "@/lib/types";
 const BRANDS: Device["brand"][] = ["kindle", "kobo", "tolino", "pocketbook", "other"];
 const MODEL_BRANDS = ["kindle", "kobo", "tolino", "pocketbook"] as const;
 
+const fieldClass = "flex flex-col gap-1.5";
+const labelClass = "text-xs font-medium text-muted-foreground";
+const controlClass =
+  "h-auto min-h-10 w-full rounded-lg border-border bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
+
 export function NewDeviceDialog({
   open,
   onOpenChange,
@@ -95,27 +100,33 @@ export function NewDeviceDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription className="break-words whitespace-normal">
+      <DialogContent className="gap-4 p-6 sm:max-w-[420px]">
+        <DialogHeader className="gap-2">
+          <DialogTitle className="font-heading text-xl font-medium tracking-tight">
+            {t("title")}
+          </DialogTitle>
+          <DialogDescription className="text-sm font-medium break-words whitespace-normal">
             {t("description")}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor={nameId}>{t("nameOptional")}</Label>
+        <div className="flex flex-col gap-4">
+          <div className={fieldClass}>
+            <Label htmlFor={nameId} className={labelClass}>
+              {t("nameOptional")}
+            </Label>
             <Input
               id={nameId}
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder={t("namePlaceholder")}
               disabled={submitting}
-              className="min-w-0"
+              className={controlClass}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor={brandId}>{t("brand")}</Label>
+          <div className={fieldClass}>
+            <Label htmlFor={brandId} className={labelClass}>
+              {t("brand")}
+            </Label>
             <Select
               value={brand}
               onValueChange={(value) =>
@@ -123,7 +134,7 @@ export function NewDeviceDialog({
               }
               disabled={submitting}
             >
-              <SelectTrigger id={brandId} className="w-full min-w-0">
+              <SelectTrigger id={brandId} className={controlClass}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -135,15 +146,17 @@ export function NewDeviceDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor={modelId}>{t("modelOptional")}</Label>
+          <div className={fieldClass}>
+            <Label htmlFor={modelId} className={labelClass}>
+              {t("modelOptional")}
+            </Label>
             {modelOptions ? (
               <Select
                 value={model}
                 onValueChange={(value) => setModel(value ?? "")}
                 disabled={submitting}
               >
-                <SelectTrigger id={modelId} className="w-full">
+                <SelectTrigger id={modelId} className={controlClass}>
                   <SelectValue placeholder={t("modelPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -160,6 +173,7 @@ export function NewDeviceDialog({
                 value={model}
                 onChange={(event) => setModel(event.target.value)}
                 disabled={submitting}
+                className={controlClass}
               />
             )}
           </div>
@@ -169,7 +183,7 @@ export function NewDeviceDialog({
             disabled={submitting}
           />
         </div>
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
