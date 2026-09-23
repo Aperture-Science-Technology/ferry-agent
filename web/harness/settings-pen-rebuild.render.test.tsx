@@ -1,6 +1,6 @@
 /**
- * Pen Settings rebuild: Header/PageTitle + Form/Field + OPDS cards,
- * no table / SaaS section chrome / Sources·Devices shortcuts.
+ * Pen Settings rebuild: Header/PageTitle (EYJrN / mF005b) + Form/Field + OPDS cards,
+ * no table / SaaS section chrome / Sources·Devices shortcuts / EmptyState·StatePanel.
  * Run: npm run test:ui-harness
  */
 import { render, screen, within } from "@testing-library/react";
@@ -96,31 +96,27 @@ function renderSettings(locale: "fr" | "en", tokens: OpdsToken[] = [baseToken()]
 }
 
 describe("UI harness — Pen settings composition", () => {
-  it("renders Pen header, Form/Fields, and OPDS cards (not a table)", () => {
+  it("renders Pen Form/Fields and OPDS cards (not a table)", () => {
     renderSettings("fr");
 
     expect(screen.getByTestId("settings-pen-layout")).toBeTruthy();
     expect(screen.getByTestId("settings-delivery")).toBeTruthy();
     expect(screen.getByTestId("settings-opds")).toBeTruthy();
+    expect(screen.getByTestId("settings-body")).toBeTruthy();
     expect(document.querySelector("table")).toBeNull();
-
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Réglages" })
-    ).toBeTruthy();
-    expect(
-      screen.getByText(messagesFr.pages.settings.description)
-    ).toBeTruthy();
 
     expect(
       screen.getByRole("heading", {
         level: 2,
         name: messagesFr.settings.deliveryPreferencesTitle,
+        hidden: true,
       })
     ).toBeTruthy();
     expect(
       screen.getByRole("heading", {
         level: 2,
         name: messagesFr.settings.readerCatalogTitle,
+        hidden: true,
       })
     ).toBeTruthy();
 
@@ -137,6 +133,37 @@ describe("UI harness — Pen settings composition", () => {
         ),
       })
     ).toBeTruthy();
+    expect(
+      within(cards[0]!).getAllByText((_, node) => {
+        if (node?.tagName !== "SPAN") return false;
+        const text = node.textContent ?? "";
+        return (
+          text.includes(messagesFr.settings.readerCatalog.actionsHintMobile) ||
+          text.includes(messagesFr.settings.readerCatalog.actionsHint)
+        );
+      }).length
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("exposes dedicated mobile and desktop headers (mF005b / Hd0003)", () => {
+    renderSettings("fr");
+    const mobile = screen.getByTestId("settings-header-mobile");
+    const desktop = screen.getByTestId("settings-header-desktop");
+    expect(mobile.className).toMatch(/md:hidden/);
+    expect(desktop.className).toMatch(/hidden/);
+    expect(desktop.className).toMatch(/md:flex/);
+    expect(within(mobile).getByText("Ferry Agent")).toBeTruthy();
+    expect(mobile.querySelector("h1")?.textContent).toBe("Réglages");
+    expect(desktop.querySelector("h1")?.textContent).toBe("Réglages");
+    expect(desktop.querySelector("h1")?.className).toMatch(/text-\[28px\]/);
+    expect(mobile.querySelector("h1")?.className).toMatch(/text-\[22px\]/);
+    expect(within(desktop).queryByText("Ferry Agent")).toBeNull();
+    expect(
+      within(mobile).getByText(messagesFr.pages.settings.descriptionMobile)
+    ).toBeTruthy();
+    expect(
+      within(desktop).getByText(messagesFr.pages.settings.description)
+    ).toBeTruthy();
   });
 
   it("drops Sources/Devices shortcut chrome and keeps FR/EN field identity", () => {
@@ -146,14 +173,18 @@ describe("UI harness — Pen settings composition", () => {
     expect(screen.queryByText(messagesFr.settings.sourcesCta)).toBeNull();
     expect(screen.getByLabelText(messagesFr.settings.kindleEmail)).toBeTruthy();
     expect(screen.getByLabelText(messagesFr.settings.defaultFormat)).toBeTruthy();
+    expect(document.querySelector("[data-testid='state-panel']")).toBeNull();
     unmount();
 
     renderSettings("en");
     expect(
-      screen.getByRole("heading", { level: 1, name: "Settings" })
-    ).toBeTruthy();
+      screen.getByTestId("settings-header-desktop").querySelector("h1")
+        ?.textContent
+    ).toBe("Settings");
     expect(
-      screen.getByText(messagesEn.pages.settings.description)
+      within(screen.getByTestId("settings-header-desktop")).getByText(
+        messagesEn.pages.settings.description
+      )
     ).toBeTruthy();
     expect(screen.getByLabelText(messagesEn.settings.kindleEmail)).toBeTruthy();
     expect(screen.queryByText(messagesEn.settings.sourcesCta)).toBeNull();
@@ -169,7 +200,9 @@ describe("UI harness — Pen settings composition", () => {
       }),
     ]);
     const layout = screen.getByTestId("settings-pen-layout");
+    expect(layout.className).toMatch(/min-w-0/);
     expect(layout.querySelector("table")).toBeNull();
+    expect(document.querySelector("thead")).toBeNull();
     expect(screen.getAllByTestId("opds-token-card").length).toBe(2);
   });
 });

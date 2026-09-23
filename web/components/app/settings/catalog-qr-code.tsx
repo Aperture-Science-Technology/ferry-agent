@@ -54,7 +54,7 @@ export function CatalogQrCode({
   // Pen QR placeholder is 96×96 (size-24). Larger sizes only for legacy callers.
   const sizeClass = size <= 96 ? "size-24" : "size-[180px]";
   const boxClass = cn(
-    "flex shrink-0 items-center justify-center rounded-sm border border-border bg-muted px-2 text-center text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground",
+    "flex shrink-0 items-center justify-center rounded-sm border border-border bg-ferry-surface-2 px-2 text-center text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground",
     sizeClass
   );
 
