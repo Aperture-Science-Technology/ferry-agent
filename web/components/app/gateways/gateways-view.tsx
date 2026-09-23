@@ -2,10 +2,9 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Radio, Plus, Ban, Trash2, RefreshCw, Loader2 } from "lucide-react";
+import { Radio, Plus, Ban, Trash2, RefreshCw, Loader2, Share2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,16 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { EmptyState } from "@/components/app/empty-state";
-import { SectionHeader } from "@/components/app/section-header";
 import {
   CreateGatewayDialog,
   GatewayCredentialsPanel,
@@ -163,7 +153,7 @@ function SoftNotice({
     <div
       role={role}
       className={cn(
-        "flex flex-col gap-3 border border-border/80 bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col gap-3 border border-border bg-muted/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
         className
       )}
     >
@@ -177,59 +167,6 @@ function SoftNotice({
       </div>
       {action}
     </div>
-  );
-}
-
-/**
- * Pen Gateway/ConnectionState — paper surface, cloud/local relation, honest status.
- */
-function GatewayCloudLocalIntro({
-  gateways,
-  now,
-}: {
-  gateways: Gateway[];
-  now: number;
-}) {
-  const t = useTranslations("access");
-  const summary = summarizeConnection(gateways, now);
-
-  return (
-    <section
-      data-gateway-connection-panel
-      className="mb-6 space-y-3 rounded-lg border border-border/80 bg-card px-5 py-5"
-    >
-      <div className="min-w-0 space-y-2">
-        <h2 className="font-heading text-lg font-medium tracking-tight break-words whitespace-normal">
-          {t("cloudLocalTitle")}
-        </h2>
-        <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
-          {t("cloudLocalBody")}
-        </p>
-        <ul className="space-y-1 text-sm text-muted-foreground">
-          <li className="break-words whitespace-normal">
-            <span className="text-foreground">{t("cloudLabel")}</span>
-            {" — "}
-            {t("cloudHint")}
-          </li>
-          <li className="break-words whitespace-normal">
-            <span className="text-foreground">{t("localLabel")}</span>
-            {" — "}
-            {t("localHint")}
-          </li>
-        </ul>
-      </div>
-      {summary ? (
-        <div
-          className="flex min-w-0 items-center gap-2"
-          data-connection-summary={summary}
-        >
-          <ConnectionDot presentation={summary} />
-          <span className="text-sm font-medium break-words whitespace-normal text-foreground">
-            {summaryLabel(summary, t)}
-          </span>
-        </div>
-      ) : null}
-    </section>
   );
 }
 
@@ -272,6 +209,79 @@ function summaryLabel(
   }
 }
 
+/**
+ * Pen Gateway/ConnectionState gsDDr — paper surface, title/body, copper status.
+ * Screen gEtgk / mobile mF0047 Conn.
+ */
+function GatewayConnectionPanel({
+  gateways,
+  now,
+}: {
+  gateways: Gateway[];
+  now: number;
+}) {
+  const t = useTranslations("access");
+  const summary = summarizeConnection(gateways, now);
+
+  return (
+    <section
+      data-gateway-connection-panel
+      className="flex max-w-[420px] flex-col gap-3 rounded-xl border border-border bg-card p-5"
+    >
+      <h2 className="font-heading text-lg font-medium tracking-tight break-words whitespace-normal text-foreground">
+        {t("cloudLocalTitle")}
+      </h2>
+      <p className="text-sm font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+        {t("cloudLocalBody")}
+      </p>
+      {summary ? (
+        <div
+          className="flex min-w-0 items-center gap-2"
+          data-connection-summary={summary}
+        >
+          <ConnectionDot presentation={summary} />
+          <span className="text-sm font-medium break-words whitespace-normal text-foreground">
+            {summaryLabel(summary, t)}
+          </span>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/** Pen L00010 Gateway actions row — surface, not a SaaS card grid. */
+function TorrentGatewayAction() {
+  const t = useTranslations("access");
+
+  return (
+    <div
+      data-testid="gateway-torrent-action"
+      className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-border bg-card p-4"
+    >
+      <div className="flex min-w-0 items-start gap-3">
+        <Share2
+          aria-hidden
+          className="mt-0.5 size-[18px] shrink-0 text-foreground"
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="text-base font-medium break-words whitespace-normal text-foreground">
+            {t("torrentActionTitle")}
+          </p>
+          <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+            {t("torrentActionDescription")}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 w-fit min-w-0 whitespace-normal"
+            render={<Link href="/app/sources">{t("torrentActionCta")}</Link>}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GatewayRecentActivity({
   gatewayId,
   refreshKey,
@@ -279,7 +289,6 @@ function GatewayRecentActivity({
   gatewayId: string;
   refreshKey: number;
 }) {
-  // Remount on refresh so loading starts from initial state (no sync setState in effect).
   return (
     <GatewayRecentActivityPanel
       key={`${gatewayId}:${refreshKey}`}
@@ -324,13 +333,13 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
   if (outcome === "loading") {
     return (
       <div
-        className="mt-3 space-y-2 border-t border-border/50 pt-3"
+        className="flex flex-col gap-2 border-t border-border pt-3"
         aria-busy="true"
         data-activity="loading"
       >
-        <p className="text-sm font-medium">{t("recentActivity")}</p>
+        <p className="text-sm font-medium text-foreground">{t("recentActivity")}</p>
         <p className="text-sm text-muted-foreground">{t("activityLoading")}</p>
-        <Skeleton className="h-8 w-full rounded-md" />
+        <Skeleton className="h-8 w-full rounded-lg" />
       </div>
     );
   }
@@ -338,10 +347,10 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
   if (outcome.status === "unavailable") {
     return (
       <div
-        className="mt-3 space-y-2 border-t border-border/50 pt-3"
+        className="flex flex-col gap-2 border-t border-border pt-3"
         data-activity="unavailable"
       >
-        <p className="text-sm font-medium">{t("recentActivity")}</p>
+        <p className="text-sm font-medium text-foreground">{t("recentActivity")}</p>
         <SoftNotice
           role="alert"
           title={t("activityUnavailableTitle")}
@@ -354,22 +363,24 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
   if (outcome.status === "empty") {
     return (
       <div
-        className="mt-3 space-y-2 border-t border-border/50 pt-3"
+        className="flex flex-col gap-2 border-t border-border pt-3"
         data-activity="empty"
       >
-        <p className="text-sm font-medium">{t("recentActivity")}</p>
-        <p className="text-sm text-muted-foreground">{t("activityEmpty")}</p>
+        <p className="text-sm font-medium text-foreground">{t("recentActivity")}</p>
+        <p className="text-sm font-medium text-muted-foreground">
+          {t("activityEmpty")}
+        </p>
       </div>
     );
   }
 
   return (
     <div
-      className="mt-3 space-y-2 border-t border-border/50 pt-3"
+      className="flex flex-col gap-2 border-t border-border pt-3"
       data-activity="ready"
     >
-      <p className="text-sm font-medium">{t("recentActivity")}</p>
-      <ul className="space-y-1.5">
+      <p className="text-sm font-medium text-foreground">{t("recentActivity")}</p>
+      <ul className="flex flex-col gap-2">
         {outcome.jobs.map((job) => {
           const bucket = normalizeJobStatus(job.status);
           const inProgress = bucket === "active";
@@ -377,43 +388,41 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
             <li
               key={job.job_id}
               data-job-status={bucket}
-              className="flex min-w-0 flex-col gap-0.5 text-sm text-muted-foreground"
+              className="flex min-w-0 flex-col gap-0.5 border-b border-border py-2 last:border-b-0"
             >
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="min-w-0 truncate text-foreground">
+                <span className="min-w-0 text-sm font-medium break-words whitespace-normal text-foreground">
                   {typeLabel(job.type)}
                 </span>
-                <Badge
-                  variant={
+                <span
+                  className={cn(
+                    "text-sm font-medium break-words whitespace-normal",
                     bucket === "failed"
-                      ? "destructive"
-                      : bucket === "uncertain"
-                        ? "outline"
-                        : "secondary"
-                  }
-                  className="max-w-full whitespace-normal"
+                      ? "text-destructive"
+                      : "text-muted-foreground"
+                  )}
                 >
                   {statusLabel(job.status)}
-                </Badge>
-                {inProgress && job.attempts > 0 && (
-                  <span className="text-xs break-words whitespace-normal">
+                </span>
+                {inProgress && job.attempts > 0 ? (
+                  <span className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
                     {t("attemptOf", {
                       current: job.attempts,
                       max: MAX_ATTEMPTS_DISPLAY,
                     })}
                   </span>
-                )}
+                ) : null}
               </div>
-              {bucket === "failed" && (
-                <span className="text-xs break-words whitespace-normal text-destructive/90">
+              {bucket === "failed" ? (
+                <span className="text-xs font-medium break-words whitespace-normal text-destructive">
                   {mapJobError(job.type, job.error, t)}
                 </span>
-              )}
-              {bucket === "uncertain" && (
-                <span className="text-xs break-words whitespace-normal">
+              ) : null}
+              {bucket === "uncertain" ? (
+                <span className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
                   {t("jobUncertainHint")}
                 </span>
-              )}
+              ) : null}
             </li>
           );
         })}
@@ -453,13 +462,13 @@ function PendingWaitState({
 
   return (
     <div
-      className="mt-3 max-w-lg space-y-2 border-t border-border/50 pt-3"
+      className="flex max-w-lg flex-col gap-2 border-t border-border pt-3"
       data-pairing={expired ? "expired" : "pending"}
     >
       <p className="text-sm font-medium break-words whitespace-normal text-foreground">
         {expired ? t("statusExpired") : t("statusWaiting")}
       </p>
-      <p className="text-sm break-words whitespace-normal text-muted-foreground">
+      <p className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
         {expiryMessage}
       </p>
       <div className="flex flex-wrap items-center gap-3">
@@ -475,7 +484,7 @@ function PendingWaitState({
         </Button>
         <Link
           href="/docs#depannage"
-          className="inline-block max-w-full text-sm break-words whitespace-normal text-foreground underline-offset-4 hover:underline"
+          className="inline-block max-w-full text-sm font-medium break-words whitespace-normal text-foreground underline-offset-4 hover:underline"
         >
           {t("troubleshootLink")}
         </Link>
@@ -487,13 +496,13 @@ function PendingWaitState({
 function OfflineHint() {
   const t = useTranslations("access");
   return (
-    <p className="mt-2 text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+    <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
       {t("offlineLibraryHint")}
     </p>
   );
 }
 
-function AccessStatusCell({ gateway, now }: { gateway: Gateway; now: number }) {
+function AccessStatusLine({ gateway, now }: { gateway: Gateway; now: number }) {
   const t = useTranslations("access");
   const presentation = gatewayConnectionPresentation(gateway, now);
   const label = connectionLabel(presentation, gateway, now, t);
@@ -502,12 +511,9 @@ function AccessStatusCell({ gateway, now }: { gateway: Gateway; now: number }) {
     <div className="min-w-0 space-y-1" data-connection={presentation}>
       <div className="flex min-w-0 items-center gap-2">
         <ConnectionDot presentation={presentation} />
-        <Badge
-          variant="outline"
-          className="max-w-full min-w-0 overflow-hidden whitespace-normal"
-        >
-          <span className="break-words">{label}</span>
-        </Badge>
+        <span className="text-sm font-medium break-words whitespace-normal text-foreground">
+          {label}
+        </span>
       </div>
       {presentation === "offline" ? <OfflineHint /> : null}
     </div>
@@ -560,7 +566,6 @@ function GatewayActions({
   revokeLabel,
   recreateLabel,
   deleteLabel,
-  align = "end",
 }: {
   gateway: Gateway;
   revoking: boolean;
@@ -571,15 +576,9 @@ function GatewayActions({
   revokeLabel: string;
   recreateLabel: string;
   deleteLabel: string;
-  align?: "start" | "end";
 }) {
   return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-wrap items-center gap-2",
-        align === "start" ? "justify-start" : "justify-end"
-      )}
-    >
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
       {gateway.status === "paired" ? (
         <Button
           size="sm"
@@ -617,16 +616,94 @@ function GatewayActions({
   );
 }
 
+/** Pen-aligned pairing / connection row — name → status → activity → actions. */
+function GatewayRow({
+  gateway,
+  now,
+  locale,
+  neverLabel,
+  recreating,
+  revoking,
+  activityRefreshKey,
+  onRecreate,
+  onRevoke,
+  onDelete,
+  revokeLabel,
+  recreateLabel,
+  deleteLabel,
+}: {
+  gateway: Gateway;
+  now: number;
+  locale: string;
+  neverLabel: string;
+  recreating: boolean;
+  revoking: boolean;
+  activityRefreshKey: number;
+  onRecreate: () => void;
+  onRevoke: () => void;
+  onDelete: () => void;
+  revokeLabel: string;
+  recreateLabel: string;
+  deleteLabel: string;
+}) {
+  return (
+    <article
+      data-testid="gateway-row"
+      data-gateway-id={gateway.gateway_id}
+      className="flex min-w-0 flex-col gap-3 border-b border-border py-3 last:border-b-0"
+    >
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h2 className="min-w-0 text-base font-medium break-words whitespace-normal text-foreground">
+            {gateway.name}
+          </h2>
+          <AccessStatusLine gateway={gateway} now={now} />
+          <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
+            {gateway.last_seen_at
+              ? formatAppDate(gateway.last_seen_at, locale)
+              : neverLabel}
+          </p>
+        </div>
+      </div>
+
+      <GatewayDetail
+        gateway={gateway}
+        now={now}
+        recreating={recreating}
+        activityRefreshKey={activityRefreshKey}
+        onRecreate={onRecreate}
+      />
+
+      <GatewayActions
+        gateway={gateway}
+        revoking={revoking}
+        recreating={recreating}
+        onRevoke={onRevoke}
+        onRecreate={onRecreate}
+        onDelete={onDelete}
+        revokeLabel={revokeLabel}
+        recreateLabel={recreateLabel}
+        deleteLabel={deleteLabel}
+      />
+    </article>
+  );
+}
+
 export function GatewaysView({
+  title,
+  description,
   initialGateways,
   gatewaysUnavailable,
 }: {
+  title: string;
+  description: string;
   initialGateways: Gateway[];
   gatewaysUnavailable: boolean;
 }) {
   const t = useTranslations("access");
   const tCreate = useTranslations("createAccess");
   const tCommon = useTranslations("common");
+  const tBrand = useTranslations("brand");
   const locale = useLocale();
   const { call } = useApiClient();
   const [gateways, setGateways] = useState(initialGateways);
@@ -667,7 +744,6 @@ export function GatewaysView({
         setNow(Date.now());
         setActivityRefreshKey((key) => key + 1);
       } catch {
-        // Keep showing the last known list; surface soft failure separately.
         if (!cancelled) setListRefreshFailed(true);
       }
     };
@@ -766,175 +842,111 @@ export function GatewaysView({
     />
   );
 
+  const headerActions = (
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      {guideLink}
+      {createAction}
+    </div>
+  );
+
   return (
-    <div className="min-w-0 space-y-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-      <Reveal>
-        <GatewayCloudLocalIntro gateways={gateways} now={now} />
+    <div
+      className="flex min-w-0 flex-col gap-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      data-testid="gateways-pen-layout"
+    >
+      {/* Pen Header/PageTitle Hd0003 + mobile Top mF0047 */}
+      <header className="flex min-h-[72px] flex-col justify-center gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <p className="font-heading text-sm font-medium text-muted-foreground md:hidden">
+            {tBrand("name")}
+          </p>
+          <h1 className="font-heading text-[22px] font-medium text-foreground md:text-[28px]">
+            {title}
+          </h1>
+          <p className="text-xs font-medium text-muted-foreground md:text-sm">
+            {description}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {headerActions}
+        </div>
+      </header>
 
-        <SectionHeader
-          title={t("sectionTitle")}
-          description={
-            gateways.length > 0
-              ? t("countLabel", { count: gateways.length })
-              : t("sectionEmptyHint")
-          }
-          action={
-            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-              {guideLink}
-              {createAction}
-            </div>
-          }
+      <GatewayConnectionPanel gateways={gateways} now={now} />
+
+      <p className="max-w-3xl text-sm font-medium leading-relaxed break-words whitespace-normal text-muted-foreground md:text-sm">
+        <span className="md:hidden">{t("pageHintMobile")}</span>
+        <span className="hidden md:inline">{t("pageHint")}</span>
+      </p>
+
+      {listRefreshFailed && gateways.length > 0 ? (
+        <SoftNotice
+          title={t("listRefreshFailedTitle")}
+          description={t("listRefreshFailed")}
         />
+      ) : null}
 
-        {listRefreshFailed && gateways.length > 0 ? (
-          <SoftNotice
-            className="mb-4"
-            title={t("listRefreshFailedTitle")}
-            description={t("listRefreshFailed")}
+      {gatewaysUnavailable && gateways.length === 0 ? (
+        <div role="alert" data-gateways-state="unavailable">
+          <EmptyState
+            icon={Radio}
+            title={t("emptyUnavailableTitle")}
+            description={t("emptyUnavailable")}
           />
-        ) : null}
-
-        {gatewaysUnavailable && gateways.length === 0 ? (
-          <div role="alert" data-gateways-state="unavailable">
-            <EmptyState
-              icon={Radio}
-              title={t("emptyUnavailableTitle")}
-              description={t("emptyUnavailable")}
-            />
-          </div>
-        ) : gateways.length === 0 ? (
-          <div data-gateways-state="empty">
-            <EmptyState
-              visual={<CloudGatewayIllustration />}
-              title={t("emptyTitle")}
-              description={t("emptyDescription")}
-              action={
-                <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
-                  {createAction}
-                  {guideLink}
-                </div>
-              }
-            />
-          </div>
-        ) : (
-          <div data-gateways-state="ready">
-            <p className="mb-4 text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
-              {t("watchFolderHint")}
-            </p>
-
-            {/* Narrow: paper rows (Pen Gateway actions), not SaaS cards */}
-            <RevealGroup className="grid gap-3 lg:hidden">
-              {gateways.map((gateway) => (
-                <RevealItem key={gateway.gateway_id}>
-                  <article
-                    data-gateway-id={gateway.gateway_id}
-                    className="flex min-w-0 flex-col gap-3 rounded-md border border-border/80 bg-card px-4 py-4"
-                  >
-                    <div className="min-w-0 space-y-2">
-                      <h3 className="font-heading text-[15px] leading-snug font-medium tracking-tight break-words whitespace-normal">
-                        {gateway.name}
-                      </h3>
-                      <AccessStatusCell gateway={gateway} now={now} />
-                      <p className="text-xs break-words whitespace-normal text-muted-foreground">
-                        {gateway.last_seen_at
-                          ? formatAppDate(gateway.last_seen_at, locale)
-                          : tCommon("never")}
-                      </p>
-                    </div>
-
-                    <GatewayDetail
+        </div>
+      ) : gateways.length === 0 ? (
+        <div data-gateways-state="empty">
+          <EmptyState
+            visual={<CloudGatewayIllustration />}
+            title={t("emptyTitle")}
+            description={t("emptyDescription")}
+            action={
+              <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
+                {createAction}
+                {guideLink}
+              </div>
+            }
+          />
+        </div>
+      ) : (
+        <div data-gateways-state="ready" className="flex min-w-0 flex-col gap-6">
+          <Reveal>
+            <div data-testid="gateways-rows">
+              <RevealGroup className="flex min-w-0 flex-col">
+                {gateways.map((gateway) => (
+                  <RevealItem key={gateway.gateway_id}>
+                    <GatewayRow
                       gateway={gateway}
                       now={now}
+                      locale={locale}
+                      neverLabel={tCommon("never")}
                       recreating={recreatingId === gateway.gateway_id}
+                      revoking={
+                        revoking &&
+                        revokeTarget?.gateway_id === gateway.gateway_id
+                      }
                       activityRefreshKey={activityRefreshKey}
                       onRecreate={() => void recreate(gateway)}
-                    />
-
-                    <GatewayActions
-                      gateway={gateway}
-                      align="start"
-                      revoking={
-                        revoking && revokeTarget?.gateway_id === gateway.gateway_id
-                      }
-                      recreating={recreatingId === gateway.gateway_id}
                       onRevoke={() => setRevokeTarget(gateway)}
-                      onRecreate={() => void recreate(gateway)}
                       onDelete={() => setDeleteTarget(gateway)}
                       revokeLabel={t("revoke")}
                       recreateLabel={t("recreateCodes")}
                       deleteLabel={t("delete")}
                     />
-                  </article>
-                </RevealItem>
-              ))}
-            </RevealGroup>
+                  </RevealItem>
+                ))}
+              </RevealGroup>
+            </div>
+          </Reveal>
 
-            {/* Desktop: editorial table */}
-            <Reveal className="hidden overflow-x-auto border-y border-border/70 lg:block">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead>{t("colName")}</TableHead>
-                    <TableHead>{t("colStatus")}</TableHead>
-                    <TableHead>{t("colLastSeen")}</TableHead>
-                    <TableHead className="text-right">{t("colAction")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {gateways.map((gateway) => (
-                    <TableRow
-                      key={gateway.gateway_id}
-                      data-gateway-id={gateway.gateway_id}
-                      className="hover:bg-muted/20"
-                    >
-                      <TableCell className="max-w-72 align-top font-medium whitespace-normal">
-                        <div className="min-w-0 space-y-1">
-                          <span className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words whitespace-normal">
-                            {gateway.name}
-                          </span>
-                          <GatewayDetail
-                            gateway={gateway}
-                            now={now}
-                            recreating={recreatingId === gateway.gateway_id}
-                            activityRefreshKey={activityRefreshKey}
-                            onRecreate={() => void recreate(gateway)}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top whitespace-normal">
-                        <AccessStatusCell gateway={gateway} now={now} />
-                      </TableCell>
-                      <TableCell className="align-top text-sm whitespace-normal text-muted-foreground">
-                        <span className="break-words">
-                          {gateway.last_seen_at
-                            ? formatAppDate(gateway.last_seen_at, locale)
-                            : tCommon("never")}
-                        </span>
-                      </TableCell>
-                      <TableCell className="align-top whitespace-normal text-right">
-                        <GatewayActions
-                          gateway={gateway}
-                          revoking={
-                            revoking &&
-                            revokeTarget?.gateway_id === gateway.gateway_id
-                          }
-                          recreating={recreatingId === gateway.gateway_id}
-                          onRevoke={() => setRevokeTarget(gateway)}
-                          onRecreate={() => void recreate(gateway)}
-                          onDelete={() => setDeleteTarget(gateway)}
-                          revokeLabel={t("revoke")}
-                          recreateLabel={t("recreateCodes")}
-                          deleteLabel={t("delete")}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Reveal>
-          </div>
-        )}
-      </Reveal>
+          <TorrentGatewayAction />
+        </div>
+      )}
+
+      {/* Empty state still surfaces torrent context when ready is empty */}
+      {gateways.length === 0 && !gatewaysUnavailable ? (
+        <TorrentGatewayAction />
+      ) : null}
 
       <CreateGatewayDialog
         open={createOpen}
@@ -946,19 +958,19 @@ export function GatewaysView({
         open={credentials !== null}
         onOpenChange={(open) => !open && setCredentials(null)}
       >
-        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="break-words whitespace-normal">
+        <DialogContent className="gap-4 p-6 sm:max-w-[420px]">
+          <DialogHeader className="gap-2">
+            <DialogTitle className="font-heading text-xl font-medium tracking-tight break-words whitespace-normal">
               {tCreate("createdTitle")}
             </DialogTitle>
-            <DialogDescription className="break-words whitespace-normal">
+            <DialogDescription className="text-sm font-medium break-words whitespace-normal">
               {tCreate("createdDescription")}
             </DialogDescription>
           </DialogHeader>
           {credentials ? (
             <GatewayCredentialsPanel credentials={credentials} />
           ) : null}
-          <DialogFooter className="gap-2 sm:gap-2">
+          <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
             <Button
               onClick={() => setCredentials(null)}
               className="whitespace-normal"
@@ -973,16 +985,16 @@ export function GatewaysView({
         open={revokeTarget !== null}
         onOpenChange={(open) => !open && !revoking && setRevokeTarget(null)}
       >
-        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="break-words whitespace-normal">
+        <DialogContent className="gap-4 p-6 sm:max-w-[400px]">
+          <DialogHeader className="gap-2">
+            <DialogTitle className="font-heading text-lg font-medium tracking-tight break-words whitespace-normal">
               {t("revokeConfirmTitle")}
             </DialogTitle>
-            <DialogDescription className="break-words whitespace-normal">
+            <DialogDescription className="text-sm font-medium break-words whitespace-normal">
               {t("revokeConfirmDescription")}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-2">
+          <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
             <Button
               variant="outline"
               onClick={() => setRevokeTarget(null)}
@@ -1009,16 +1021,16 @@ export function GatewaysView({
         open={deleteTarget !== null}
         onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
       >
-        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="break-words whitespace-normal">
+        <DialogContent className="gap-4 p-6 sm:max-w-[400px]">
+          <DialogHeader className="gap-2">
+            <DialogTitle className="font-heading text-lg font-medium tracking-tight break-words whitespace-normal">
               {t("deleteConfirmTitle")}
             </DialogTitle>
-            <DialogDescription className="break-words whitespace-normal">
+            <DialogDescription className="text-sm font-medium break-words whitespace-normal">
               {t("deleteConfirmDescription")}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-2">
+          <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
             <Button
               variant="outline"
               onClick={() => setDeleteTarget(null)}

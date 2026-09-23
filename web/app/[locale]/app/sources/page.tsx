@@ -1,6 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { PageHeader } from "@/components/app/page-header";
-import { SourcesManager } from "@/components/app/sources/sources-manager";
+import { SourcesView } from "@/components/app/sources/sources-view";
 import { safeApiFetch } from "@/lib/api";
 import type { Source } from "@/lib/types";
 
@@ -15,12 +14,12 @@ export default async function SourcesPage({
   const sources = await safeApiFetch<Source[]>("/api/v1/sources");
 
   return (
-    <div className="min-w-0">
-      <PageHeader title={t("title")} description={t("description")} />
-      <SourcesManager
-        initialSources={sources ?? []}
-        sourcesUnavailable={sources === null}
-      />
-    </div>
+    <SourcesView
+      title={t("title")}
+      description={t("description")}
+      descriptionMobile={t("descriptionMobile")}
+      initialSources={sources ?? []}
+      sourcesUnavailable={sources === null}
+    />
   );
 }

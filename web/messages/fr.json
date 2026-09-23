@@ -161,27 +161,29 @@
   "pages": {
     "library": {
       "title": "Bibliothèque",
-      "description": "Votre collection personnelle de livres déjà disponibles, prêts à envoyer sur votre liseuse."
+      "description": "Retrouver dans mes livres"
     },
     "devices": {
       "title": "Appareils",
-      "description": "Vos liseuses et la façon dont les livres y arrivent depuis Ferry Agent."
+      "description": "Destinations enregistrées"
     },
     "access": {
       "title": "Gateway",
-      "description": "Module local optionnel — complémentaire du cloud."
+      "description": "Module local optionnel — complémentaire du cloud"
     },
     "sources": {
       "title": "Sources",
-      "description": "Catalogues cloud et module local (Gateway)."
+      "description": "Catalogues cloud et module local (Gateway).",
+      "descriptionMobile": "Catalogues cloud et Gateway"
     },
     "deliveries": {
       "title": "Livraisons",
-      "description": "Suivez vos livraisons depuis la bibliothèque en ligne vers vos appareils."
+      "description": "Historique des transferts"
     },
     "settings": {
       "title": "Réglages",
-      "description": "Préférences d'envoi, catalogue pour votre liseuse, et renvois utiles."
+      "description": "Préférences d’envoi et catalogue lecteur (OPDS)",
+      "descriptionMobile": "Envoi et catalogue OPDS"
     }
   },
   "library": {
@@ -291,7 +293,12 @@
     "passageHint": "Du fichier à la liseuse — un parcours simple.",
     "coverFallback": "Couverture",
     "collectionRegion": "Collection",
-    "addRegion": "Ajout de livres"
+    "addRegion": "Ajout de livres",
+    "modeMine": "Retrouver dans mes livres",
+    "modeSources": "Chercher dans les sources",
+    "browseModeLabel": "Parcourir la bibliothèque",
+    "recentSection": "Récents",
+    "searchSourcesPlaceholder": "Chercher dans les sources"
   },
   "deliverDialog": {
     "title": "Envoyer « {title} »",
@@ -362,18 +369,9 @@
   },
   "devices": {
     "newDevice": "Nouvel appareil",
-    "sectionTitle": "Vos appareils",
-    "countLabel": "{count} appareils",
-    "colProfile": "Profil de conversion",
-    "refreshing": "Mise à jour de la liste…",
     "emptyTitle": "Aucun appareil",
     "emptyDescription": "Ajoutez votre première liseuse pour envoyer des livres depuis votre bibliothèque.",
     "emptyUnavailable": "Impossible de charger vos appareils pour le moment. Réessayez un peu plus tard.",
-    "colDevice": "Appareil",
-    "colDelivery": "Mode d'arrivée",
-    "colCloud": "Compte cloud",
-    "colLastSync": "Dernière synchro",
-    "colAction": "Action",
     "linked": "Lié",
     "linkedDropbox": "Lié à Dropbox",
     "linkedDrive": "Lié à Google Drive",
@@ -391,7 +389,6 @@
       "C": "Code dans le navigateur",
       "D": "Transfert USB"
     },
-    "sectionDescription": "Ajoutez vos liseuses pour choisir comment les livres y arrivent.",
     "unavailableTitle": "Appareils indisponibles",
     "refresh": "Actualiser",
     "retry": "Réessayer",
@@ -560,7 +557,12 @@
     "jobFailedMalicious": "Le fichier a été refusé pour des raisons de sécurité.",
     "jobFailedTooLarge": "Le fichier est trop volumineux.",
     "jobFailedBadFormat": "Le fichier reçu n’est pas un livre reconnu.",
-    "jobFailedRevoked": "Votre Gateway n’est plus disponible."
+    "jobFailedRevoked": "Votre Gateway n’est plus disponible.",
+    "pageHint": "Le Gateway gère les téléchargements et sources sur votre machine. La bibliothèque reste dans le cloud.",
+    "pageHintMobile": "Torrents et sources machine. La bibliothèque reste cloud.",
+    "torrentActionTitle": "Torrents via Gateway",
+    "torrentActionDescription": "Gérée localement, liée à votre compte en ligne.",
+    "torrentActionCta": "Ouvrir les sources"
   },
   "createAccess": {
     "title": "Créer un Gateway",
@@ -613,6 +615,7 @@
     "unknownHint": "L'état de cette source n'a pas pu être confirmé. Réessayez plus tard.",
     "alwaysActive": "Toujours disponible",
     "gatewayLocal": "Local via Gateway",
+    "gatewayLocalShort": "Via Gateway",
     "gatewayHint": "Cette source dépend du Gateway installé chez vous. Elle n'indique pas à elle seule s'il est connecté.",
     "prowlarrNote": "Prowlarr, s'il est utilisé, reste configuré côté Gateway — pas comme une rubrique principale ici.",
     "gatewayCta": "Ouvrir Gateway",
@@ -631,9 +634,6 @@
     "partialNote": "Certaines sources activables n'ont pas pu être confirmées. Celles affichées restent utilisables ; les autres restent en état inconnu."
   },
   "deliveries": {
-    "sectionTitle": "Vos envois",
-    "sectionDescription": "Chaque envoi depuis votre bibliothèque apparaît ici avec son statut.",
-    "countLabel": "{count} envois",
     "emptyTitle": "Aucun envoi",
     "emptyDescription": "Envoyez un livre depuis votre bibliothèque pour suivre vos envois ici.",
     "unavailableTitle": "Envois indisponibles",
@@ -643,19 +643,9 @@
     "refreshFailedTitle": "Actualisation incomplète",
     "refreshFailedDescription": "La liste affichée n’a pas pu être mise à jour. Vos derniers envois connus restent visibles.",
     "statusHintDelivered": "L’opération d’envoi est terminée. Cela ne confirme pas que le livre a été ouvert sur la liseuse.",
-    "statusHintDeliveredShort": "Envoi terminé — pas une lecture confirmée",
     "statusHintUnknown": "Statut non reconnu. Actualisez pour vérifier, sans traiter l’envoi comme terminé.",
     "failedHint": "L’envoi n’a pas abouti. Ouvrez le suivi pour plus de détail.",
     "routeTo": "{title} → {device}",
-    "colBook": "Livre",
-    "colDevice": "Liseuse",
-    "colStatus": "Statut",
-    "colMethod": "Mode d’envoi",
-    "colFormat": "Format",
-    "colCreated": "Demandé",
-    "colDelivered": "Terminé",
-    "colError": "Échec",
-    "colAction": "Action",
     "track": "Suivre",
     "trackFailed": "Voir le problème",
     "trackAria": "Suivre l’envoi de {title}",
@@ -696,11 +686,11 @@
   "settings": {
     "unavailableTitle": "Réglages indisponibles",
     "unavailable": "Impossible de charger vos réglages pour le moment. Les valeurs affichées peuvent être incomplètes.",
-    "deliveryPreferencesTitle": "Préférences d'envoi",
-    "deliveryPreferencesDescription": "Votre compte et la façon dont les livres partent vers votre liseuse.",
-    "email": "Email",
+    "deliveryPreferencesTitle": "Préférences d’envoi",
+    "deliveryPreferencesDescription": "Compte et destination d’envoi vers votre liseuse.",
+    "email": "Email du compte",
     "emailHint": "Géré par votre fournisseur de connexion.",
-    "kindleEmail": "Votre email Kindle",
+    "kindleEmail": "Email Kindle",
     "kindleEmailPlaceholder": "votre-nom@kindle.com",
     "kindleEmailHint": "Utilisée comme destination lors d'un envoi vers Kindle par email.",
     "clearKindleEmail": "Effacer",
@@ -708,8 +698,8 @@
     "defaultFormatHint": "Format utilisé par défaut lors d'un envoi.",
     "sourcesTitle": "Sources",
     "sourcesDescription": "La gestion des catalogues se fait dans Sources.",
-    "readerCatalogTitle": "Catalogue pour votre liseuse",
-    "readerCatalogDescription": "Un lien pour afficher votre bibliothèque en ligne dans KOReader, Moon+, Marvin ou Kobo.",
+    "readerCatalogTitle": "Catalogue lecteur (OPDS)",
+    "readerCatalogDescription": "Liens pour afficher votre bibliothèque sur une liseuse.",
     "readerCatalog": {
       "warningTitle": "Accès à toute votre bibliothèque",
       "warning": "Chaque lien donne accès à toute votre bibliothèque. Révoquez un lien dès que vous n'en avez plus besoin.",
@@ -731,12 +721,12 @@
       "columnActions": "Actions",
       "neverUsed": "Jamais",
       "revoke": "Révoquer",
-      "revokeConfirmTitle": "Révoquer ce lien ?",
-      "revokeConfirmDescription": "Après révocation, ce lien ne fonctionnera plus sur la liseuse. Il faudra en créer un nouveau pour reconnecter l'appareil.",
+      "revokeConfirmTitle": "Révoquer l’accès OPDS ?",
+      "revokeConfirmDescription": "Le jeton et le QR associés ne fonctionneront plus. Vous pourrez en créer un nouveau.",
       "defaultLabel": "Liseuse",
       "createTitle": "Créer un lien catalogue",
       "createDescription": "Donnez un nom à ce lien pour le retrouver facilement (ex. Kobo, KOReader).",
-      "labelField": "Libellé",
+      "labelField": "Libellé du jeton OPDS",
       "createdTitle": "Lien prêt",
       "createdDescription": "Ce lien ne sera plus jamais réaffiché. Copiez-le ou scannez le QR maintenant.",
       "oneTimeTitle": "À conserver maintenant",
@@ -751,7 +741,13 @@
       "qrError": "QR indisponible. Utilisez le lien ci-dessus.",
       "qrAlt": "Code QR du lien catalogue",
       "createErrorTitle": "Création impossible",
-      "revokeErrorTitle": "Révocation impossible"
+      "revokeErrorTitle": "Révocation impossible",
+      "tokenTitle": "Jeton « {label} »",
+      "actionsHint": "QR · Copier l’URL · Révoquer",
+      "actionsHintMobile": "QR · Copier · Révoquer",
+      "actionsHintList": "Révoquer",
+      "labelHint": "Affiché dans Réglages · Catalogue lecteur",
+      "qrPlaceholder": "QR"
     },
     "devicesTitle": "Appareils",
     "devicesDescription": "Gérez vos liseuses et la façon dont les livres y arrivent.",

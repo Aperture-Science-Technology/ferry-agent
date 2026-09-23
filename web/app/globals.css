@@ -39,13 +39,19 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Pen radii: sm=6 md=8 lg=12 (explicit px, not scaled from a single base). */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-3xl: 24px;
+  --radius-4xl: 28px;
+  --radius-cover: 9px;
+  --color-disabled: var(--disabled);
+  --color-ferry-surface: var(--ferry-surface);
+  --color-ferry-surface-2: var(--ferry-surface-2);
+  --color-ferry-transfer: var(--ferry-transfer);
 }
 
 /*
@@ -72,12 +78,16 @@
   --border: #d4d0c8;
   --input: #e0ded7;
   --ring: #a25c41;
+  --disabled: #a39a90;
+  --ferry-surface: #fbfaf7;
+  --ferry-surface-2: #eeede8;
+  --ferry-transfer: #9a4825;
   --chart-1: #9a4825;
   --chart-2: #665b53;
   --chart-3: #a39a90;
   --chart-4: #5c6b4a;
   --chart-5: #312620;
-  --radius: 0.5rem;
+  --radius: 12px;
   --sidebar: #f5f3ef;
   --sidebar-foreground: #271d16;
   --sidebar-primary: #9a4825;
@@ -86,6 +96,13 @@
   --sidebar-accent-foreground: #312620;
   --sidebar-border: #d4d0c8;
   --sidebar-ring: #a25c41;
+  /* Pen Shell/Sidebar width — overrides ui/sidebar default via !important below. */
+  --fa-sidebar-width: 240px;
+}
+
+/* Pen desktop sidebar is a fixed 240 px column (frame DQYhS). */
+[data-slot="sidebar-wrapper"] {
+  --sidebar-width: var(--fa-sidebar-width) !important;
 }
 
 .dark {
@@ -107,6 +124,10 @@
   --border: #665b53;
   --input: #665b53;
   --ring: #a25c41;
+  --disabled: #a39a90;
+  --ferry-surface: #312620;
+  --ferry-surface-2: #3f271d;
+  --ferry-transfer: #a25c41;
   --chart-1: #a25c41;
   --chart-2: #a39a90;
   --chart-3: #665b53;

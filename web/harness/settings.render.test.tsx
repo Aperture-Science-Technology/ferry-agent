@@ -127,6 +127,9 @@ function renderSettings(
   return render(
     <NextIntlClientProvider locale="fr" messages={messages}>
       <SettingsForm
+        title={messages.pages.settings.title}
+        description={messages.pages.settings.description}
+        descriptionMobile={messages.pages.settings.descriptionMobile}
         initialEmail={props.initialEmail ?? "alex@example.com"}
         initialKindleEmail={props.initialKindleEmail ?? "alex@kindle.com"}
         initialDefaultFormat={props.initialDefaultFormat ?? "epub"}

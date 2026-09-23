@@ -1,22 +1,9 @@
-import { Badge } from "@/components/ui/badge";
 import { normalizeDeliveryStatus } from "@/components/app/deliveries/deliveries-state";
 import { cn } from "@/lib/utils";
-import type { DeliveryStatus } from "@/lib/types";
-
-const STATUS_VARIANT: Record<
-  DeliveryStatus | "unknown",
-  "default" | "secondary" | "destructive" | "outline" | "ghost"
-> = {
-  queued: "secondary",
-  sent: "outline",
-  delivered: "default",
-  failed: "destructive",
-  unknown: "ghost",
-};
 
 /**
- * Status chip with an ink/copper marker.
- * delivered uses primary fill; queued/sent stay muted — never look like success.
+ * Pen Delivery/StatusBadge (ePqtu): surface-2 pill, 1px border, 6px marker + 12/500 label.
+ * Unknown stays visually muted — never reads as delivered/success.
  */
 export function DeliveryStatusBadge({
   status,
@@ -28,11 +15,10 @@ export function DeliveryStatusBadge({
   className?: string;
 }) {
   const normalized = normalizeDeliveryStatus(status);
-  const variant = STATUS_VARIANT[normalized];
 
   const dotClass =
     normalized === "delivered"
-      ? "bg-primary-foreground"
+      ? "bg-ferry-transfer"
       : normalized === "failed"
         ? "bg-destructive"
         : normalized === "sent"
@@ -42,15 +28,14 @@ export function DeliveryStatusBadge({
             : "bg-border";
 
   return (
-    <Badge
-      variant={variant}
+    <span
       className={cn(
-        "max-w-full min-w-0 gap-1.5 overflow-hidden whitespace-normal",
+        "inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-full border border-border bg-ferry-surface-2 px-2.5 py-1 text-xs font-medium text-foreground",
         className
       )}
     >
       <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", dotClass)} />
       <span className="min-w-0 break-words">{label}</span>
-    </Badge>
+    </span>
   );
 }

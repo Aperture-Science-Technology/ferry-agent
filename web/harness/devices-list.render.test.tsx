@@ -80,6 +80,8 @@ function renderDevices(
   return render(
     <NextIntlClientProvider locale="fr" messages={messages}>
       <DevicesView
+        title="Appareils"
+        description="Destinations enregistrées"
         initialDevices={props.initialDevices ?? []}
         devicesUnavailable={props.devicesUnavailable ?? false}
         cloudLinkStatus={props.cloudLinkStatus}
@@ -104,9 +106,9 @@ describe("UI harness — devices list", () => {
       ],
     });
 
-    expect(screen.getAllByText("Salon").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Kindle").length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/— Paperwhite/).length).toBeGreaterThan(0);
+    expect(screen.getByText("Salon")).toBeTruthy();
+    expect(screen.getByText("Kindle")).toBeTruthy();
+    expect(screen.getByText(/— Paperwhite/)).toBeTruthy();
     unmount();
 
     const { unmount: unmountModel } = renderDevices({
@@ -119,8 +121,8 @@ describe("UI harness — devices list", () => {
       ],
     });
 
-    expect(screen.getAllByText("Kobo").length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/— Clara BW/).length).toBeGreaterThan(0);
+    expect(screen.getByText("Kobo")).toBeTruthy();
+    expect(screen.getByText(/— Clara BW/)).toBeTruthy();
     expect(screen.queryByText("Salon")).toBeNull();
     unmountModel();
 
@@ -134,7 +136,7 @@ describe("UI harness — devices list", () => {
       ],
     });
 
-    expect(screen.getAllByText("Tolino").length).toBeGreaterThan(0);
+    expect(screen.getByText("Tolino")).toBeTruthy();
     expect(screen.queryByText(/— /)).toBeNull();
   });
 
@@ -162,7 +164,7 @@ describe("UI harness — devices list", () => {
       )
     ).toBeTruthy();
 
-    expect(screen.getAllByText("Non lié").length).toBeGreaterThan(0);
+    expect(screen.getByText("Non lié")).toBeTruthy();
     expect(screen.queryByText("Lié")).toBeNull();
     expect(screen.queryByText("Lié à Dropbox")).toBeNull();
     expect(screen.queryByText("Lié à Google Drive")).toBeNull();
@@ -186,7 +188,7 @@ describe("UI harness — devices list", () => {
       devicesUnavailable: false,
     });
 
-    expect(screen.getAllByText("Kindle Cuisine").length).toBeGreaterThan(0);
+    expect(screen.getByText("Kindle Cuisine")).toBeTruthy();
     expect(screen.queryByText("Aucun appareil")).toBeNull();
     expect(screen.queryByText("Appareils indisponibles")).toBeNull();
 
@@ -195,7 +197,7 @@ describe("UI harness — devices list", () => {
     await waitFor(() => {
       expect(screen.getByText("Actualisation incomplète")).toBeTruthy();
     });
-    expect(screen.getAllByText("Kindle Cuisine").length).toBeGreaterThan(0);
+    expect(screen.getByText("Kindle Cuisine")).toBeTruthy();
     expect(screen.queryByText("Aucun appareil")).toBeNull();
   });
 
@@ -216,9 +218,7 @@ describe("UI harness — devices list", () => {
       initialDevices: [baseDevice()],
     });
 
-    fireEvent.click(
-      screen.getAllByRole("button", { name: "Nouvel appareil" })[0]!
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Nouvel appareil" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Nouvel appareil")).toBeTruthy();
@@ -234,7 +234,7 @@ describe("UI harness — devices list", () => {
       initialDevices: [baseDevice({ name: "À modifier" })],
     });
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Modifier" })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Modifier" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Modifier l'appareil")).toBeTruthy();

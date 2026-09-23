@@ -16,6 +16,22 @@ vi.mock("@/lib/api-client", () => ({
   }),
 }));
 
+vi.mock("motion/react", () => {
+  const passthrough = ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode;
+    [key: string]: unknown;
+  }) => <div {...props}>{children}</div>;
+  return {
+    motion: {
+      div: passthrough,
+    },
+    useReducedMotion: () => true,
+  };
+});
+
 const LONG_NAME =
   "Liseuse du salon avec un nom personnalisé très long pour forcer le retour à la ligne";
 const LONG_MODEL =
@@ -38,39 +54,24 @@ describe("UI harness — devices identity", () => {
     render(
       <NextIntlClientProvider locale="fr" messages={messages}>
         <DevicesView
+          title="Appareils"
+          description="Destinations enregistrées"
           initialDevices={[device]}
           devicesUnavailable={false}
         />
       </NextIntlClientProvider>
     );
 
-    const names = screen.getAllByText(LONG_NAME);
-    expect(names.length).toBeGreaterThan(0);
-    expect(names.some((el) => el.className.includes("font-heading"))).toBe(
-      true
-    );
-    expect(
-      names.some(
-        (el) =>
-          el.className.includes("break-words") &&
-          el.className.includes("whitespace-normal")
-      )
-    ).toBe(true);
+    const name = screen.getByText(LONG_NAME);
+    expect(name.className.includes("break-words")).toBe(true);
+    expect(name.className.includes("whitespace-normal")).toBe(true);
 
-    const models = screen.getAllByText(`— ${LONG_MODEL}`);
-    expect(models.length).toBeGreaterThan(0);
-    expect(
-      models.every(
-        (el) =>
-          el.className.includes("break-words") &&
-          el.className.includes("whitespace-normal")
-      )
-    ).toBe(true);
+    const model = screen.getByText(`— ${LONG_MODEL}`);
+    expect(model.className.includes("break-words")).toBe(true);
+    expect(model.className.includes("whitespace-normal")).toBe(true);
 
-    expect(screen.getAllByText("Kindle").length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByText(/Arrive par email \(Kindle\)/).length
-    ).toBeGreaterThan(0);
+    expect(screen.getByText("Kindle")).toBeTruthy();
+    expect(screen.getByText(/Arrive par email \(Kindle\)/)).toBeTruthy();
 
     expect(screen.queryByText(/smtp/i)).toBeNull();
     expect(screen.queryByText(/\/devices\/.+\/methods/i)).toBeNull();

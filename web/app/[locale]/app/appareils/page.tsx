@@ -1,5 +1,4 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { PageHeader } from "@/components/app/page-header";
 import { DevicesView } from "@/components/app/devices/devices-view";
 import { safeApiFetch } from "@/lib/api";
 import type { Device } from "@/lib/types";
@@ -20,13 +19,12 @@ export default async function AppareilsPage({
     cloudLinkRaw === "ok" || cloudLinkRaw === "error" ? cloudLinkRaw : undefined;
 
   return (
-    <div className="space-y-2">
-      <PageHeader title={t("title")} description={t("description")} />
-      <DevicesView
-        initialDevices={devices ?? []}
-        devicesUnavailable={devices === null}
-        cloudLinkStatus={cloudLinkStatus}
-      />
-    </div>
+    <DevicesView
+      title={t("title")}
+      description={t("description")}
+      initialDevices={devices ?? []}
+      devicesUnavailable={devices === null}
+      cloudLinkStatus={cloudLinkStatus}
+    />
   );
 }

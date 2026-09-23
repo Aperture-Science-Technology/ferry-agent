@@ -161,27 +161,29 @@
   "pages": {
     "library": {
       "title": "Library",
-      "description": "Your personal collection of books already available, ready to send to your e-reader."
+      "description": "Find in my books"
     },
     "devices": {
       "title": "Devices",
-      "description": "Your e-readers and how books arrive on them from Ferry Agent."
+      "description": "Registered destinations"
     },
     "access": {
       "title": "Gateway",
-      "description": "Optional local module — complements the cloud."
+      "description": "Optional local module — complements the cloud"
     },
     "sources": {
       "title": "Sources",
-      "description": "Cloud catalogs and local module (Gateway)."
+      "description": "Cloud catalogs and local module (Gateway).",
+      "descriptionMobile": "Cloud catalogs and Gateway"
     },
     "deliveries": {
       "title": "Deliveries",
-      "description": "Track deliveries from your online library to your devices."
+      "description": "Transfer history"
     },
     "settings": {
       "title": "Settings",
-      "description": "Delivery preferences, catalog for your e-reader, and useful shortcuts."
+      "description": "Delivery preferences and reader catalog (OPDS)",
+      "descriptionMobile": "Delivery and OPDS catalog"
     }
   },
   "library": {
@@ -291,7 +293,12 @@
     "passageHint": "From file to e-reader — a simple path.",
     "coverFallback": "Cover",
     "collectionRegion": "Collection",
-    "addRegion": "Adding books"
+    "addRegion": "Adding books",
+    "modeMine": "Find in my books",
+    "modeSources": "Search sources",
+    "browseModeLabel": "Browse the library",
+    "recentSection": "Recent",
+    "searchSourcesPlaceholder": "Search sources"
   },
   "deliverDialog": {
     "title": "Send “{title}”",
@@ -362,18 +369,9 @@
   },
   "devices": {
     "newDevice": "New device",
-    "sectionTitle": "Your devices",
-    "countLabel": "{count} devices",
-    "colProfile": "Conversion profile",
-    "refreshing": "Updating the list…",
     "emptyTitle": "No devices",
     "emptyDescription": "Add your first e-reader to send books from your library.",
     "emptyUnavailable": "Your devices couldn't be loaded right now. Please try again later.",
-    "colDevice": "Device",
-    "colDelivery": "How it arrives",
-    "colCloud": "Cloud account",
-    "colLastSync": "Last sync",
-    "colAction": "Action",
     "linked": "Linked",
     "linkedDropbox": "Linked to Dropbox",
     "linkedDrive": "Linked to Google Drive",
@@ -391,7 +389,6 @@
       "C": "Code in the browser",
       "D": "USB transfer"
     },
-    "sectionDescription": "Add your e-readers to choose how books arrive on them.",
     "unavailableTitle": "Devices unavailable",
     "refresh": "Refresh",
     "retry": "Try again",
@@ -560,7 +557,12 @@
     "jobFailedMalicious": "The file was refused for security reasons.",
     "jobFailedTooLarge": "The file is too large.",
     "jobFailedBadFormat": "The file received isn't a recognized book.",
-    "jobFailedRevoked": "Your Gateway is no longer available."
+    "jobFailedRevoked": "Your Gateway is no longer available.",
+    "pageHint": "The Gateway handles downloads and sources on your machine. The library stays in the cloud.",
+    "pageHintMobile": "Torrents and machine sources. The library stays in the cloud.",
+    "torrentActionTitle": "Torrents via Gateway",
+    "torrentActionDescription": "Managed locally, linked to your online account.",
+    "torrentActionCta": "Open sources"
   },
   "createAccess": {
     "title": "Create a Gateway",
@@ -613,6 +615,7 @@
     "unknownHint": "This source's state could not be confirmed. Please try again later.",
     "alwaysActive": "Always available",
     "gatewayLocal": "Local via Gateway",
+    "gatewayLocalShort": "Via Gateway",
     "gatewayHint": "This source depends on the Gateway installed at home. It alone does not mean the Gateway is connected.",
     "prowlarrNote": "Prowlarr, if you use it, stays configured on the Gateway — not as a main section here.",
     "gatewayCta": "Open Gateway",
@@ -631,9 +634,6 @@
     "partialNote": "Some activable sources could not be confirmed. Those shown remain usable; the others stay unknown."
   },
   "deliveries": {
-    "sectionTitle": "Your deliveries",
-    "sectionDescription": "Each send from your library appears here with its status.",
-    "countLabel": "{count} deliveries",
     "emptyTitle": "No deliveries",
     "emptyDescription": "Send a book from your library to track your deliveries here.",
     "unavailableTitle": "Deliveries unavailable",
@@ -643,19 +643,9 @@
     "refreshFailedTitle": "Refresh incomplete",
     "refreshFailedDescription": "The list couldn't be updated. Your last known deliveries stay visible.",
     "statusHintDelivered": "The send operation finished. This does not confirm that the book was opened on the e-reader.",
-    "statusHintDeliveredShort": "Send finished — not confirmed reading",
     "statusHintUnknown": "Unrecognized status. Refresh to check — do not treat this send as finished.",
     "failedHint": "This send did not complete. Open tracking for more detail.",
     "routeTo": "{title} → {device}",
-    "colBook": "Book",
-    "colDevice": "E-reader",
-    "colStatus": "Status",
-    "colMethod": "Delivery mode",
-    "colFormat": "Format",
-    "colCreated": "Requested",
-    "colDelivered": "Finished",
-    "colError": "Failed",
-    "colAction": "Action",
     "track": "Track",
     "trackFailed": "See the problem",
     "trackAria": "Track delivery of {title}",
@@ -697,10 +687,10 @@
     "unavailableTitle": "Settings unavailable",
     "unavailable": "Couldn't load your settings right now. The values shown may be incomplete.",
     "deliveryPreferencesTitle": "Delivery preferences",
-    "deliveryPreferencesDescription": "Your account and how books are sent to your e-reader.",
-    "email": "Email",
+    "deliveryPreferencesDescription": "Account and delivery destination for your e-reader.",
+    "email": "Account email",
     "emailHint": "Managed by your sign-in provider.",
-    "kindleEmail": "Your Kindle email",
+    "kindleEmail": "Kindle email",
     "kindleEmailPlaceholder": "your-name@kindle.com",
     "kindleEmailHint": "Used as the destination when sending to Kindle by email.",
     "clearKindleEmail": "Clear",
@@ -708,8 +698,8 @@
     "defaultFormatHint": "Format used by default when sending a book.",
     "sourcesTitle": "Sources",
     "sourcesDescription": "Catalog management lives on the Sources page.",
-    "readerCatalogTitle": "Catalog for your e-reader",
-    "readerCatalogDescription": "One link to show your online library in KOReader, Moon+, Marvin, or Kobo.",
+    "readerCatalogTitle": "Reader catalog (OPDS)",
+    "readerCatalogDescription": "Links to show your library on an e-reader.",
     "readerCatalog": {
       "warningTitle": "Access to your whole library",
       "warning": "Each link gives access to your entire library. Revoke a link as soon as you no longer need it.",
@@ -731,12 +721,12 @@
       "columnActions": "Actions",
       "neverUsed": "Never",
       "revoke": "Revoke",
-      "revokeConfirmTitle": "Revoke this link?",
-      "revokeConfirmDescription": "After revocation, this link will no longer work on the e-reader. You will need to create a new one to reconnect the device.",
+      "revokeConfirmTitle": "Revoke OPDS access?",
+      "revokeConfirmDescription": "The token and its QR code will stop working. You can create a new one afterward.",
       "defaultLabel": "E-reader",
       "createTitle": "Create a catalog link",
       "createDescription": "Give this link a name so you can find it later (e.g. Kobo, KOReader).",
-      "labelField": "Label",
+      "labelField": "OPDS token label",
       "createdTitle": "Link ready",
       "createdDescription": "This link will never be shown again. Copy it or scan the QR now.",
       "oneTimeTitle": "Save it now",
@@ -751,7 +741,13 @@
       "qrError": "QR unavailable. Use the link above.",
       "qrAlt": "QR code for the catalog link",
       "createErrorTitle": "Couldn't create",
-      "revokeErrorTitle": "Couldn't revoke"
+      "revokeErrorTitle": "Couldn't revoke",
+      "tokenTitle": "Token “{label}”",
+      "actionsHint": "QR · Copy URL · Revoke",
+      "actionsHintMobile": "QR · Copy · Revoke",
+      "actionsHintList": "Revoke",
+      "labelHint": "Shown in Settings · Reader catalog",
+      "qrPlaceholder": "QR"
     },
     "devicesTitle": "Devices",
     "devicesDescription": "Manage your e-readers and how books arrive on them.",

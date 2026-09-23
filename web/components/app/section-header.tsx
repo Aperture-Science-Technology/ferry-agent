@@ -1,36 +1,43 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { PassageRule } from "@/components/passage-rule";
 
 /**
- * Section title with the Ferry “passage” accent (ink rule).
- * Reusable across app screens.
+ * Section title — Pen “Récents” style (14/500 muted) or stronger when needed.
+ * No decorative passage rule (removed from Pen product screens).
  */
 export function SectionHeader({
   title,
   description,
   action,
   className,
+  muted = false,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
   className?: string;
+  muted?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "mb-5 flex flex-wrap items-start justify-between gap-3",
+        "mb-4 flex flex-wrap items-start justify-between gap-3",
         className
       )}
     >
       <div className="min-w-0 flex-1">
-        <PassageRule className="mb-2" />
-        <h2 className="font-heading text-lg font-medium tracking-tight text-balance">
+        <h2
+          className={cn(
+            "font-medium text-balance",
+            muted
+              ? "text-sm text-muted-foreground"
+              : "font-heading text-lg text-foreground"
+          )}
+        >
           {title}
         </h2>
         {description ? (
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-1 max-w-2xl text-xs font-medium text-muted-foreground">
             {description}
           </p>
         ) : null}
