@@ -4,18 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "motion/react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  LayoutGrid,
-  List,
-  Loader2,
-  Plus,
-  Search,
-  SearchX,
-  Send,
-} from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { ChevronLeft, ChevronRight, Loader2, Search, SearchX } from "lucide-react";
+import { useTranslations } from "next-intl";
+// brand name for mobile top label (Pen mF0028)
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,32 +19,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/app/empty-state";
-import { SectionHeader } from "@/components/app/section-header";
-import { PassageRule } from "@/components/passage-rule";
 import { StatePanel } from "@/components/app/state-panel";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
 import { DeliverDialog } from "@/components/app/library/deliver-dialog";
 import {
   applyLibraryItemsRefreshResult,
-  buildCollectionHighlights,
   filterAndSortLibraryItems,
-  hasActiveLibraryFilters,
   LIBRARY_COLLECTION_PAGE_SIZE,
   libraryCollectionPageState,
   pageAfterLibraryCriteriaChange,
   paginateLibraryItems,
-  type SortBy,
-  type SourceFilter,
+  recentLibraryItems,
 } from "@/components/app/library/library-collection";
 import {
   LibraryCoverImage,
@@ -67,14 +46,8 @@ import { useGatewayJob } from "@/lib/use-gateway-job";
 import { cn } from "@/lib/utils";
 import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@/lib/types";
 
-type ViewMode = "grid" | "list";
+type BrowseMode = "mine" | "sources";
 type AddTab = "search" | "import";
-
-function formatAppDate(iso: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "short",
-  }).format(new Date(iso));
-}
 
 function mapFetchError(
   error: string | null,
@@ -169,47 +142,6 @@ function SearchResultActions({
   );
 }
 
-function BookActions({
-  item,
-  canDeliver,
-  onDetails,
-  onDeliver,
-  t,
-  fullWidth,
-}: {
-  item: LibraryItem;
-  canDeliver: boolean;
-  onDetails: (item: LibraryItem) => void;
-  onDeliver: (item: LibraryItem) => void;
-  t: ReturnType<typeof useTranslations<"library">>;
-  fullWidth?: boolean;
-}) {
-  return (
-    <div className={cn("flex flex-wrap gap-2", fullWidth && "w-full")}>
-      {canDeliver ? (
-        <Button
-          size="sm"
-          className={fullWidth ? "min-w-0 flex-1" : undefined}
-          aria-label={t("deliverOf", { title: item.title })}
-          onClick={() => onDeliver(item)}
-        >
-          <Send />
-          {t("deliver")}
-        </Button>
-      ) : null}
-      <Button
-        size="sm"
-        variant={canDeliver ? "ghost" : "outline"}
-        className={fullWidth && !canDeliver ? "w-full" : fullWidth ? "min-w-0 flex-1" : undefined}
-        aria-label={t("detailsOf", { title: item.title })}
-        onClick={() => onDetails(item)}
-      >
-        {t("details")}
-      </Button>
-    </div>
-  );
-}
-
 export function LibraryView({
   title,
   description,
@@ -227,14 +159,14 @@ export function LibraryView({
 }) {
   const t = useTranslations("library");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
+  const tBrand = useTranslations("brand");
   const { call } = useApiClient();
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
-  const addSectionRef = useRef<HTMLElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState("");
+  const [collectionQuery, setCollectionQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -242,45 +174,26 @@ export function LibraryView({
   const [items, setItems] = useState(initialItems);
   const [detailItem, setDetailItem] = useState<LibraryItem | null>(null);
   const [deliverItem, setDeliverItem] = useState<LibraryItem | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
-
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [sortBy, setSortBy] = useState<SortBy>("added");
-  const [collectionQuery, setCollectionQuery] = useState("");
-  const [languageFilter, setLanguageFilter] = useState("all");
-  const [formatFilter, setFormatFilter] = useState("all");
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
-
-  const [addOpen, setAddOpen] = useState(initialItems.length === 0 && !itemsUnavailable);
+  const [browseMode, setBrowseMode] = useState<BrowseMode>(
+    initialItems.length === 0 && !itemsUnavailable ? "sources" : "mine"
+  );
   const [addTab, setAddTab] = useState<AddTab>("search");
 
   const canDeliver = devices.length > 0;
+  const selectedItem = items.find((item) => item.id === selectedId) ?? null;
+  const headerSendEnabled = Boolean(selectedItem && canDeliver);
 
   useEffect(() => {
-    if (!addOpen || addTab !== "search") return;
+    if (browseMode !== "sources" || addTab !== "search") return;
     const frame = requestAnimationFrame(() => {
       searchInputRef.current?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [addOpen, addTab]);
+  }, [browseMode, addTab]);
 
-  const languages = useMemo(
-    () => Array.from(new Set(items.map((item) => item.language).filter((v): v is string => !!v))),
-    [items]
-  );
-  const formats = useMemo(
-    () => Array.from(new Set(items.map((item) => item.original_format))),
-    [items]
-  );
-
-  const filtersActive = hasActiveLibraryFilters({
-    textQuery: collectionQuery,
-    languageFilter,
-    formatFilter,
-    sourceFilter,
-  });
-
-  const filterCriteriaKey = `${collectionQuery}\0${languageFilter}\0${formatFilter}\0${sourceFilter}\0${sortBy}`;
+  const filterCriteriaKey = `${collectionQuery}\0all\0all\0all\0added`;
   const [pageState, setPageState] = useState({
     criteriaKey: filterCriteriaKey,
     page: 1,
@@ -292,27 +205,25 @@ export function LibraryView({
   }
 
   const collectionPage =
-    pageState.criteriaKey === filterCriteriaKey ? pageState.page : pageAfterLibraryCriteriaChange();
+    pageState.criteriaKey === filterCriteriaKey
+      ? pageState.page
+      : pageAfterLibraryCriteriaChange();
 
   const displayedItems = useMemo(
     () =>
       filterAndSortLibraryItems(items, {
         textQuery: collectionQuery,
-        languageFilter,
-        formatFilter,
-        sourceFilter,
-        sortBy,
+        languageFilter: "all",
+        formatFilter: "all",
+        sourceFilter: "all",
+        sortBy: "added",
       }),
-    [items, collectionQuery, languageFilter, formatFilter, sourceFilter, sortBy]
+    [items, collectionQuery]
   );
 
-  const highlights = useMemo(
-    () =>
-      buildCollectionHighlights(items, displayedItems.length, {
-        filtersActive,
-        deviceCount: devices.length,
-      }),
-    [items, displayedItems.length, filtersActive, devices.length]
+  const recentItems = useMemo(
+    () => recentLibraryItems(displayedItems),
+    [displayedItems]
   );
 
   const pageSlice = useMemo(
@@ -331,17 +242,6 @@ export function LibraryView({
     setPageState({
       criteriaKey: filterCriteriaKey,
       page: nextPage,
-    });
-  }
-
-  function openAdd(tab: AddTab = "search") {
-    setAddTab(tab);
-    setAddOpen(true);
-    requestAnimationFrame(() => {
-      addSectionRef.current?.scrollIntoView({
-        behavior: prefersReducedMotion ? "auto" : "smooth",
-        block: "start",
-      });
     });
   }
 
@@ -385,7 +285,6 @@ export function LibraryView({
       setItems((prev) => applyLibraryItemsRefreshResult(prev, itemsAcc).items);
     } catch {
       setItems((prev) => applyLibraryItemsRefreshResult(prev, null).items);
-      // Owned badge + toast still apply even if library refresh fails.
     }
     toast.success(t("toastFetchArrived"));
   }
@@ -408,6 +307,8 @@ export function LibraryView({
 
   async function runSearch() {
     if (!query.trim()) return;
+    setBrowseMode("sources");
+    setAddTab("search");
     setSearching(true);
     try {
       const found = await call<SearchResult[]>("/api/v1/books/search", {
@@ -452,15 +353,6 @@ export function LibraryView({
     }
   }
 
-  function sourceBadgeLabel(item: LibraryItem) {
-    const ref = item.source_ref;
-    if (!ref) return t("sourceManual");
-    if (ref.startsWith("gateway:")) return t("sourceLinked");
-    if (ref.startsWith("gutenberg:")) return t("sourceGutenberg");
-    if (ref.startsWith("standard_ebooks:")) return t("sourceStandardEbooks");
-    return t("sourceManual");
-  }
-
   function sourceLabel(source: string) {
     if (source === "gutenberg") return t("sourceGutenberg");
     if (source === "standard_ebooks") return t("sourceStandardEbooks");
@@ -469,228 +361,51 @@ export function LibraryView({
     return source;
   }
 
-  function resetFilters() {
-    setCollectionQuery("");
-    setLanguageFilter("all");
-    setFormatFilter("all");
-    setSourceFilter("all");
-  }
-
   function handleRetry() {
     setRetrying(true);
     router.refresh();
   }
 
-  const filterControls = (
-    <div className="space-y-4" role="group" aria-label={t("filtersLabel")}>
-      <div className="min-w-0 space-y-2">
-        <Label htmlFor="library-collection-search" className="text-xs text-muted-foreground">
-          {t("collectionSearchLabel")}
-        </Label>
-        <div className="relative max-w-xl">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <Input
-            id="library-collection-search"
-            value={collectionQuery}
-            onChange={(event) => setCollectionQuery(event.target.value)}
-            placeholder={t("collectionSearchPlaceholder")}
-            className="h-10 border-border bg-card pl-9"
-            autoComplete="off"
-            spellCheck={false}
-          />
-        </div>
-        <p className="max-w-xl text-xs leading-relaxed whitespace-normal text-muted-foreground">
-          {t("collectionSearchHelp")}
-        </p>
-      </div>
+  function selectBook(item: LibraryItem) {
+    setSelectedId((prev) => (prev === item.id ? null : item.id));
+  }
 
-      <div className="flex flex-wrap items-end gap-x-3 gap-y-3 border-t border-border/70 pt-4">
-        <div className="min-w-0 space-y-1.5">
-          <Label htmlFor="library-sort" className="text-xs text-muted-foreground">
-            {t("sortLabel")}
-          </Label>
-          <Select value={sortBy} onValueChange={(value) => setSortBy((value as SortBy) ?? "added")}>
-            <SelectTrigger id="library-sort" size="sm" className="min-w-0 border-border bg-card sm:min-w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="added">{t("sortAdded")}</SelectItem>
-              <SelectItem value="title">{t("sortTitle")}</SelectItem>
-              <SelectItem value="author">{t("sortAuthor")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+  function openDeliver(item: LibraryItem) {
+    setSelectedId(item.id);
+    setDeliverItem(item);
+  }
 
-        {languages.length > 0 && (
-          <div className="min-w-0 space-y-1.5">
-            <Label htmlFor="library-language" className="text-xs text-muted-foreground">
-              {t("filterLanguageLabel")}
-            </Label>
-            <Select value={languageFilter} onValueChange={(value) => setLanguageFilter(value ?? "all")}>
-              <SelectTrigger id="library-language" size="sm" className="min-w-0 border-border bg-card sm:min-w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filterLanguageAll")}</SelectItem>
-                {languages.map((language) => (
-                  <SelectItem key={language} value={language}>
-                    {language}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+  function handleHeaderSend() {
+    if (!selectedItem || !canDeliver) return;
+    setDeliverItem(selectedItem);
+  }
 
-        {formats.length > 1 && (
-          <div className="min-w-0 space-y-1.5">
-            <Label htmlFor="library-format" className="text-xs text-muted-foreground">
-              {t("filterFormatLabel")}
-            </Label>
-            <Select value={formatFilter} onValueChange={(value) => setFormatFilter(value ?? "all")}>
-              <SelectTrigger id="library-format" size="sm" className="min-w-0 border-border bg-card sm:min-w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("filterFormatAll")}</SelectItem>
-                {formats.map((format) => (
-                  <SelectItem key={format} value={format}>
-                    {format.toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+  const headerSearchValue = browseMode === "mine" ? collectionQuery : query;
+  const headerSearchPlaceholder =
+    browseMode === "mine"
+      ? t("collectionSearchPlaceholder")
+      : t("searchSourcesPlaceholder");
 
-        <div className="min-w-0 space-y-1.5">
-          <Label htmlFor="library-source" className="text-xs text-muted-foreground">
-            {t("filterSourceLabel")}
-          </Label>
-          <Select
-            value={sourceFilter}
-            onValueChange={(value) => setSourceFilter((value as SourceFilter) ?? "all")}
-          >
-            <SelectTrigger id="library-source" size="sm" className="min-w-0 border-border bg-card sm:min-w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("filterSourceAll")}</SelectItem>
-              <SelectItem value="linked">{t("sourceLinked")}</SelectItem>
-              <SelectItem value="manual">{t("sourceManual")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+  function onHeaderSearchChange(value: string) {
+    if (browseMode === "mine") {
+      setCollectionQuery(value);
+    } else {
+      setQuery(value);
+    }
+  }
 
-        <div
-          className="ml-auto flex gap-0.5 rounded-md border border-border bg-card p-0.5"
-          role="group"
-          aria-label={t("viewModeLabel")}
-        >
-          <Button
-            size="icon-sm"
-            variant={viewMode === "grid" ? "secondary" : "ghost"}
-            onClick={() => setViewMode("grid")}
-            aria-label={t("gridView")}
-            aria-pressed={viewMode === "grid"}
-          >
-            <LayoutGrid />
-          </Button>
-          <Button
-            size="icon-sm"
-            variant={viewMode === "list" ? "secondary" : "ghost"}
-            onClick={() => setViewMode("list")}
-            aria-label={t("listView")}
-            aria-pressed={viewMode === "list"}
-          >
-            <List />
-          </Button>
-        </div>
-      </div>
-
-      {filtersActive ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3">
-          <p className="min-w-0 text-sm whitespace-normal text-muted-foreground" aria-live="polite">
-            {t("filtersActive")}
-          </p>
-          <Button variant="outline" size="sm" onClick={resetFilters} className="shrink-0">
-            {t("resetFilters")}
-          </Button>
-        </div>
-      ) : null}
-    </div>
-  );
-
-  const collectionInfo = items.length === 0 ? null : (
-    <dl
-      className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-muted-foreground"
-      aria-label={t("infoRegion")}
-    >
-      <div>
-        <dt className="sr-only">{t("infoRegion")}</dt>
-        <dd>
-          {itemsPartial
-            ? t("infoTotalPartial", { count: highlights.totalLoaded })
-            : t("infoTotal", { count: highlights.totalLoaded })}
-        </dd>
-      </div>
-      {highlights.matched !== null ? (
-        <>
-          <span aria-hidden="true" className="text-border">
-            ·
-          </span>
-          <div>
-            <dt className="sr-only">{t("infoMatched", { count: highlights.matched })}</dt>
-            <dd>{t("infoMatched", { count: highlights.matched })}</dd>
-          </div>
-        </>
-      ) : null}
-      {highlights.formatCount !== null ? (
-        <>
-          <span aria-hidden="true" className="text-border">
-            ·
-          </span>
-          <div>
-            <dt className="sr-only">{t("infoFormats", { count: highlights.formatCount })}</dt>
-            <dd>{t("infoFormats", { count: highlights.formatCount })}</dd>
-          </div>
-        </>
-      ) : null}
-      {highlights.sourceKindCount !== null ? (
-        <>
-          <span aria-hidden="true" className="text-border">
-            ·
-          </span>
-          <div>
-            <dt className="sr-only">{t("infoSources", { count: highlights.sourceKindCount })}</dt>
-            <dd>{t("infoSources", { count: highlights.sourceKindCount })}</dd>
-          </div>
-        </>
-      ) : null}
-      {highlights.deviceCount !== null ? (
-        <>
-          <span aria-hidden="true" className="text-border">
-            ·
-          </span>
-          <div>
-            <dt className="sr-only">{t("infoDevices", { count: highlights.deviceCount })}</dt>
-            <dd>{t("infoDevices", { count: highlights.deviceCount })}</dd>
-          </div>
-        </>
-      ) : null}
-    </dl>
-  );
+  function onHeaderSearchSubmit() {
+    if (browseMode === "mine") return;
+    void runSearch();
+  }
 
   const paginationControls =
     displayedItems.length > LIBRARY_COLLECTION_PAGE_SIZE ? (
       <nav
-        className="flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between"
         aria-label={t("paginationRegion")}
       >
-        <p className="min-w-0 text-sm whitespace-normal text-muted-foreground" aria-live="polite">
-          <span className="sr-only">
-            {t("paginationPage", { page: pageSlice.page, pageCount: pageSlice.pageCount })}
-          </span>
+        <p className="min-w-0 text-sm text-muted-foreground" aria-live="polite">
           {t("paginationRange", {
             from: pageSlice.rangeStart,
             to: pageSlice.rangeEnd,
@@ -725,264 +440,6 @@ export function LibraryView({
       </nav>
     ) : null;
 
-  const collectionCountLabel =
-    items.length === 0
-      ? undefined
-      : itemsPartial
-        ? t("booksCountPartial", { count: displayedItems.length })
-        : t("booksCount", { count: displayedItems.length });
-
-  const addPanel = (
-    <section
-      ref={addSectionRef}
-      id="library-add-panel"
-      aria-label={t("addRegion")}
-      className="scroll-mt-6 space-y-5 border-y border-border/70 bg-muted/20 px-4 py-6 sm:px-6 sm:py-8"
-    >
-      <SectionHeader
-        title={t("addBooksTitle")}
-        description={t("addBooksDescription")}
-        className="mb-0"
-      />
-      <Tabs
-        value={addTab}
-        onValueChange={(value) => setAddTab((value as AddTab) ?? "search")}
-      >
-        <TabsList variant="line" className="mb-5 w-full max-w-md sm:w-auto">
-          <TabsTrigger value="search" className="min-w-0 whitespace-normal">
-            {t("searchSourcesTab")}
-          </TabsTrigger>
-          <TabsTrigger value="import" className="min-w-0 whitespace-normal">
-            {t("importTab")}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="search" className="space-y-6">
-          <div className="max-w-2xl space-y-2">
-            <h3 className="font-heading text-lg font-medium tracking-tight text-balance sm:text-xl">
-              {t("searchSourcesTab")}
-            </h3>
-            <p className="text-base leading-relaxed whitespace-normal text-muted-foreground">
-              {t("searchHelp")}
-            </p>
-          </div>
-
-          <div className="border border-border/80 bg-card p-4 sm:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="relative min-w-0 flex-1 space-y-2">
-                <Label
-                  htmlFor="library-source-search"
-                  className="text-sm font-medium"
-                >
-                  {t("searchSourcesLabel")}
-                </Label>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                  <Input
-                    ref={searchInputRef}
-                    id="library-source-search"
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    onKeyDown={(event) => event.key === "Enter" && void runSearch()}
-                    placeholder={t("searchPlaceholder")}
-                    className="h-12 border-border bg-background pl-11 text-base"
-                    disabled={searching}
-                  />
-                </div>
-              </div>
-              <Button
-                size="lg"
-                onClick={() => void runSearch()}
-                disabled={searching || !query.trim()}
-                className="h-12 sm:min-w-36 sm:shrink-0"
-              >
-                {searching ? <Loader2 className="animate-spin" /> : <Search />}
-                {t("search")}
-              </Button>
-            </div>
-          </div>
-
-          {searching && (
-            <motion.div
-              initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: prefersReducedMotion ? 0.01 : 0.18,
-                ease: [0.2, 0, 0, 1],
-              }}
-              aria-busy="true"
-              aria-live="polite"
-            >
-              <StatePanel className="border-border/60 bg-card/40 py-12">
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin text-primary" />
-                  {t("searching")}
-                </div>
-                <div className="mt-4 grid w-full gap-3 sm:grid-cols-2">
-                  <Skeleton className="h-24 w-full rounded-md" />
-                  <Skeleton className="h-24 w-full rounded-md" />
-                </div>
-              </StatePanel>
-            </motion.div>
-          )}
-
-          {!searching && results !== null && (
-            <Reveal>
-              {results.length === 0 ? (
-                <EmptyState
-                  icon={SearchX}
-                  title={t("noResultsHint")}
-                  description={t("searchHelpMatch")}
-                />
-              ) : (
-                <div className="space-y-4 border border-border/80 bg-card p-4 sm:p-5">
-                  <p className="text-sm font-medium text-foreground" role="status">
-                    {t("resultsFound", { count: results.length })}
-                  </p>
-
-                  <div className="grid gap-0 divide-y divide-border/70 lg:hidden">
-                    {results.map((result) => {
-                      const resultKey = `${result.source}:${result.result_id}`;
-                      const isPending = resultKey in pendingJobs;
-                      return (
-                        <article
-                          key={resultKey}
-                          className="flex gap-3 py-3 first:pt-0 last:pb-0"
-                        >
-                          <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/60">
-                            <SearchCoverImage
-                              coverUrl={result.cover_url}
-                              className="absolute inset-0 size-full"
-                              iconClassName="size-5"
-                            />
-                          </div>
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <div className="min-w-0">
-                              <h3 className="line-clamp-2 text-sm font-medium break-words whitespace-normal">
-                                {result.title}
-                              </h3>
-                              <p className="line-clamp-1 text-sm break-words text-muted-foreground">
-                                {result.author}
-                              </p>
-                            </div>
-                            <p className="text-xs tracking-wide text-muted-foreground uppercase">
-                              {sourceLabel(result.source)}
-                              <span className="mx-1.5 text-border">·</span>
-                              {result.format}
-                              {result.owned ? (
-                                <>
-                                  <span className="mx-1.5 text-border">·</span>
-                                  {t("owned")}
-                                </>
-                              ) : null}
-                              {isPending ? (
-                                <>
-                                  <span className="mx-1.5 text-border">·</span>
-                                  {t("fetching")}
-                                </>
-                              ) : null}
-                            </p>
-                            <SearchResultActions
-                              result={result}
-                              resultKey={resultKey}
-                              isPending={isPending}
-                              addingId={addingId}
-                              onAdd={addResult}
-                              t={t}
-                            />
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-
-                  <div className="hidden overflow-x-auto lg:block">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="w-14" />
-                          <TableHead>{t("title")}</TableHead>
-                          <TableHead>{t("author")}</TableHead>
-                          <TableHead>{t("source")}</TableHead>
-                          <TableHead>{t("format")}</TableHead>
-                          <TableHead className="text-right">{t("action")}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {results.map((result) => {
-                          const resultKey = `${result.source}:${result.result_id}`;
-                          const isPending = resultKey in pendingJobs;
-                          return (
-                            <TableRow key={resultKey}>
-                              <TableCell>
-                                <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-md bg-muted ring-1 ring-border/60">
-                                  <SearchCoverImage
-                                    coverUrl={result.cover_url}
-                                    iconClassName="size-4"
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="max-w-56 font-medium">
-                                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                  <span className="line-clamp-2 break-words whitespace-normal">
-                                    {result.title}
-                                  </span>
-                                  {result.owned && (
-                                    <Badge variant="secondary">{t("owned")}</Badge>
-                                  )}
-                                  {isPending && (
-                                    <Badge variant="outline" className="gap-1">
-                                      <Loader2 className="size-3 animate-spin" />
-                                      {t("fetching")}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="max-w-40 text-muted-foreground">
-                                <span className="line-clamp-1 break-words">{result.author}</span>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {sourceLabel(result.source)}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground uppercase">
-                                {result.format}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <SearchResultActions
-                                  result={result}
-                                  resultKey={resultKey}
-                                  isPending={isPending}
-                                  addingId={addingId}
-                                  onAdd={addResult}
-                                  t={t}
-                                />
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
-            </Reveal>
-          )}
-        </TabsContent>
-
-        <TabsContent value="import" className="space-y-3">
-          <p className="max-w-2xl text-sm leading-relaxed whitespace-normal text-muted-foreground">
-            {t("uploadHelp")}
-          </p>
-          <UploadDropzone
-            onUploaded={(item) => {
-              setItems((prev) => [item, ...prev]);
-            }}
-          />
-        </TabsContent>
-      </Tabs>
-    </section>
-  );
-
   const retryButton = (
     <Button size="sm" variant="outline" onClick={handleRetry} disabled={retrying} className="w-fit">
       {retrying ? <Loader2 className="animate-spin" /> : null}
@@ -991,7 +448,7 @@ export function LibraryView({
   );
 
   return (
-    <div className="space-y-10">
+    <div className="flex flex-col gap-6" data-testid="library-pen-layout">
       {Object.entries(pendingJobs).map(([resultKey, jobId]) => (
         <PendingFetchTracker
           key={jobId}
@@ -1003,40 +460,91 @@ export function LibraryView({
         />
       ))}
 
-      <header className="mb-2 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 max-w-2xl flex-1">
-          <PassageRule className="mb-3 w-20" />
-          <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+      {/* Pen Header/Page ePLzB — 72 px, Fraunces 18/500 + subtitle 12/500 */}
+      <header className="flex min-h-[72px] flex-col justify-center gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="font-heading text-sm font-medium text-muted-foreground md:hidden">
+            {tBrand("name")}
+          </p>
+          <h1 className="font-heading text-[22px] font-medium text-foreground md:text-lg">
             {title}
           </h1>
-          <p className="mt-2 text-base leading-relaxed whitespace-normal text-muted-foreground">
-            {description}
-          </p>
-          {collectionCountLabel ? (
-            <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">
-              {collectionCountLabel}
-            </p>
-          ) : null}
-          <p className="mt-1 text-sm text-muted-foreground/80">{t("passageHint")}</p>
+          <p className="text-xs font-medium text-muted-foreground">{description}</p>
         </div>
-        <div className="flex w-full min-w-0 shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end md:w-auto">
+          <div className="relative flex w-full max-w-none items-center gap-2 rounded-md border border-border bg-muted px-3 py-2.5 md:w-[280px]">
+            <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <Label htmlFor="library-header-search" className="sr-only">
+              {browseMode === "mine"
+                ? t("collectionSearchLabel")
+                : t("searchSourcesLabel")}
+            </Label>
+            <Input
+              ref={searchInputRef}
+              id="library-header-search"
+              value={headerSearchValue}
+              onChange={(event) => onHeaderSearchChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") onHeaderSearchSubmit();
+              }}
+              placeholder={headerSearchPlaceholder}
+              className="h-auto border-0 bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
+              autoComplete="off"
+              spellCheck={false}
+              disabled={browseMode === "sources" && searching}
+            />
+          </div>
           <Button
-            onClick={() => (addOpen ? setAddOpen(false) : openAdd("search"))}
-            variant={addOpen ? "outline" : "default"}
-            aria-expanded={addOpen}
-            aria-controls="library-add-panel"
-            className="w-full whitespace-normal sm:w-auto"
+            type="button"
+            className="rounded-md px-3.5 py-2.5 text-sm font-medium disabled:pointer-events-none disabled:bg-card disabled:text-disabled disabled:opacity-50"
+            disabled={!headerSendEnabled}
+            aria-disabled={!headerSendEnabled}
+            onClick={handleHeaderSend}
           >
-            {!addOpen ? <Plus /> : null}
-            {addOpen ? t("hideAddBooks") : t("addBooks")}
+            {t("deliver")}
           </Button>
-          {!addOpen ? (
-            <p className="max-w-56 text-xs leading-relaxed whitespace-normal text-muted-foreground sm:text-right">
-              {t("addBooksHint")}
-            </p>
-          ) : null}
         </div>
       </header>
+
+      {/* Pen Library tools — mode chips */}
+      <div
+        className="flex flex-wrap items-center gap-4"
+        role="tablist"
+        aria-label={t("browseModeLabel")}
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={browseMode === "mine"}
+          className={cn(
+            "rounded-sm border px-3 py-2 text-sm font-medium",
+            browseMode === "mine"
+              ? "border-border bg-card text-foreground"
+              : "border-border bg-transparent text-muted-foreground"
+          )}
+          onClick={() => setBrowseMode("mine")}
+        >
+          {t("modeMine")}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={browseMode === "sources"}
+          className={cn(
+            "rounded-sm border px-3 py-2 text-sm font-medium",
+            browseMode === "sources"
+              ? "border-border bg-card text-foreground"
+              : "border-border bg-transparent text-muted-foreground"
+          )}
+          onClick={() => {
+            setBrowseMode("sources");
+            setAddTab("search");
+          }}
+        >
+          {t("modeSources")}
+        </button>
+      </div>
 
       {itemsUnavailable && items.length === 0 ? (
         <div role="alert">
@@ -1046,238 +554,395 @@ export function LibraryView({
             action={retryButton}
           />
         </div>
-      ) : (
-        <section aria-label={t("collectionRegion")} className="space-y-6">
+      ) : browseMode === "sources" ? (
+        <section aria-label={t("addRegion")} className="space-y-5">
           {itemsPartial && items.length > 0 ? (
             <div
               role="status"
-              className="flex flex-col gap-3 border border-border/80 bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 rounded-md border border-border bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0 space-y-1">
-                <p className="font-heading text-sm font-medium tracking-tight">
-                  {t("partialWarningTitle")}
-                </p>
-                <p className="text-sm leading-relaxed whitespace-normal text-muted-foreground">
-                  {t("partialWarning")}
-                </p>
+                <p className="text-sm font-medium">{t("partialWarningTitle")}</p>
+                <p className="text-sm text-muted-foreground">{t("partialWarning")}</p>
               </div>
               {retryButton}
             </div>
           ) : null}
 
-          {items.length === 0 ? (
+          <Tabs
+            value={addTab}
+            onValueChange={(value) => setAddTab((value as AddTab) ?? "search")}
+          >
+            <TabsList variant="line" className="mb-4 w-full max-w-md sm:w-auto">
+              <TabsTrigger value="search">{t("searchSourcesTab")}</TabsTrigger>
+              <TabsTrigger value="import">{t("importTab")}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="search" className="space-y-5">
+              <p className="max-w-2xl text-sm text-muted-foreground">{t("searchHelp")}</p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Button
+                  onClick={() => void runSearch()}
+                  disabled={searching || !query.trim()}
+                  className="rounded-md"
+                >
+                  {searching ? <Loader2 className="animate-spin" /> : <Search />}
+                  {t("search")}
+                </Button>
+              </div>
+
+              {searching ? (
+                <motion.div
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: prefersReducedMotion ? 0.01 : 0.18,
+                    ease: [0.2, 0, 0, 1],
+                  }}
+                  aria-busy="true"
+                  aria-live="polite"
+                >
+                  <StatePanel className="border-border/60 bg-card/40 py-12">
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin text-primary" />
+                      {t("searching")}
+                    </div>
+                    <div className="mt-4 grid w-full gap-3 sm:grid-cols-2">
+                      <Skeleton className="h-24 w-full rounded-md" />
+                      <Skeleton className="h-24 w-full rounded-md" />
+                    </div>
+                  </StatePanel>
+                </motion.div>
+              ) : null}
+
+              {!searching && results !== null ? (
+                <Reveal>
+                  {results.length === 0 ? (
+                    <EmptyState
+                      icon={SearchX}
+                      title={t("noResultsHint")}
+                      description={t("searchHelpMatch")}
+                    />
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-sm font-medium" role="status">
+                        {t("resultsFound", { count: results.length })}
+                      </p>
+                      <div className="grid gap-0 divide-y divide-border lg:hidden">
+                        {results.map((result) => {
+                          const resultKey = `${result.source}:${result.result_id}`;
+                          const isPending = resultKey in pendingJobs;
+                          return (
+                            <article key={resultKey} className="flex gap-3 py-3">
+                              <div className="relative size-16 shrink-0 overflow-hidden rounded-[9px] bg-muted">
+                                <SearchCoverImage
+                                  coverUrl={result.cover_url}
+                                  className="absolute inset-0 size-full"
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1 space-y-2">
+                                <div className="min-w-0">
+                                  <h3 className="line-clamp-2 text-sm font-medium">
+                                    {result.title}
+                                  </h3>
+                                  <p className="line-clamp-1 text-sm text-muted-foreground">
+                                    {result.author}
+                                  </p>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {sourceLabel(result.source)}
+                                  <span className="mx-1.5 text-border">·</span>
+                                  {result.format}
+                                </p>
+                                <SearchResultActions
+                                  result={result}
+                                  resultKey={resultKey}
+                                  isPending={isPending}
+                                  addingId={addingId}
+                                  onAdd={addResult}
+                                  t={t}
+                                />
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                      <div className="hidden overflow-x-auto lg:block">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                              <TableHead className="w-14" />
+                              <TableHead>{t("title")}</TableHead>
+                              <TableHead>{t("author")}</TableHead>
+                              <TableHead>{t("source")}</TableHead>
+                              <TableHead>{t("format")}</TableHead>
+                              <TableHead className="text-right">{t("action")}</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {results.map((result) => {
+                              const resultKey = `${result.source}:${result.result_id}`;
+                              const isPending = resultKey in pendingJobs;
+                              return (
+                                <TableRow key={resultKey}>
+                                  <TableCell>
+                                    <div className="relative size-11 overflow-hidden rounded-[9px] bg-muted">
+                                      <SearchCoverImage coverUrl={result.cover_url} />
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="max-w-56 font-medium">
+                                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                      <span className="line-clamp-2">{result.title}</span>
+                                      {result.owned ? (
+                                        <Badge variant="secondary">{t("owned")}</Badge>
+                                      ) : null}
+                                      {isPending ? (
+                                        <Badge variant="outline" className="gap-1">
+                                          <Loader2 className="size-3 animate-spin" />
+                                          {t("fetching")}
+                                        </Badge>
+                                      ) : null}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {result.author}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {sourceLabel(result.source)}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {result.format}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <SearchResultActions
+                                      result={result}
+                                      resultKey={resultKey}
+                                      isPending={isPending}
+                                      addingId={addingId}
+                                      onAdd={addResult}
+                                      t={t}
+                                    />
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+                </Reveal>
+              ) : null}
+            </TabsContent>
+
+            <TabsContent value="import" className="space-y-3">
+              <p className="max-w-2xl text-sm text-muted-foreground">{t("uploadHelp")}</p>
+              <UploadDropzone
+                onUploaded={(item) => {
+                  setItems((prev) => [item, ...prev]);
+                  setBrowseMode("mine");
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        </section>
+      ) : items.length === 0 ? (
+        <EmptyState
+          visual={<EmptyLibraryIllustration />}
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
+          action={
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:justify-center">
+              <Button
+                onClick={() => {
+                  setBrowseMode("sources");
+                  setAddTab("search");
+                }}
+              >
+                {t("searchSourcesTab")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBrowseMode("sources");
+                  setAddTab("import");
+                }}
+              >
+                {t("importTab")}
+              </Button>
+            </div>
+          }
+        />
+      ) : (
+        <section aria-label={t("collectionRegion")} className="flex flex-col gap-6">
+          {itemsPartial ? (
+            <div
+              role="status"
+              className="flex flex-col gap-3 rounded-md border border-border bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0 space-y-1">
+                <p className="text-sm font-medium">{t("partialWarningTitle")}</p>
+                <p className="text-sm text-muted-foreground">{t("partialWarning")}</p>
+              </div>
+              {retryButton}
+            </div>
+          ) : null}
+
+          {displayedItems.length === 0 ? (
             <EmptyState
-              visual={<EmptyLibraryIllustration />}
-              title={t("emptyTitle")}
-              description={t("emptyDescription")}
+              icon={SearchX}
+              title={t("noMatch")}
+              description={t("noMatchDescription")}
               action={
-                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:justify-center">
-                  <Button onClick={() => openAdd("search")} className="whitespace-normal">
-                    {t("searchSourcesTab")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => openAdd("import")}
-                    className="whitespace-normal"
-                  >
-                    {t("importTab")}
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCollectionQuery("")}
+                >
+                  {t("resetFilters")}
+                </Button>
               }
             />
           ) : (
             <>
-              <div className="space-y-5">
-                <div className="space-y-3">
-                  <h2 className="font-heading text-xl font-medium tracking-tight text-balance">
-                    {t("myLibrary")}
-                  </h2>
-                  {collectionInfo}
-                </div>
-
-                <div className="hidden space-y-0 border-y border-border/70 py-4 lg:block">
-                  {filterControls}
-                </div>
-
-                <details className="group border-y border-border/70 py-3 lg:hidden">
-                  <summary className="cursor-pointer list-none text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
-                    <span className="flex min-w-0 items-center justify-between gap-3">
-                      <span className="min-w-0 whitespace-normal">{t("filtersSummary")}</span>
-                      <span className="shrink-0 text-xs font-normal text-muted-foreground group-open:hidden">
-                        {filtersActive ? t("filtersActive") : t("filtersLabel")}
-                      </span>
-                    </span>
-                  </summary>
-                  <div className="mt-4 border-t border-border/70 pt-4">{filterControls}</div>
-                </details>
-              </div>
-
-              {displayedItems.length === 0 ? (
-                <EmptyState
-                  icon={SearchX}
-                  title={t("noMatch")}
-                  description={t("noMatchDescription")}
-                  action={
-                    <Button variant="outline" size="sm" onClick={resetFilters}>
-                      {t("resetFilters")}
-                    </Button>
-                  }
-                />
-              ) : viewMode === "grid" ? (
-                <div className="space-y-6">
-                  <RevealGroup
-                    className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-                    stagger={prefersReducedMotion ? 0 : 0.04}
-                  >
-                    {pageSlice.items.map((item) => (
+              {/* Pen Book grid dZwIa — desktop; mobile filled uses rows */}
+              <div
+                data-testid="library-book-grid"
+                className="hidden gap-5 md:flex md:flex-wrap"
+              >
+                <RevealGroup
+                  className="flex flex-wrap gap-5"
+                  stagger={prefersReducedMotion ? 0 : 0.04}
+                >
+                  {pageSlice.items.map((item) => {
+                    const selected = selectedId === item.id;
+                    return (
                       <RevealItem key={item.id}>
-                        <article className="group flex h-full min-w-0 flex-col gap-2.5">
-                          <div className="relative aspect-3/4 overflow-hidden rounded-lg bg-muted ring-1 ring-border/60">
+                        <article
+                          className={cn(
+                            "flex w-[140px] flex-col gap-2.5",
+                            selected && "outline-none"
+                          )}
+                        >
+                          <button
+                            type="button"
+                            className={cn(
+                              "relative h-[186px] w-[140px] overflow-hidden rounded-[9px] bg-muted text-left",
+                              "focus-visible:ring-2 focus-visible:ring-ring",
+                              selected && "ring-2 ring-ring"
+                            )}
+                            aria-pressed={selected}
+                            aria-label={item.title}
+                            onClick={() => selectBook(item)}
+                            onDoubleClick={() => setDetailItem(item)}
+                          >
                             <LibraryCoverImage
                               itemId={item.id}
                               hasCover={Boolean(item.cover_url)}
                               alt={item.title}
                             />
-                          </div>
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <h3 className="line-clamp-2 text-sm leading-snug font-medium break-words whitespace-normal">
+                          </button>
+                          <button
+                            type="button"
+                            className="min-w-0 text-left"
+                            onClick={() => selectBook(item)}
+                          >
+                            <h3 className="line-clamp-2 w-full text-sm font-medium text-foreground">
                               {item.title}
                             </h3>
-                            <p className="line-clamp-1 text-xs break-words text-muted-foreground">
+                            <p className="line-clamp-1 text-xs font-medium text-muted-foreground">
                               {item.author || tCommon("dash")}
                             </p>
-                            <p className="pt-0.5 text-xs tracking-wide text-muted-foreground/90 uppercase">
-                              {item.original_format}
-                              <span className="mx-1.5 text-border">·</span>
-                              {sourceBadgeLabel(item)}
-                            </p>
-                          </div>
-                          <BookActions
-                            item={item}
-                            canDeliver={canDeliver}
-                            onDetails={setDetailItem}
-                            onDeliver={setDeliverItem}
-                            t={t}
-                            fullWidth
-                          />
+                          </button>
                         </article>
                       </RevealItem>
-                    ))}
-                  </RevealGroup>
-                  {paginationControls}
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div className="grid gap-0 divide-y divide-border/70 lg:hidden">
-                    {pageSlice.items.map((item) => (
-                      <article key={item.id} className="flex gap-4 py-3 first:pt-0 last:pb-0">
-                        <div className="relative aspect-3/4 w-14 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/60">
-                          <LibraryCoverImage
-                            itemId={item.id}
-                            hasCover={Boolean(item.cover_url)}
-                            alt={item.title}
-                            iconClassName="size-5"
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1 space-y-2.5">
-                          <div className="min-w-0 space-y-1">
-                            <h3 className="line-clamp-2 text-[15px] leading-snug font-medium break-words whitespace-normal">
-                              {item.title}
-                            </h3>
-                            <p className="line-clamp-1 text-sm break-words text-muted-foreground">
-                              {item.author || tCommon("dash")}
-                            </p>
-                            <p className="text-xs tracking-wide text-muted-foreground/90 uppercase">
-                              {item.original_format}
-                              <span className="mx-1.5 text-border">·</span>
-                              {sourceBadgeLabel(item)}
-                            </p>
-                          </div>
-                          <BookActions
-                            item={item}
-                            canDeliver={canDeliver}
-                            onDetails={setDetailItem}
-                            onDeliver={setDeliverItem}
-                            t={t}
-                          />
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                  <div className="hidden overflow-x-auto lg:block">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                          <TableHead className="w-16" />
-                          <TableHead>{t("title")}</TableHead>
-                          <TableHead>{t("author")}</TableHead>
-                          <TableHead>{t("format")}</TableHead>
-                          <TableHead className="hidden xl:table-cell">{t("source")}</TableHead>
-                          <TableHead className="hidden xl:table-cell">{t("language")}</TableHead>
-                          <TableHead className="hidden 2xl:table-cell">{t("added")}</TableHead>
-                          <TableHead className="text-right">{t("action")}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {pageSlice.items.map((item) => (
-                          <TableRow key={item.id} className="hover:bg-muted/20">
-                            <TableCell>
-                              <div className="relative size-12 overflow-hidden rounded-md bg-muted ring-1 ring-border/60">
-                                <LibraryCoverImage
-                                  itemId={item.id}
-                                  hasCover={Boolean(item.cover_url)}
-                                  alt={item.title}
-                                  iconClassName="size-4"
-                                />
-                              </div>
-                            </TableCell>
-                            <TableCell className="max-w-56 font-medium">
-                              <span className="line-clamp-2 break-words whitespace-normal">
+                    );
+                  })}
+                </RevealGroup>
+              </div>
+
+              {/* Pen Book list / Récents — simultaneous with grid on desktop */}
+              <div data-testid="library-recent-section" className="flex w-full flex-col">
+                <h2 className="mb-0 text-sm font-medium text-muted-foreground">
+                  {t("recentSection")}
+                </h2>
+                <ul className="flex flex-col">
+                  {(recentItems.length > 0 ? recentItems : pageSlice.items.slice(0, 3)).map(
+                    (item) => {
+                      const selected = selectedId === item.id;
+                      return (
+                        <li key={item.id}>
+                          <div
+                            className={cn(
+                              "flex items-center gap-4 border-b border-border py-3",
+                              selected && "bg-muted/40"
+                            )}
+                          >
+                            <button
+                              type="button"
+                              className="relative h-14 w-10 shrink-0 overflow-hidden rounded-[9px] bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-pressed={selected}
+                              aria-label={item.title}
+                              onClick={() => selectBook(item)}
+                              onDoubleClick={() => setDetailItem(item)}
+                            >
+                              <LibraryCoverImage
+                                itemId={item.id}
+                                hasCover={Boolean(item.cover_url)}
+                                alt={item.title}
+                              />
+                            </button>
+                            <button
+                              type="button"
+                              className="min-w-0 flex-1 text-left"
+                              onClick={() => selectBook(item)}
+                            >
+                              <p className="line-clamp-1 text-base font-medium text-foreground">
                                 {item.title}
-                              </span>
-                            </TableCell>
-                            <TableCell className="max-w-40 text-muted-foreground">
-                              <span className="line-clamp-1 break-words">
+                              </p>
+                              <p className="line-clamp-1 text-xs font-medium text-muted-foreground">
                                 {item.author || tCommon("dash")}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground uppercase">
-                              {item.original_format}
-                            </TableCell>
-                            <TableCell className="hidden text-muted-foreground xl:table-cell">
-                              {sourceBadgeLabel(item)}
-                            </TableCell>
-                            <TableCell className="hidden text-muted-foreground xl:table-cell">
-                              {item.language ?? tCommon("dash")}
-                            </TableCell>
-                            <TableCell className="hidden text-muted-foreground 2xl:table-cell">
-                              {formatAppDate(item.added_at, locale)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end">
-                                <BookActions
-                                  item={item}
-                                  canDeliver={canDeliver}
-                                  onDetails={setDetailItem}
-                                  onDeliver={setDeliverItem}
-                                  t={t}
-                                />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  {paginationControls}
-                </div>
-              )}
+                                <span className="mx-1.5 text-border">·</span>
+                                {item.original_format.toUpperCase()}
+                              </p>
+                            </button>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="rounded-sm px-3 py-2 text-sm font-medium"
+                                aria-label={t("detailsOf", { title: item.title })}
+                                onClick={() => setDetailItem(item)}
+                              >
+                                {t("details")}
+                              </Button>
+                              {canDeliver ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-sm border-border px-3 py-2 text-sm font-medium"
+                                  aria-label={t("deliverOf", { title: item.title })}
+                                  onClick={() => openDeliver(item)}
+                                >
+                                  {t("deliver")}
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    }
+                  )}
+                </ul>
+              </div>
+
+              {paginationControls}
             </>
           )}
         </section>
       )}
-
-      {addOpen ? addPanel : null}
 
       <BookDetailDialog
         item={detailItem}
@@ -1289,6 +954,7 @@ export function LibraryView({
         }}
         onDeleted={(id) => {
           setItems((prev) => prev.filter((it) => it.id !== id));
+          if (selectedId === id) setSelectedId(null);
         }}
       />
 

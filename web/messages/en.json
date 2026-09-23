@@ -161,7 +161,7 @@
   "pages": {
     "library": {
       "title": "Library",
-      "description": "Your personal collection of books already available, ready to send to your e-reader."
+      "description": "Find in my books"
     },
     "devices": {
       "title": "Devices",
@@ -291,7 +291,12 @@
     "passageHint": "From file to e-reader — a simple path.",
     "coverFallback": "Cover",
     "collectionRegion": "Collection",
-    "addRegion": "Adding books"
+    "addRegion": "Adding books",
+    "modeMine": "Find in my books",
+    "modeSources": "Search sources",
+    "browseModeLabel": "Browse the library",
+    "recentSection": "Recent",
+    "searchSourcesPlaceholder": "Search sources"
   },
   "deliverDialog": {
     "title": "Send “{title}”",

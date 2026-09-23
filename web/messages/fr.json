@@ -161,7 +161,7 @@
   "pages": {
     "library": {
       "title": "Bibliothèque",
-      "description": "Votre collection personnelle de livres déjà disponibles, prêts à envoyer sur votre liseuse."
+      "description": "Retrouver dans mes livres"
     },
     "devices": {
       "title": "Appareils",
@@ -291,7 +291,12 @@
     "passageHint": "Du fichier à la liseuse — un parcours simple.",
     "coverFallback": "Couverture",
     "collectionRegion": "Collection",
-    "addRegion": "Ajout de livres"
+    "addRegion": "Ajout de livres",
+    "modeMine": "Retrouver dans mes livres",
+    "modeSources": "Chercher dans les sources",
+    "browseModeLabel": "Parcourir la bibliothèque",
+    "recentSection": "Récents",
+    "searchSourcesPlaceholder": "Chercher dans les sources"
   },
   "deliverDialog": {
     "title": "Envoyer « {title} »",

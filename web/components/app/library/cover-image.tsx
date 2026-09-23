@@ -3,36 +3,31 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useAuth } from "@clerk/nextjs";
-import { BookOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 function CoverFallback({
   label,
   className,
-  iconClassName,
   decorative,
 }: {
   label: string;
   className?: string;
-  iconClassName?: string;
   /** When true, parent already exposes an accessible name (e.g. book title). */
   decorative?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col items-center justify-center gap-1.5 bg-muted px-2 text-center",
+        "flex h-full w-full items-center justify-center bg-muted px-2 text-center",
         className
       )}
       {...(decorative
         ? { "aria-hidden": true }
         : { role: "img", "aria-label": label })}
     >
-      <BookOpen className={cn("size-8 text-primary/70", iconClassName)} />
-      <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-        {label}
-      </span>
+      {/* Pen YoLR8: plain “Couverture” / “Cover” — no icon, no artificial uppercase. */}
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
     </div>
   );
 }
@@ -46,12 +41,12 @@ export function LibraryCoverImage({
   hasCover,
   alt,
   className,
-  iconClassName,
 }: {
   itemId: string;
   hasCover: boolean;
   alt: string;
   className?: string;
+  /** @deprecated Pen cover fallback has no icon. */
   iconClassName?: string;
 }) {
   const t = useTranslations("library");
@@ -109,7 +104,6 @@ export function LibraryCoverImage({
       <CoverFallback
         label={fallbackLabel}
         className={className}
-        iconClassName={iconClassName}
         decorative={Boolean(alt)}
       />
     );
@@ -122,7 +116,7 @@ export function LibraryCoverImage({
       fill
       unoptimized
       className={cn("object-cover", className)}
-      sizes="(max-width: 640px) 100vw, 200px"
+      sizes="(max-width: 640px) 100vw, 140px"
       onError={() => setFailed(true)}
     />
   );
@@ -134,10 +128,10 @@ export function LibraryCoverImage({
 export function SearchCoverImage({
   coverUrl,
   className,
-  iconClassName,
 }: {
   coverUrl: string | null | undefined;
   className?: string;
+  /** @deprecated Pen cover fallback has no icon. */
   iconClassName?: string;
 }) {
   const t = useTranslations("library");
@@ -146,11 +140,7 @@ export function SearchCoverImage({
 
   if (!coverUrl || failed) {
     return (
-      <CoverFallback
-        label={fallbackLabel}
-        className={className}
-        iconClassName={iconClassName ?? "size-4"}
-      />
+      <CoverFallback label={fallbackLabel} className={className} />
     );
   }
 

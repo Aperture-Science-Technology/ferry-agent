@@ -13,6 +13,7 @@ import {
   paginateLibraryItems,
   applyLibraryItemsRefreshResult,
   libraryCollectionPageState,
+  recentLibraryItems,
 } from "./library-collection.ts";
 
 describe("mergeLibraryFetch", () => {
@@ -284,6 +285,36 @@ describe("hasActiveLibraryFilters", () => {
         sourceFilter: "all",
       }),
       true
+    );
+  });
+});
+
+describe("recentLibraryItems", () => {
+  it("returns the most recently added books without inventing titles", () => {
+    const sample = [
+      {
+        title: "Old",
+        author: "A",
+        original_format: "epub",
+        added_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        title: "New",
+        author: "B",
+        original_format: "epub",
+        added_at: "2026-03-01T00:00:00Z",
+      },
+      {
+        title: "Mid",
+        author: "C",
+        original_format: "epub",
+        added_at: "2026-02-01T00:00:00Z",
+      },
+    ];
+    const recent = recentLibraryItems(sample, 2);
+    assert.deepEqual(
+      recent.map((item) => item.title),
+      ["New", "Mid"]
     );
   });
 });
