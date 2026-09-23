@@ -64,4 +64,15 @@ describe("product truth in marketing i18n", () => {
     assert.match(fr.faq.items.cloudFirst.a, /en ligne|héberg/i);
     assert.match(en.faq.items.cloudFirst.a, /online|hosted/i);
   });
+
+  it("landing hero presents an online library, not local-only storage", () => {
+    const fr = JSON.parse(load("fr"));
+    const en = JSON.parse(load("en"));
+    assert.match(fr.hero.titleBefore, /bibliothèque en ligne/i);
+    assert.match(en.hero.titleBefore, /online library/i);
+    assert.match(fr.hero.sceneCaption, /pas une confirmation d.envoi/i);
+    assert.match(en.hero.sceneCaption, /not a delivery confirmation/i);
+    assert.match(fr.howItWorks.steps.add.body, /bibliothèque en ligne/i);
+    assert.match(en.howItWorks.steps.add.body, /online library/i);
+  });
 });
