@@ -177,7 +177,7 @@
     },
     "deliveries": {
       "title": "Deliveries",
-      "description": "Track deliveries from your online library to your devices."
+      "description": "Transfer history"
     },
     "settings": {
       "title": "Settings",
@@ -636,9 +636,6 @@
     "partialNote": "Some activable sources could not be confirmed. Those shown remain usable; the others stay unknown."
   },
   "deliveries": {
-    "sectionTitle": "Your deliveries",
-    "sectionDescription": "Each send from your library appears here with its status.",
-    "countLabel": "{count} deliveries",
     "emptyTitle": "No deliveries",
     "emptyDescription": "Send a book from your library to track your deliveries here.",
     "unavailableTitle": "Deliveries unavailable",
@@ -648,19 +645,9 @@
     "refreshFailedTitle": "Refresh incomplete",
     "refreshFailedDescription": "The list couldn't be updated. Your last known deliveries stay visible.",
     "statusHintDelivered": "The send operation finished. This does not confirm that the book was opened on the e-reader.",
-    "statusHintDeliveredShort": "Send finished — not confirmed reading",
     "statusHintUnknown": "Unrecognized status. Refresh to check — do not treat this send as finished.",
     "failedHint": "This send did not complete. Open tracking for more detail.",
     "routeTo": "{title} → {device}",
-    "colBook": "Book",
-    "colDevice": "E-reader",
-    "colStatus": "Status",
-    "colMethod": "Delivery mode",
-    "colFormat": "Format",
-    "colCreated": "Requested",
-    "colDelivered": "Finished",
-    "colError": "Failed",
-    "colAction": "Action",
     "track": "Track",
     "trackFailed": "See the problem",
     "trackAria": "Track delivery of {title}",

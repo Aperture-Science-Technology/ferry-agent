@@ -177,7 +177,7 @@
     },
     "deliveries": {
       "title": "Livraisons",
-      "description": "Suivez vos livraisons depuis la bibliothèque en ligne vers vos appareils."
+      "description": "Historique des transferts"
     },
     "settings": {
       "title": "Réglages",
@@ -636,9 +636,6 @@
     "partialNote": "Certaines sources activables n'ont pas pu être confirmées. Celles affichées restent utilisables ; les autres restent en état inconnu."
   },
   "deliveries": {
-    "sectionTitle": "Vos envois",
-    "sectionDescription": "Chaque envoi depuis votre bibliothèque apparaît ici avec son statut.",
-    "countLabel": "{count} envois",
     "emptyTitle": "Aucun envoi",
     "emptyDescription": "Envoyez un livre depuis votre bibliothèque pour suivre vos envois ici.",
     "unavailableTitle": "Envois indisponibles",
@@ -648,19 +645,9 @@
     "refreshFailedTitle": "Actualisation incomplète",
     "refreshFailedDescription": "La liste affichée n’a pas pu être mise à jour. Vos derniers envois connus restent visibles.",
     "statusHintDelivered": "L’opération d’envoi est terminée. Cela ne confirme pas que le livre a été ouvert sur la liseuse.",
-    "statusHintDeliveredShort": "Envoi terminé — pas une lecture confirmée",
     "statusHintUnknown": "Statut non reconnu. Actualisez pour vérifier, sans traiter l’envoi comme terminé.",
     "failedHint": "L’envoi n’a pas abouti. Ouvrez le suivi pour plus de détail.",
     "routeTo": "{title} → {device}",
-    "colBook": "Livre",
-    "colDevice": "Liseuse",
-    "colStatus": "Statut",
-    "colMethod": "Mode d’envoi",
-    "colFormat": "Format",
-    "colCreated": "Demandé",
-    "colDelivered": "Terminé",
-    "colError": "Échec",
-    "colAction": "Action",
     "track": "Suivre",
     "trackFailed": "Voir le problème",
     "trackAria": "Suivre l’envoi de {title}",
