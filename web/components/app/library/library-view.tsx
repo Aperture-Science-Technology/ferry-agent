@@ -4,27 +4,26 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "motion/react";
-import { ChevronLeft, ChevronRight, Loader2, Search, SearchX } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Library,
+  Loader2,
+  Search,
+  SearchX,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
-// brand name for mobile top label (Pen mF0028)
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EmptyState } from "@/components/app/empty-state";
-import { StatePanel } from "@/components/app/state-panel";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
 import { DeliverDialog } from "@/components/app/library/deliver-dialog";
+import {
+  LibraryEmpty,
+  LibraryFeedback,
+} from "@/components/app/library/library-feedback";
 import {
   applyLibraryItemsRefreshResult,
   filterAndSortLibraryItems,
@@ -39,12 +38,16 @@ import {
   SearchCoverImage,
 } from "@/components/app/library/cover-image";
 import { UploadDropzone } from "@/components/app/library/upload-dropzone";
-import { EmptyLibraryIllustration } from "@/components/illustrations";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { ApiError, useApiClient } from "@/lib/api-client";
 import { useGatewayJob } from "@/lib/use-gateway-job";
 import { cn } from "@/lib/utils";
-import type { Device, LibraryItem, PaginatedLibraryItems, SearchResult } from "@/lib/types";
+import type {
+  Device,
+  LibraryItem,
+  PaginatedLibraryItems,
+  SearchResult,
+} from "@/lib/types";
 
 type BrowseMode = "mine" | "sources";
 type AddTab = "search" | "import";
@@ -54,7 +57,10 @@ function mapFetchError(
   t: ReturnType<typeof useTranslations<"library">>
 ): string {
   if (!error) return t("toastFetchFailed");
-  if (/abandonn[ée] après \d+ tentatives/i.test(error) || /abandoned after \d+ attempts/i.test(error)) {
+  if (
+    /abandonn[ée] après \d+ tentatives/i.test(error) ||
+    /abandoned after \d+ attempts/i.test(error)
+  ) {
     return t("toastFetchAbandoned");
   }
   if (/malveillant|VirusTotal/i.test(error)) return t("toastFetchMalicious");
@@ -117,14 +123,14 @@ function SearchResultActions({
 }) {
   if (result.owned) {
     return (
-      <Button size="sm" variant="secondary" disabled>
+      <Button size="sm" variant="secondary" disabled className="rounded-sm">
         {t("inLibrary")}
       </Button>
     );
   }
   if (isPending) {
     return (
-      <Button size="sm" variant="outline" disabled>
+      <Button size="sm" variant="outline" disabled className="rounded-sm">
         <Loader2 className="animate-spin" />
         {t("fetching")}
       </Button>
@@ -133,12 +139,85 @@ function SearchResultActions({
   return (
     <Button
       size="sm"
+      className="rounded-sm"
       disabled={addingId === resultKey}
       onClick={() => onAdd(result)}
     >
       {addingId === resultKey ? <Loader2 className="animate-spin" /> : null}
       {t("add")}
     </Button>
+  );
+}
+
+/** Pen Library/BookRow B3CiDv */
+function BookRow({
+  item,
+  selected,
+  canDeliver,
+  onSelect,
+  onOpenDetail,
+  onDeliver,
+  t,
+  tCommon,
+}: {
+  item: LibraryItem;
+  selected: boolean;
+  canDeliver: boolean;
+  onSelect: () => void;
+  onOpenDetail: () => void;
+  onDeliver: () => void;
+  t: ReturnType<typeof useTranslations<"library">>;
+  tCommon: ReturnType<typeof useTranslations<"common">>;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-4 border-b border-border py-3",
+        selected && "bg-muted/40"
+      )}
+    >
+      <button
+        type="button"
+        className="relative h-14 w-10 shrink-0 overflow-hidden rounded-[9px] bg-ferry-surface-2 focus-visible:ring-2 focus-visible:ring-ring"
+        aria-pressed={selected}
+        aria-label={item.title}
+        onClick={onSelect}
+        onDoubleClick={onOpenDetail}
+      >
+        <LibraryCoverImage
+          itemId={item.id}
+          hasCover={Boolean(item.cover_url)}
+          alt={item.title}
+        />
+      </button>
+      <button
+        type="button"
+        className="min-w-0 flex-1 text-left"
+        onClick={onSelect}
+        onDoubleClick={onOpenDetail}
+      >
+        <p className="line-clamp-1 text-base font-medium text-foreground">
+          {item.title}
+        </p>
+        <p className="line-clamp-1 text-xs font-medium text-muted-foreground">
+          {item.author || tCommon("dash")}
+          <span className="mx-1.5 text-border">·</span>
+          {item.original_format.toUpperCase()}
+        </p>
+      </button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0 rounded-sm border-border px-3 py-2 text-sm font-medium"
+        disabled={!canDeliver}
+        aria-disabled={!canDeliver}
+        aria-label={t("deliverOf", { title: item.title })}
+        onClick={onDeliver}
+      >
+        {t("deliver")}
+      </Button>
+    </div>
   );
 }
 
@@ -227,7 +306,12 @@ export function LibraryView({
   );
 
   const pageSlice = useMemo(
-    () => paginateLibraryItems(displayedItems, collectionPage, LIBRARY_COLLECTION_PAGE_SIZE),
+    () =>
+      paginateLibraryItems(
+        displayedItems,
+        collectionPage,
+        LIBRARY_COLLECTION_PAGE_SIZE
+      ),
     [displayedItems, collectionPage]
   );
 
@@ -271,12 +355,19 @@ export function LibraryView({
     clearPending(resultKey);
     markOwned(resultKey);
     try {
-      const refreshed = await call<PaginatedLibraryItems>("/api/v1/books?page=1&limit=200");
+      const refreshed = await call<PaginatedLibraryItems>(
+        "/api/v1/books?page=1&limit=200"
+      );
       const itemsAcc = [...refreshed.items];
-      const totalPages = Math.max(1, Math.ceil(refreshed.total / refreshed.limit));
+      const totalPages = Math.max(
+        1,
+        Math.ceil(refreshed.total / refreshed.limit)
+      );
       for (let page = 2; page <= totalPages; page += 1) {
         try {
-          const next = await call<PaginatedLibraryItems>(`/api/v1/books?page=${page}&limit=200`);
+          const next = await call<PaginatedLibraryItems>(
+            `/api/v1/books?page=${page}&limit=200`
+          );
           itemsAcc.push(...next.items);
         } catch {
           break;
@@ -302,7 +393,9 @@ export function LibraryView({
 
   function handleFetchTimeout(resultKey: string) {
     clearPending(resultKey);
-    toast.error(t("toastFetchFailed"), { description: t("toastFetchTimeout") });
+    toast.error(t("toastFetchFailed"), {
+      description: t("toastFetchTimeout"),
+    });
   }
 
   async function runSearch() {
@@ -327,16 +420,22 @@ export function LibraryView({
     const resultKey = `${result.source}:${result.result_id}`;
     setAddingId(resultKey);
     try {
-      const added = await call<LibraryItem | { gateway_job_id: string }>("/api/v1/books", {
-        method: "POST",
-        body: JSON.stringify({
-          source: result.source,
-          result_id: result.result_id,
-          result,
-        }),
-      });
+      const added = await call<LibraryItem | { gateway_job_id: string }>(
+        "/api/v1/books",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            source: result.source,
+            result_id: result.result_id,
+            result,
+          }),
+        }
+      );
       if ("gateway_job_id" in added) {
-        setPendingJobs((prev) => ({ ...prev, [resultKey]: added.gateway_job_id }));
+        setPendingJobs((prev) => ({
+          ...prev,
+          [resultKey]: added.gateway_job_id,
+        }));
       } else {
         setItems((prev) => [added, ...prev]);
         toast.success(t("toastAdded", { title: added.title }));
@@ -371,6 +470,7 @@ export function LibraryView({
   }
 
   function openDeliver(item: LibraryItem) {
+    if (!canDeliver) return;
     setSelectedId(item.id);
     setDeliverItem(item);
   }
@@ -399,6 +499,19 @@ export function LibraryView({
     void runSearch();
   }
 
+  const retryButton = (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={handleRetry}
+      disabled={retrying}
+      className="w-fit rounded-sm"
+    >
+      {retrying ? <Loader2 className="animate-spin" /> : null}
+      {t("retryLoad")}
+    </Button>
+  );
+
   const paginationControls =
     displayedItems.length > LIBRARY_COLLECTION_PAGE_SIZE ? (
       <nav
@@ -416,6 +529,7 @@ export function LibraryView({
           <Button
             size="sm"
             variant="outline"
+            className="rounded-sm"
             onClick={() => setCollectionPage(Math.max(1, pageSlice.page - 1))}
             disabled={pageSlice.page <= 1}
             aria-label={t("paginationPrevious")}
@@ -424,12 +538,18 @@ export function LibraryView({
             <span className="hidden sm:inline">{t("paginationPrevious")}</span>
           </Button>
           <span className="min-w-24 text-center text-xs text-muted-foreground tabular-nums">
-            {t("paginationPage", { page: pageSlice.page, pageCount: pageSlice.pageCount })}
+            {t("paginationPage", {
+              page: pageSlice.page,
+              pageCount: pageSlice.pageCount,
+            })}
           </span>
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setCollectionPage(Math.min(pageSlice.pageCount, pageSlice.page + 1))}
+            className="rounded-sm"
+            onClick={() =>
+              setCollectionPage(Math.min(pageSlice.pageCount, pageSlice.page + 1))
+            }
             disabled={pageSlice.page >= pageSlice.pageCount}
             aria-label={t("paginationNext")}
           >
@@ -440,11 +560,29 @@ export function LibraryView({
       </nav>
     ) : null;
 
-  const retryButton = (
-    <Button size="sm" variant="outline" onClick={handleRetry} disabled={retrying} className="w-fit">
-      {retrying ? <Loader2 className="animate-spin" /> : null}
-      {t("retryLoad")}
-    </Button>
+  const searchField = (
+    <div className="relative flex w-full items-center gap-2 rounded-md border border-border bg-ferry-surface-2 px-3 py-2.5 md:w-[280px]">
+      <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <Label htmlFor="library-header-search" className="sr-only">
+        {browseMode === "mine"
+          ? t("collectionSearchLabel")
+          : t("searchSourcesLabel")}
+      </Label>
+      <Input
+        ref={searchInputRef}
+        id="library-header-search"
+        value={headerSearchValue}
+        onChange={(event) => onHeaderSearchChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") onHeaderSearchSubmit();
+        }}
+        placeholder={headerSearchPlaceholder}
+        className="h-auto border-0 bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
+        autoComplete="off"
+        spellCheck={false}
+        disabled={browseMode === "sources" && searching}
+      />
+    </div>
   );
 
   return (
@@ -460,9 +598,9 @@ export function LibraryView({
         />
       ))}
 
-      {/* Pen Header/Page ePLzB — 72 px, Fraunces 18/500 + subtitle 12/500 */}
+      {/* Pen Header/Page ePLzB (desktop) / Top mF0028 (mobile) */}
       <header className="flex min-h-[72px] flex-col justify-center gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-1">
           <p className="font-heading text-sm font-medium text-muted-foreground md:hidden">
             {tBrand("name")}
           </p>
@@ -472,31 +610,11 @@ export function LibraryView({
           <p className="text-xs font-medium text-muted-foreground">{description}</p>
         </div>
 
-        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end md:w-auto">
-          <div className="relative flex w-full max-w-none items-center gap-2 rounded-md border border-border bg-muted px-3 py-2.5 md:w-[280px]">
-            <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-            <Label htmlFor="library-header-search" className="sr-only">
-              {browseMode === "mine"
-                ? t("collectionSearchLabel")
-                : t("searchSourcesLabel")}
-            </Label>
-            <Input
-              ref={searchInputRef}
-              id="library-header-search"
-              value={headerSearchValue}
-              onChange={(event) => onHeaderSearchChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") onHeaderSearchSubmit();
-              }}
-              placeholder={headerSearchPlaceholder}
-              className="h-auto border-0 bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
-              autoComplete="off"
-              spellCheck={false}
-              disabled={browseMode === "sources" && searching}
-            />
-          </div>
+        <div className="hidden w-full min-w-0 items-center justify-end gap-2 md:flex md:w-auto">
+          {searchField}
           <Button
             type="button"
+            data-testid="library-header-send"
             className="rounded-md px-3.5 py-2.5 text-sm font-medium disabled:pointer-events-none disabled:bg-card disabled:text-disabled disabled:opacity-50"
             disabled={!headerSendEnabled}
             aria-disabled={!headerSendEnabled}
@@ -507,79 +625,81 @@ export function LibraryView({
         </div>
       </header>
 
-      {/* Pen Library tools — mode chips */}
-      <div
-        className="flex flex-wrap items-center gap-4"
-        role="tablist"
-        aria-label={t("browseModeLabel")}
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={browseMode === "mine"}
-          className={cn(
-            "rounded-sm border px-3 py-2 text-sm font-medium",
-            browseMode === "mine"
-              ? "border-border bg-card text-foreground"
-              : "border-border bg-transparent text-muted-foreground"
-          )}
-          onClick={() => setBrowseMode("mine")}
+      {/* Pen Library tools — mode chips (desktop a0ck4H); mobile search in body */}
+      <div className="flex flex-col gap-3 md:gap-4">
+        <div
+          className="flex flex-wrap items-center gap-4"
+          role="tablist"
+          aria-label={t("browseModeLabel")}
         >
-          {t("modeMine")}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={browseMode === "sources"}
-          className={cn(
-            "rounded-sm border px-3 py-2 text-sm font-medium",
-            browseMode === "sources"
-              ? "border-border bg-card text-foreground"
-              : "border-border bg-transparent text-muted-foreground"
-          )}
-          onClick={() => {
-            setBrowseMode("sources");
-            setAddTab("search");
-          }}
-        >
-          {t("modeSources")}
-        </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={browseMode === "mine"}
+            className={cn(
+              "rounded-sm border px-3 py-2 text-sm font-medium",
+              browseMode === "mine"
+                ? "border-border bg-card text-foreground"
+                : "border-border bg-transparent text-muted-foreground"
+            )}
+            onClick={() => setBrowseMode("mine")}
+          >
+            {t("modeMine")}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={browseMode === "sources"}
+            className={cn(
+              "rounded-sm border px-3 py-2 text-sm font-medium",
+              browseMode === "sources"
+                ? "border-border bg-card text-foreground"
+                : "border-border bg-transparent text-muted-foreground"
+            )}
+            onClick={() => {
+              setBrowseMode("sources");
+              setAddTab("search");
+            }}
+          >
+            {t("modeSources")}
+          </button>
+        </div>
+
+        <div className="md:hidden">{searchField}</div>
       </div>
 
       {itemsUnavailable && items.length === 0 ? (
-        <div role="alert">
-          <EmptyState
-            title={t("emptyUnavailableTitle")}
-            description={t("emptyUnavailable")}
-            action={retryButton}
-          />
-        </div>
+        <LibraryFeedback
+          role="alert"
+          icon={Library}
+          title={t("emptyUnavailableTitle")}
+          description={t("emptyUnavailable")}
+          action={retryButton}
+        />
       ) : browseMode === "sources" ? (
-        <section aria-label={t("addRegion")} className="space-y-5">
+        <section aria-label={t("addRegion")} className="flex flex-col gap-5">
           {itemsPartial && items.length > 0 ? (
-            <div
-              role="status"
-              className="flex flex-col gap-3 rounded-md border border-border bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0 space-y-1">
-                <p className="text-sm font-medium">{t("partialWarningTitle")}</p>
-                <p className="text-sm text-muted-foreground">{t("partialWarning")}</p>
-              </div>
-              {retryButton}
-            </div>
+            <LibraryFeedback
+              icon={Library}
+              title={t("partialWarningTitle")}
+              description={t("partialWarning")}
+              action={retryButton}
+            />
           ) : null}
 
           <Tabs
             value={addTab}
             onValueChange={(value) => setAddTab((value as AddTab) ?? "search")}
           >
-            <TabsList variant="line" className="mb-4 w-full max-w-md sm:w-auto">
+            <TabsList variant="line" className="mb-2 w-full max-w-md sm:w-auto">
               <TabsTrigger value="search">{t("searchSourcesTab")}</TabsTrigger>
               <TabsTrigger value="import">{t("importTab")}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="search" className="space-y-5">
-              <p className="max-w-2xl text-sm text-muted-foreground">{t("searchHelp")}</p>
+            <TabsContent value="search" className="flex flex-col gap-5">
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                {t("searchHelp")}
+              </p>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button
                   onClick={() => void runSearch()}
@@ -602,58 +722,58 @@ export function LibraryView({
                   aria-busy="true"
                   aria-live="polite"
                 >
-                  <StatePanel className="border-border/60 bg-card/40 py-12">
-                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="size-4 animate-spin text-primary" />
-                      {t("searching")}
+                  <LibraryFeedback
+                    icon={Loader2}
+                    iconClassName="animate-spin"
+                    title={t("feedbackLoadingTitle")}
+                    description={t("searching")}
+                  >
+                    <div className="mt-2 grid w-full gap-3 sm:grid-cols-2">
+                      <Skeleton className="h-16 w-full rounded-md" />
+                      <Skeleton className="h-16 w-full rounded-md" />
                     </div>
-                    <div className="mt-4 grid w-full gap-3 sm:grid-cols-2">
-                      <Skeleton className="h-24 w-full rounded-md" />
-                      <Skeleton className="h-24 w-full rounded-md" />
-                    </div>
-                  </StatePanel>
+                  </LibraryFeedback>
                 </motion.div>
               ) : null}
 
               {!searching && results !== null ? (
                 <Reveal>
                   {results.length === 0 ? (
-                    <EmptyState
+                    <LibraryEmpty
                       icon={SearchX}
                       title={t("noResultsHint")}
                       description={t("searchHelpMatch")}
                     />
                   ) : (
-                    <div className="space-y-4">
+                    <div className="flex flex-col gap-4">
                       <p className="text-sm font-medium" role="status">
                         {t("resultsFound", { count: results.length })}
                       </p>
-                      <div className="grid gap-0 divide-y divide-border lg:hidden">
+                      <ul className="flex flex-col">
                         {results.map((result) => {
                           const resultKey = `${result.source}:${result.result_id}`;
                           const isPending = resultKey in pendingJobs;
                           return (
-                            <article key={resultKey} className="flex gap-3 py-3">
-                              <div className="relative size-16 shrink-0 overflow-hidden rounded-[9px] bg-muted">
-                                <SearchCoverImage
-                                  coverUrl={result.cover_url}
-                                  className="absolute inset-0 size-full"
-                                />
-                              </div>
-                              <div className="min-w-0 flex-1 space-y-2">
-                                <div className="min-w-0">
-                                  <h3 className="line-clamp-2 text-sm font-medium">
+                            <li key={resultKey}>
+                              <article className="flex items-center gap-4 border-b border-border py-3">
+                                <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-[9px] bg-ferry-surface-2">
+                                  <SearchCoverImage
+                                    coverUrl={result.cover_url}
+                                    className="absolute inset-0 size-full"
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="line-clamp-1 text-base font-medium">
                                     {result.title}
                                   </h3>
-                                  <p className="line-clamp-1 text-sm text-muted-foreground">
+                                  <p className="line-clamp-1 text-xs font-medium text-muted-foreground">
                                     {result.author}
+                                    <span className="mx-1.5 text-border">·</span>
+                                    {sourceLabel(result.source)}
+                                    <span className="mx-1.5 text-border">·</span>
+                                    {result.format}
                                   </p>
                                 </div>
-                                <p className="text-xs text-muted-foreground">
-                                  {sourceLabel(result.source)}
-                                  <span className="mx-1.5 text-border">·</span>
-                                  {result.format}
-                                </p>
                                 <SearchResultActions
                                   result={result}
                                   resultKey={resultKey}
@@ -662,81 +782,21 @@ export function LibraryView({
                                   onAdd={addResult}
                                   t={t}
                                 />
-                              </div>
-                            </article>
+                              </article>
+                            </li>
                           );
                         })}
-                      </div>
-                      <div className="hidden overflow-x-auto lg:block">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="hover:bg-transparent">
-                              <TableHead className="w-14" />
-                              <TableHead>{t("title")}</TableHead>
-                              <TableHead>{t("author")}</TableHead>
-                              <TableHead>{t("source")}</TableHead>
-                              <TableHead>{t("format")}</TableHead>
-                              <TableHead className="text-right">{t("action")}</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {results.map((result) => {
-                              const resultKey = `${result.source}:${result.result_id}`;
-                              const isPending = resultKey in pendingJobs;
-                              return (
-                                <TableRow key={resultKey}>
-                                  <TableCell>
-                                    <div className="relative size-11 overflow-hidden rounded-[9px] bg-muted">
-                                      <SearchCoverImage coverUrl={result.cover_url} />
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="max-w-56 font-medium">
-                                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                      <span className="line-clamp-2">{result.title}</span>
-                                      {result.owned ? (
-                                        <Badge variant="secondary">{t("owned")}</Badge>
-                                      ) : null}
-                                      {isPending ? (
-                                        <Badge variant="outline" className="gap-1">
-                                          <Loader2 className="size-3 animate-spin" />
-                                          {t("fetching")}
-                                        </Badge>
-                                      ) : null}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-muted-foreground">
-                                    {result.author}
-                                  </TableCell>
-                                  <TableCell className="text-muted-foreground">
-                                    {sourceLabel(result.source)}
-                                  </TableCell>
-                                  <TableCell className="text-muted-foreground">
-                                    {result.format}
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <SearchResultActions
-                                      result={result}
-                                      resultKey={resultKey}
-                                      isPending={isPending}
-                                      addingId={addingId}
-                                      onAdd={addResult}
-                                      t={t}
-                                    />
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
+                      </ul>
                     </div>
                   )}
                 </Reveal>
               ) : null}
             </TabsContent>
 
-            <TabsContent value="import" className="space-y-3">
-              <p className="max-w-2xl text-sm text-muted-foreground">{t("uploadHelp")}</p>
+            <TabsContent value="import" className="flex flex-col gap-3">
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                {t("uploadHelp")}
+              </p>
               <UploadDropzone
                 onUploaded={(item) => {
                   setItems((prev) => [item, ...prev]);
@@ -747,13 +807,14 @@ export function LibraryView({
           </Tabs>
         </section>
       ) : items.length === 0 ? (
-        <EmptyState
-          visual={<EmptyLibraryIllustration />}
+        <LibraryEmpty
+          icon={Library}
           title={t("emptyTitle")}
           description={t("emptyDescription")}
           action={
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:justify-center">
               <Button
+                className="rounded-md"
                 onClick={() => {
                   setBrowseMode("sources");
                   setAddTab("search");
@@ -763,6 +824,7 @@ export function LibraryView({
               </Button>
               <Button
                 variant="outline"
+                className="rounded-md"
                 onClick={() => {
                   setBrowseMode("sources");
                   setAddTab("import");
@@ -774,22 +836,21 @@ export function LibraryView({
           }
         />
       ) : (
-        <section aria-label={t("collectionRegion")} className="flex flex-col gap-6">
+        <section
+          aria-label={t("collectionRegion")}
+          className="flex flex-col gap-5 md:gap-6"
+        >
           {itemsPartial ? (
-            <div
-              role="status"
-              className="flex flex-col gap-3 rounded-md border border-border bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0 space-y-1">
-                <p className="text-sm font-medium">{t("partialWarningTitle")}</p>
-                <p className="text-sm text-muted-foreground">{t("partialWarning")}</p>
-              </div>
-              {retryButton}
-            </div>
+            <LibraryFeedback
+              icon={Library}
+              title={t("partialWarningTitle")}
+              description={t("partialWarning")}
+              action={retryButton}
+            />
           ) : null}
 
           {displayedItems.length === 0 ? (
-            <EmptyState
+            <LibraryEmpty
               icon={SearchX}
               title={t("noMatch")}
               description={t("noMatchDescription")}
@@ -797,6 +858,7 @@ export function LibraryView({
                 <Button
                   variant="outline"
                   size="sm"
+                  className="rounded-sm"
                   onClick={() => setCollectionQuery("")}
                 >
                   {t("resetFilters")}
@@ -805,7 +867,7 @@ export function LibraryView({
             />
           ) : (
             <>
-              {/* Pen Book grid dZwIa — desktop; mobile filled uses rows */}
+              {/* Pen Book grid AuAXZ / dZwIa — desktop only */}
               <div
                 data-testid="library-book-grid"
                 className="hidden gap-5 md:flex md:flex-wrap"
@@ -818,16 +880,11 @@ export function LibraryView({
                     const selected = selectedId === item.id;
                     return (
                       <RevealItem key={item.id}>
-                        <article
-                          className={cn(
-                            "flex w-[140px] flex-col gap-2.5",
-                            selected && "outline-none"
-                          )}
-                        >
+                        <article className="flex w-[140px] flex-col gap-2.5">
                           <button
                             type="button"
                             className={cn(
-                              "relative h-[186px] w-[140px] overflow-hidden rounded-[9px] bg-muted text-left",
+                              "relative h-[186px] w-[140px] overflow-hidden rounded-[9px] bg-ferry-surface-2 text-left",
                               "focus-visible:ring-2 focus-visible:ring-ring",
                               selected && "ring-2 ring-ring"
                             )}
@@ -846,6 +903,7 @@ export function LibraryView({
                             type="button"
                             className="min-w-0 text-left"
                             onClick={() => selectBook(item)}
+                            onDoubleClick={() => setDetailItem(item)}
                           >
                             <h3 className="line-clamp-2 w-full text-sm font-medium text-foreground">
                               {item.title}
@@ -861,80 +919,52 @@ export function LibraryView({
                 </RevealGroup>
               </div>
 
-              {/* Pen Book list / Récents — simultaneous with grid on desktop */}
-              <div data-testid="library-recent-section" className="flex w-full flex-col">
-                <h2 className="mb-0 text-sm font-medium text-muted-foreground">
+              {/* Mobile mF0028: collection as BookRows (no Récents heading) */}
+              <div className="flex w-full flex-col md:hidden" data-testid="library-mobile-rows">
+                <ul className="flex flex-col">
+                  {pageSlice.items.map((item) => (
+                    <li key={item.id}>
+                      <BookRow
+                        item={item}
+                        selected={selectedId === item.id}
+                        canDeliver={canDeliver}
+                        onSelect={() => selectBook(item)}
+                        onOpenDetail={() => setDetailItem(item)}
+                        onDeliver={() => openDeliver(item)}
+                        t={t}
+                        tCommon={tCommon}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Pen Book list — Récents simultaneous with grid (desktop) */}
+              <div
+                data-testid="library-recent-section"
+                className="hidden w-full flex-col md:flex"
+              >
+                <h2 className="text-sm font-medium text-muted-foreground">
                   {t("recentSection")}
                 </h2>
                 <ul className="flex flex-col">
-                  {(recentItems.length > 0 ? recentItems : pageSlice.items.slice(0, 3)).map(
-                    (item) => {
-                      const selected = selectedId === item.id;
-                      return (
-                        <li key={item.id}>
-                          <div
-                            className={cn(
-                              "flex items-center gap-4 border-b border-border py-3",
-                              selected && "bg-muted/40"
-                            )}
-                          >
-                            <button
-                              type="button"
-                              className="relative h-14 w-10 shrink-0 overflow-hidden rounded-[9px] bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-                              aria-pressed={selected}
-                              aria-label={item.title}
-                              onClick={() => selectBook(item)}
-                              onDoubleClick={() => setDetailItem(item)}
-                            >
-                              <LibraryCoverImage
-                                itemId={item.id}
-                                hasCover={Boolean(item.cover_url)}
-                                alt={item.title}
-                              />
-                            </button>
-                            <button
-                              type="button"
-                              className="min-w-0 flex-1 text-left"
-                              onClick={() => selectBook(item)}
-                            >
-                              <p className="line-clamp-1 text-base font-medium text-foreground">
-                                {item.title}
-                              </p>
-                              <p className="line-clamp-1 text-xs font-medium text-muted-foreground">
-                                {item.author || tCommon("dash")}
-                                <span className="mx-1.5 text-border">·</span>
-                                {item.original_format.toUpperCase()}
-                              </p>
-                            </button>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="rounded-sm px-3 py-2 text-sm font-medium"
-                                aria-label={t("detailsOf", { title: item.title })}
-                                onClick={() => setDetailItem(item)}
-                              >
-                                {t("details")}
-                              </Button>
-                              {canDeliver ? (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-sm border-border px-3 py-2 text-sm font-medium"
-                                  aria-label={t("deliverOf", { title: item.title })}
-                                  onClick={() => openDeliver(item)}
-                                >
-                                  {t("deliver")}
-                                </Button>
-                              ) : null}
-                            </div>
-                          </div>
-                        </li>
-                      );
-                    }
-                  )}
+                  {(recentItems.length > 0
+                    ? recentItems
+                    : pageSlice.items.slice(0, 3)
+                  ).map((item) => (
+                    <li key={item.id}>
+                      <BookRow
+                        item={item}
+                        selected={selectedId === item.id}
+                        canDeliver={canDeliver}
+                        onSelect={() => selectBook(item)}
+                        onOpenDetail={() => setDetailItem(item)}
+                        onDeliver={() => openDeliver(item)}
+                        t={t}
+                        tCommon={tCommon}
+                      />
+                    </li>
+                  ))}
                 </ul>
               </div>
 
@@ -949,7 +979,9 @@ export function LibraryView({
         devices={devices}
         onOpenChange={(open) => !open && setDetailItem(null)}
         onUpdated={(updated) => {
-          setItems((prev) => prev.map((it) => (it.id === updated.id ? updated : it)));
+          setItems((prev) =>
+            prev.map((it) => (it.id === updated.id ? updated : it))
+          );
           setDetailItem(updated);
         }}
         onDeleted={(id) => {

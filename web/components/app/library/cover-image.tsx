@@ -19,7 +19,7 @@ function CoverFallback({
   return (
     <div
       className={cn(
-        "flex h-full w-full items-center justify-center bg-muted px-2 text-center",
+        "flex h-full w-full items-center justify-center bg-ferry-surface-2 px-2 text-center",
         className
       )}
       {...(decorative

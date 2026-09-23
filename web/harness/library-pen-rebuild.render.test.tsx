@@ -158,7 +158,7 @@ describe("UI harness — Pen library composition", () => {
   it("keeps header Envoyer disabled and non-clickable without a selection", () => {
     renderLibrary("fr");
 
-    const headerSend = screen.getAllByRole("button", { name: "Envoyer" })[0];
+    const headerSend = screen.getByTestId("library-header-send");
     expect(headerSend).toHaveProperty("disabled", true);
 
     fireEvent.click(headerSend);
@@ -194,7 +194,7 @@ describe("UI harness — Pen library composition", () => {
 
     expect(screen.getByTestId("library-book-grid")).toBeTruthy();
     expect(screen.getAllByText("Le Passage du Nord").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Votre bibliothèque commence ici")).toBeNull();
+    expect(screen.queryByText("Aucun livre pour l'instant")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });

@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { Copy, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -15,15 +14,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  GatewayFormField,
+  gatewayFormControlClass,
+  gatewayFormLabelClass,
+} from "@/components/app/gateways/gateway-form-field";
 import { copyTextToClipboard } from "@/components/app/gateways/gateways-state";
 import { useApiClient } from "@/lib/api-client";
 import type { Gateway, GatewayCredentials } from "@/lib/types";
-
-/** Pen Form/Field lz3PJ — label 12 muted, input pad 12 radius-md surface-2. */
-const fieldClass = "flex flex-col gap-1.5";
-const labelClass = "text-xs font-medium text-muted-foreground";
-const controlClass =
-  "h-auto min-h-10 w-full rounded-lg border-border bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const t = useTranslations("createAccess");
@@ -40,30 +38,27 @@ function CopyField({ label, value }: { label: string; value: string }) {
   }
 
   return (
-    <div className={fieldClass}>
-      <Label htmlFor={fieldId} className={`${labelClass} break-words whitespace-normal`}>
-        {label}
-      </Label>
+    <GatewayFormField label={label} htmlFor={fieldId}>
       <div className="flex min-w-0 gap-2">
         <Input
           id={fieldId}
           readOnly
           value={value}
-          className={`${controlClass} min-w-0 font-mono text-xs break-all`}
+          className={`${gatewayFormControlClass} min-w-0 font-mono text-xs break-all`}
           onFocus={(event) => event.currentTarget.select()}
         />
         <Button
           type="button"
           variant="outline"
           size="icon"
-          className="shrink-0"
+          className="shrink-0 rounded-md"
           aria-label={t("copyAction")}
           onClick={() => void handleCopy()}
         >
           <Copy />
         </Button>
       </div>
-    </div>
+    </GatewayFormField>
   );
 }
 
@@ -94,10 +89,10 @@ export function GatewayCredentialsPanel({
     <div className="flex min-w-0 flex-col gap-4" data-credentials-panel>
       <CopyField label={t("pairingToken")} value={credentials.pairing_token} />
       <CopyField label={t("gatewayKey")} value={credentials.gateway_key} />
-      <div className={fieldClass}>
-        <Label className={`${labelClass} break-words whitespace-normal`}>
+      <div className="flex flex-col gap-1.5">
+        <p className={`${gatewayFormLabelClass} break-words whitespace-normal`}>
           {t("bothSecrets")}
-        </Label>
+        </p>
         <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
           {t("bothSecretsHint")}
         </p>
@@ -105,7 +100,7 @@ export function GatewayCredentialsPanel({
           <pre
             tabIndex={0}
             data-both-secrets
-            className="max-h-28 min-w-0 flex-1 overflow-auto rounded-lg border border-border bg-ferry-surface-2 p-3 font-mono text-xs break-all whitespace-pre-wrap select-all"
+            className="max-h-28 min-w-0 flex-1 overflow-auto rounded-md border border-border bg-ferry-surface-2 p-3 font-mono text-xs break-all whitespace-pre-wrap select-all"
           >
             {block}
           </pre>
@@ -113,7 +108,7 @@ export function GatewayCredentialsPanel({
             type="button"
             variant="outline"
             size="icon"
-            className="shrink-0"
+            className="shrink-0 rounded-md"
             aria-label={t("copyBothAction")}
             onClick={() => void handleCopyBoth()}
           >
@@ -222,7 +217,7 @@ export function CreateGatewayDialog({
             <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
               <Button
                 onClick={() => handleOpenChange(false)}
-                className="whitespace-normal"
+                className="whitespace-normal rounded-md"
               >
                 {tCommon("done")}
               </Button>
@@ -238,13 +233,7 @@ export function CreateGatewayDialog({
                 {t("description")}
               </DialogDescription>
             </DialogHeader>
-            <div className={fieldClass}>
-              <Label
-                htmlFor={nameId}
-                className={`${labelClass} break-words whitespace-normal`}
-              >
-                {t("name")}
-              </Label>
+            <GatewayFormField label={t("name")} htmlFor={nameId}>
               <Input
                 id={nameId}
                 value={name}
@@ -252,7 +241,7 @@ export function CreateGatewayDialog({
                 placeholder={t("defaultName")}
                 disabled={submitting}
                 autoComplete="off"
-                className={controlClass}
+                className={gatewayFormControlClass}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
@@ -260,21 +249,21 @@ export function CreateGatewayDialog({
                   }
                 }}
               />
-            </div>
+            </GatewayFormField>
             <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
               <Button
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
                 disabled={submitting}
                 autoFocus
-                className="whitespace-normal"
+                className="whitespace-normal rounded-md"
               >
                 {tCommon("cancel")}
               </Button>
               <Button
                 onClick={() => void submit()}
                 disabled={submitting || !displayName.trim()}
-                className="whitespace-normal"
+                className="whitespace-normal rounded-md"
               >
                 {submitting ? <Loader2 className="animate-spin" /> : null}
                 {tCommon("create")}

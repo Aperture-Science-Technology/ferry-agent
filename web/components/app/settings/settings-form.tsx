@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Eraser, Loader2 } from "lucide-react";
+import { CircleAlert, Eraser, Loader2, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -16,6 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
+import {
+  SettingsEmpty,
+  SettingsFeedback,
+} from "@/components/app/settings/settings-feedback";
+import {
+  SettingsFormField,
+  settingsFormControlClass,
+} from "@/components/app/settings/settings-form-field";
 import {
   buildSettingsPatchPayload,
   settingsAreDirty,
@@ -31,68 +38,6 @@ type SavedSettings = {
   kindle_email: string | null;
   default_format: string;
 };
-
-/** Pen Form/Field — label 12/500 muted + input surface-2 pad 12 radius-md + optional hint. */
-function SettingsField({
-  id,
-  label,
-  hint,
-  className,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      data-testid="settings-field"
-      className={cn("flex min-w-0 flex-col gap-1.5", className)}
-    >
-      <Label
-        htmlFor={id}
-        className="text-xs font-medium break-words whitespace-normal text-muted-foreground"
-      >
-        {label}
-      </Label>
-      {children}
-      {hint ? (
-        <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
-          {hint}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function SoftNotice({
-  title,
-  description,
-  role = "status",
-}: {
-  title: string;
-  description: string;
-  role?: "status" | "alert";
-}) {
-  return (
-    <div
-      role={role}
-      className="flex flex-col gap-1 border border-border bg-muted/40 px-4 py-3"
-    >
-      <p className="font-heading text-sm font-medium tracking-tight break-words whitespace-normal">
-        {title}
-      </p>
-      <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
-        {description}
-      </p>
-    </div>
-  );
-}
-
-const fieldControlClass =
-  "h-auto min-h-0 w-full rounded-md border-border bg-muted px-3 py-3 text-sm font-medium text-foreground shadow-none";
 
 function parseApiDetail(raw: string): string | null {
   try {
@@ -210,160 +155,187 @@ export function SettingsForm({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col gap-6",
-        "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+        "flex min-w-0 flex-col gap-3",
+        "pb-[max(0.5rem,env(safe-area-inset-bottom))] md:gap-6"
       )}
       data-testid="settings-pen-layout"
       data-settings-state={settingsState}
     >
-      {/* Pen Header/PageTitle Hd0003 + mobile Top mF0050 */}
-      <header className="flex min-h-[72px] flex-col justify-center gap-2">
-        <p className="font-heading text-sm font-medium text-muted-foreground md:hidden">
-          {tBrand("name")}
-        </p>
-        <h1 className="font-heading text-[22px] font-medium text-foreground md:text-[28px]">
-          {title}
-        </h1>
-        <p className="text-xs font-medium text-muted-foreground md:text-sm">
-          <span className="md:hidden">{descriptionMobile}</span>
-          <span className="hidden md:inline">{description}</span>
-        </p>
-      </header>
+      {/* Title stacks are dedicated (mF005b Top vs Hd0003); no shared DashboardHeader. */}
+      <div className="flex flex-col gap-2 md:min-h-[72px]">
+        <header
+          data-testid="settings-header-mobile"
+          className="flex flex-col gap-2 md:hidden"
+        >
+          <p className="font-heading text-sm font-medium text-muted-foreground">
+            {tBrand("name")}
+          </p>
+          <h1 className="font-heading text-[22px] font-medium text-foreground">
+            {title}
+          </h1>
+          <p className="text-xs font-medium text-muted-foreground">
+            {descriptionMobile}
+          </p>
+        </header>
+
+        <header
+          data-testid="settings-header-desktop"
+          className="hidden min-w-0 flex-1 flex-col gap-2 md:flex"
+        >
+          <h1 className="font-heading text-[28px] font-medium text-foreground">
+            {title}
+          </h1>
+          <p className="text-sm font-medium text-muted-foreground">
+            {description}
+          </p>
+        </header>
+      </div>
 
       {settingsUnavailable ? (
-        <SoftNotice
+        <SettingsEmpty
+          role="alert"
+          icon={CircleAlert}
           title={t("unavailableTitle")}
           description={t("unavailable")}
-          role="alert"
         />
       ) : null}
 
-      <Reveal>
-        <section className="flex min-w-0 flex-col gap-6" data-testid="settings-delivery">
-          <h2 className="font-heading text-base font-medium text-foreground">
-            {t("deliveryPreferencesTitle")}
-          </h2>
-
-          {/* Pen desktop: account email; mobile Top/Body omits it */}
-          <SettingsField
-            id="settings-account-email"
-            label={t("email")}
-            hint={t("emailHint")}
-            className="hidden md:flex"
+      <div data-testid="settings-body" className="flex min-w-0 flex-col gap-3 md:gap-6">
+        <Reveal>
+          <section
+            className="flex min-w-0 flex-col gap-3 md:gap-6"
+            data-testid="settings-delivery"
           >
-            <Input
-              id="settings-account-email"
-              value={initialEmail}
-              readOnly
-              disabled
-              className={fieldControlClass}
-            />
-          </SettingsField>
+            {/* Pen Sec1 — desktop only (absent from mF005b Body). */}
+            <h2 className="hidden font-heading text-base font-medium text-foreground md:block">
+              {t("deliveryPreferencesTitle")}
+            </h2>
 
-          <SettingsField
-            id="settings-kindle-email"
-            label={t("kindleEmail")}
-            hint={t("kindleEmailHint")}
-          >
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+            {/* Pen desktop: account email; mobile Top/Body omits it */}
+            <SettingsFormField
+              htmlFor="settings-account-email"
+              label={t("email")}
+              hint={t("emailHint")}
+              className="hidden md:flex md:flex-col"
+            >
               <Input
-                id="settings-kindle-email"
-                type="email"
-                value={kindleEmail}
-                onChange={(event) => setKindleEmail(event.target.value)}
-                placeholder={t("kindleEmailPlaceholder")}
-                disabled={settingsUnavailable}
-                className={cn(fieldControlClass, "min-w-0 flex-1")}
-                autoComplete="email"
+                id="settings-account-email"
+                value={initialEmail}
+                readOnly
+                disabled
+                className={settingsFormControlClass}
               />
+            </SettingsFormField>
+
+            <SettingsFormField
+              htmlFor="settings-kindle-email"
+              label={t("kindleEmail")}
+              hint={t("kindleEmailHint")}
+            >
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  id="settings-kindle-email"
+                  type="email"
+                  value={kindleEmail}
+                  onChange={(event) => setKindleEmail(event.target.value)}
+                  placeholder={t("kindleEmailPlaceholder")}
+                  disabled={settingsUnavailable}
+                  className={cn(settingsFormControlClass, "min-w-0 flex-1")}
+                  autoComplete="email"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={settingsUnavailable || !kindleEmail}
+                  onClick={() => setKindleEmail("")}
+                  className="w-full shrink-0 whitespace-normal sm:w-auto"
+                >
+                  <Eraser aria-hidden />
+                  {t("clearKindleEmail")}
+                </Button>
+              </div>
+            </SettingsFormField>
+
+            <SettingsFormField
+              htmlFor="settings-default-format"
+              label={t("defaultFormat")}
+              hint={t("defaultFormatHint")}
+            >
+              <Select
+                value={defaultFormat}
+                onValueChange={(value) => setDefaultFormat(value ?? "epub")}
+                disabled={settingsUnavailable}
+              >
+                <SelectTrigger
+                  id="settings-default-format"
+                  className={cn(settingsFormControlClass, "uppercase")}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FORMATS.map((format) => (
+                    <SelectItem
+                      key={format}
+                      value={format}
+                      className="uppercase"
+                    >
+                      {format}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </SettingsFormField>
+
+            {saveError ? (
+              <SettingsFeedback
+                role="alert"
+                icon={TriangleAlert}
+                title={t("saveErrorTitle")}
+                description={saveError}
+              />
+            ) : null}
+
+            <div className="flex min-w-0 flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p
+                className="min-w-0 text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground"
+                aria-live="polite"
+                data-settings-dirty={dirty ? "true" : "false"}
+              >
+                {dirty ? t("unsavedChanges") : t("allSaved")}
+              </p>
               <Button
                 type="button"
-                variant="outline"
-                disabled={settingsUnavailable || !kindleEmail}
-                onClick={() => setKindleEmail("")}
+                onClick={() => void save()}
+                disabled={saving || settingsUnavailable || !dirty}
                 className="w-full shrink-0 whitespace-normal sm:w-auto"
               >
-                <Eraser aria-hidden />
-                {t("clearKindleEmail")}
+                {saving ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                {tCommon("save")}
               </Button>
             </div>
-          </SettingsField>
+          </section>
+        </Reveal>
 
-          <SettingsField
-            id="settings-default-format"
-            label={t("defaultFormat")}
-            hint={t("defaultFormatHint")}
+        <Reveal>
+          <section
+            className="flex min-w-0 flex-col gap-3 md:gap-4"
+            data-testid="settings-opds"
           >
-            <Select
-              value={defaultFormat}
-              onValueChange={(value) => setDefaultFormat(value ?? "epub")}
-              disabled={settingsUnavailable}
-            >
-              <SelectTrigger
-                id="settings-default-format"
-                className={cn(fieldControlClass, "uppercase")}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {FORMATS.map((format) => (
-                  <SelectItem
-                    key={format}
-                    value={format}
-                    className="uppercase"
-                  >
-                    {format}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </SettingsField>
-
-          {saveError ? (
-            <SoftNotice
-              title={t("saveErrorTitle")}
-              description={saveError}
-              role="alert"
+            <div className="hidden min-w-0 flex-col gap-1 md:flex">
+              <h2 className="font-heading text-base font-medium text-foreground">
+                {t("readerCatalogTitle")}
+              </h2>
+              <p className="text-sm font-medium text-muted-foreground">
+                {t("readerCatalogDescription")}
+              </p>
+            </div>
+            <ReaderCatalogSection
+              initialTokens={initialOpdsTokens}
+              tokensUnavailable={opdsTokensUnavailable}
             />
-          ) : null}
-
-          <div className="flex min-w-0 flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <p
-              className="min-w-0 text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground"
-              aria-live="polite"
-              data-settings-dirty={dirty ? "true" : "false"}
-            >
-              {dirty ? t("unsavedChanges") : t("allSaved")}
-            </p>
-            <Button
-              type="button"
-              onClick={() => void save()}
-              disabled={saving || settingsUnavailable || !dirty}
-              className="w-full shrink-0 whitespace-normal sm:w-auto"
-            >
-              {saving ? <Loader2 className="animate-spin" aria-hidden /> : null}
-              {tCommon("save")}
-            </Button>
-          </div>
-        </section>
-      </Reveal>
-
-      <Reveal>
-        <section className="flex min-w-0 flex-col gap-4" data-testid="settings-opds">
-          <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="font-heading text-base font-medium text-foreground">
-              {t("readerCatalogTitle")}
-            </h2>
-            <p className="text-xs font-medium text-muted-foreground md:text-sm">
-              {t("readerCatalogDescription")}
-            </p>
-          </div>
-          <ReaderCatalogSection
-            initialTokens={initialOpdsTokens}
-            tokensUnavailable={opdsTokensUnavailable}
-          />
-        </section>
-      </Reveal>
+          </section>
+        </Reveal>
+      </div>
     </div>
   );
 }

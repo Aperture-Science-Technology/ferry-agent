@@ -75,7 +75,7 @@ describe("UI harness — library unavailable vs empty", () => {
       screen.getByText("Impossible d'afficher votre bibliothèque")
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Réessayer" })).toBeTruthy();
-    expect(screen.queryByText("Votre bibliothèque commence ici")).toBeNull();
+    expect(screen.queryByText("Aucun livre pour l'instant")).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Rechercher dans les sources" })
     ).toBeNull();
