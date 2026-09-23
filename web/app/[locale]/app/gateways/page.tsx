@@ -15,7 +15,7 @@ export default async function GatewaysPage({
   const gateways = await safeApiFetch<Gateway[]>("/api/v1/gateways");
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader title={t("title")} description={t("description")} />
       <GatewaysView
         initialGateways={gateways ?? []}

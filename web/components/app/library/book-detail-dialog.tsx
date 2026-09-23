@@ -119,17 +119,19 @@ export function BookDetailDialog({
     <>
       <Dialog open={item !== null} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
+          <DialogHeader className="min-w-0">
             <PassageRule className="mb-1" />
-            <DialogTitle className="font-heading text-xl tracking-tight">
+            <DialogTitle className="font-heading text-xl tracking-tight break-words whitespace-normal">
               {item?.title ?? ""}
             </DialogTitle>
-            <DialogDescription>{item?.author ?? ""}</DialogDescription>
+            <DialogDescription className="break-words whitespace-normal">
+              {item?.author ?? ""}
+            </DialogDescription>
           </DialogHeader>
 
           {item && (
             <div className="grid gap-5 sm:grid-cols-[168px_1fr]">
-              <div className="relative mx-auto aspect-3/4 w-full max-w-42 overflow-hidden rounded-xl bg-muted ring-1 ring-border/50 sm:mx-0">
+              <div className="relative mx-auto aspect-3/4 w-full max-w-42 overflow-hidden rounded-lg bg-muted ring-1 ring-border/60 sm:mx-0">
                 <LibraryCoverImage
                   itemId={item.id}
                   hasCover={Boolean(item.cover_url)}
@@ -137,7 +139,7 @@ export function BookDetailDialog({
                 />
               </div>
 
-              <div className="space-y-4 text-sm">
+              <div className="min-w-0 space-y-4 text-sm">
                 <div className="flex flex-wrap gap-1.5">
                   <Badge variant="secondary">{item.original_format.toUpperCase()}</Badge>
                   {item.language && <Badge variant="outline">{item.language}</Badge>}
@@ -159,7 +161,7 @@ export function BookDetailDialog({
                   {item.publisher && (
                     <>
                       <dt className="text-muted-foreground">{t("publisher")}</dt>
-                      <dd>{item.publisher}</dd>
+                      <dd className="min-w-0 break-words whitespace-normal">{item.publisher}</dd>
                     </>
                   )}
                   {item.published_year != null && (
@@ -171,7 +173,7 @@ export function BookDetailDialog({
                   {item.isbn && (
                     <>
                       <dt className="text-muted-foreground">{t("isbn")}</dt>
-                      <dd>{item.isbn}</dd>
+                      <dd className="min-w-0 break-all">{item.isbn}</dd>
                     </>
                   )}
                   <dt className="text-muted-foreground">{t("added")}</dt>
@@ -179,10 +181,12 @@ export function BookDetailDialog({
                 </dl>
 
                 {item.description && (
-                  <p className="leading-relaxed text-muted-foreground">{item.description}</p>
+                  <p className="leading-relaxed whitespace-normal text-muted-foreground">
+                    {item.description}
+                  </p>
                 )}
 
-                <div className="flex flex-wrap gap-2 border-t border-border/50 pt-4">
+                <div className="flex flex-wrap gap-2 border-t border-border/60 pt-4">
                   <Button size="sm" onClick={() => setDeliverOpen(true)}>
                     <Send />
                     {t("send")}
@@ -204,24 +208,21 @@ export function BookDetailDialog({
             </div>
           )}
 
-          <div className="space-y-3 border-t border-border/50 pt-4">
+          <div className="space-y-3 border-t border-border/60 pt-4">
             <h3 className="font-heading text-sm font-medium tracking-tight">
               {t("deliveryHistory")}
             </h3>
             {loadingDeliveries ? (
               <div className="space-y-1.5">
-                <Skeleton className="h-10 w-full rounded-lg" />
-                <Skeleton className="h-10 w-full rounded-lg" />
+                <Skeleton className="h-10 w-full rounded-md" />
+                <Skeleton className="h-10 w-full rounded-md" />
               </div>
             ) : deliveries && deliveries.length > 0 ? (
-              <ul className="space-y-2">
+              <ul className="space-y-0 divide-y divide-border/70 border-y border-border/70">
                 {deliveries.map((job) => (
-                  <li
-                    key={job.id}
-                    className="flex flex-col gap-1 rounded-lg border border-border/60 bg-muted/20 px-3 py-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="truncate">
+                  <li key={job.id} className="flex flex-col gap-1 py-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="min-w-0 break-words whitespace-normal">
                         {job.device_label ?? tCommon("dash")}
                         <span className="text-muted-foreground">
                           {" "}
@@ -236,7 +237,9 @@ export function BookDetailDialog({
                       </span>
                     </div>
                     {job.error ? (
-                      <p className="truncate text-destructive text-xs">{job.error}</p>
+                      <p className="text-xs break-words whitespace-normal text-destructive">
+                        {job.error}
+                      </p>
                     ) : null}
                   </li>
                 ))}

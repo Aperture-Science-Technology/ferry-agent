@@ -15,7 +15,7 @@ export default async function LivraisonsPage({
   const deliveries = await safeApiFetch<DeliveryJob[]>("/api/v1/deliveries");
 
   return (
-    <div>
+    <div className="space-y-2">
       <PageHeader title={t("title")} description={t("description")} />
       <DeliveriesView
         initialDeliveries={deliveries ?? []}

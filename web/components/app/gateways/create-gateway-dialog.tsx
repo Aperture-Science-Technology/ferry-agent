@@ -33,19 +33,20 @@ function CopyField({ label, value }: { label: string; value: string }) {
   }
 
   return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <div className="flex gap-2">
+    <div className="min-w-0 space-y-2">
+      <Label className="break-words whitespace-normal">{label}</Label>
+      <div className="flex min-w-0 gap-2">
         <Input
           readOnly
           value={value}
-          className="font-mono text-xs break-all"
+          className="min-w-0 font-mono text-xs break-all"
           onFocus={(event) => event.currentTarget.select()}
         />
         <Button
           type="button"
           variant="outline"
           size="icon"
+          className="shrink-0"
           aria-label={t("copyAction")}
           onClick={() => void handleCopy()}
         >
@@ -56,7 +57,8 @@ function CopyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function bothSecretsBlock(credentials: GatewayCredentials): string {
+/** Ready-to-paste block with both secrets — keep format stable for install guides. */
+export function bothSecretsBlock(credentials: GatewayCredentials): string {
   return `PAIRING_TOKEN=${credentials.pairing_token}\nGATEWAY_KEY=${credentials.gateway_key}`;
 }
 
@@ -79,16 +81,19 @@ export function GatewayCredentialsPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4" data-credentials-panel>
       <CopyField label={t("pairingToken")} value={credentials.pairing_token} />
       <CopyField label={t("gatewayKey")} value={credentials.gateway_key} />
-      <div className="space-y-2">
-        <Label>{t("bothSecrets")}</Label>
-        <p className="text-sm text-muted-foreground">{t("bothSecretsHint")}</p>
-        <div className="flex gap-2">
+      <div className="min-w-0 space-y-2">
+        <Label className="break-words whitespace-normal">{t("bothSecrets")}</Label>
+        <p className="text-sm break-words whitespace-normal text-muted-foreground">
+          {t("bothSecretsHint")}
+        </p>
+        <div className="flex min-w-0 gap-2">
           <pre
             tabIndex={0}
-            className="max-h-28 flex-1 overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs whitespace-pre-wrap break-all select-all"
+            data-both-secrets
+            className="max-h-28 min-w-0 flex-1 overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs break-all whitespace-pre-wrap select-all"
           >
             {block}
           </pre>
@@ -103,7 +108,9 @@ export function GatewayCredentialsPanel({
             <Copy />
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">{t("copyFallbackHint")}</p>
+        <p className="text-xs break-words whitespace-normal text-muted-foreground">
+          {t("copyFallbackHint")}
+        </p>
       </div>
     </div>
   );
@@ -141,7 +148,9 @@ export function CreateGatewayDialog({
   const { call } = useApiClient();
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [credentials, setCredentials] = useState<GatewayCredentials | null>(null);
+  const [credentials, setCredentials] = useState<GatewayCredentials | null>(
+    null
+  );
 
   const displayName = name || t("defaultName");
 
@@ -182,26 +191,47 @@ export function CreateGatewayDialog({
       onOpenChange={handleOpenChange}
       disablePointerDismissal={submitting}
     >
-      <DialogContent showCloseButton={!submitting || credentials !== null}>
+      <DialogContent
+        showCloseButton={!submitting || credentials !== null}
+        className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-lg"
+      >
         {credentials ? (
           <>
             <DialogHeader>
-              <DialogTitle>{t("createdTitle")}</DialogTitle>
-              <DialogDescription>{t("createdDescription")}</DialogDescription>
+              <DialogTitle className="break-words whitespace-normal">
+                {t("createdTitle")}
+              </DialogTitle>
+              <DialogDescription className="break-words whitespace-normal">
+                {t("createdDescription")}
+              </DialogDescription>
             </DialogHeader>
             <GatewayCredentialsPanel credentials={credentials} />
-            <DialogFooter>
-              <Button onClick={() => handleOpenChange(false)}>{tCommon("done")}</Button>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button
+                onClick={() => handleOpenChange(false)}
+                className="whitespace-normal"
+              >
+                {tCommon("done")}
+              </Button>
             </DialogFooter>
           </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>{t("title")}</DialogTitle>
-              <DialogDescription>{t("description")}</DialogDescription>
+              <DialogTitle className="break-words whitespace-normal">
+                {t("title")}
+              </DialogTitle>
+              <DialogDescription className="break-words whitespace-normal">
+                {t("description")}
+              </DialogDescription>
             </DialogHeader>
-            <div className="space-y-2">
-              <Label htmlFor="create-access-name">{t("name")}</Label>
+            <div className="min-w-0 space-y-2">
+              <Label
+                htmlFor="create-access-name"
+                className="break-words whitespace-normal"
+              >
+                {t("name")}
+              </Label>
               <Input
                 id="create-access-name"
                 value={name}
@@ -217,16 +247,21 @@ export function CreateGatewayDialog({
                 }}
               />
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
                 disabled={submitting}
                 autoFocus
+                className="whitespace-normal"
               >
                 {tCommon("cancel")}
               </Button>
-              <Button onClick={() => void submit()} disabled={submitting || !displayName.trim()}>
+              <Button
+                onClick={() => void submit()}
+                disabled={submitting || !displayName.trim()}
+                className="whitespace-normal"
+              >
                 {submitting ? <Loader2 className="animate-spin" /> : null}
                 {tCommon("create")}
               </Button>

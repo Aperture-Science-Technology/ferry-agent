@@ -31,6 +31,17 @@ export type SourceAvailability =
   | "always_on"
   | "gateway";
 
+/**
+ * Distinct surface states for the Sources screen (T10 / harness).
+ * Priority: unavailable > error > empty > partial > success.
+ */
+export type SourcesSurfaceState =
+  | "unavailable"
+  | "empty"
+  | "partial"
+  | "error"
+  | "success";
+
 export const OPEN_ACCESS_TYPES: readonly KnownSourceType[] = [
   "gutenberg",
   "standard_ebooks",
@@ -39,6 +50,12 @@ export const OPEN_ACCESS_TYPES: readonly KnownSourceType[] = [
 export const LOCAL_TYPES: readonly KnownSourceType[] = [
   "upload",
   "torrent_gateway",
+];
+
+/** Display order matching Pen Screen/Sources (flat editorial list). */
+export const SOURCE_DISPLAY_TYPES: readonly KnownSourceType[] = [
+  ...OPEN_ACCESS_TYPES,
+  ...LOCAL_TYPES,
 ];
 
 export function sourceGroup(type: KnownSourceType): SourceGroup {
@@ -82,6 +99,33 @@ export function canToggleSource(
   if (sourceRowKind(type) !== "toggleable") return false;
   if (sourcesUnavailable) return false;
   return findSourceByType(sources, type) !== null;
+}
+
+/**
+ * True when the list loaded but at least one activable catalog is missing —
+ * never treat missing rows as enabled.
+ */
+export function hasPartialSources(
+  sources: SourceLike[],
+  sourcesUnavailable: boolean
+): boolean {
+  if (sourcesUnavailable) return false;
+  if (sources.length === 0) return false;
+  return OPEN_ACCESS_TYPES.some(
+    (type) => findSourceByType(sources, type) === null
+  );
+}
+
+export function sourcesSurfaceState(options: {
+  sources: SourceLike[];
+  sourcesUnavailable: boolean;
+  updateError: string | null;
+}): SourcesSurfaceState {
+  if (options.sourcesUnavailable) return "unavailable";
+  if (options.updateError) return "error";
+  if (options.sources.length === 0) return "empty";
+  if (hasPartialSources(options.sources, false)) return "partial";
+  return "success";
 }
 
 /**

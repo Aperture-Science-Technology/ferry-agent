@@ -22,6 +22,22 @@ describe("normalizeDeliveryStatus", () => {
     assert.equal(normalizeDeliveryStatus("failed"), "failed");
     assert.equal(normalizeDeliveryStatus("weird"), "unknown");
   });
+
+  it("never maps an unrecognized status to delivered (success)", () => {
+    for (const raw of [
+      "",
+      "complete",
+      "success",
+      "DONE",
+      "Delivered",
+      "in_transit",
+      "ok",
+    ]) {
+      const normalized = normalizeDeliveryStatus(raw);
+      assert.equal(normalized, "unknown");
+      assert.notEqual(normalized, "delivered");
+    }
+  });
 });
 
 describe("active vs terminal", () => {

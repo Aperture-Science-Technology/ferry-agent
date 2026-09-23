@@ -2,19 +2,19 @@
   <title>Cloud service and Gateway</title>
   <desc>Two zones: the online Ferry Agent service on the left and a small Gateway module on the right, linked by a transfer path. Labels must stay in HTML, not in this image.</desc>
   <!-- Online library zone (paper) -->
-  <rect x="12" y="28" width="88" height="64" rx="8" fill="#F4EEE4" stroke="#C9B8A4" stroke-width="1"/>
-  <path fill="#E8DFD2" d="M34 54c0-7 5.5-12 12.2-12 2.2-5.5 7.6-9.2 13.8-9.2 8.4 0 15.2 6.6 15.2 14.8 0 .6 0 1.2-.1 1.8 5.2 1.2 9 5.8 9 11.2 0 6.4-5.2 11.6-11.6 11.6H36.8C30.2 72.2 26 67 26 60.8c0-4.2 2.4-7.8 6-9.6.5-.3.9-.7 1-1.2.5-1.5.9-2.9.9-4Z"/>
+  <rect x="12" y="28" width="88" height="64" rx="8" fill="#F5F3EF" stroke="#D4D0C8" stroke-width="1"/>
+  <path fill="#EEEDE8" d="M34 54c0-7 5.5-12 12.2-12 2.2-5.5 7.6-9.2 13.8-9.2 8.4 0 15.2 6.6 15.2 14.8 0 .6 0 1.2-.1 1.8 5.2 1.2 9 5.8 9 11.2 0 6.4-5.2 11.6-11.6 11.6H36.8C30.2 72.2 26 67 26 60.8c0-4.2 2.4-7.8 6-9.6.5-.3.9-.7 1-1.2.5-1.5.9-2.9.9-4Z"/>
   <!-- Open book -->
-  <path fill="#FFFBF5" fill-opacity=".95" d="M42 58c0-.6.4-1.1.9-1.2 3.2-.8 6.4.2 7.6 1.4.2.2.3.5.3.8v12.2c0 .6-.5 1-1.1.9-2.4-.6-4.8-.2-6.8 1-.4.2-.9-.1-.9-.6V58Z"/>
-  <path fill="#FFFBF5" fill-opacity=".8" d="M66 58c0-.6-.4-1.1-.9-1.2-3.2-.8-6.4.2-7.6 1.4-.2.2-.3.5-.3.8v12.2c0 .6.5 1 1.1.9 2.4-.6 4.8-.2 6.8 1 .4.2.9-.1.9-.6V58Z"/>
-  <path fill="none" stroke="#B85C38" stroke-width="1.6" stroke-linecap="round" d="M46.5 64.5c1.8-2 3.8-3 5.5-3s3.7 1 5.5 3"/>
+  <path fill="#FBFAF7" fill-opacity=".95" d="M42 58c0-.6.4-1.1.9-1.2 3.2-.8 6.4.2 7.6 1.4.2.2.3.5.3.8v12.2c0 .6-.5 1-1.1.9-2.4-.6-4.8-.2-6.8 1-.4.2-.9-.1-.9-.6V58Z"/>
+  <path fill="#FBFAF7" fill-opacity=".8" d="M66 58c0-.6-.4-1.1-.9-1.2-3.2-.8-6.4.2-7.6 1.4-.2.2-.3.5-.3.8v12.2c0 .6.5 1 1.1.9 2.4-.6 4.8-.2 6.8 1 .4.2.9-.1.9-.6V58Z"/>
+  <path fill="none" stroke="#9A4825" stroke-width="1.6" stroke-linecap="round" d="M46.5 64.5c1.8-2 3.8-3 5.5-3s3.7 1 5.5 3"/>
   <!-- Transfer path (passage) -->
-  <path fill="none" stroke="#B85C38" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 4" d="M104 60h28"/>
-  <circle cx="118" cy="60" r="2.2" fill="#B85C38"/>
+  <path fill="none" stroke="#9A4825" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 4" d="M104 60h28"/>
+  <circle cx="118" cy="60" r="2.2" fill="#9A4825"/>
   <!-- Local Gateway module (ink) -->
-  <rect x="136" y="36" width="52" height="48" rx="8" fill="#3A322C" stroke="#5C4F45" stroke-width="1"/>
-  <rect x="146" y="46" width="32" height="6" rx="2" fill="#D9CBB8" fill-opacity=".45"/>
-  <rect x="146" y="56" width="20" height="4" rx="2" fill="#5C4F45"/>
-  <circle cx="170" cy="70" r="4" fill="#B85C38"/>
-  <circle cx="170" cy="70" r="1.6" fill="#F4EEE4"/>
+  <rect x="136" y="36" width="52" height="48" rx="8" fill="#312620" stroke="#665B53" stroke-width="1"/>
+  <rect x="146" y="46" width="32" height="6" rx="2" fill="#E0DED7" fill-opacity=".45"/>
+  <rect x="146" y="56" width="20" height="4" rx="2" fill="#665B53"/>
+  <circle cx="170" cy="70" r="4" fill="#9A4825"/>
+  <circle cx="170" cy="70" r="1.6" fill="#FEFCF4"/>
 </svg>

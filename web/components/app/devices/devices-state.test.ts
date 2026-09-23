@@ -51,4 +51,19 @@ describe("cloudLinkPresentation", () => {
     assert.equal(cloudLinkPresentation({ cloud_linked: true }), "linked");
     assert.equal(cloudLinkPresentation({ cloud_linked: false }), "not_linked");
   });
+
+  it("treats an OAuth error as error, never linked/success", () => {
+    assert.equal(
+      cloudLinkPresentation({ cloud_linked: true }, "error"),
+      "error"
+    );
+    assert.equal(
+      cloudLinkPresentation({ cloud_linked: false }, "error"),
+      "error"
+    );
+    assert.notEqual(
+      cloudLinkPresentation({ cloud_linked: true }, "error"),
+      "linked"
+    );
+  });
 });

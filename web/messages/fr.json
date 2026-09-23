@@ -147,15 +147,16 @@
     "devices": "Appareils",
     "access": "Gateway",
     "sources": "Sources",
-    "deliveries": "Envois",
+    "deliveries": "Livraisons",
     "settings": "Réglages",
     "more": "Plus",
     "docs": "Guide",
     "account": "Compte",
-    "groupTransfer": "Transfert",
+    "language": "Langue",
+    "groupPrimary": "Principal",
     "groupLocal": "Chez vous",
     "moreMenu": "Menu",
-    "moreDescription": "Gateway, sources, réglages et compte."
+    "moreDescription": "Gateway, sources, réglages, guide et compte."
   },
   "pages": {
     "library": {
@@ -168,15 +169,15 @@
     },
     "access": {
       "title": "Gateway",
-      "description": "Le module installé chez vous pour vos sources locales et téléchargements."
+      "description": "Module local optionnel — complémentaire du cloud."
     },
     "sources": {
       "title": "Sources",
-      "description": "Gérez les catalogues utilisés pour chercher des livres, et vos sources installées chez vous."
+      "description": "Catalogues cloud et module local (Gateway)."
     },
     "deliveries": {
-      "title": "Envois",
-      "description": "Suivez vos envois depuis la bibliothèque en ligne vers vos appareils."
+      "title": "Livraisons",
+      "description": "Suivez vos livraisons depuis la bibliothèque en ligne vers vos appareils."
     },
     "settings": {
       "title": "Réglages",
@@ -288,6 +289,7 @@
     "filtersLabel": "Filtres et affichage",
     "filtersSummary": "Trier et filtrer",
     "passageHint": "Du fichier à la liseuse — un parcours simple.",
+    "coverFallback": "Couverture",
     "collectionRegion": "Collection",
     "addRegion": "Ajout de livres"
   },
@@ -395,7 +397,9 @@
     "retry": "Réessayer",
     "refreshFailedTitle": "Actualisation incomplète",
     "refreshFailedDescription": "La liste affichée n’a pas pu être mise à jour. Vos appareils connus restent visibles.",
-    "deleteConfirmDescriptionNamed": "« {name} » sera retiré. Les livres ne seront plus envoyés vers cet appareil."
+    "deleteConfirmDescriptionNamed": "« {name} » sera retiré. Les livres ne seront plus envoyés vers cet appareil.",
+    "cloudLinkFailedTitle": "Liaison cloud interrompue",
+    "cloudLinkFailedDescription": "Le compte cloud n’a pas pu être lié. Aucune nouvelle connexion n’a été enregistrée."
   },
   "editDevice": {
     "title": "Modifier l'appareil",
@@ -491,8 +495,8 @@
     "sectionTitle": "Vos Gateways",
     "sectionEmptyHint": "Aucun module local pour l’instant.",
     "countLabel": "{count, plural, one {# Gateway} other {# Gateways}}",
-    "cloudLocalTitle": "Bibliothèque en ligne, module chez vous",
-    "cloudLocalBody": "Ferry Agent est une application en ligne. Le Gateway est un module optionnel installé chez vous : il gère surtout les téléchargements torrent et la liaison avec vos sources locales.",
+    "cloudLocalTitle": "Gateway",
+    "cloudLocalBody": "Module local optionnel — complémentaire du cloud (torrents / sources machine).",
     "cloudLabel": "En ligne",
     "cloudHint": "votre bibliothèque, vos appareils et vos envois",
     "localLabel": "Chez vous",
@@ -577,13 +581,17 @@
   "sources": {
     "sectionTitle": "Vos sources",
     "intro": "Ferry Agent cherche dans les catalogues que vous activez ici. Les fichiers importés et les sources locales passent par la bibliothèque en ligne ou le Gateway installé chez vous.",
+    "supportedHint": "Sources supportées : Gutenberg, Standard Ebooks, Upload, Torrents (Gateway). Pas de dossier local ni de suppression de source.",
     "openAccessTitle": "Sources en accès libre",
     "openAccessDescription": "Catalogues publics utilisés lors d'une recherche dans les sources.",
     "localTitle": "Vos fichiers et sources locales",
     "localDescription": "Import depuis vos fichiers, et résultats via le Gateway installé chez vous.",
+    "groupOpenAccess": "Accès libre",
+    "groupLocal": "Local",
+    "uploadShelf": "Bibliothèque",
     "providers": {
       "gutenberg": {
-        "name": "Gutenberg",
+        "name": "Project Gutenberg",
         "description": "Des dizaines de milliers de livres du domaine public, en plusieurs langues."
       },
       "standardEbooks": {
@@ -591,11 +599,11 @@
         "description": "Des classiques du domaine public, relus et mis en forme avec soin."
       },
       "upload": {
-        "name": "Ajout manuel",
+        "name": "Fichiers importés",
         "description": "Les livres que vous importez vous-même depuis vos fichiers."
       },
       "torrentGateway": {
-        "name": "Sources locales (Gateway)",
+        "name": "Torrents (Gateway)",
         "description": "Résultats trouvés via le module installé chez vous, puis ajoutés à votre bibliothèque en ligne."
       }
     },
@@ -604,7 +612,7 @@
     "unknown": "État inconnu",
     "unknownHint": "L'état de cette source n'a pas pu être confirmé. Réessayez plus tard.",
     "alwaysActive": "Toujours disponible",
-    "gatewayLocal": "Via le Gateway",
+    "gatewayLocal": "Local via Gateway",
     "gatewayHint": "Cette source dépend du Gateway installé chez vous. Elle n'indique pas à elle seule s'il est connecté.",
     "prowlarrNote": "Prowlarr, s'il est utilisé, reste configuré côté Gateway — pas comme une rubrique principale ici.",
     "gatewayCta": "Ouvrir Gateway",
@@ -616,7 +624,11 @@
     "toastUpdateFailed": "Impossible de mettre à jour cette source. Réessayez.",
     "updateErrorTitle": "Mise à jour impossible",
     "unavailableTitle": "Sources indisponibles",
-    "unavailableNote": "Impossible de charger l'état de vos sources pour le moment. Aucune activation n'est confirmée tant que la liste n'est pas disponible."
+    "unavailableNote": "Impossible de charger l'état de vos sources pour le moment. Aucune activation n'est confirmée tant que la liste n'est pas disponible.",
+    "emptyTitle": "Aucune source renvoyée",
+    "emptyDescription": "La liste a bien répondu, mais aucun catalogue n'a été renvoyé. Réessayez plus tard — aucune activation n'est confirmée.",
+    "partialTitle": "État partiel",
+    "partialNote": "Certaines sources activables n'ont pas pu être confirmées. Celles affichées restent utilisables ; les autres restent en état inconnu."
   },
   "deliveries": {
     "sectionTitle": "Vos envois",
@@ -632,7 +644,9 @@
     "refreshFailedDescription": "La liste affichée n’a pas pu être mise à jour. Vos derniers envois connus restent visibles.",
     "statusHintDelivered": "L’opération d’envoi est terminée. Cela ne confirme pas que le livre a été ouvert sur la liseuse.",
     "statusHintDeliveredShort": "Envoi terminé — pas une lecture confirmée",
+    "statusHintUnknown": "Statut non reconnu. Actualisez pour vérifier, sans traiter l’envoi comme terminé.",
     "failedHint": "L’envoi n’a pas abouti. Ouvrez le suivi pour plus de détail.",
+    "routeTo": "{title} → {device}",
     "colBook": "Livre",
     "colDevice": "Liseuse",
     "colStatus": "Statut",
@@ -643,7 +657,9 @@
     "colError": "Échec",
     "colAction": "Action",
     "track": "Suivre",
+    "trackFailed": "Voir le problème",
     "trackAria": "Suivre l’envoi de {title}",
+    "trackFailedAria": "Voir le problème de l’envoi de {title}",
     "openDownload": "Ouvrir le fichier",
     "statuses": {
       "queued": "Demandé",
@@ -696,7 +712,7 @@
     "readerCatalogDescription": "Un lien pour afficher votre bibliothèque en ligne dans KOReader, Moon+, Marvin ou Kobo.",
     "readerCatalog": {
       "warningTitle": "Accès à toute votre bibliothèque",
-      "warning": "Chaque lien donne accès à toute votre bibliothèque. Annulez un lien dès que vous n'en avez plus besoin.",
+      "warning": "Chaque lien donne accès à toute votre bibliothèque. Révoquez un lien dès que vous n'en avez plus besoin.",
       "guideTitle": "Comment connecter votre liseuse",
       "guideStep1": "Sur la liseuse, ouvrez KOReader (ou l'app catalogue).",
       "guideStep2": "Ajoutez un catalogue.",
@@ -714,9 +730,9 @@
       "columnLastUsed": "Dernière utilisation",
       "columnActions": "Actions",
       "neverUsed": "Jamais",
-      "revoke": "Annuler",
-      "revokeConfirmTitle": "Annuler ce lien ?",
-      "revokeConfirmDescription": "Après annulation, ce lien ne fonctionnera plus sur la liseuse. Il faudra en créer un nouveau pour reconnecter l'appareil.",
+      "revoke": "Révoquer",
+      "revokeConfirmTitle": "Révoquer ce lien ?",
+      "revokeConfirmDescription": "Après révocation, ce lien ne fonctionnera plus sur la liseuse. Il faudra en créer un nouveau pour reconnecter l'appareil.",
       "defaultLabel": "Liseuse",
       "createTitle": "Créer un lien catalogue",
       "createDescription": "Donnez un nom à ce lien pour le retrouver facilement (ex. Kobo, KOReader).",
@@ -728,14 +744,14 @@
       "urlLabel": "Lien catalogue",
       "qrHint": "Scannez depuis la liseuse pour ajouter le catalogue. Si le QR échoue, utilisez le lien ci-dessus.",
       "toastCreateFailed": "Impossible de créer le lien. Réessayez.",
-      "toastRevoked": "Lien annulé.",
-      "toastRevokeFailed": "Impossible d'annuler ce lien. Réessayez.",
+      "toastRevoked": "Lien révoqué.",
+      "toastRevokeFailed": "Impossible de révoquer ce lien. Réessayez.",
       "copyUrlAria": "Copier le lien catalogue",
       "qrLoading": "Préparation du QR…",
       "qrError": "QR indisponible. Utilisez le lien ci-dessus.",
       "qrAlt": "Code QR du lien catalogue",
       "createErrorTitle": "Création impossible",
-      "revokeErrorTitle": "Annulation impossible"
+      "revokeErrorTitle": "Révocation impossible"
     },
     "devicesTitle": "Appareils",
     "devicesDescription": "Gérez vos liseuses et la façon dont les livres y arrivent.",

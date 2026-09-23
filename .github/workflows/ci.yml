@@ -3,10 +3,13 @@ name: CI
 on:
   push:
     branches:
-      - "**"
-    tags:
-      - "v*"
+      - develop
+      - main
   pull_request:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -46,6 +49,10 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://ferry:ferry@localhost:5432/ferry_test
         run: pytest -q
+
+      # Policy suite lives under .github/tests (outside testpaths=["tests"]).
+      - name: Run CI PR-gates policy tests
+        run: pytest .github/tests/test_ci_pr_gates_policy.py -q
 
       - name: Run integration tests
         env:
@@ -129,10 +136,14 @@ jobs:
         run: ruff format --check .
 
   # W-34 — OpenAPI→TS freshness + i18n key symmetry (fr/en).
-  # Node 22+: test:product-truth uses --experimental-strip-types (unavailable on 20).
+  # Node 22+: web `test:*` scripts use --experimental-strip-types (unavailable on 20).
+  # Dashboard lot suites (library → settings + UI harness) run here via package scripts.
   types-freshness:
     name: Types freshness + i18n
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -143,6 +154,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install Python dependencies
+        working-directory: .
         run: pip install -r requirements.txt
 
       - name: Setup Node.js
@@ -153,23 +165,41 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install web dependencies
-        working-directory: web
         run: npm ci
 
       - name: Regenerate API types
-        working-directory: web
         run: npm run gen:types
 
       - name: Fail if generated types drifted
+        working-directory: .
         run: git diff --exit-code -- openapi.json web/lib/api-types.generated.ts
 
       - name: Check i18n key symmetry (fr/en)
-        working-directory: web
         run: npm run check:i18n
 
       - name: Product truth + gateway download URL contract
-        working-directory: web
         run: npm run test:product-truth
+
+      - name: Library state suites
+        run: npm run test:library
+
+      - name: Deliveries + devices state suites
+        run: npm run test:delivery-devices
+
+      - name: Gateway state suites
+        run: npm run test:gateways
+
+      - name: Sources + settings state suites
+        run: npm run test:sources-settings
+
+      - name: Final / gateway job view suites
+        run: npm run test:final
+
+      - name: UI render harness
+        run: npm run test:ui-harness
+
+      - name: Web ESLint
+        run: npm run lint
 
   secrets-scan:
     name: Secrets scan (gitleaks)
@@ -223,7 +253,7 @@ jobs:
   build-push-core:
     name: Build & push core image
     needs: [python-tests, web-build, lint, gateway-tests]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -249,7 +279,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/core
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
             type=sha,format=short
 
       - name: Build & push core image
@@ -271,7 +300,7 @@ jobs:
   build-push-web:
     name: Build & push web image
     needs: [python-tests, web-build, lint, gateway-tests]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -297,7 +326,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/web
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
             type=sha,format=short
 
       - name: Build & push web image
@@ -323,7 +351,7 @@ jobs:
   build-push-mcp-server:
     name: Build & push mcp-server image
     needs: [python-tests, web-build, lint, gateway-tests]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -349,7 +377,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/mcp-server
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
             type=sha,format=short
 
       - name: Build & push mcp-server image
@@ -373,7 +400,6 @@ jobs:
     needs: [python-tests, web-build, lint, gateway-tests]
     if: >-
       github.ref == 'refs/heads/main' ||
-      github.ref == 'refs/heads/develop' ||
       startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -403,7 +429,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/gateway
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=development,enable=${{ github.ref == 'refs/heads/develop' }}
             type=semver,pattern={{version}}
             type=sha,format=short
 

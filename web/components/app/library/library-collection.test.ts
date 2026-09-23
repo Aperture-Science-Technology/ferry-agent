@@ -11,6 +11,8 @@ import {
   mergeLibraryFetch,
   pageAfterLibraryCriteriaChange,
   paginateLibraryItems,
+  applyLibraryItemsRefreshResult,
+  libraryCollectionPageState,
 } from "./library-collection.ts";
 
 describe("mergeLibraryFetch", () => {
@@ -188,6 +190,48 @@ describe("paginateLibraryItems", () => {
 describe("pageAfterLibraryCriteriaChange", () => {
   it("resets to page 1 when filters change via the helper", () => {
     assert.equal(pageAfterLibraryCriteriaChange(), 1);
+  });
+});
+
+describe("libraryCollectionPageState", () => {
+  it("resets an active filter change back to page 1 (not the stale page)", () => {
+    const onPage3 = { criteriaKey: "q=\0all\0all\0all\0added", page: 3 };
+    const afterFilter = libraryCollectionPageState(
+      onPage3,
+      "hugo\0all\0all\0all\0added"
+    );
+    assert.deepEqual(afterFilter, {
+      criteriaKey: "hugo\0all\0all\0all\0added",
+      page: 1,
+    });
+    assert.notEqual(afterFilter.page, onPage3.page);
+  });
+
+  it("keeps the current page when criteria are unchanged", () => {
+    const same = { criteriaKey: "a\0all\0all\0all\0title", page: 2 };
+    assert.equal(libraryCollectionPageState(same, same.criteriaKey), same);
+  });
+});
+
+describe("applyLibraryItemsRefreshResult", () => {
+  it("keeps previous items when a refresh fails (not an empty library)", () => {
+    const previous = [{ id: "a" }, { id: "b" }];
+    const outcome = applyLibraryItemsRefreshResult(previous, null);
+    assert.equal(outcome.ok, false);
+    assert.equal(outcome.keptPrevious, true);
+    assert.deepEqual(outcome.items, previous);
+    assert.notEqual(outcome.items.length, 0);
+  });
+
+  it("replaces items when a refresh succeeds", () => {
+    const previous = [{ id: "a" }];
+    const fresh = [{ id: "b" }, { id: "c" }];
+    const outcome = applyLibraryItemsRefreshResult(previous, fresh);
+    assert.deepEqual(outcome, {
+      ok: true,
+      items: fresh,
+      keptPrevious: false,
+    });
   });
 });
 

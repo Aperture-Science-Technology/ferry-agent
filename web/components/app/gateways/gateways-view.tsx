@@ -1,19 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Radio, Plus, Ban, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +26,6 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/app/empty-state";
 import { SectionHeader } from "@/components/app/section-header";
-import { StatusDot } from "@/components/status-dot";
 import {
   CreateGatewayDialog,
   GatewayCredentialsPanel,
@@ -50,6 +42,7 @@ import {
 import { CloudGatewayIllustration } from "@/components/illustrations";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import type {
   Gateway,
   GatewayCredentials,
@@ -130,33 +123,153 @@ function connectionLabel(
   }
 }
 
-function GatewayCloudLocalIntro() {
-  const t = useTranslations("access");
+/** Copper ink status — never emerald “synced” teal. */
+function ConnectionDot({
+  presentation,
+}: {
+  presentation: GatewayConnectionPresentation;
+}) {
   return (
-    <div className="mb-6 grid gap-4 rounded-xl border border-border/60 bg-card/40 p-4 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-6 sm:p-5">
-      <CloudGatewayIllustration className="mx-0 w-[160px] sm:w-[180px]" />
-      <div className="min-w-0 space-y-2 text-left">
-        <p className="font-heading text-base font-medium tracking-tight">
-          {t("cloudLocalTitle")}
+    <span
+      aria-hidden
+      data-connection-dot={presentation}
+      className={cn(
+        "size-2 shrink-0 rounded-full",
+        presentation === "connected" && "bg-primary",
+        presentation === "pending" && "bg-primary/45",
+        presentation === "expired" && "bg-destructive",
+        presentation === "offline" && "bg-muted-foreground/45",
+        presentation === "revoked" && "bg-muted-foreground/35",
+        presentation === "unknown" && "bg-muted-foreground/40"
+      )}
+    />
+  );
+}
+
+function SoftNotice({
+  title,
+  description,
+  action,
+  role = "status",
+  className,
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+  role?: "status" | "alert";
+  className?: string;
+}) {
+  return (
+    <div
+      role={role}
+      className={cn(
+        "flex flex-col gap-3 border border-border/80 bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between",
+        className
+      )}
+    >
+      <div className="min-w-0 space-y-1">
+        <p className="font-heading text-sm font-medium tracking-tight break-words whitespace-normal">
+          {title}
         </p>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+          {description}
+        </p>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+/**
+ * Pen Gateway/ConnectionState — paper surface, cloud/local relation, honest status.
+ */
+function GatewayCloudLocalIntro({
+  gateways,
+  now,
+}: {
+  gateways: Gateway[];
+  now: number;
+}) {
+  const t = useTranslations("access");
+  const summary = summarizeConnection(gateways, now);
+
+  return (
+    <section
+      data-gateway-connection-panel
+      className="mb-6 space-y-3 rounded-lg border border-border/80 bg-card px-5 py-5"
+    >
+      <div className="min-w-0 space-y-2">
+        <h2 className="font-heading text-lg font-medium tracking-tight break-words whitespace-normal">
+          {t("cloudLocalTitle")}
+        </h2>
+        <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
           {t("cloudLocalBody")}
         </p>
         <ul className="space-y-1 text-sm text-muted-foreground">
-          <li>
+          <li className="break-words whitespace-normal">
             <span className="text-foreground">{t("cloudLabel")}</span>
             {" — "}
             {t("cloudHint")}
           </li>
-          <li>
+          <li className="break-words whitespace-normal">
             <span className="text-foreground">{t("localLabel")}</span>
             {" — "}
             {t("localHint")}
           </li>
         </ul>
       </div>
-    </div>
+      {summary ? (
+        <div
+          className="flex min-w-0 items-center gap-2"
+          data-connection-summary={summary}
+        >
+          <ConnectionDot presentation={summary} />
+          <span className="text-sm font-medium break-words whitespace-normal text-foreground">
+            {summaryLabel(summary, t)}
+          </span>
+        </div>
+      ) : null}
+    </section>
   );
+}
+
+function summarizeConnection(
+  gateways: Gateway[],
+  now: number
+): GatewayConnectionPresentation | null {
+  if (gateways.length === 0) return null;
+  const presentations = gateways.map((g) =>
+    gatewayConnectionPresentation(g, now)
+  );
+  const order: GatewayConnectionPresentation[] = [
+    "connected",
+    "pending",
+    "expired",
+    "offline",
+    "revoked",
+    "unknown",
+  ];
+  return order.find((p) => presentations.includes(p)) ?? "unknown";
+}
+
+function summaryLabel(
+  presentation: GatewayConnectionPresentation,
+  t: AccessTranslations
+): string {
+  switch (presentation) {
+    case "pending":
+      return t("statusPending");
+    case "expired":
+      return t("statusExpired");
+    case "connected":
+      return t("statusConnected");
+    case "revoked":
+      return t("statusRevoked");
+    case "offline":
+      return t("statusOffline");
+    default:
+      return t("statusUnknown");
+  }
 }
 
 function GatewayRecentActivity({
@@ -210,7 +323,11 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
 
   if (outcome === "loading") {
     return (
-      <div className="mt-3 space-y-2 border-t border-border/40 pt-3" aria-busy="true">
+      <div
+        className="mt-3 space-y-2 border-t border-border/50 pt-3"
+        aria-busy="true"
+        data-activity="loading"
+      >
         <p className="text-sm font-medium">{t("recentActivity")}</p>
         <p className="text-sm text-muted-foreground">{t("activityLoading")}</p>
         <Skeleton className="h-8 w-full rounded-md" />
@@ -220,19 +337,26 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
 
   if (outcome.status === "unavailable") {
     return (
-      <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+      <div
+        className="mt-3 space-y-2 border-t border-border/50 pt-3"
+        data-activity="unavailable"
+      >
         <p className="text-sm font-medium">{t("recentActivity")}</p>
-        <Alert>
-          <AlertTitle>{t("activityUnavailableTitle")}</AlertTitle>
-          <AlertDescription>{t("activityUnavailable")}</AlertDescription>
-        </Alert>
+        <SoftNotice
+          role="alert"
+          title={t("activityUnavailableTitle")}
+          description={t("activityUnavailable")}
+        />
       </div>
     );
   }
 
   if (outcome.status === "empty") {
     return (
-      <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+      <div
+        className="mt-3 space-y-2 border-t border-border/50 pt-3"
+        data-activity="empty"
+      >
         <p className="text-sm font-medium">{t("recentActivity")}</p>
         <p className="text-sm text-muted-foreground">{t("activityEmpty")}</p>
       </div>
@@ -240,7 +364,10 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
   }
 
   return (
-    <div className="mt-3 space-y-2 border-t border-border/40 pt-3">
+    <div
+      className="mt-3 space-y-2 border-t border-border/50 pt-3"
+      data-activity="ready"
+    >
       <p className="text-sm font-medium">{t("recentActivity")}</p>
       <ul className="space-y-1.5">
         {outcome.jobs.map((job) => {
@@ -249,6 +376,7 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
           return (
             <li
               key={job.job_id}
+              data-job-status={bucket}
               className="flex min-w-0 flex-col gap-0.5 text-sm text-muted-foreground"
             >
               <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -263,11 +391,12 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
                         ? "outline"
                         : "secondary"
                   }
+                  className="max-w-full whitespace-normal"
                 >
                   {statusLabel(job.status)}
                 </Badge>
                 {inProgress && job.attempts > 0 && (
-                  <span className="text-xs">
+                  <span className="text-xs break-words whitespace-normal">
                     {t("attemptOf", {
                       current: job.attempts,
                       max: MAX_ATTEMPTS_DISPLAY,
@@ -276,12 +405,14 @@ function GatewayRecentActivityPanel({ gatewayId }: { gatewayId: string }) {
                 )}
               </div>
               {bucket === "failed" && (
-                <span className="text-xs break-words text-destructive/90">
+                <span className="text-xs break-words whitespace-normal text-destructive/90">
                   {mapJobError(job.type, job.error, t)}
                 </span>
               )}
               {bucket === "uncertain" && (
-                <span className="text-xs break-words">{t("jobUncertainHint")}</span>
+                <span className="text-xs break-words whitespace-normal">
+                  {t("jobUncertainHint")}
+                </span>
               )}
             </li>
           );
@@ -321,16 +452,22 @@ function PendingWaitState({
   }
 
   return (
-    <div className="mt-3 max-w-sm space-y-2 border-t border-border/40 pt-3">
-      <p className="text-sm font-medium text-foreground">
+    <div
+      className="mt-3 max-w-lg space-y-2 border-t border-border/50 pt-3"
+      data-pairing={expired ? "expired" : "pending"}
+    >
+      <p className="text-sm font-medium break-words whitespace-normal text-foreground">
         {expired ? t("statusExpired") : t("statusWaiting")}
       </p>
-      <p className="text-sm break-words text-muted-foreground">{expiryMessage}</p>
+      <p className="text-sm break-words whitespace-normal text-muted-foreground">
+        {expiryMessage}
+      </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button
           size="sm"
           variant={expired ? "default" : "outline"}
           disabled={recreating}
+          className="min-w-0 whitespace-normal"
           onClick={onRecreate}
         >
           {recreating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
@@ -338,7 +475,7 @@ function PendingWaitState({
         </Button>
         <Link
           href="/docs#depannage"
-          className="inline-block text-sm text-foreground underline-offset-4 hover:underline"
+          className="inline-block max-w-full text-sm break-words whitespace-normal text-foreground underline-offset-4 hover:underline"
         >
           {t("troubleshootLink")}
         </Link>
@@ -350,22 +487,26 @@ function PendingWaitState({
 function OfflineHint() {
   const t = useTranslations("access");
   return (
-    <p className="mt-2 text-xs text-muted-foreground">{t("offlineLibraryHint")}</p>
+    <p className="mt-2 text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+      {t("offlineLibraryHint")}
+    </p>
   );
 }
 
 function AccessStatusCell({ gateway, now }: { gateway: Gateway; now: number }) {
   const t = useTranslations("access");
   const presentation = gatewayConnectionPresentation(gateway, now);
-  const online = presentation === "connected";
   const label = connectionLabel(presentation, gateway, now, t);
 
   return (
-    <div className="min-w-0 space-y-1">
+    <div className="min-w-0 space-y-1" data-connection={presentation}>
       <div className="flex min-w-0 items-center gap-2">
-        <StatusDot online={online} />
-        <Badge variant="secondary" className="max-w-full">
-          <span className="truncate">{label}</span>
+        <ConnectionDot presentation={presentation} />
+        <Badge
+          variant="outline"
+          className="max-w-full min-w-0 overflow-hidden whitespace-normal"
+        >
+          <span className="break-words">{label}</span>
         </Badge>
       </div>
       {presentation === "offline" ? <OfflineHint /> : null}
@@ -419,6 +560,7 @@ function GatewayActions({
   revokeLabel,
   recreateLabel,
   deleteLabel,
+  align = "end",
 }: {
   gateway: Gateway;
   revoking: boolean;
@@ -429,22 +571,45 @@ function GatewayActions({
   revokeLabel: string;
   recreateLabel: string;
   deleteLabel: string;
+  align?: "start" | "end";
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div
+      className={cn(
+        "flex min-w-0 flex-wrap items-center gap-2",
+        align === "start" ? "justify-start" : "justify-end"
+      )}
+    >
       {gateway.status === "paired" ? (
-        <Button size="sm" variant="outline" disabled={revoking} onClick={onRevoke}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={revoking}
+          className="min-w-0 whitespace-normal"
+          onClick={onRevoke}
+        >
           {revoking ? <Loader2 className="animate-spin" /> : <Ban />}
           {revokeLabel}
         </Button>
       ) : null}
       {gateway.status === "revoked" ? (
-        <Button size="sm" variant="outline" disabled={recreating} onClick={onRecreate}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={recreating}
+          className="min-w-0 whitespace-normal"
+          onClick={onRecreate}
+        >
           {recreating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
           {recreateLabel}
         </Button>
       ) : null}
-      <Button size="sm" variant="destructive" onClick={onDelete}>
+      <Button
+        size="sm"
+        variant="destructive"
+        className="min-w-0 whitespace-normal"
+        onClick={onDelete}
+      >
         <Trash2 />
         {deleteLabel}
       </Button>
@@ -469,7 +634,9 @@ export function GatewaysView({
   const [revokeTarget, setRevokeTarget] = useState<Gateway | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [recreatingId, setRecreatingId] = useState<string | null>(null);
-  const [credentials, setCredentials] = useState<GatewayCredentials | null>(null);
+  const [credentials, setCredentials] = useState<GatewayCredentials | null>(
+    null
+  );
   const [deleteTarget, setDeleteTarget] = useState<Gateway | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -526,7 +693,9 @@ export function GatewaysView({
       });
       setGateways((prev) =>
         prev.map((g) =>
-          g.gateway_id === revokeTarget.gateway_id ? { ...g, status: "revoked" } : g
+          g.gateway_id === revokeTarget.gateway_id
+            ? { ...g, status: "revoked" }
+            : g
         )
       );
       toast.success(t("toastRevoked"));
@@ -564,8 +733,12 @@ export function GatewaysView({
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await call(`/api/v1/gateways/${deleteTarget.gateway_id}`, { method: "DELETE" });
-      setGateways((prev) => prev.filter((g) => g.gateway_id !== deleteTarget.gateway_id));
+      await call(`/api/v1/gateways/${deleteTarget.gateway_id}`, {
+        method: "DELETE",
+      });
+      setGateways((prev) =>
+        prev.filter((g) => g.gateway_id !== deleteTarget.gateway_id)
+      );
       toast.success(t("toastDeleted"));
       setDeleteTarget(null);
     } catch {
@@ -576,20 +749,27 @@ export function GatewaysView({
   }
 
   const createAction = (
-    <Button onClick={() => setCreateOpen(true)}>
+    <Button
+      onClick={() => setCreateOpen(true)}
+      className="min-w-0 whitespace-normal"
+    >
       <Plus />
       {t("createLink")}
     </Button>
   );
 
   const guideLink = (
-    <Button variant="outline" render={<Link href="/docs">{t("guideLink")}</Link>} />
+    <Button
+      variant="outline"
+      className="min-w-0 whitespace-normal"
+      render={<Link href="/docs">{t("guideLink")}</Link>}
+    />
   );
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
       <Reveal>
-        <GatewayCloudLocalIntro />
+        <GatewayCloudLocalIntro gateways={gateways} now={now} />
 
         <SectionHeader
           title={t("sectionTitle")}
@@ -599,7 +779,7 @@ export function GatewaysView({
               : t("sectionEmptyHint")
           }
           action={
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
               {guideLink}
               {createAction}
             </div>
@@ -607,82 +787,90 @@ export function GatewaysView({
         />
 
         {listRefreshFailed && gateways.length > 0 ? (
-          <Alert className="mb-4">
-            <AlertTitle>{t("listRefreshFailedTitle")}</AlertTitle>
-            <AlertDescription>{t("listRefreshFailed")}</AlertDescription>
-          </Alert>
+          <SoftNotice
+            className="mb-4"
+            title={t("listRefreshFailedTitle")}
+            description={t("listRefreshFailed")}
+          />
         ) : null}
 
         {gatewaysUnavailable && gateways.length === 0 ? (
-          <Alert>
-            <Radio />
-            <AlertTitle>{t("emptyUnavailableTitle")}</AlertTitle>
-            <AlertDescription>{t("emptyUnavailable")}</AlertDescription>
-          </Alert>
+          <div role="alert" data-gateways-state="unavailable">
+            <EmptyState
+              icon={Radio}
+              title={t("emptyUnavailableTitle")}
+              description={t("emptyUnavailable")}
+            />
+          </div>
         ) : gateways.length === 0 ? (
-          <EmptyState
-            visual={<CloudGatewayIllustration />}
-            title={t("emptyTitle")}
-            description={t("emptyDescription")}
-            action={
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {createAction}
-                {guideLink}
-              </div>
-            }
-          />
+          <div data-gateways-state="empty">
+            <EmptyState
+              visual={<CloudGatewayIllustration />}
+              title={t("emptyTitle")}
+              description={t("emptyDescription")}
+              action={
+                <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
+                  {createAction}
+                  {guideLink}
+                </div>
+              }
+            />
+          </div>
         ) : (
-          <>
-            <p className="mb-4 text-sm text-muted-foreground">{t("watchFolderHint")}</p>
+          <div data-gateways-state="ready">
+            <p className="mb-4 text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+              {t("watchFolderHint")}
+            </p>
 
-            {/* Narrow / with sidebar: cards until useful table width */}
+            {/* Narrow: paper rows (Pen Gateway actions), not SaaS cards */}
             <RevealGroup className="grid gap-3 lg:hidden">
               {gateways.map((gateway) => (
                 <RevealItem key={gateway.gateway_id}>
-                  <Card size="sm" className="bg-card/60">
-                    <CardContent className="space-y-3">
-                      <div className="min-w-0 space-y-1">
-                        <CardTitle className="line-clamp-2 text-sm break-words">
-                          {gateway.name}
-                        </CardTitle>
-                        <CardDescription>
-                          <AccessStatusCell gateway={gateway} now={now} />
-                        </CardDescription>
-                      </div>
-
-                      <p className="text-xs text-muted-foreground">
+                  <article
+                    data-gateway-id={gateway.gateway_id}
+                    className="flex min-w-0 flex-col gap-3 rounded-md border border-border/80 bg-card px-4 py-4"
+                  >
+                    <div className="min-w-0 space-y-2">
+                      <h3 className="font-heading text-[15px] leading-snug font-medium tracking-tight break-words whitespace-normal">
+                        {gateway.name}
+                      </h3>
+                      <AccessStatusCell gateway={gateway} now={now} />
+                      <p className="text-xs break-words whitespace-normal text-muted-foreground">
                         {gateway.last_seen_at
                           ? formatAppDate(gateway.last_seen_at, locale)
                           : tCommon("never")}
                       </p>
+                    </div>
 
-                      <GatewayDetail
-                        gateway={gateway}
-                        now={now}
-                        recreating={recreatingId === gateway.gateway_id}
-                        activityRefreshKey={activityRefreshKey}
-                        onRecreate={() => void recreate(gateway)}
-                      />
+                    <GatewayDetail
+                      gateway={gateway}
+                      now={now}
+                      recreating={recreatingId === gateway.gateway_id}
+                      activityRefreshKey={activityRefreshKey}
+                      onRecreate={() => void recreate(gateway)}
+                    />
 
-                      <GatewayActions
-                        gateway={gateway}
-                        revoking={revoking && revokeTarget?.gateway_id === gateway.gateway_id}
-                        recreating={recreatingId === gateway.gateway_id}
-                        onRevoke={() => setRevokeTarget(gateway)}
-                        onRecreate={() => void recreate(gateway)}
-                        onDelete={() => setDeleteTarget(gateway)}
-                        revokeLabel={t("revoke")}
-                        recreateLabel={t("recreateCodes")}
-                        deleteLabel={t("delete")}
-                      />
-                    </CardContent>
-                  </Card>
+                    <GatewayActions
+                      gateway={gateway}
+                      align="start"
+                      revoking={
+                        revoking && revokeTarget?.gateway_id === gateway.gateway_id
+                      }
+                      recreating={recreatingId === gateway.gateway_id}
+                      onRevoke={() => setRevokeTarget(gateway)}
+                      onRecreate={() => void recreate(gateway)}
+                      onDelete={() => setDeleteTarget(gateway)}
+                      revokeLabel={t("revoke")}
+                      recreateLabel={t("recreateCodes")}
+                      deleteLabel={t("delete")}
+                    />
+                  </article>
                 </RevealItem>
               ))}
             </RevealGroup>
 
-            {/* Desktop with useful width: table */}
-            <Reveal className="hidden overflow-hidden rounded-xl border border-border/60 lg:block">
+            {/* Desktop: editorial table */}
+            <Reveal className="hidden overflow-x-auto border-y border-border/70 lg:block">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -694,10 +882,16 @@ export function GatewaysView({
                 </TableHeader>
                 <TableBody>
                   {gateways.map((gateway) => (
-                    <TableRow key={gateway.gateway_id}>
-                      <TableCell className="align-top font-medium">
+                    <TableRow
+                      key={gateway.gateway_id}
+                      data-gateway-id={gateway.gateway_id}
+                      className="hover:bg-muted/20"
+                    >
+                      <TableCell className="max-w-72 align-top font-medium whitespace-normal">
                         <div className="min-w-0 space-y-1">
-                          <span className="line-clamp-2 break-words">{gateway.name}</span>
+                          <span className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words whitespace-normal">
+                            {gateway.name}
+                          </span>
                           <GatewayDetail
                             gateway={gateway}
                             now={now}
@@ -707,18 +901,23 @@ export function GatewaysView({
                           />
                         </div>
                       </TableCell>
-                      <TableCell className="align-top">
+                      <TableCell className="align-top whitespace-normal">
                         <AccessStatusCell gateway={gateway} now={now} />
                       </TableCell>
-                      <TableCell className="align-top whitespace-nowrap text-muted-foreground">
-                        {gateway.last_seen_at
-                          ? formatAppDate(gateway.last_seen_at, locale)
-                          : tCommon("never")}
+                      <TableCell className="align-top text-sm whitespace-normal text-muted-foreground">
+                        <span className="break-words">
+                          {gateway.last_seen_at
+                            ? formatAppDate(gateway.last_seen_at, locale)
+                            : tCommon("never")}
+                        </span>
                       </TableCell>
-                      <TableCell className="align-top text-right">
+                      <TableCell className="align-top whitespace-normal text-right">
                         <GatewayActions
                           gateway={gateway}
-                          revoking={revoking && revokeTarget?.gateway_id === gateway.gateway_id}
+                          revoking={
+                            revoking &&
+                            revokeTarget?.gateway_id === gateway.gateway_id
+                          }
                           recreating={recreatingId === gateway.gateway_id}
                           onRevoke={() => setRevokeTarget(gateway)}
                           onRecreate={() => void recreate(gateway)}
@@ -733,7 +932,7 @@ export function GatewaysView({
                 </TableBody>
               </Table>
             </Reveal>
-          </>
+          </div>
         )}
       </Reveal>
 
@@ -747,14 +946,25 @@ export function GatewaysView({
         open={credentials !== null}
         onOpenChange={(open) => !open && setCredentials(null)}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{tCreate("createdTitle")}</DialogTitle>
-            <DialogDescription>{tCreate("createdDescription")}</DialogDescription>
+            <DialogTitle className="break-words whitespace-normal">
+              {tCreate("createdTitle")}
+            </DialogTitle>
+            <DialogDescription className="break-words whitespace-normal">
+              {tCreate("createdDescription")}
+            </DialogDescription>
           </DialogHeader>
-          {credentials ? <GatewayCredentialsPanel credentials={credentials} /> : null}
-          <DialogFooter>
-            <Button onClick={() => setCredentials(null)}>{tCommon("done")}</Button>
+          {credentials ? (
+            <GatewayCredentialsPanel credentials={credentials} />
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              onClick={() => setCredentials(null)}
+              className="whitespace-normal"
+            >
+              {tCommon("done")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -763,21 +973,31 @@ export function GatewaysView({
         open={revokeTarget !== null}
         onOpenChange={(open) => !open && !revoking && setRevokeTarget(null)}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("revokeConfirmTitle")}</DialogTitle>
-            <DialogDescription>{t("revokeConfirmDescription")}</DialogDescription>
+            <DialogTitle className="break-words whitespace-normal">
+              {t("revokeConfirmTitle")}
+            </DialogTitle>
+            <DialogDescription className="break-words whitespace-normal">
+              {t("revokeConfirmDescription")}
+            </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button
               variant="outline"
               onClick={() => setRevokeTarget(null)}
               disabled={revoking}
               autoFocus
+              className="whitespace-normal"
             >
               {tCommon("cancel")}
             </Button>
-            <Button variant="destructive" onClick={confirmRevoke} disabled={revoking}>
+            <Button
+              variant="destructive"
+              onClick={() => void confirmRevoke()}
+              disabled={revoking}
+              className="whitespace-normal"
+            >
               {revoking ? <Loader2 className="animate-spin" /> : <Ban />}
               {t("revoke")}
             </Button>
@@ -789,21 +1009,31 @@ export function GatewaysView({
         open={deleteTarget !== null}
         onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("deleteConfirmTitle")}</DialogTitle>
-            <DialogDescription>{t("deleteConfirmDescription")}</DialogDescription>
+            <DialogTitle className="break-words whitespace-normal">
+              {t("deleteConfirmTitle")}
+            </DialogTitle>
+            <DialogDescription className="break-words whitespace-normal">
+              {t("deleteConfirmDescription")}
+            </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button
               variant="outline"
               onClick={() => setDeleteTarget(null)}
               disabled={deleting}
               autoFocus
+              className="whitespace-normal"
             >
               {tCommon("cancel")}
             </Button>
-            <Button variant="destructive" onClick={confirmDelete} disabled={deleting}>
+            <Button
+              variant="destructive"
+              onClick={() => void confirmDelete()}
+              disabled={deleting}
+              className="whitespace-normal"
+            >
               {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
               {t("delete")}
             </Button>

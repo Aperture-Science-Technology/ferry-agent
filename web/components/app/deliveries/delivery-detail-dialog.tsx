@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Download, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,23 +18,13 @@ import {
   mergeDeliveryJobs,
   normalizeDeliveryStatus,
 } from "@/components/app/deliveries/deliveries-state";
+import { DeliveryStatusBadge } from "@/components/app/deliveries/delivery-status-badge";
 import { StatePanel } from "@/components/app/state-panel";
 import { useApiClient } from "@/lib/api-client";
-import type { DeliveryJob, DeliveryStatus } from "@/lib/types";
+import type { DeliveryJob } from "@/lib/types";
 
 const DETAIL_POLL_MS = 5000;
 const DETAIL_POLL_MAX_MS = 5 * 60 * 1000;
-
-const STATUS_VARIANT: Record<
-  DeliveryStatus | "unknown",
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  queued: "secondary",
-  sent: "outline",
-  delivered: "default",
-  failed: "destructive",
-  unknown: "outline",
-};
 
 function formatAppDate(iso: string, locale: string) {
   return new Intl.DateTimeFormat(locale, {
@@ -156,14 +145,20 @@ export function DeliveryDetailDialog({
     return tDeliveries(`statuses.${normalized}`);
   }
 
+  const normalizedStatus = displayJob
+    ? normalizeDeliveryStatus(displayJob.status)
+    : null;
+
   return (
     <Dialog open={jobId !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[min(90vh,40rem)] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-heading text-xl tracking-tight">
+          <DialogTitle className="font-heading text-xl tracking-tight text-balance">
             {t("title")}
           </DialogTitle>
-          <DialogDescription>{t("description")}</DialogDescription>
+          <DialogDescription className="leading-relaxed whitespace-normal">
+            {t("description")}
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (
@@ -192,6 +187,7 @@ export function DeliveryDetailDialog({
                 variant="outline"
                 onClick={() => void handleRetry()}
                 disabled={retrying}
+                className="whitespace-normal"
               >
                 {retrying ? <Loader2 className="animate-spin" /> : null}
                 {t("retry")}
@@ -199,89 +195,100 @@ export function DeliveryDetailDialog({
             }
           />
         ) : displayJob ? (
-          <div className="space-y-5 text-sm">
+          <div className="min-w-0 space-y-5 text-sm">
             <div className="min-w-0 space-y-1">
               <p className="font-heading text-base font-medium tracking-tight">
-                <span className="line-clamp-3 break-words">
-                  {displayJob.item_title ?? tCommon("dash")}
+                <span className="line-clamp-3 break-words whitespace-normal">
+                  {tDeliveries("routeTo", {
+                    title: displayJob.item_title ?? tCommon("dash"),
+                    device: displayJob.device_label ?? tCommon("dash"),
+                  })}
                 </span>
               </p>
-              <p className="line-clamp-2 text-muted-foreground break-words">
+              <p className="line-clamp-2 break-words whitespace-normal text-muted-foreground">
                 {displayJob.item_author ?? tCommon("dash")}
               </p>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-1.5">
-                <Badge
-                  variant={
-                    STATUS_VARIANT[normalizeDeliveryStatus(displayJob.status)]
-                  }
-                >
-                  {statusLabel(displayJob.status)}
-                </Badge>
+            <div className="min-w-0 space-y-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <DeliveryStatusBadge
+                  status={displayJob.status}
+                  label={statusLabel(displayJob.status)}
+                />
                 {displayJob.target_format ? (
-                  <Badge variant="secondary" className="uppercase">
+                  <span className="text-xs tracking-wide text-muted-foreground uppercase">
                     {displayJob.target_format}
-                  </Badge>
+                  </span>
                 ) : null}
               </div>
-              {normalizeDeliveryStatus(displayJob.status) === "delivered" ? (
-                <p className="text-xs leading-relaxed text-muted-foreground">
+              {normalizedStatus === "delivered" ? (
+                <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
                   {t("statusHintDelivered")}
                 </p>
-              ) : normalizeDeliveryStatus(displayJob.status) === "queued" ? (
-                <p className="text-xs leading-relaxed text-muted-foreground">
+              ) : normalizedStatus === "queued" ? (
+                <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
                   {t("statusHintQueued")}
                 </p>
-              ) : normalizeDeliveryStatus(displayJob.status) === "sent" ? (
-                <p className="text-xs leading-relaxed text-muted-foreground">
+              ) : normalizedStatus === "sent" ? (
+                <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
                   {t("statusHintSent")}
                 </p>
-              ) : normalizeDeliveryStatus(displayJob.status) === "unknown" ? (
-                <p className="text-xs leading-relaxed text-muted-foreground">
+              ) : normalizedStatus === "unknown" ? (
+                <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
                   {t("statusHintUnknown")}
                 </p>
               ) : null}
             </div>
 
-            <dl className="grid grid-cols-[minmax(0,8rem)_1fr] gap-x-4 gap-y-2">
-              <dt className="text-muted-foreground">{t("device")}</dt>
-              <dd className="min-w-0 truncate text-right sm:text-left">
-                {displayJob.device_label ?? tCommon("dash")}
-              </dd>
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,8rem)_1fr] sm:gap-x-4 sm:gap-y-2">
+              <div className="min-w-0 sm:contents">
+                <dt className="text-muted-foreground">{t("device")}</dt>
+                <dd className="min-w-0 break-words whitespace-normal sm:text-left">
+                  {displayJob.device_label ?? tCommon("dash")}
+                </dd>
+              </div>
 
-              <dt className="text-muted-foreground">{t("method")}</dt>
-              <dd className="min-w-0 truncate text-right sm:text-left">
-                {tMethods(`methods.${displayJob.method}`)}
-              </dd>
+              <div className="min-w-0 sm:contents">
+                <dt className="text-muted-foreground">{t("method")}</dt>
+                <dd className="min-w-0 break-words whitespace-normal sm:text-left">
+                  {tMethods(`methods.${displayJob.method}`)}
+                </dd>
+              </div>
 
-              <dt className="text-muted-foreground">{t("format")}</dt>
-              <dd className="text-right uppercase sm:text-left">
-                {displayJob.target_format ?? tCommon("dash")}
-              </dd>
+              <div className="min-w-0 sm:contents">
+                <dt className="text-muted-foreground">{t("format")}</dt>
+                <dd className="break-words whitespace-normal uppercase sm:text-left">
+                  {displayJob.target_format ?? tCommon("dash")}
+                </dd>
+              </div>
 
-              <dt className="text-muted-foreground">{t("created")}</dt>
-              <dd className="text-right sm:text-left">
-                {formatAppDate(displayJob.created_at, locale)}
-              </dd>
+              <div className="min-w-0 sm:contents">
+                <dt className="text-muted-foreground">{t("created")}</dt>
+                <dd className="break-words whitespace-normal sm:text-left">
+                  {formatAppDate(displayJob.created_at, locale)}
+                </dd>
+              </div>
 
               {displayJob.delivered_at ? (
-                <>
+                <div className="min-w-0 sm:contents">
                   <dt className="text-muted-foreground">{t("delivered")}</dt>
-                  <dd className="text-right sm:text-left">
+                  <dd className="break-words whitespace-normal sm:text-left">
                     {formatAppDate(displayJob.delivered_at, locale)}
                   </dd>
-                </>
+                </div>
               ) : null}
             </dl>
 
             {displayJob.status === "failed" ? (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5">
+              <div
+                role="alert"
+                className="border border-destructive/30 bg-destructive/10 px-3 py-2.5"
+              >
                 <p className="mb-1 font-heading text-xs font-medium tracking-tight text-destructive">
                   {t("error")}
                 </p>
-                <p className="break-words text-destructive">
+                <p className="break-words whitespace-normal text-destructive">
                   {displayJob.error?.trim()
                     ? displayJob.error
                     : t("errorFallback")}
@@ -290,9 +297,10 @@ export function DeliveryDetailDialog({
             ) : null}
 
             {displayJob.download_url ? (
-              <div className="space-y-2 border-t border-border/50 pt-4">
+              <div className="min-w-0 space-y-2 border-t border-border/50 pt-4">
                 <Button
                   size="sm"
+                  className="whitespace-normal"
                   render={
                     <a
                       href={displayJob.download_url}
@@ -305,7 +313,7 @@ export function DeliveryDetailDialog({
                   }
                 />
                 <p
-                  className="truncate text-xs text-muted-foreground"
+                  className="break-all text-xs leading-relaxed text-muted-foreground"
                   title={displayJob.download_url}
                 >
                   {displayJob.download_url}

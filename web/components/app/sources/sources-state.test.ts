@@ -10,9 +10,12 @@ import {
   applySourceToggleSuccess,
   canToggleSource,
   findSourceByType,
+  hasPartialSources,
+  SOURCE_DISPLAY_TYPES,
   sourceAvailability,
   sourceGroup,
   sourceRowKind,
+  sourcesSurfaceState,
   type SourceLike,
 } from "./sources-state.ts";
 
@@ -32,7 +35,7 @@ const upload: SourceLike = {
   enabled: true,
 };
 
-describe("sourceRowKind / sourceGroup", () => {
+describe("sourceRowKind / sourceGroup / display order", () => {
   it("splits open-access toggles from local upload and gateway rows", () => {
     assert.equal(sourceRowKind("gutenberg"), "toggleable");
     assert.equal(sourceRowKind("standard_ebooks"), "toggleable");
@@ -40,6 +43,12 @@ describe("sourceRowKind / sourceGroup", () => {
     assert.equal(sourceRowKind("torrent_gateway"), "gateway_local");
     assert.equal(sourceGroup("gutenberg"), "openAccess");
     assert.equal(sourceGroup("torrent_gateway"), "local");
+    assert.deepEqual(SOURCE_DISPLAY_TYPES, [
+      "gutenberg",
+      "standard_ebooks",
+      "upload",
+      "torrent_gateway",
+    ]);
   });
 });
 
@@ -82,6 +91,55 @@ describe("canToggleSource", () => {
     assert.equal(canToggleSource("upload", sources, false), false);
     assert.equal(canToggleSource("torrent_gateway", sources, false), false);
     assert.equal(canToggleSource("gutenberg", sources, true), false);
+  });
+});
+
+describe("sourcesSurfaceState / hasPartialSources", () => {
+  it("keeps unavailable, empty, partial, error and success distinct", () => {
+    assert.equal(
+      sourcesSurfaceState({
+        sources: [],
+        sourcesUnavailable: true,
+        updateError: null,
+      }),
+      "unavailable"
+    );
+    assert.equal(
+      sourcesSurfaceState({
+        sources: [],
+        sourcesUnavailable: false,
+        updateError: null,
+      }),
+      "empty"
+    );
+    assert.equal(
+      sourcesSurfaceState({
+        sources: [gutenbergOn, upload],
+        sourcesUnavailable: false,
+        updateError: null,
+      }),
+      "partial"
+    );
+    assert.equal(
+      sourcesSurfaceState({
+        sources: [gutenbergOn, standardOff],
+        sourcesUnavailable: false,
+        updateError: "fail",
+      }),
+      "error"
+    );
+    assert.equal(
+      sourcesSurfaceState({
+        sources: [gutenbergOn, standardOff, upload],
+        sourcesUnavailable: false,
+        updateError: null,
+      }),
+      "success"
+    );
+    assert.equal(hasPartialSources([gutenbergOn], false), true);
+    assert.equal(hasPartialSources([gutenbergOn, standardOff], false), false);
+    assert.equal(hasPartialSources([], false), false);
+    assert.equal(hasPartialSources([gutenbergOn], true), false);
   });
 });
 

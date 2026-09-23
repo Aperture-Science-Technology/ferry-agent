@@ -39,14 +39,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/app/empty-state";
 import { SectionHeader } from "@/components/app/section-header";
+import { PassageRule } from "@/components/passage-rule";
 import { StatePanel } from "@/components/app/state-panel";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
 import { DeliverDialog } from "@/components/app/library/deliver-dialog";
 import {
+  applyLibraryItemsRefreshResult,
   buildCollectionHighlights,
   filterAndSortLibraryItems,
   hasActiveLibraryFilters,
   LIBRARY_COLLECTION_PAGE_SIZE,
+  libraryCollectionPageState,
   pageAfterLibraryCriteriaChange,
   paginateLibraryItems,
   type SortBy,
@@ -283,11 +286,9 @@ export function LibraryView({
     page: 1,
   });
 
-  if (pageState.criteriaKey !== filterCriteriaKey) {
-    setPageState({
-      criteriaKey: filterCriteriaKey,
-      page: pageAfterLibraryCriteriaChange(),
-    });
+  const nextPageState = libraryCollectionPageState(pageState, filterCriteriaKey);
+  if (nextPageState !== pageState) {
+    setPageState(nextPageState);
   }
 
   const collectionPage =
@@ -381,8 +382,9 @@ export function LibraryView({
           break;
         }
       }
-      setItems(itemsAcc);
+      setItems((prev) => applyLibraryItemsRefreshResult(prev, itemsAcc).items);
     } catch {
+      setItems((prev) => applyLibraryItemsRefreshResult(prev, null).items);
       // Owned badge + toast still apply even if library refresh fails.
     }
     toast.success(t("toastFetchArrived"));
@@ -481,34 +483,34 @@ export function LibraryView({
 
   const filterControls = (
     <div className="space-y-4" role="group" aria-label={t("filtersLabel")}>
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         <Label htmlFor="library-collection-search" className="text-xs text-muted-foreground">
           {t("collectionSearchLabel")}
         </Label>
         <div className="relative max-w-xl">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input
             id="library-collection-search"
             value={collectionQuery}
             onChange={(event) => setCollectionQuery(event.target.value)}
             placeholder={t("collectionSearchPlaceholder")}
-            className="h-10 border-border/50 bg-background/60 pl-9"
+            className="h-10 border-border bg-card pl-9"
             autoComplete="off"
             spellCheck={false}
           />
         </div>
-        <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
+        <p className="max-w-xl text-xs leading-relaxed whitespace-normal text-muted-foreground">
           {t("collectionSearchHelp")}
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-3 border-t border-border/40 pt-4">
-        <div className="space-y-1.5">
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-3 border-t border-border/70 pt-4">
+        <div className="min-w-0 space-y-1.5">
           <Label htmlFor="library-sort" className="text-xs text-muted-foreground">
             {t("sortLabel")}
           </Label>
           <Select value={sortBy} onValueChange={(value) => setSortBy((value as SortBy) ?? "added")}>
-            <SelectTrigger id="library-sort" size="sm" className="min-w-36 border-border/50 bg-background/60">
+            <SelectTrigger id="library-sort" size="sm" className="min-w-0 border-border bg-card sm:min-w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -520,12 +522,12 @@ export function LibraryView({
         </div>
 
         {languages.length > 0 && (
-          <div className="space-y-1.5">
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="library-language" className="text-xs text-muted-foreground">
               {t("filterLanguageLabel")}
             </Label>
             <Select value={languageFilter} onValueChange={(value) => setLanguageFilter(value ?? "all")}>
-              <SelectTrigger id="library-language" size="sm" className="min-w-32 border-border/50 bg-background/60">
+              <SelectTrigger id="library-language" size="sm" className="min-w-0 border-border bg-card sm:min-w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -541,12 +543,12 @@ export function LibraryView({
         )}
 
         {formats.length > 1 && (
-          <div className="space-y-1.5">
+          <div className="min-w-0 space-y-1.5">
             <Label htmlFor="library-format" className="text-xs text-muted-foreground">
               {t("filterFormatLabel")}
             </Label>
             <Select value={formatFilter} onValueChange={(value) => setFormatFilter(value ?? "all")}>
-              <SelectTrigger id="library-format" size="sm" className="min-w-32 border-border/50 bg-background/60">
+              <SelectTrigger id="library-format" size="sm" className="min-w-0 border-border bg-card sm:min-w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -561,7 +563,7 @@ export function LibraryView({
           </div>
         )}
 
-        <div className="space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <Label htmlFor="library-source" className="text-xs text-muted-foreground">
             {t("filterSourceLabel")}
           </Label>
@@ -569,7 +571,7 @@ export function LibraryView({
             value={sourceFilter}
             onValueChange={(value) => setSourceFilter((value as SourceFilter) ?? "all")}
           >
-            <SelectTrigger id="library-source" size="sm" className="min-w-36 border-border/50 bg-background/60">
+            <SelectTrigger id="library-source" size="sm" className="min-w-0 border-border bg-card sm:min-w-36">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -581,7 +583,7 @@ export function LibraryView({
         </div>
 
         <div
-          className="ml-auto flex gap-0.5 rounded-lg bg-background/50 p-0.5 ring-1 ring-border/40"
+          className="ml-auto flex gap-0.5 rounded-md border border-border bg-card p-0.5"
           role="group"
           aria-label={t("viewModeLabel")}
         >
@@ -607,11 +609,11 @@ export function LibraryView({
       </div>
 
       {filtersActive ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-3">
-          <p className="text-sm text-muted-foreground" aria-live="polite">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3">
+          <p className="min-w-0 text-sm whitespace-normal text-muted-foreground" aria-live="polite">
             {t("filtersActive")}
           </p>
-          <Button variant="outline" size="sm" onClick={resetFilters}>
+          <Button variant="outline" size="sm" onClick={resetFilters} className="shrink-0">
             {t("resetFilters")}
           </Button>
         </div>
@@ -682,10 +684,10 @@ export function LibraryView({
   const paginationControls =
     displayedItems.length > LIBRARY_COLLECTION_PAGE_SIZE ? (
       <nav
-        className="flex flex-col gap-3 border-t border-border/40 pt-4 sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between"
         aria-label={t("paginationRegion")}
       >
-        <p className="text-sm text-muted-foreground" aria-live="polite">
+        <p className="min-w-0 text-sm whitespace-normal text-muted-foreground" aria-live="polite">
           <span className="sr-only">
             {t("paginationPage", { page: pageSlice.page, pageCount: pageSlice.pageCount })}
           </span>
@@ -695,7 +697,7 @@ export function LibraryView({
             total: pageSlice.total,
           })}
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -735,7 +737,7 @@ export function LibraryView({
       ref={addSectionRef}
       id="library-add-panel"
       aria-label={t("addRegion")}
-      className="scroll-mt-6 space-y-5 rounded-2xl bg-muted/30 px-4 py-6 sm:px-7 sm:py-8"
+      className="scroll-mt-6 space-y-5 border-y border-border/70 bg-muted/20 px-4 py-6 sm:px-6 sm:py-8"
     >
       <SectionHeader
         title={t("addBooksTitle")}
@@ -747,8 +749,12 @@ export function LibraryView({
         onValueChange={(value) => setAddTab((value as AddTab) ?? "search")}
       >
         <TabsList variant="line" className="mb-5 w-full max-w-md sm:w-auto">
-          <TabsTrigger value="search">{t("searchSourcesTab")}</TabsTrigger>
-          <TabsTrigger value="import">{t("importTab")}</TabsTrigger>
+          <TabsTrigger value="search" className="min-w-0 whitespace-normal">
+            {t("searchSourcesTab")}
+          </TabsTrigger>
+          <TabsTrigger value="import" className="min-w-0 whitespace-normal">
+            {t("importTab")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="search" className="space-y-6">
@@ -756,12 +762,12 @@ export function LibraryView({
             <h3 className="font-heading text-lg font-medium tracking-tight text-balance sm:text-xl">
               {t("searchSourcesTab")}
             </h3>
-            <p className="text-base leading-relaxed text-muted-foreground">
+            <p className="text-base leading-relaxed whitespace-normal text-muted-foreground">
               {t("searchHelp")}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-background/70 p-4 ring-1 ring-border/50 sm:p-5">
+          <div className="border border-border/80 bg-card p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="relative min-w-0 flex-1 space-y-2">
                 <Label
@@ -771,7 +777,7 @@ export function LibraryView({
                   {t("searchSourcesLabel")}
                 </Label>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
                   <Input
                     ref={searchInputRef}
                     id="library-source-search"
@@ -779,7 +785,7 @@ export function LibraryView({
                     onChange={(event) => setQuery(event.target.value)}
                     onKeyDown={(event) => event.key === "Enter" && void runSearch()}
                     placeholder={t("searchPlaceholder")}
-                    className="h-12 border-border/50 bg-background pl-11 text-base"
+                    className="h-12 border-border bg-background pl-11 text-base"
                     disabled={searching}
                   />
                 </div>
@@ -807,14 +813,14 @@ export function LibraryView({
               aria-busy="true"
               aria-live="polite"
             >
-              <StatePanel className="border-transparent bg-background/50 py-12 ring-1 ring-border/40">
+              <StatePanel className="border-border/60 bg-card/40 py-12">
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin text-chart-1" />
+                  <Loader2 className="size-4 animate-spin text-primary" />
                   {t("searching")}
                 </div>
                 <div className="mt-4 grid w-full gap-3 sm:grid-cols-2">
-                  <Skeleton className="h-24 w-full rounded-lg" />
-                  <Skeleton className="h-24 w-full rounded-lg" />
+                  <Skeleton className="h-24 w-full rounded-md" />
+                  <Skeleton className="h-24 w-full rounded-md" />
                 </div>
               </StatePanel>
             </motion.div>
@@ -829,21 +835,21 @@ export function LibraryView({
                   description={t("searchHelpMatch")}
                 />
               ) : (
-                <div className="space-y-4 rounded-2xl bg-background/60 p-4 ring-1 ring-border/50 sm:p-5">
+                <div className="space-y-4 border border-border/80 bg-card p-4 sm:p-5">
                   <p className="text-sm font-medium text-foreground" role="status">
                     {t("resultsFound", { count: results.length })}
                   </p>
 
-                  <div className="grid gap-3 lg:hidden">
+                  <div className="grid gap-0 divide-y divide-border/70 lg:hidden">
                     {results.map((result) => {
                       const resultKey = `${result.source}:${result.result_id}`;
                       const isPending = resultKey in pendingJobs;
                       return (
                         <article
                           key={resultKey}
-                          className="flex gap-3 rounded-xl bg-muted/30 p-3 ring-1 ring-border/40"
+                          className="flex gap-3 py-3 first:pt-0 last:pb-0"
                         >
-                          <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/40">
+                          <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/60">
                             <SearchCoverImage
                               coverUrl={result.cover_url}
                               className="absolute inset-0 size-full"
@@ -851,9 +857,11 @@ export function LibraryView({
                             />
                           </div>
                           <div className="min-w-0 flex-1 space-y-2">
-                            <div>
-                              <h3 className="line-clamp-2 text-sm font-medium">{result.title}</h3>
-                              <p className="line-clamp-1 text-sm text-muted-foreground">
+                            <div className="min-w-0">
+                              <h3 className="line-clamp-2 text-sm font-medium break-words whitespace-normal">
+                                {result.title}
+                              </h3>
+                              <p className="line-clamp-1 text-sm break-words text-muted-foreground">
                                 {result.author}
                               </p>
                             </div>
@@ -888,7 +896,7 @@ export function LibraryView({
                     })}
                   </div>
 
-                  <div className="hidden overflow-hidden rounded-xl bg-muted/20 ring-1 ring-border/40 lg:block">
+                  <div className="hidden overflow-x-auto lg:block">
                     <Table>
                       <TableHeader>
                         <TableRow className="hover:bg-transparent">
@@ -907,16 +915,18 @@ export function LibraryView({
                           return (
                             <TableRow key={resultKey}>
                               <TableCell>
-                                <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-md bg-muted ring-1 ring-border/40">
+                                <div className="relative flex size-11 items-center justify-center overflow-hidden rounded-md bg-muted ring-1 ring-border/60">
                                   <SearchCoverImage
                                     coverUrl={result.cover_url}
                                     iconClassName="size-4"
                                   />
                                 </div>
                               </TableCell>
-                              <TableCell className="font-medium">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="line-clamp-2">{result.title}</span>
+                              <TableCell className="max-w-56 font-medium">
+                                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                  <span className="line-clamp-2 break-words whitespace-normal">
+                                    {result.title}
+                                  </span>
                                   {result.owned && (
                                     <Badge variant="secondary">{t("owned")}</Badge>
                                   )}
@@ -928,8 +938,8 @@ export function LibraryView({
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {result.author}
+                              <TableCell className="max-w-40 text-muted-foreground">
+                                <span className="line-clamp-1 break-words">{result.author}</span>
                               </TableCell>
                               <TableCell className="text-muted-foreground">
                                 {sourceLabel(result.source)}
@@ -960,7 +970,7 @@ export function LibraryView({
         </TabsContent>
 
         <TabsContent value="import" className="space-y-3">
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          <p className="max-w-2xl text-sm leading-relaxed whitespace-normal text-muted-foreground">
             {t("uploadHelp")}
           </p>
           <UploadDropzone
@@ -981,7 +991,7 @@ export function LibraryView({
   );
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {Object.entries(pendingJobs).map(([resultKey, jobId]) => (
         <PendingFetchTracker
           key={jobId}
@@ -993,13 +1003,15 @@ export function LibraryView({
         />
       ))}
 
-      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 max-w-2xl">
-          <div className="mb-3 h-px w-20 bg-gradient-to-r from-chart-1 via-chart-2 to-transparent" />
-          <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+      <header className="mb-2 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 max-w-2xl flex-1">
+          <PassageRule className="mb-3 w-20" />
+          <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
             {title}
           </h1>
-          <p className="mt-2 text-base leading-relaxed text-muted-foreground">{description}</p>
+          <p className="mt-2 text-base leading-relaxed whitespace-normal text-muted-foreground">
+            {description}
+          </p>
           {collectionCountLabel ? (
             <p className="mt-3 text-sm text-muted-foreground" aria-live="polite">
               {collectionCountLabel}
@@ -1007,19 +1019,19 @@ export function LibraryView({
           ) : null}
           <p className="mt-1 text-sm text-muted-foreground/80">{t("passageHint")}</p>
         </div>
-        <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+        <div className="flex w-full min-w-0 shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
           <Button
             onClick={() => (addOpen ? setAddOpen(false) : openAdd("search"))}
             variant={addOpen ? "outline" : "default"}
             aria-expanded={addOpen}
             aria-controls="library-add-panel"
-            className="w-full sm:w-auto"
+            className="w-full whitespace-normal sm:w-auto"
           >
             {!addOpen ? <Plus /> : null}
             {addOpen ? t("hideAddBooks") : t("addBooks")}
           </Button>
           {!addOpen ? (
-            <p className="max-w-56 text-xs leading-relaxed text-muted-foreground sm:text-right">
+            <p className="max-w-56 text-xs leading-relaxed whitespace-normal text-muted-foreground sm:text-right">
               {t("addBooksHint")}
             </p>
           ) : null}
@@ -1039,13 +1051,13 @@ export function LibraryView({
           {itemsPartial && items.length > 0 ? (
             <div
               role="status"
-              className="flex flex-col gap-3 rounded-xl bg-accent/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 border border-border/80 bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0 space-y-1">
                 <p className="font-heading text-sm font-medium tracking-tight">
                   {t("partialWarningTitle")}
                 </p>
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <p className="text-sm leading-relaxed whitespace-normal text-muted-foreground">
                   {t("partialWarning")}
                 </p>
               </div>
@@ -1059,9 +1071,15 @@ export function LibraryView({
               title={t("emptyTitle")}
               description={t("emptyDescription")}
               action={
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-                  <Button onClick={() => openAdd("search")}>{t("searchSourcesTab")}</Button>
-                  <Button variant="outline" onClick={() => openAdd("import")}>
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:justify-center">
+                  <Button onClick={() => openAdd("search")} className="whitespace-normal">
+                    {t("searchSourcesTab")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => openAdd("import")}
+                    className="whitespace-normal"
+                  >
                     {t("importTab")}
                   </Button>
                 </div>
@@ -1077,20 +1095,20 @@ export function LibraryView({
                   {collectionInfo}
                 </div>
 
-                <div className="hidden space-y-0 border-y border-border/40 py-4 lg:block">
+                <div className="hidden space-y-0 border-y border-border/70 py-4 lg:block">
                   {filterControls}
                 </div>
 
-                <details className="group border-y border-border/40 py-3 lg:hidden">
+                <details className="group border-y border-border/70 py-3 lg:hidden">
                   <summary className="cursor-pointer list-none text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
-                    <span className="flex items-center justify-between gap-3">
-                      {t("filtersSummary")}
-                      <span className="text-xs font-normal text-muted-foreground group-open:hidden">
+                    <span className="flex min-w-0 items-center justify-between gap-3">
+                      <span className="min-w-0 whitespace-normal">{t("filtersSummary")}</span>
+                      <span className="shrink-0 text-xs font-normal text-muted-foreground group-open:hidden">
                         {filtersActive ? t("filtersActive") : t("filtersLabel")}
                       </span>
                     </span>
                   </summary>
-                  <div className="mt-4 border-t border-border/40 pt-4">{filterControls}</div>
+                  <div className="mt-4 border-t border-border/70 pt-4">{filterControls}</div>
                 </details>
               </div>
 
@@ -1108,20 +1126,13 @@ export function LibraryView({
               ) : viewMode === "grid" ? (
                 <div className="space-y-6">
                   <RevealGroup
-                    className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4"
+                    className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                     stagger={prefersReducedMotion ? 0 : 0.04}
                   >
                     {pageSlice.items.map((item) => (
                       <RevealItem key={item.id}>
-                        <article className="group flex h-full flex-col gap-3">
-                          <div
-                            className={cn(
-                              "relative aspect-3/4 overflow-hidden rounded-lg bg-muted",
-                              "shadow-[0_18px_36px_-18px_rgba(0,0,0,0.65)] ring-1 ring-border/30",
-                              "motion-safe:transition-transform motion-safe:duration-200",
-                              "motion-safe:group-hover:-translate-y-1"
-                            )}
-                          >
+                        <article className="group flex h-full min-w-0 flex-col gap-2.5">
+                          <div className="relative aspect-3/4 overflow-hidden rounded-lg bg-muted ring-1 ring-border/60">
                             <LibraryCoverImage
                               itemId={item.id}
                               hasCover={Boolean(item.cover_url)}
@@ -1129,10 +1140,10 @@ export function LibraryView({
                             />
                           </div>
                           <div className="min-w-0 flex-1 space-y-1">
-                            <h3 className="line-clamp-2 text-[15px] leading-snug font-medium">
+                            <h3 className="line-clamp-2 text-sm leading-snug font-medium break-words whitespace-normal">
                               {item.title}
                             </h3>
-                            <p className="line-clamp-1 text-sm text-muted-foreground">
+                            <p className="line-clamp-1 text-xs break-words text-muted-foreground">
                               {item.author || tCommon("dash")}
                             </p>
                             <p className="pt-0.5 text-xs tracking-wide text-muted-foreground/90 uppercase">
@@ -1157,28 +1168,23 @@ export function LibraryView({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <div className="grid gap-4 lg:hidden">
+                  <div className="grid gap-0 divide-y divide-border/70 lg:hidden">
                     {pageSlice.items.map((item) => (
-                      <article key={item.id} className="flex gap-4 border-b border-border/30 pb-4 last:border-b-0 last:pb-0">
-                        <div
-                          className={cn(
-                            "relative aspect-3/4 w-20 shrink-0 overflow-hidden rounded-md bg-muted",
-                            "shadow-[0_14px_28px_-16px_rgba(0,0,0,0.55)] ring-1 ring-border/30"
-                          )}
-                        >
+                      <article key={item.id} className="flex gap-4 py-3 first:pt-0 last:pb-0">
+                        <div className="relative aspect-3/4 w-14 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border/60">
                           <LibraryCoverImage
                             itemId={item.id}
                             hasCover={Boolean(item.cover_url)}
                             alt={item.title}
-                            iconClassName="size-6"
+                            iconClassName="size-5"
                           />
                         </div>
                         <div className="min-w-0 flex-1 space-y-2.5">
-                          <div className="space-y-1">
-                            <h3 className="line-clamp-2 text-[15px] leading-snug font-medium">
+                          <div className="min-w-0 space-y-1">
+                            <h3 className="line-clamp-2 text-[15px] leading-snug font-medium break-words whitespace-normal">
                               {item.title}
                             </h3>
-                            <p className="line-clamp-1 text-sm text-muted-foreground">
+                            <p className="line-clamp-1 text-sm break-words text-muted-foreground">
                               {item.author || tCommon("dash")}
                             </p>
                             <p className="text-xs tracking-wide text-muted-foreground/90 uppercase">
@@ -1214,9 +1220,9 @@ export function LibraryView({
                       </TableHeader>
                       <TableBody>
                         {pageSlice.items.map((item) => (
-                          <TableRow key={item.id} className="hover:bg-muted/30">
+                          <TableRow key={item.id} className="hover:bg-muted/20">
                             <TableCell>
-                              <div className="relative size-12 overflow-hidden rounded-md bg-muted shadow-sm ring-1 ring-border/40">
+                              <div className="relative size-12 overflow-hidden rounded-md bg-muted ring-1 ring-border/60">
                                 <LibraryCoverImage
                                   itemId={item.id}
                                   hasCover={Boolean(item.cover_url)}
@@ -1226,10 +1232,14 @@ export function LibraryView({
                               </div>
                             </TableCell>
                             <TableCell className="max-w-56 font-medium">
-                              <span className="line-clamp-2">{item.title}</span>
+                              <span className="line-clamp-2 break-words whitespace-normal">
+                                {item.title}
+                              </span>
                             </TableCell>
                             <TableCell className="max-w-40 text-muted-foreground">
-                              <span className="line-clamp-1">{item.author || tCommon("dash")}</span>
+                              <span className="line-clamp-1 break-words">
+                                {item.author || tCommon("dash")}
+                              </span>
                             </TableCell>
                             <TableCell className="text-muted-foreground uppercase">
                               {item.original_format}

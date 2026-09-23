@@ -152,10 +152,11 @@
     "more": "More",
     "docs": "Guide",
     "account": "Account",
-    "groupTransfer": "Transfer",
+    "language": "Language",
+    "groupPrimary": "Main",
     "groupLocal": "At home",
     "moreMenu": "Menu",
-    "moreDescription": "Gateway, sources, settings, and account."
+    "moreDescription": "Gateway, sources, settings, guide, and account."
   },
   "pages": {
     "library": {
@@ -168,11 +169,11 @@
     },
     "access": {
       "title": "Gateway",
-      "description": "The module installed on your machine for local sources and downloads."
+      "description": "Optional local module — complements the cloud."
     },
     "sources": {
       "title": "Sources",
-      "description": "Manage the catalogs used to search for books, and your sources installed at home."
+      "description": "Cloud catalogs and local module (Gateway)."
     },
     "deliveries": {
       "title": "Deliveries",
@@ -288,6 +289,7 @@
     "filtersLabel": "Filters and display",
     "filtersSummary": "Sort and filter",
     "passageHint": "From file to e-reader — a simple path.",
+    "coverFallback": "Cover",
     "collectionRegion": "Collection",
     "addRegion": "Adding books"
   },
@@ -395,7 +397,9 @@
     "retry": "Try again",
     "refreshFailedTitle": "Refresh incomplete",
     "refreshFailedDescription": "The list couldn't be updated. Your known devices stay visible.",
-    "deleteConfirmDescriptionNamed": "“{name}” will be removed. Books will no longer be sent to this device."
+    "deleteConfirmDescriptionNamed": "“{name}” will be removed. Books will no longer be sent to this device.",
+    "cloudLinkFailedTitle": "Cloud link interrupted",
+    "cloudLinkFailedDescription": "The cloud account could not be linked. No new connection was saved."
   },
   "editDevice": {
     "title": "Edit device",
@@ -491,8 +495,8 @@
     "sectionTitle": "Your Gateways",
     "sectionEmptyHint": "No local module yet.",
     "countLabel": "{count, plural, one {# Gateway} other {# Gateways}}",
-    "cloudLocalTitle": "Online library, module at home",
-    "cloudLocalBody": "Ferry Agent is an online app. The Gateway is an optional module installed on your machine: it mainly handles torrent downloads and talking to your local sources.",
+    "cloudLocalTitle": "Gateway",
+    "cloudLocalBody": "Optional local module — complements the cloud (torrents / machine sources).",
     "cloudLabel": "Online",
     "cloudHint": "your library, devices, and deliveries",
     "localLabel": "At home",
@@ -577,13 +581,17 @@
   "sources": {
     "sectionTitle": "Your sources",
     "intro": "Ferry Agent searches the catalogs you enable here. Imported files and local sources go through your online library or the Gateway installed at home.",
+    "supportedHint": "Supported sources: Gutenberg, Standard Ebooks, Upload, Torrents (Gateway). No local folder and no source deletion.",
     "openAccessTitle": "Open-access sources",
     "openAccessDescription": "Public catalogs used when searching sources.",
     "localTitle": "Your files and local sources",
     "localDescription": "Import from your files, and results through the Gateway installed at home.",
+    "groupOpenAccess": "Open access",
+    "groupLocal": "Local",
+    "uploadShelf": "Library",
     "providers": {
       "gutenberg": {
-        "name": "Gutenberg",
+        "name": "Project Gutenberg",
         "description": "Tens of thousands of public-domain books, in several languages."
       },
       "standardEbooks": {
@@ -591,11 +599,11 @@
         "description": "Public-domain classics, carefully proofread and formatted."
       },
       "upload": {
-        "name": "Manual upload",
+        "name": "Imported files",
         "description": "The books you import yourself from your own files."
       },
       "torrentGateway": {
-        "name": "Local sources (Gateway)",
+        "name": "Torrents (Gateway)",
         "description": "Results found through the module installed at home, then added to your online library."
       }
     },
@@ -604,7 +612,7 @@
     "unknown": "Unknown state",
     "unknownHint": "This source's state could not be confirmed. Please try again later.",
     "alwaysActive": "Always available",
-    "gatewayLocal": "Via Gateway",
+    "gatewayLocal": "Local via Gateway",
     "gatewayHint": "This source depends on the Gateway installed at home. It alone does not mean the Gateway is connected.",
     "prowlarrNote": "Prowlarr, if you use it, stays configured on the Gateway — not as a main section here.",
     "gatewayCta": "Open Gateway",
@@ -616,7 +624,11 @@
     "toastUpdateFailed": "Couldn't update this source. Please try again.",
     "updateErrorTitle": "Update failed",
     "unavailableTitle": "Sources unavailable",
-    "unavailableNote": "Couldn't load the state of your sources right now. No activation is confirmed until the list is available."
+    "unavailableNote": "Couldn't load the state of your sources right now. No activation is confirmed until the list is available.",
+    "emptyTitle": "No sources returned",
+    "emptyDescription": "The list responded, but no catalog was returned. Try again later — no activation is confirmed.",
+    "partialTitle": "Partial state",
+    "partialNote": "Some activable sources could not be confirmed. Those shown remain usable; the others stay unknown."
   },
   "deliveries": {
     "sectionTitle": "Your deliveries",
@@ -632,7 +644,9 @@
     "refreshFailedDescription": "The list couldn't be updated. Your last known deliveries stay visible.",
     "statusHintDelivered": "The send operation finished. This does not confirm that the book was opened on the e-reader.",
     "statusHintDeliveredShort": "Send finished — not confirmed reading",
+    "statusHintUnknown": "Unrecognized status. Refresh to check — do not treat this send as finished.",
     "failedHint": "This send did not complete. Open tracking for more detail.",
+    "routeTo": "{title} → {device}",
     "colBook": "Book",
     "colDevice": "E-reader",
     "colStatus": "Status",
@@ -643,7 +657,9 @@
     "colError": "Failed",
     "colAction": "Action",
     "track": "Track",
+    "trackFailed": "See the problem",
     "trackAria": "Track delivery of {title}",
+    "trackFailedAria": "See the problem with delivery of {title}",
     "openDownload": "Open file",
     "statuses": {
       "queued": "Requested",

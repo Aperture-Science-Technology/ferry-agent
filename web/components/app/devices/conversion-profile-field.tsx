@@ -65,7 +65,10 @@ export function ConversionProfileField({
         </SelectContent>
       </Select>
       {selectValue === PROFILE_AUTO ? (
-        <p id={hintId} className="text-muted-foreground text-xs">
+        <p
+          id={hintId}
+          className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground"
+        >
           {t("conversionProfileAutoHint")}
         </p>
       ) : null}
