@@ -1,6 +1,6 @@
 /**
  * Pen deliveries rebuild: StatusRow composition (SAPRI / mF0035), no desktop table,
- * header Livraisons + Historique, FR/EN labels, unknown ≠ delivered.
+ * dedicated mobile header, unique page title, FR/EN labels, unknown ≠ delivered.
  * Run: npm run test:ui-harness
  */
 import { render, screen, within } from "@testing-library/react";
@@ -111,6 +111,7 @@ describe("UI harness — Pen deliveries composition", () => {
       })
     ).toBeTruthy();
     expect(within(rows[0]!).getByText("Terminé")).toBeTruthy();
+    expect(within(rows[0]!).getByText(/EPUB/i)).toBeTruthy();
     expect(
       within(rows[1]!).getByRole("heading", {
         name: "Ink & Transfer → Kobo Clara",
@@ -119,16 +120,37 @@ describe("UI harness — Pen deliveries composition", () => {
     expect(within(rows[1]!).getByText("En cours")).toBeTruthy();
   });
 
+  it("exposes dedicated mobile and desktop headers (mF0035 / Hd0003)", () => {
+    renderDeliveries("fr");
+    const mobile = screen.getByTestId("deliveries-header-mobile");
+    const desktop = screen.getByTestId("deliveries-header-desktop");
+    expect(mobile.className).toMatch(/md:hidden/);
+    expect(desktop.className).toMatch(/hidden/);
+    expect(desktop.className).toMatch(/md:flex/);
+    expect(within(mobile).getByText("Ferry Agent")).toBeTruthy();
+    expect(mobile.querySelector("h1")?.textContent).toBe("Livraisons");
+    expect(desktop.querySelector("h1")?.textContent).toBe("Livraisons");
+    expect(desktop.querySelector("h1")?.className).toMatch(/text-\[28px\]/);
+    expect(mobile.querySelector("h1")?.className).toMatch(/text-\[22px\]/);
+    expect(within(desktop).queryByText("Ferry Agent")).toBeNull();
+    // Single refresh control (not duplicated across breakpoints)
+    expect(screen.getAllByRole("button", { name: "Actualiser" }).length).toBe(1);
+  });
+
   it("shows Pen page header copy in FR and EN without SaaS section chrome", () => {
     const { unmount } = renderDeliveries("fr");
-    expect(screen.getByRole("heading", { level: 1, name: "Livraisons" })).toBeTruthy();
-    expect(screen.getByText("Historique des transferts")).toBeTruthy();
+    expect(screen.getByTestId("deliveries-header-mobile").querySelector("h1")?.textContent).toBe(
+      "Livraisons"
+    );
+    expect(screen.getAllByText("Historique des transferts").length).toBeGreaterThan(0);
     expect(screen.queryByText("Vos envois")).toBeNull();
     unmount();
 
     renderDeliveries("en");
-    expect(screen.getByRole("heading", { level: 1, name: "Deliveries" })).toBeTruthy();
-    expect(screen.getByText("Transfer history")).toBeTruthy();
+    expect(screen.getByTestId("deliveries-header-mobile").querySelector("h1")?.textContent).toBe(
+      "Deliveries"
+    );
+    expect(screen.getAllByText("Transfer history").length).toBeGreaterThan(0);
     expect(screen.getByText("Finished")).toBeTruthy();
     expect(screen.getByText("In progress")).toBeTruthy();
     expect(screen.queryByText("Your deliveries")).toBeNull();
@@ -150,6 +172,7 @@ describe("UI harness — Pen deliveries composition", () => {
     renderDeliveries("fr");
     const layout = screen.getByTestId("deliveries-pen-layout");
     expect(layout.className).toMatch(/min-w-0/);
+    expect(screen.getByTestId("deliveries-body")).toBeTruthy();
     expect(document.querySelectorAll("[data-testid='delivery-status-row']").length).toBe(
       2
     );

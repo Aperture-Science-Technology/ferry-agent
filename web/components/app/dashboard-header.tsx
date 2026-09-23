@@ -5,7 +5,7 @@ import { usePathname } from "@/i18n/navigation";
 
 /**
  * Shell strip for routes that do not own Header/Page.
- * Library owns ePLzB / mF0028 titles — never double the heading.
+ * Library (ePLzB) and Deliveries (Hd0003 / mF0035) own their titles — never double.
  */
 export function DashboardHeader() {
   const pathname = usePathname();
@@ -14,6 +14,7 @@ export function DashboardHeader() {
 
   if (
     pathname?.startsWith("/app/bibliotheque") ||
+    pathname?.startsWith("/app/livraisons") ||
     pathname?.startsWith("/app/gateways") ||
     pathname?.startsWith("/app/sources") ||
     pathname?.startsWith("/app/reglages")
@@ -22,9 +23,7 @@ export function DashboardHeader() {
   }
 
   let title = tNav("dashboard");
-  if (pathname?.startsWith("/app/livraisons"))
-    title = tPages("deliveries.title");
-  else if (pathname?.startsWith("/app/appareils"))
+  if (pathname?.startsWith("/app/appareils"))
     title = tPages("devices.title");
 
   return (
