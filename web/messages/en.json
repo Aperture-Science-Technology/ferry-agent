@@ -165,7 +165,7 @@
     },
     "devices": {
       "title": "Devices",
-      "description": "Your e-readers and how books arrive on them from Ferry Agent."
+      "description": "Registered destinations"
     },
     "access": {
       "title": "Gateway",
@@ -367,18 +367,9 @@
   },
   "devices": {
     "newDevice": "New device",
-    "sectionTitle": "Your devices",
-    "countLabel": "{count} devices",
-    "colProfile": "Conversion profile",
-    "refreshing": "Updating the list…",
     "emptyTitle": "No devices",
     "emptyDescription": "Add your first e-reader to send books from your library.",
     "emptyUnavailable": "Your devices couldn't be loaded right now. Please try again later.",
-    "colDevice": "Device",
-    "colDelivery": "How it arrives",
-    "colCloud": "Cloud account",
-    "colLastSync": "Last sync",
-    "colAction": "Action",
     "linked": "Linked",
     "linkedDropbox": "Linked to Dropbox",
     "linkedDrive": "Linked to Google Drive",
@@ -396,7 +387,6 @@
       "C": "Code in the browser",
       "D": "USB transfer"
     },
-    "sectionDescription": "Add your e-readers to choose how books arrive on them.",
     "unavailableTitle": "Devices unavailable",
     "refresh": "Refresh",
     "retry": "Try again",

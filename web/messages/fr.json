@@ -165,7 +165,7 @@
     },
     "devices": {
       "title": "Appareils",
-      "description": "Vos liseuses et la façon dont les livres y arrivent depuis Ferry Agent."
+      "description": "Destinations enregistrées"
     },
     "access": {
       "title": "Gateway",
@@ -367,18 +367,9 @@
   },
   "devices": {
     "newDevice": "Nouvel appareil",
-    "sectionTitle": "Vos appareils",
-    "countLabel": "{count} appareils",
-    "colProfile": "Profil de conversion",
-    "refreshing": "Mise à jour de la liste…",
     "emptyTitle": "Aucun appareil",
     "emptyDescription": "Ajoutez votre première liseuse pour envoyer des livres depuis votre bibliothèque.",
     "emptyUnavailable": "Impossible de charger vos appareils pour le moment. Réessayez un peu plus tard.",
-    "colDevice": "Appareil",
-    "colDelivery": "Mode d'arrivée",
-    "colCloud": "Compte cloud",
-    "colLastSync": "Dernière synchro",
-    "colAction": "Action",
     "linked": "Lié",
     "linkedDropbox": "Lié à Dropbox",
     "linkedDrive": "Lié à Google Drive",
@@ -396,7 +387,6 @@
       "C": "Code dans le navigateur",
       "D": "Transfert USB"
     },
-    "sectionDescription": "Ajoutez vos liseuses pour choisir comment les livres y arrivent.",
     "unavailableTitle": "Appareils indisponibles",
     "refresh": "Actualiser",
     "retry": "Réessayer",

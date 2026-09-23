@@ -38,6 +38,11 @@ const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
 const CLOUD_LINK_MESSAGE = "ferry-cloud-link";
 
+const fieldClass = "flex flex-col gap-1.5";
+const labelClass = "text-xs font-medium text-muted-foreground";
+const controlClass =
+  "h-auto min-h-10 w-full rounded-lg border-border bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
+
 export function CloudLinkDialog({
   device,
   onOpenChange,
@@ -193,14 +198,16 @@ export function CloudLinkDialog({
 
   return (
     <Dialog open={device !== null} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription className="break-words whitespace-normal">
+      <DialogContent className="gap-4 p-6 sm:max-w-[420px]">
+        <DialogHeader className="gap-2">
+          <DialogTitle className="font-heading text-xl font-medium tracking-tight">
+            {t("title")}
+          </DialogTitle>
+          <DialogDescription className="text-sm font-medium break-words whitespace-normal">
             {description}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {phase === "popup_blocked" ? (
             <Alert role="alert">
               <AlertTitle>{t("popupBlockedTitle")}</AlertTitle>
@@ -213,14 +220,16 @@ export function CloudLinkDialog({
               <AlertDescription>{t("uncertainDescription")}</AlertDescription>
             </Alert>
           ) : null}
-          <div className="space-y-2">
-            <Label htmlFor={providerId}>{t("provider")}</Label>
+          <div className={fieldClass}>
+            <Label htmlFor={providerId} className={labelClass}>
+              {t("provider")}
+            </Label>
             <Select
               value={provider}
               onValueChange={(value) => value && setProvider(value as Provider)}
               disabled={busy}
             >
-              <SelectTrigger id={providerId} className="w-full">
+              <SelectTrigger id={providerId} className={controlClass}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -243,7 +252,7 @@ export function CloudLinkDialog({
                 : t("openAuth")}
           </Button>
         </div>
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}

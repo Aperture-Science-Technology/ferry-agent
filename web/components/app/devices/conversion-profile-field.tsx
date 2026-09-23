@@ -38,8 +38,13 @@ export function ConversionProfileField({
   const selectValue = value ?? PROFILE_AUTO;
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={selectId}>{t("conversionProfile")}</Label>
+    <div className="flex flex-col gap-1.5">
+      <Label
+        htmlFor={selectId}
+        className="text-xs font-medium text-muted-foreground"
+      >
+        {t("conversionProfile")}
+      </Label>
       <Select
         value={selectValue}
         onValueChange={(next) => {
@@ -50,7 +55,7 @@ export function ConversionProfileField({
       >
         <SelectTrigger
           id={selectId}
-          className="w-full"
+          className="h-auto min-h-10 w-full rounded-lg border-border bg-ferry-surface-2 px-3 py-3 text-sm font-medium"
           aria-describedby={selectValue === PROFILE_AUTO ? hintId : undefined}
         >
           <SelectValue />
@@ -67,7 +72,7 @@ export function ConversionProfileField({
       {selectValue === PROFILE_AUTO ? (
         <p
           id={hintId}
-          className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground"
+          className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground"
         >
           {t("conversionProfileAutoHint")}
         </p>
