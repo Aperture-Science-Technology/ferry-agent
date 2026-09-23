@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -19,9 +19,16 @@ import { copyTextToClipboard } from "@/components/app/gateways/gateways-state";
 import { useApiClient } from "@/lib/api-client";
 import type { Gateway, GatewayCredentials } from "@/lib/types";
 
+/** Pen Form/Field lz3PJ — label 12 muted, input pad 12 radius-md surface-2. */
+const fieldClass = "flex flex-col gap-1.5";
+const labelClass = "text-xs font-medium text-muted-foreground";
+const controlClass =
+  "h-auto min-h-10 w-full rounded-lg border-border bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
+
 function CopyField({ label, value }: { label: string; value: string }) {
   const t = useTranslations("createAccess");
   const tCommon = useTranslations("common");
+  const fieldId = useId();
 
   async function handleCopy() {
     const ok = await copyTextToClipboard(value);
@@ -33,13 +40,16 @@ function CopyField({ label, value }: { label: string; value: string }) {
   }
 
   return (
-    <div className="min-w-0 space-y-2">
-      <Label className="break-words whitespace-normal">{label}</Label>
+    <div className={fieldClass}>
+      <Label htmlFor={fieldId} className={`${labelClass} break-words whitespace-normal`}>
+        {label}
+      </Label>
       <div className="flex min-w-0 gap-2">
         <Input
+          id={fieldId}
           readOnly
           value={value}
-          className="min-w-0 font-mono text-xs break-all"
+          className={`${controlClass} min-w-0 font-mono text-xs break-all`}
           onFocus={(event) => event.currentTarget.select()}
         />
         <Button
@@ -81,19 +91,21 @@ export function GatewayCredentialsPanel({
   }
 
   return (
-    <div className="min-w-0 space-y-4" data-credentials-panel>
+    <div className="flex min-w-0 flex-col gap-4" data-credentials-panel>
       <CopyField label={t("pairingToken")} value={credentials.pairing_token} />
       <CopyField label={t("gatewayKey")} value={credentials.gateway_key} />
-      <div className="min-w-0 space-y-2">
-        <Label className="break-words whitespace-normal">{t("bothSecrets")}</Label>
-        <p className="text-sm break-words whitespace-normal text-muted-foreground">
+      <div className={fieldClass}>
+        <Label className={`${labelClass} break-words whitespace-normal`}>
+          {t("bothSecrets")}
+        </Label>
+        <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
           {t("bothSecretsHint")}
         </p>
         <div className="flex min-w-0 gap-2">
           <pre
             tabIndex={0}
             data-both-secrets
-            className="max-h-28 min-w-0 flex-1 overflow-auto rounded-md border border-border/60 bg-muted/40 p-3 font-mono text-xs break-all whitespace-pre-wrap select-all"
+            className="max-h-28 min-w-0 flex-1 overflow-auto rounded-lg border border-border bg-ferry-surface-2 p-3 font-mono text-xs break-all whitespace-pre-wrap select-all"
           >
             {block}
           </pre>
@@ -108,7 +120,7 @@ export function GatewayCredentialsPanel({
             <Copy />
           </Button>
         </div>
-        <p className="text-xs break-words whitespace-normal text-muted-foreground">
+        <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
           {t("copyFallbackHint")}
         </p>
       </div>
@@ -146,6 +158,7 @@ export function CreateGatewayDialog({
   const t = useTranslations("createAccess");
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
+  const nameId = useId();
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [credentials, setCredentials] = useState<GatewayCredentials | null>(
@@ -193,20 +206,20 @@ export function CreateGatewayDialog({
     >
       <DialogContent
         showCloseButton={!submitting || credentials !== null}
-        className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-lg"
+        className="max-h-[min(90dvh,40rem)] gap-4 overflow-y-auto p-6 sm:max-w-[420px]"
       >
         {credentials ? (
           <>
-            <DialogHeader>
-              <DialogTitle className="break-words whitespace-normal">
+            <DialogHeader className="gap-2">
+              <DialogTitle className="font-heading text-xl font-medium tracking-tight break-words whitespace-normal">
                 {t("createdTitle")}
               </DialogTitle>
-              <DialogDescription className="break-words whitespace-normal">
+              <DialogDescription className="text-sm font-medium break-words whitespace-normal">
                 {t("createdDescription")}
               </DialogDescription>
             </DialogHeader>
             <GatewayCredentialsPanel credentials={credentials} />
-            <DialogFooter className="gap-2 sm:gap-2">
+            <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
               <Button
                 onClick={() => handleOpenChange(false)}
                 className="whitespace-normal"
@@ -217,28 +230,29 @@ export function CreateGatewayDialog({
           </>
         ) : (
           <>
-            <DialogHeader>
-              <DialogTitle className="break-words whitespace-normal">
+            <DialogHeader className="gap-2">
+              <DialogTitle className="font-heading text-xl font-medium tracking-tight break-words whitespace-normal">
                 {t("title")}
               </DialogTitle>
-              <DialogDescription className="break-words whitespace-normal">
+              <DialogDescription className="text-sm font-medium break-words whitespace-normal">
                 {t("description")}
               </DialogDescription>
             </DialogHeader>
-            <div className="min-w-0 space-y-2">
+            <div className={fieldClass}>
               <Label
-                htmlFor="create-access-name"
-                className="break-words whitespace-normal"
+                htmlFor={nameId}
+                className={`${labelClass} break-words whitespace-normal`}
               >
                 {t("name")}
               </Label>
               <Input
-                id="create-access-name"
+                id={nameId}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder={t("defaultName")}
                 disabled={submitting}
                 autoComplete="off"
+                className={controlClass}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
@@ -247,7 +261,7 @@ export function CreateGatewayDialog({
                 }}
               />
             </div>
-            <DialogFooter className="gap-2 sm:gap-2">
+            <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
               <Button
                 variant="outline"
                 onClick={() => handleOpenChange(false)}

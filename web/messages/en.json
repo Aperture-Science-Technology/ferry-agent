@@ -169,7 +169,7 @@
     },
     "access": {
       "title": "Gateway",
-      "description": "Optional local module — complements the cloud."
+      "description": "Optional local module — complements the cloud"
     },
     "sources": {
       "title": "Sources",
@@ -555,7 +555,12 @@
     "jobFailedMalicious": "The file was refused for security reasons.",
     "jobFailedTooLarge": "The file is too large.",
     "jobFailedBadFormat": "The file received isn't a recognized book.",
-    "jobFailedRevoked": "Your Gateway is no longer available."
+    "jobFailedRevoked": "Your Gateway is no longer available.",
+    "pageHint": "The Gateway handles downloads and sources on your machine. The library stays in the cloud.",
+    "pageHintMobile": "Torrents and machine sources. The library stays in the cloud.",
+    "torrentActionTitle": "Torrents via Gateway",
+    "torrentActionDescription": "Managed locally, linked to your online account.",
+    "torrentActionCta": "Open sources"
   },
   "createAccess": {
     "title": "Create a Gateway",

@@ -4,15 +4,18 @@ import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
 
 /**
- * Shell strip for non-library routes only.
- * Library owns Header/Page (Pen ePLzB) — no double title.
+ * Shell strip for routes that do not own Header/PageTitle.
+ * Library / Gateway render their own Pen title — no double heading.
  */
 export function DashboardHeader() {
   const pathname = usePathname();
   const tPages = useTranslations("pages");
   const tNav = useTranslations("nav");
 
-  if (pathname?.startsWith("/app/bibliotheque")) {
+  if (
+    pathname?.startsWith("/app/bibliotheque") ||
+    pathname?.startsWith("/app/gateways")
+  ) {
     return null;
   }
 
@@ -21,7 +24,6 @@ export function DashboardHeader() {
     title = tPages("deliveries.title");
   else if (pathname?.startsWith("/app/appareils"))
     title = tPages("devices.title");
-  else if (pathname?.startsWith("/app/gateways")) title = tPages("access.title");
   else if (pathname?.startsWith("/app/sources")) title = tPages("sources.title");
   else if (pathname?.startsWith("/app/reglages"))
     title = tPages("settings.title");
