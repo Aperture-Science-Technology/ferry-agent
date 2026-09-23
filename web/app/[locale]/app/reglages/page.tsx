@@ -24,7 +24,7 @@ export default async function ReglagesPage({
   ]);
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader title={t("title")} description={t("description")} />
       <SettingsForm
         initialEmail={settings?.email ?? ""}

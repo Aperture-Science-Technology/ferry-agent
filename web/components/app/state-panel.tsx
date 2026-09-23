@@ -1,9 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { PassageRule } from "@/components/passage-rule";
 import { cn } from "@/lib/utils";
 
 /**
  * Full-width status surface for loading / empty / soft-error states.
+ * Editorial paper plane — not a decorative SaaS card.
  */
 export function StatePanel({
   icon: Icon,
@@ -26,29 +28,30 @@ export function StatePanel({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-xl border border-dashed border-border/70 bg-card/40 px-6 py-14 text-center",
+        "relative px-5 py-12 text-center sm:px-8 sm:py-14",
+        "border border-border/80 bg-muted/25",
+        "rounded-lg",
         className
       )}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-primary/40"
-      />
       <div className="relative mx-auto flex max-w-md flex-col items-center gap-3">
+        <PassageRule tone="accent" className="mb-1 w-12" />
         {visual ? <div className="mb-1">{visual}</div> : null}
         {!visual && Icon ? (
-          <div className="flex size-12 items-center justify-center rounded-xl bg-muted/60 ring-1 ring-border/50">
-            <Icon className="size-5 text-chart-1" />
-          </div>
+          <Icon className="size-7 text-muted-foreground" aria-hidden />
         ) : null}
         {title ? (
-          <p className="font-heading text-base font-medium tracking-tight">{title}</p>
+          <p className="font-heading text-lg font-medium tracking-tight text-balance">
+            {title}
+          </p>
         ) : null}
         {description ? (
-          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <p className="min-w-0 text-sm leading-relaxed whitespace-normal text-muted-foreground">
+            {description}
+          </p>
         ) : null}
         {children}
-        {action ? <div className="mt-1">{action}</div> : null}
+        {action ? <div className="mt-2 flex min-w-0 flex-wrap justify-center gap-2">{action}</div> : null}
       </div>
     </div>
   );

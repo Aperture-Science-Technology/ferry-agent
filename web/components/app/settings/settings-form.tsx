@@ -7,7 +7,6 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -100,6 +99,13 @@ export function SettingsForm({
   }
 
   const dirty = settingsAreDirty(kindleEmail, defaultFormat, saved);
+  const settingsState = settingsUnavailable
+    ? "unavailable"
+    : saveError
+      ? "error"
+      : dirty
+        ? "dirty"
+        : "ready";
 
   async function save() {
     setSaving(true);
@@ -134,12 +140,19 @@ export function SettingsForm({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-10">
+    <div
+      className="min-w-0 max-w-2xl space-y-10 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      data-settings-state={settingsState}
+    >
       {settingsUnavailable ? (
         <Alert>
           <Settings2 aria-hidden />
-          <AlertTitle>{t("unavailableTitle")}</AlertTitle>
-          <AlertDescription>{t("unavailable")}</AlertDescription>
+          <AlertTitle className="break-words whitespace-normal">
+            {t("unavailableTitle")}
+          </AlertTitle>
+          <AlertDescription className="break-words whitespace-normal">
+            {t("unavailable")}
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -148,98 +161,126 @@ export function SettingsForm({
           title={t("deliveryPreferencesTitle")}
           description={t("deliveryPreferencesDescription")}
         />
-        <Card className="border-border/60 bg-card/60">
-          <CardContent className="space-y-5 pt-6">
-            <div className="space-y-2">
-              <Label htmlFor="settings-account-email">{t("email")}</Label>
+        <div className="min-w-0 space-y-5">
+          <div className="min-w-0 space-y-2">
+            <Label
+              htmlFor="settings-account-email"
+              className="break-words whitespace-normal"
+            >
+              {t("email")}
+            </Label>
+            <Input
+              id="settings-account-email"
+              value={initialEmail}
+              readOnly
+              disabled
+              className="min-w-0"
+            />
+            <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+              {t("emailHint")}
+            </p>
+          </div>
+
+          <div className="min-w-0 space-y-2">
+            <Label
+              htmlFor="settings-kindle-email"
+              className="break-words whitespace-normal"
+            >
+              {t("kindleEmail")}
+            </Label>
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               <Input
-                id="settings-account-email"
-                value={initialEmail}
-                readOnly
-                disabled
-              />
-              <p className="text-xs text-muted-foreground">{t("emailHint")}</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="settings-kindle-email">{t("kindleEmail")}</Label>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  id="settings-kindle-email"
-                  type="email"
-                  value={kindleEmail}
-                  onChange={(event) => setKindleEmail(event.target.value)}
-                  placeholder={t("kindleEmailPlaceholder")}
-                  disabled={settingsUnavailable}
-                  className="min-w-0 flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={settingsUnavailable || !kindleEmail}
-                  onClick={() => setKindleEmail("")}
-                  className="shrink-0"
-                >
-                  <Eraser aria-hidden />
-                  {t("clearKindleEmail")}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">{t("kindleEmailHint")}</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="settings-default-format">{t("defaultFormat")}</Label>
-              <Select
-                value={defaultFormat}
-                onValueChange={(value) => setDefaultFormat(value ?? "epub")}
+                id="settings-kindle-email"
+                type="email"
+                value={kindleEmail}
+                onChange={(event) => setKindleEmail(event.target.value)}
+                placeholder={t("kindleEmailPlaceholder")}
                 disabled={settingsUnavailable}
-              >
-                <SelectTrigger
-                  id="settings-default-format"
-                  className="w-full uppercase"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FORMATS.map((format) => (
-                    <SelectItem
-                      key={format}
-                      value={format}
-                      className="uppercase"
-                    >
-                      {format}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {t("defaultFormatHint")}
-              </p>
-            </div>
-
-            {saveError ? (
-              <Alert variant="destructive" role="alert">
-                <Settings2 aria-hidden />
-                <AlertTitle>{t("saveErrorTitle")}</AlertTitle>
-                <AlertDescription>{saveError}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-muted-foreground" aria-live="polite">
-                {dirty ? t("unsavedChanges") : t("allSaved")}
-              </p>
+                className="min-w-0 flex-1"
+                autoComplete="email"
+              />
               <Button
                 type="button"
-                onClick={() => void save()}
-                disabled={saving || settingsUnavailable || !dirty}
+                variant="outline"
+                disabled={settingsUnavailable || !kindleEmail}
+                onClick={() => setKindleEmail("")}
+                className="w-full shrink-0 whitespace-normal sm:w-auto"
               >
-                {saving ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                {tCommon("save")}
+                <Eraser aria-hidden />
+                {t("clearKindleEmail")}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+              {t("kindleEmailHint")}
+            </p>
+          </div>
+
+          <div className="min-w-0 space-y-2">
+            <Label
+              htmlFor="settings-default-format"
+              className="break-words whitespace-normal"
+            >
+              {t("defaultFormat")}
+            </Label>
+            <Select
+              value={defaultFormat}
+              onValueChange={(value) => setDefaultFormat(value ?? "epub")}
+              disabled={settingsUnavailable}
+            >
+              <SelectTrigger
+                id="settings-default-format"
+                className="w-full min-w-0 uppercase"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {FORMATS.map((format) => (
+                  <SelectItem
+                    key={format}
+                    value={format}
+                    className="uppercase"
+                  >
+                    {format}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+              {t("defaultFormatHint")}
+            </p>
+          </div>
+
+          {saveError ? (
+            <Alert variant="destructive" role="alert">
+              <Settings2 aria-hidden />
+              <AlertTitle className="break-words whitespace-normal">
+                {t("saveErrorTitle")}
+              </AlertTitle>
+              <AlertDescription className="break-words whitespace-normal">
+                {saveError}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <div className="flex min-w-0 flex-col gap-2 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p
+              className="min-w-0 text-xs leading-relaxed break-words whitespace-normal text-muted-foreground"
+              aria-live="polite"
+              data-settings-dirty={dirty ? "true" : "false"}
+            >
+              {dirty ? t("unsavedChanges") : t("allSaved")}
+            </p>
+            <Button
+              type="button"
+              onClick={() => void save()}
+              disabled={saving || settingsUnavailable || !dirty}
+              className="w-full shrink-0 whitespace-normal sm:w-auto"
+            >
+              {saving ? <Loader2 className="animate-spin" aria-hidden /> : null}
+              {tCommon("save")}
+            </Button>
+          </div>
+        </div>
       </Reveal>
 
       <Reveal>
@@ -247,20 +288,21 @@ export function SettingsForm({
           title={t("sourcesTitle")}
           description={t("sourcesDescription")}
         />
-        <Card size="sm" className="border-border/60 bg-card/60">
-          <CardContent className="space-y-3 pt-4">
-            <p className="text-sm text-muted-foreground">{t("sourcesSummary")}</p>
-            <Button
-              variant="outline"
-              render={
-                <Link href="/app/sources">
-                  {t("sourcesCta")}
-                  <ArrowRight aria-hidden />
-                </Link>
-              }
-            />
-          </CardContent>
-        </Card>
+        <div className="min-w-0 space-y-3 border-y border-border/70 py-4">
+          <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+            {t("sourcesSummary")}
+          </p>
+          <Button
+            variant="outline"
+            className="w-full whitespace-normal sm:w-auto"
+            render={
+              <Link href="/app/sources">
+                {t("sourcesCta")}
+                <ArrowRight aria-hidden />
+              </Link>
+            }
+          />
+        </div>
       </Reveal>
 
       <Reveal>
@@ -279,19 +321,18 @@ export function SettingsForm({
           title={t("devicesTitle")}
           description={t("devicesDescription")}
         />
-        <Card size="sm" className="border-border/60 bg-card/60">
-          <CardContent className="pt-4">
-            <Button
-              variant="outline"
-              render={
-                <Link href="/app/appareils">
-                  {t("devicesCta")}
-                  <ArrowRight aria-hidden />
-                </Link>
-              }
-            />
-          </CardContent>
-        </Card>
+        <div className="min-w-0 border-y border-border/70 py-4">
+          <Button
+            variant="outline"
+            className="w-full whitespace-normal sm:w-auto"
+            render={
+              <Link href="/app/appareils">
+                {t("devicesCta")}
+                <ArrowRight aria-hidden />
+              </Link>
+            }
+          />
+        </div>
       </Reveal>
     </div>
   );

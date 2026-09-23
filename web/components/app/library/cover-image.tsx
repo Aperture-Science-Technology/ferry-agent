@@ -4,7 +4,38 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useAuth } from "@clerk/nextjs";
 import { BookOpen } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+
+function CoverFallback({
+  label,
+  className,
+  iconClassName,
+  decorative,
+}: {
+  label: string;
+  className?: string;
+  iconClassName?: string;
+  /** When true, parent already exposes an accessible name (e.g. book title). */
+  decorative?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex h-full w-full flex-col items-center justify-center gap-1.5 bg-muted px-2 text-center",
+        className
+      )}
+      {...(decorative
+        ? { "aria-hidden": true }
+        : { role: "img", "aria-label": label })}
+    >
+      <BookOpen className={cn("size-8 text-primary/70", iconClassName)} />
+      <span className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        {label}
+      </span>
+    </div>
+  );
+}
 
 /**
  * Couverture d'un item en bibliotheque via le proxy authentifie
@@ -23,15 +54,19 @@ export function LibraryCoverImage({
   className?: string;
   iconClassName?: string;
 }) {
+  const t = useTranslations("library");
   const { getToken } = useAuth();
   const coverKey = hasCover ? itemId : null;
   const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(coverKey);
+  const fallbackLabel = t("coverFallback");
 
   // Reset when the cover identity changes (React: adjust state during render).
   if (activeKey !== coverKey) {
     setActiveKey(coverKey);
     setSrc(null);
+    setFailed(false);
   }
 
   useEffect(() => {
@@ -46,13 +81,20 @@ export function LibraryCoverImage({
         const res = await fetch(`/api/v1/covers/${coverKey}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-        if (!res.ok || cancelled) return;
+        if (!res.ok || cancelled) {
+          if (!cancelled) setFailed(true);
+          return;
+        }
         const blob = await res.blob();
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         setSrc(objectUrl);
+        setFailed(false);
       } catch {
-        if (!cancelled) setSrc(null);
+        if (!cancelled) {
+          setSrc(null);
+          setFailed(true);
+        }
       }
     })();
 
@@ -62,16 +104,14 @@ export function LibraryCoverImage({
     };
   }, [coverKey, getToken]);
 
-  if (!src) {
+  if (!src || failed) {
     return (
-      <div
-        className={cn(
-          "flex h-full w-full items-center justify-center bg-gradient-to-br from-muted via-muted to-accent/40",
-          className
-        )}
-      >
-        <BookOpen className={cn("size-10 text-chart-1/70", iconClassName)} />
-      </div>
+      <CoverFallback
+        label={fallbackLabel}
+        className={className}
+        iconClassName={iconClassName}
+        decorative={Boolean(alt)}
+      />
     );
   }
 
@@ -83,6 +123,7 @@ export function LibraryCoverImage({
       unoptimized
       className={cn("object-cover", className)}
       sizes="(max-width: 640px) 100vw, 200px"
+      onError={() => setFailed(true)}
     />
   );
 }
@@ -99,11 +140,17 @@ export function SearchCoverImage({
   className?: string;
   iconClassName?: string;
 }) {
-  if (!coverUrl) {
+  const t = useTranslations("library");
+  const [failed, setFailed] = useState(false);
+  const fallbackLabel = t("coverFallback");
+
+  if (!coverUrl || failed) {
     return (
-      <div className={cn("flex h-full w-full items-center justify-center", className)}>
-        <BookOpen className={cn("size-4 text-chart-1/70", iconClassName)} />
-      </div>
+      <CoverFallback
+        label={fallbackLabel}
+        className={className}
+        iconClassName={iconClassName ?? "size-4"}
+      />
     );
   }
 
@@ -115,6 +162,7 @@ export function SearchCoverImage({
       height={40}
       unoptimized
       className={cn("h-full w-full object-cover", className)}
+      onError={() => setFailed(true)}
     />
   );
 }

@@ -136,10 +136,14 @@ jobs:
         run: ruff format --check .
 
   # W-34 — OpenAPI→TS freshness + i18n key symmetry (fr/en).
-  # Node 22+: test:product-truth uses --experimental-strip-types (unavailable on 20).
+  # Node 22+: web `test:*` scripts use --experimental-strip-types (unavailable on 20).
+  # Dashboard lot suites (library → settings + UI harness) run here via package scripts.
   types-freshness:
     name: Types freshness + i18n
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -150,6 +154,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install Python dependencies
+        working-directory: .
         run: pip install -r requirements.txt
 
       - name: Setup Node.js
@@ -160,23 +165,41 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install web dependencies
-        working-directory: web
         run: npm ci
 
       - name: Regenerate API types
-        working-directory: web
         run: npm run gen:types
 
       - name: Fail if generated types drifted
+        working-directory: .
         run: git diff --exit-code -- openapi.json web/lib/api-types.generated.ts
 
       - name: Check i18n key symmetry (fr/en)
-        working-directory: web
         run: npm run check:i18n
 
       - name: Product truth + gateway download URL contract
-        working-directory: web
         run: npm run test:product-truth
+
+      - name: Library state suites
+        run: npm run test:library
+
+      - name: Deliveries + devices state suites
+        run: npm run test:delivery-devices
+
+      - name: Gateway state suites
+        run: npm run test:gateways
+
+      - name: Sources + settings state suites
+        run: npm run test:sources-settings
+
+      - name: Final / gateway job view suites
+        run: npm run test:final
+
+      - name: UI render harness
+        run: npm run test:ui-harness
+
+      - name: Web ESLint
+        run: npm run lint
 
   secrets-scan:
     name: Secrets scan (gitleaks)

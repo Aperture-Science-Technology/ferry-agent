@@ -98,7 +98,9 @@ export function NewDeviceDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription>{t("description")}</DialogDescription>
+          <DialogDescription className="break-words whitespace-normal">
+            {t("description")}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -109,6 +111,7 @@ export function NewDeviceDialog({
               onChange={(event) => setName(event.target.value)}
               placeholder={t("namePlaceholder")}
               disabled={submitting}
+              className="min-w-0"
             />
           </div>
           <div className="space-y-2">
@@ -120,7 +123,7 @@ export function NewDeviceDialog({
               }
               disabled={submitting}
             >
-              <SelectTrigger id={brandId} className="w-full">
+              <SelectTrigger id={brandId} className="w-full min-w-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -166,15 +169,20 @@ export function NewDeviceDialog({
             disabled={submitting}
           />
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-2">
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
             disabled={submitting}
+            className="whitespace-normal"
           >
             {tCommon("cancel")}
           </Button>
-          <Button onClick={() => void submit()} disabled={submitting}>
+          <Button
+            onClick={() => void submit()}
+            disabled={submitting}
+            className="whitespace-normal"
+          >
             {submitting ? <Loader2 className="animate-spin" /> : null}
             {tCommon("create")}
           </Button>

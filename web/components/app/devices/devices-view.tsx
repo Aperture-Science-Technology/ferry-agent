@@ -13,15 +13,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -47,10 +40,12 @@ import { BrandBadge } from "@/components/app/devices/brand-badge";
 import { conversionProfileLabel } from "@/components/app/devices/conversion-profile-field";
 import {
   applyDeviceFetchResult,
+  cloudLinkPresentation,
   deviceDisplayName,
 } from "@/components/app/devices/devices-state";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import type { Device } from "@/lib/types";
 
 const CLOUD_LINK_MESSAGE = "ferry-cloud-link";
@@ -71,11 +66,10 @@ function DeviceIdentity({
 }) {
   return (
     <div
-      className={
-        muted
-          ? "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-muted-foreground"
-          : "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-medium"
-      }
+      className={cn(
+        "flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm",
+        muted ? "text-muted-foreground" : "font-medium"
+      )}
     >
       <BrandBadge brand={device.brand} className="min-w-0 max-w-full" />
       {device.model ? (
@@ -100,8 +94,13 @@ function CloudStatus({
   linked: string;
   notLinked: string;
 }) {
-  if (!device.cloud_linked) {
-    return <span className="text-muted-foreground">{notLinked}</span>;
+  const presentation = cloudLinkPresentation(device);
+  if (presentation !== "linked") {
+    return (
+      <span className="text-sm break-words whitespace-normal text-muted-foreground">
+        {notLinked}
+      </span>
+    );
   }
   const label =
     device.cloud_provider === "dropbox"
@@ -110,10 +109,41 @@ function CloudStatus({
         ? linkedDrive
         : linked;
   return (
-    <Badge variant="outline" className="max-w-full gap-1">
+    <Badge
+      variant="outline"
+      className="max-w-full min-w-0 gap-1.5 overflow-hidden whitespace-normal"
+    >
+      <span
+        aria-hidden
+        className="size-1.5 shrink-0 rounded-full bg-chart-2"
+      />
       <Check className="size-3 shrink-0" />
-      <span className="truncate">{label}</span>
+      <span className="min-w-0 break-words">{label}</span>
     </Badge>
+  );
+}
+
+function DeviceMetaLine({
+  delivery,
+  profile,
+  sync,
+}: {
+  delivery: string;
+  profile: string;
+  sync: string;
+}) {
+  return (
+    <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+      <span>{delivery}</span>
+      <span className="mx-1.5 text-border" aria-hidden>
+        ·
+      </span>
+      <span>{profile}</span>
+      <span className="mx-1.5 text-border" aria-hidden>
+        ·
+      </span>
+      <span>{sync}</span>
+    </p>
   );
 }
 
@@ -126,6 +156,7 @@ function DeviceActions({
   linkLabel,
   deleteLabel,
   disabled,
+  align = "end",
 }: {
   device: Device;
   onEdit: () => void;
@@ -135,15 +166,33 @@ function DeviceActions({
   linkLabel: string;
   deleteLabel: string;
   disabled?: boolean;
+  align?: "start" | "end";
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button size="sm" variant="outline" onClick={onEdit} disabled={disabled}>
+    <div
+      className={cn(
+        "flex min-w-0 flex-wrap items-center gap-2",
+        align === "start" ? "justify-start" : "justify-end"
+      )}
+    >
+      <Button
+        size="sm"
+        variant="outline"
+        className="min-w-0 whitespace-normal"
+        onClick={onEdit}
+        disabled={disabled}
+      >
         <Pencil />
         {editLabel}
       </Button>
       {device.delivery_tier === "B" ? (
-        <Button size="sm" variant="outline" onClick={onLink} disabled={disabled}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="min-w-0 whitespace-normal"
+          onClick={onLink}
+          disabled={disabled}
+        >
           <Link2 />
           {linkLabel}
         </Button>
@@ -151,6 +200,7 @@ function DeviceActions({
       <Button
         size="sm"
         variant="destructive"
+        className="min-w-0 whitespace-normal"
         onClick={onDelete}
         disabled={disabled}
       >
@@ -191,6 +241,11 @@ export function DevicesView({
   const refreshingRef = useRef(false);
   const cloudLinkHandled = useRef(false);
 
+  const oauthPresentation = cloudLinkPresentation(
+    { cloud_linked: false },
+    cloudLinkStatus ?? null
+  );
+
   const refresh = useCallback(
     async (opts?: { silent?: boolean }) => {
       if (refreshingRef.current) return;
@@ -202,14 +257,15 @@ export function DevicesView({
         setUnavailable(false);
         setRefreshError(false);
       } catch {
-        let keptEmpty = true;
         setDevices((prev) => {
           const outcome = applyDeviceFetchResult(prev, null);
-          keptEmpty = outcome.items.length === 0;
+          if (outcome.items.length === 0) {
+            setUnavailable(true);
+          } else {
+            setRefreshError(true);
+          }
           return outcome.items;
         });
-        if (keptEmpty) setUnavailable(true);
-        else setRefreshError(true);
       } finally {
         refreshingRef.current = false;
         setRefreshing(false);
@@ -276,27 +332,50 @@ export function DevicesView({
     return tNewDevice(`brands.${brand}`);
   }
 
+  function syncLabel(device: Device) {
+    return device.last_synced_at
+      ? formatAppDate(device.last_synced_at, locale)
+      : tCommon("never");
+  }
+
   const createAction = (
-    <Button onClick={() => setCreateOpen(true)}>
+    <Button
+      onClick={() => setCreateOpen(true)}
+      className="min-w-0 whitespace-normal"
+    >
       <Plus />
       {t("newDevice")}
     </Button>
   );
 
   const headerActions = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
       <Button
         variant="outline"
         size="sm"
         onClick={() => void refresh()}
         disabled={refreshing}
         aria-busy={refreshing}
+        className="whitespace-normal"
       >
         {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
         {t("refresh")}
       </Button>
       {createAction}
     </div>
+  );
+
+  const retryButton = (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => void refresh()}
+      disabled={refreshing}
+      className="w-fit shrink-0 whitespace-normal"
+    >
+      {refreshing ? <Loader2 className="animate-spin" /> : null}
+      {t("retry")}
+    </Button>
   );
 
   const deleteName = deleteTarget
@@ -316,41 +395,49 @@ export function DevicesView({
           action={headerActions}
         />
 
+        {oauthPresentation === "error" ? (
+          <div
+            role="status"
+            data-cloud-link="error"
+            className="mb-4 flex flex-col gap-3 border border-border/80 bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0 space-y-1">
+              <p className="font-heading text-sm font-medium tracking-tight">
+                {t("cloudLinkFailedTitle")}
+              </p>
+              <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+                {t("cloudLinkFailedDescription")}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         {refreshError && devices.length > 0 ? (
-          <Alert className="mb-4" role="status">
-            <AlertTitle>{t("refreshFailedTitle")}</AlertTitle>
-            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span>{t("refreshFailedDescription")}</span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void refresh()}
-                disabled={refreshing}
-              >
-                {refreshing ? <Loader2 className="animate-spin" /> : null}
-                {t("retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <div
+            role="status"
+            className="mb-4 flex flex-col gap-3 border border-border/80 bg-accent/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0 space-y-1">
+              <p className="font-heading text-sm font-medium tracking-tight">
+                {t("refreshFailedTitle")}
+              </p>
+              <p className="text-sm leading-relaxed break-words whitespace-normal text-muted-foreground">
+                {t("refreshFailedDescription")}
+              </p>
+            </div>
+            {retryButton}
+          </div>
         ) : null}
 
         {unavailable && devices.length === 0 ? (
-          <Alert role="alert">
-            <Tablet />
-            <AlertTitle>{t("unavailableTitle")}</AlertTitle>
-            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span>{t("emptyUnavailable")}</span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void refresh()}
-                disabled={refreshing}
-              >
-                {refreshing ? <Loader2 className="animate-spin" /> : null}
-                {t("retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <div role="alert">
+            <EmptyState
+              icon={Tablet}
+              title={t("unavailableTitle")}
+              description={t("emptyUnavailable")}
+              action={retryButton}
+            />
+          </div>
         ) : devices.length === 0 ? (
           <EmptyState
             icon={Tablet}
@@ -360,58 +447,56 @@ export function DevicesView({
           />
         ) : (
           <div aria-busy={refreshing}>
-            <RevealGroup className="grid gap-3 lg:hidden">
-              {devices.map((device) => (
-                <RevealItem key={device.id}>
-                  <Card size="sm" className="bg-card/60">
-                    <CardContent className="space-y-3">
-                      <div className="min-w-0 space-y-1">
-                        {device.name ? (
-                          <>
-                            <CardTitle className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words">
-                              {device.name}
-                            </CardTitle>
-                            <CardDescription className="min-w-0">
-                              <DeviceIdentity device={device} />
-                            </CardDescription>
-                          </>
-                        ) : (
-                          <CardTitle className="min-w-0 text-sm font-medium">
-                            <DeviceIdentity device={device} muted={false} />
-                          </CardTitle>
-                        )}
-                      </div>
-
-                      <p className="line-clamp-2 text-xs text-muted-foreground break-words">
-                        {conversionProfileLabel(
-                          device.conversion_profile,
-                          tEditDevice
-                        )}
-                      </p>
-
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant="secondary" className="max-w-full">
-                          <span className="truncate">
-                            {t(`tiers.${device.delivery_tier}`)}
-                          </span>
-                        </Badge>
-                        <CloudStatus
-                          device={device}
-                          linkedDropbox={t("linkedDropbox")}
-                          linkedDrive={t("linkedDrive")}
-                          linked={t("linked")}
-                          notLinked={t("notLinked")}
+            <RevealGroup className="grid gap-0 divide-y divide-border/70 lg:hidden">
+              {devices.map((device) => {
+                const delivery = t(`tiers.${device.delivery_tier}`);
+                const profile = conversionProfileLabel(
+                  device.conversion_profile,
+                  tEditDevice
+                );
+                return (
+                  <RevealItem key={device.id}>
+                    <article className="flex min-w-0 flex-col gap-3 py-4 first:pt-0 last:pb-0">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <BrandBadge
+                          brand={device.brand}
+                          showLabel={false}
+                          size="lg"
+                          className="shrink-0"
                         />
+                        <div className="min-w-0 flex-1 space-y-1">
+                          {device.name ? (
+                            <>
+                              <h3 className="font-heading text-[15px] leading-snug font-medium tracking-tight break-words whitespace-normal">
+                                {device.name}
+                              </h3>
+                              <DeviceIdentity device={device} />
+                            </>
+                          ) : (
+                            <h3 className="min-w-0 text-[15px] leading-snug font-medium">
+                              <DeviceIdentity device={device} muted={false} />
+                            </h3>
+                          )}
+                          <DeviceMetaLine
+                            delivery={delivery}
+                            profile={profile}
+                            sync={syncLabel(device)}
+                          />
+                        </div>
+                        <div className="max-w-[40%] min-w-0 shrink">
+                          <CloudStatus
+                            device={device}
+                            linkedDropbox={t("linkedDropbox")}
+                            linkedDrive={t("linkedDrive")}
+                            linked={t("linked")}
+                            notLinked={t("notLinked")}
+                          />
+                        </div>
                       </div>
-
-                      <p className="text-xs text-muted-foreground">
-                        {device.last_synced_at
-                          ? formatAppDate(device.last_synced_at, locale)
-                          : tCommon("never")}
-                      </p>
 
                       <DeviceActions
                         device={device}
+                        align="start"
                         onEdit={() => setEditTarget(device)}
                         onLink={() => setLinkTarget(device)}
                         onDelete={() => setDeleteTarget(device)}
@@ -420,13 +505,13 @@ export function DevicesView({
                         deleteLabel={t("delete")}
                         disabled={deleting}
                       />
-                    </CardContent>
-                  </Card>
-                </RevealItem>
-              ))}
+                    </article>
+                  </RevealItem>
+                );
+              })}
             </RevealGroup>
 
-            <Reveal className="hidden overflow-hidden rounded-xl border border-border/60 lg:block">
+            <Reveal className="hidden overflow-x-auto border-y border-border/70 lg:block">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -440,36 +525,42 @@ export function DevicesView({
                 </TableHeader>
                 <TableBody>
                   {devices.map((device) => (
-                    <TableRow key={device.id}>
-                      <TableCell className="max-w-56 whitespace-normal font-medium">
-                        <div className="min-w-0 space-y-1">
-                          {device.name ? (
-                            <span className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words whitespace-normal">
-                              {device.name}
-                            </span>
-                          ) : null}
-                          <DeviceIdentity
-                            device={device}
-                            muted={Boolean(device.name)}
+                    <TableRow key={device.id} className="hover:bg-muted/20">
+                      <TableCell className="max-w-56 align-top font-medium whitespace-normal">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <BrandBadge
+                            brand={device.brand}
+                            showLabel={false}
+                            size="lg"
+                            className="shrink-0"
                           />
+                          <div className="min-w-0 space-y-1">
+                            {device.name ? (
+                              <span className="font-heading line-clamp-2 text-sm font-medium tracking-tight break-words whitespace-normal">
+                                {device.name}
+                              </span>
+                            ) : null}
+                            <DeviceIdentity
+                              device={device}
+                              muted={Boolean(device.name)}
+                            />
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="max-w-48">
-                        <span className="line-clamp-2 text-sm text-muted-foreground break-words">
+                      <TableCell className="max-w-48 align-top whitespace-normal">
+                        <span className="line-clamp-2 text-sm break-words whitespace-normal text-muted-foreground">
                           {conversionProfileLabel(
                             device.conversion_profile,
                             tEditDevice
                           )}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="max-w-48">
-                          <span className="truncate">
-                            {t(`tiers.${device.delivery_tier}`)}
-                          </span>
-                        </Badge>
+                      <TableCell className="max-w-48 align-top whitespace-normal">
+                        <span className="line-clamp-2 text-sm break-words whitespace-normal text-muted-foreground">
+                          {t(`tiers.${device.delivery_tier}`)}
+                        </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-top whitespace-normal">
                         <CloudStatus
                           device={device}
                           linkedDropbox={t("linkedDropbox")}
@@ -478,12 +569,10 @@ export function DevicesView({
                           notLinked={t("notLinked")}
                         />
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {device.last_synced_at
-                          ? formatAppDate(device.last_synced_at, locale)
-                          : tCommon("never")}
+                      <TableCell className="align-top text-sm whitespace-normal text-muted-foreground">
+                        <span className="break-words">{syncLabel(device)}</span>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="align-top whitespace-normal text-right">
                         <DeviceActions
                           device={device}
                           onEdit={() => setEditTarget(device)}
@@ -536,16 +625,17 @@ export function DevicesView({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("deleteConfirmTitle")}</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="break-words whitespace-normal">
               {t("deleteConfirmDescriptionNamed", { name: deleteName })}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button
               variant="outline"
               onClick={() => setDeleteTarget(null)}
               disabled={deleting}
               autoFocus
+              className="whitespace-normal"
             >
               {tCommon("cancel")}
             </Button>
@@ -553,6 +643,7 @@ export function DevicesView({
               variant="destructive"
               onClick={() => void confirmDelete()}
               disabled={deleting}
+              className="whitespace-normal"
             >
               {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
               {t("delete")}

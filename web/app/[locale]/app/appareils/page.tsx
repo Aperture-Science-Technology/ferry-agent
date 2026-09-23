@@ -20,7 +20,7 @@ export default async function AppareilsPage({
     cloudLinkRaw === "ok" || cloudLinkRaw === "error" ? cloudLinkRaw : undefined;
 
   return (
-    <div>
+    <div className="space-y-2">
       <PageHeader title={t("title")} description={t("description")} />
       <DevicesView
         initialDevices={devices ?? []}

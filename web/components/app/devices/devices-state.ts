@@ -39,10 +39,17 @@ export function applyDeviceFetchResult<T>(
   return { ok: true, items: result };
 }
 
-export type CloudLinkPresentation = "linked" | "not_linked";
+export type CloudLinkPresentation = "linked" | "not_linked" | "error";
 
+/**
+ * Cloud account presentation for a device row or an OAuth callback.
+ * An OAuth `error` result must never present as linked/success — even if the
+ * device was already cloud-linked from a previous successful link.
+ */
 export function cloudLinkPresentation(
-  device: Pick<DeviceListItem, "cloud_linked">
+  device: Pick<DeviceListItem, "cloud_linked">,
+  oauthResult?: "ok" | "error" | null
 ): CloudLinkPresentation {
+  if (oauthResult === "error") return "error";
   return device.cloud_linked ? "linked" : "not_linked";
 }
