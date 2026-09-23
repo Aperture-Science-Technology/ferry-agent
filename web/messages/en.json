@@ -397,7 +397,9 @@
     "retry": "Try again",
     "refreshFailedTitle": "Refresh incomplete",
     "refreshFailedDescription": "The list couldn't be updated. Your known devices stay visible.",
-    "deleteConfirmDescriptionNamed": "“{name}” will be removed. Books will no longer be sent to this device."
+    "deleteConfirmDescriptionNamed": "“{name}” will be removed. Books will no longer be sent to this device.",
+    "cloudLinkFailedTitle": "Cloud link interrupted",
+    "cloudLinkFailedDescription": "The cloud account could not be linked. No new connection was saved."
   },
   "editDevice": {
     "title": "Edit device",

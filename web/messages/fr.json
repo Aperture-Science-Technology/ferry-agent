@@ -397,7 +397,9 @@
     "retry": "Réessayer",
     "refreshFailedTitle": "Actualisation incomplète",
     "refreshFailedDescription": "La liste affichée n’a pas pu être mise à jour. Vos appareils connus restent visibles.",
-    "deleteConfirmDescriptionNamed": "« {name} » sera retiré. Les livres ne seront plus envoyés vers cet appareil."
+    "deleteConfirmDescriptionNamed": "« {name} » sera retiré. Les livres ne seront plus envoyés vers cet appareil.",
+    "cloudLinkFailedTitle": "Liaison cloud interrompue",
+    "cloudLinkFailedDescription": "Le compte cloud n’a pas pu être lié. Aucune nouvelle connexion n’a été enregistrée."
   },
   "editDevice": {
     "title": "Modifier l'appareil",

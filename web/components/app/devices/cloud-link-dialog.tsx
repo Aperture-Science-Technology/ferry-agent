@@ -196,7 +196,9 @@ export function CloudLinkDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription className="break-words whitespace-normal">
+            {description}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {phase === "popup_blocked" ? (
@@ -231,7 +233,7 @@ export function CloudLinkDialog({
             variant="outline"
             onClick={() => void startLink()}
             disabled={busy}
-            className="w-full"
+            className="w-full whitespace-normal"
           >
             {busy ? <Loader2 className="animate-spin" /> : <ExternalLink />}
             {phase === "waiting"
@@ -241,11 +243,12 @@ export function CloudLinkDialog({
                 : t("openAuth")}
           </Button>
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-2">
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
             disabled={phase === "opening"}
+            className="whitespace-normal"
           >
             {tCommon("cancel")}
           </Button>
