@@ -1,9 +1,10 @@
 "use client";
 
 import { UserButton, useUser } from "@clerk/nextjs";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Cable,
+  ChevronsUpDown,
   Database,
   Library,
   Settings,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { BrandMark } from "@/components/brand-logo";
 import {
   Sidebar,
   SidebarContent,
@@ -44,7 +46,7 @@ type NavItem = {
   icon: typeof Library;
 };
 
-/** Principal — Pen Shell/Sidebar DQYhS. */
+/** Principal — Pen Shell/Sidebar. */
 const PRIMARY: NavItem[] = [
   { href: "/app/bibliotheque", labelKey: "library", icon: Library },
   { href: "/app/livraisons", labelKey: "deliveries", icon: Truck },
@@ -76,8 +78,11 @@ function NavLink({ item }: { item: NavItem }) {
         tooltip={label}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "h-auto min-w-0 gap-2.5 rounded-sm px-3 py-2.5 text-sm font-medium text-sidebar-foreground",
-          "data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-foreground",
+          "h-7 w-full min-w-0 gap-2 rounded-sm p-2 text-xs text-sidebar-foreground",
+          "hover:bg-accent",
+          active
+            ? "bg-sidebar-accent font-medium data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-foreground"
+            : "bg-transparent font-normal data-active:bg-transparent",
           "data-active:before:hidden"
         )}
         render={
@@ -100,7 +105,7 @@ function NavCluster({
 }) {
   return (
     <SidebarGroup className="gap-1 p-0">
-      <SidebarGroupLabel className="h-auto px-3 py-0 text-[11px] font-medium tracking-normal text-muted-foreground normal-case">
+      <SidebarGroupLabel className="h-auto px-2 py-0 text-xs font-medium tracking-normal text-muted-foreground normal-case">
         {label}
       </SidebarGroupLabel>
       <SidebarGroupContent>
@@ -114,68 +119,79 @@ function NavCluster({
   );
 }
 
-function CopperMark() {
-  return (
-    <span className="size-5 shrink-0 rounded-[6px] bg-primary" aria-hidden />
-  );
-}
-
 /**
- * Pen Shell/Sidebar DQYhS — 240×fill, pad [24,16], gap 24.
- * Desktop only (ui/sidebar hides below md when enableMobileSheet=false).
+ * Pen Shell/Sidebar — 208 wide, pad 8, gap 8, space-between.
+ * Header = Button/Ghost brand · Footer Cluster = elevated nav + account.
  */
 export function AppSidebar() {
   const t = useTranslations("nav");
   const tBrand = useTranslations("brand");
+  const locale = useLocale();
   const { user } = useUser();
   const displayName =
     user?.fullName?.trim() ||
     user?.firstName?.trim() ||
     user?.primaryEmailAddress?.emailAddress ||
     t("account");
+  const email =
+    user?.primaryEmailAddress?.emailAddress?.trim() || t("account");
 
   return (
-    <Sidebar collapsible="none" enableMobileSheet={false} variant="sidebar">
-      <SidebarHeader className="gap-0 border-0 px-4 pt-6 pb-0">
+    <Sidebar
+      collapsible="none"
+      enableMobileSheet={false}
+      variant="sidebar"
+      className="hidden justify-between gap-2 border-0 bg-sidebar p-2 md:flex"
+    >
+      <SidebarHeader className="gap-1 border-0 p-2">
         <Link
           href="/app/bibliotheque"
-          className="flex min-w-0 items-center gap-2.5 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+          className="inline-flex h-10 w-full min-w-0 items-center gap-2 rounded-full border border-border-strong bg-accent px-5 text-base font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
-          <CopperMark />
-          <span className="font-heading text-base font-medium text-sidebar-foreground">
-            {tBrand("name")}
-          </span>
+          <BrandMark className="size-4" />
+          <span className="min-w-0 truncate">{tBrand("name")}</span>
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="gap-6 px-4 pt-6">
-        <NavCluster items={PRIMARY} label={t("groupPrimary")} />
-        <NavCluster items={LOCAL} label={t("groupLocal")} />
-      </SidebarContent>
+      {/* Content Slot — flex grow; nav lives in elevated footer (Shell/Sidebar + rule). */}
+      <SidebarContent className="min-h-0 flex-1 gap-1 p-0" />
 
-      <SidebarFooter className="gap-2 border-0 px-4 pb-6">
-        {/* Locale is not in Pen account card; keep compact control for i18n without altering Account geometry. */}
-        <div className="flex justify-end px-1">
-          <LocaleSwitcher compact />
-        </div>
-        <div className="flex min-w-0 items-center gap-2.5 rounded-md bg-ferry-surface-2 p-3">
-          <div className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-primary">
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "size-7",
-                  userButtonTrigger: "size-7",
-                },
-              }}
-            />
+      <SidebarFooter className="gap-0 border-0 p-0">
+        <div className="flex w-full flex-col gap-2 rounded-lg bg-card p-2">
+          <div className="flex flex-col gap-1 p-2">
+            <NavCluster items={PRIMARY} label={t("groupPrimary")} />
+            <NavCluster items={LOCAL} label={t("groupLocal")} />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-sidebar-foreground">
-              {displayName}
-            </p>
-            <p className="text-xs font-medium text-muted-foreground">
-              {t("account")}
-            </p>
+
+          {/* Compact locale: single visible value (no FR · EN pair). */}
+          <div className="flex justify-end px-1">
+            <LocaleSwitcher compact />
+          </div>
+
+          {/* Sidebar/Account — 192×48, pad 8, gap 8, avatar 32 */}
+          <div className="flex h-12 w-full min-w-0 items-center gap-2 rounded-sm p-2">
+            <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-avatar">
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "size-8",
+                    userButtonTrigger: "size-8",
+                  },
+                }}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-sidebar-foreground">
+                {displayName}
+              </p>
+              <p className="truncate text-xs font-medium text-muted-foreground">
+                {email} · {locale.toUpperCase()}
+              </p>
+            </div>
+            <ChevronsUpDown
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-hidden
+            />
           </div>
         </div>
       </SidebarFooter>
