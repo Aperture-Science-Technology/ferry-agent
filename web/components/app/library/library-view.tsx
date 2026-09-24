@@ -15,9 +15,10 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
   DialogContent,
@@ -179,6 +180,7 @@ export function LibraryView({
   const { call } = useApiClient();
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState("");
@@ -526,14 +528,13 @@ export function LibraryView({
     ) : null;
 
   const searchField = (
-    <div className="relative flex w-full items-center gap-3 rounded-full border border-input-border bg-input px-5 py-3 md:w-[280px]">
-      <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+    <>
       <Label htmlFor="library-header-search" className="sr-only">
         {browseMode === "mine"
           ? t("collectionSearchLabel")
           : t("searchSourcesLabel")}
       </Label>
-      <Input
+      <SearchInput
         ref={searchInputRef}
         id="library-header-search"
         value={headerSearchValue}
@@ -542,17 +543,16 @@ export function LibraryView({
           if (event.key === "Enter") onHeaderSearchSubmit();
         }}
         placeholder={headerSearchPlaceholder}
-        className="h-auto border-0 bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
         autoComplete="off"
         spellCheck={false}
         disabled={browseMode === "sources" && searching}
       />
-    </div>
+    </>
   );
 
   const headerActions = (
     <>
-      {searchField}
+      {!isMobile ? searchField : null}
       <Button
         type="button"
         variant="ghost"
@@ -714,7 +714,7 @@ export function LibraryView({
             {headerDescription || description}
           </p>
           <div className="flex flex-col gap-2 pt-1">
-            {searchField}
+            {isMobile ? searchField : null}
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
