@@ -73,13 +73,15 @@ describe("UI harness — app shell", () => {
 
     expect(more.getAttribute("aria-expanded")).toBe("true");
     const sheet = screen.getByRole("dialog");
-    expect(within(sheet).getByRole("heading", { name: "Menu" })).toBeTruthy();
+    expect(within(sheet).getByRole("heading", { name: "Plus" })).toBeTruthy();
     expect(within(sheet).getByRole("link", { name: "Gateway" })).toBeTruthy();
     expect(within(sheet).getByRole("link", { name: "Sources" })).toBeTruthy();
     expect(within(sheet).getByRole("link", { name: "Réglages" })).toBeTruthy();
     expect(within(sheet).getByRole("link", { name: "Guide" })).toBeTruthy();
     expect(within(sheet).getByText("Langue")).toBeTruthy();
-    expect(within(sheet).getByText("Compte")).toBeTruthy();
+    expect(within(sheet).getByText("Alex Martin")).toBeTruthy();
+    expect(within(sheet).getByText(/alex@example\.com/)).toBeTruthy();
+    expect(within(sheet).getByTestId("user-button")).toBeTruthy();
   });
 
   it("marks Gateway as the current page in the desktop sidebar", () => {
