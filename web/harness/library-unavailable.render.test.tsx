@@ -76,8 +76,12 @@ describe("UI harness — library unavailable vs empty", () => {
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Réessayer" })).toBeTruthy();
     expect(screen.queryByText("Aucun livre pour l'instant")).toBeNull();
+    // Empty-state CTAs must not appear; header may still offer Sources.
+    expect(screen.queryByRole("button", { name: "Importer" })).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Rechercher dans les sources" })
+      screen.queryByText(
+        "Importez depuis une source ou ajoutez un fichier local pour commencer."
+      )
     ).toBeNull();
   });
 });

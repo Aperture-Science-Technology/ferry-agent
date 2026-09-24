@@ -47,7 +47,6 @@
     "docs": "Guide",
     "dashboard": "Library"
   },
-
   "hero": {
     "badge": "Online library",
     "titleBefore": "Your online library.",
@@ -158,7 +157,6 @@
       }
     }
   },
-
   "nav": {
     "dashboard": "Dashboard",
     "library": "Library",
@@ -228,7 +226,7 @@
     "deliver": "Send",
     "deliverOf": "Send “{title}”",
     "emptyTitle": "No books yet",
-    "emptyDescription": "Import from a source or add a file.",
+    "emptyDescription": "Import from a source or add a local file to get started.",
     "emptyUnavailable": "Loading didn't succeed. Try again to reload your books — your collection hasn't disappeared.",
     "emptyUnavailableTitle": "Couldn't show your library",
     "retryLoad": "Try again",
@@ -318,7 +316,16 @@
     "recentSection": "Recent",
     "searchSourcesPlaceholder": "Search sources",
     "feedbackLoadingTitle": "Loading…",
-    "feedbackLoadingBody": "Fetching your library."
+    "feedbackLoadingBody": "Fetching your library.",
+    "headerDescription": "Manage your books, sources, and sends to your devices.",
+    "toolsCount": "{count} books · recent",
+    "toolsCountPartial": "{count} books · recent (incomplete list)",
+    "chipGrid": "Grid",
+    "chipList": "List",
+    "emptyMobileSubtitle": "Imported books will appear here",
+    "importShort": "Import",
+    "authorFormat": "{author} · {format}",
+    "deleteOf": "Delete “{title}”"
   },
   "deliverDialog": {
     "title": "Send “{title}”",

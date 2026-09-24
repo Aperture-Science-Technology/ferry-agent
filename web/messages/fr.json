@@ -47,7 +47,6 @@
     "docs": "Guide",
     "dashboard": "Bibliothèque"
   },
-
   "hero": {
     "badge": "Bibliothèque en ligne",
     "titleBefore": "Votre bibliothèque en ligne.",
@@ -158,7 +157,6 @@
       }
     }
   },
-
   "nav": {
     "dashboard": "Espace",
     "library": "Bibliothèque",
@@ -228,7 +226,7 @@
     "deliver": "Envoyer",
     "deliverOf": "Envoyer « {title} »",
     "emptyTitle": "Aucun livre pour l'instant",
-    "emptyDescription": "Importez depuis une source ou ajoutez un fichier.",
+    "emptyDescription": "Importez depuis une source ou ajoutez un fichier local pour commencer.",
     "emptyUnavailable": "La lecture n'a pas abouti. Réessayez pour recharger vos livres — votre collection n'a pas disparu.",
     "emptyUnavailableTitle": "Impossible d'afficher votre bibliothèque",
     "retryLoad": "Réessayer",
@@ -318,7 +316,16 @@
     "recentSection": "Récents",
     "searchSourcesPlaceholder": "Chercher dans les sources",
     "feedbackLoadingTitle": "Chargement…",
-    "feedbackLoadingBody": "Récupération de la bibliothèque."
+    "feedbackLoadingBody": "Récupération de la bibliothèque.",
+    "headerDescription": "Gérez vos livres, sources et envois vers vos appareils.",
+    "toolsCount": "{count} livres · récents",
+    "toolsCountPartial": "{count} livres · récents (liste incomplète)",
+    "chipGrid": "Grille",
+    "chipList": "Liste",
+    "emptyMobileSubtitle": "Les livres importés apparaîtront ici",
+    "importShort": "Importer",
+    "authorFormat": "{author} · {format}",
+    "deleteOf": "Supprimer « {title} »"
   },
   "deliverDialog": {
     "title": "Envoyer « {title} »",

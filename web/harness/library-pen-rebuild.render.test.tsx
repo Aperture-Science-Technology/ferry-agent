@@ -1,6 +1,6 @@
 /**
- * Pen library rebuild: grid + Récents simultaneous, header Envoyer disabled
- * without selection, no internal filter tokens, cover fallback, refresh keep.
+ * Pen library rebuild: Header/Page + tools + grid/list chips (no Récents, no tabs).
+ * Cover placeholder 96×128; header Envoyer disabled without selection.
  * Run: npm run test:ui-harness
  */
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -135,24 +135,47 @@ function renderLibrary(
 }
 
 describe("UI harness — Pen library composition", () => {
-  it("renders book grid and Récents section simultaneously with Pen structure", () => {
+  it("renders tools row, book grid, and view chips (no Récents section)", () => {
     renderLibrary("fr");
 
+    const tools = screen.getByTestId("library-tools");
     const grid = screen.getByTestId("library-book-grid");
-    const recent = screen.getByTestId("library-recent-section");
+    expect(tools).toBeTruthy();
     expect(grid).toBeTruthy();
-    expect(recent).toBeTruthy();
+    expect(screen.queryByTestId("library-recent-section")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Récents" })).toBeNull();
 
-    expect(within(recent).getByRole("heading", { name: "Récents" })).toBeTruthy();
+    expect(within(tools).getByText("3 livres · récents")).toBeTruthy();
+    expect(
+      within(tools).getByRole("button", { name: "Grille" }).getAttribute(
+        "aria-pressed"
+      )
+    ).toBe("true");
+    expect(
+      within(tools).getByRole("button", { name: "Liste" }).getAttribute(
+        "aria-pressed"
+      )
+    ).toBe("false");
+
     expect(within(grid).getByText("Le Passage du Nord")).toBeTruthy();
-    expect(within(recent).getByText("Le Passage du Nord")).toBeTruthy();
 
     const coverButton = within(grid).getByRole("button", {
       name: "Le Passage du Nord",
     });
-    expect(coverButton.className).toMatch(/w-\[140px\]/);
-    expect(coverButton.className).toMatch(/h-\[186px\]/);
-    expect(coverButton.className).toMatch(/rounded-\[9px\]/);
+    expect(coverButton.className).toMatch(/w-24/);
+    expect(coverButton.className).toMatch(/h-32/);
+    expect(coverButton.className).toMatch(/rounded-sm/);
+  });
+
+  it("switches from grid to list via view chips", () => {
+    renderLibrary("fr");
+
+    expect(screen.getByTestId("library-book-grid")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Liste" }));
+    expect(screen.queryByTestId("library-book-grid")).toBeNull();
+    const list = screen.getByTestId("library-book-list");
+    expect(within(list).getByText("Le Passage du Nord")).toBeTruthy();
+    expect(within(list).getByText("Camille Durand · EPUB")).toBeTruthy();
   });
 
   it("keeps header Envoyer disabled and non-clickable without a selection", () => {
@@ -165,12 +188,13 @@ describe("UI harness — Pen library composition", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("opens deliver from a recent-row Envoyer (existing per-book path)", () => {
+  it("opens deliver from a list-row Envoyer (existing per-book path)", () => {
     callMock.mockResolvedValue({ default_format: "epub" });
     renderLibrary("fr");
 
-    const recent = screen.getByTestId("library-recent-section");
-    const rowSend = within(recent).getAllByRole("button", {
+    fireEvent.click(screen.getByRole("button", { name: "Liste" }));
+    const list = screen.getByTestId("library-book-list");
+    const rowSend = within(list).getAllByRole("button", {
       name: /Envoyer «/,
     })[0];
     fireEvent.click(rowSend);
@@ -203,7 +227,7 @@ describe("UI harness — cover fallback Pen YoLR8", () => {
   it("shows Couverture / Cover without an icon glyph", () => {
     const { rerender } = render(
       <NextIntlClientProvider locale="fr" messages={messagesFr}>
-        <div className="relative h-24 w-20">
+        <div className="relative h-32 w-24">
           <LibraryCoverImage
             itemId="no-cover"
             hasCover={false}
@@ -218,7 +242,7 @@ describe("UI harness — cover fallback Pen YoLR8", () => {
 
     rerender(
       <NextIntlClientProvider locale="en" messages={messagesEn}>
-        <div className="relative h-24 w-20">
+        <div className="relative h-32 w-24">
           <LibraryCoverImage
             itemId="no-cover"
             hasCover={false}
