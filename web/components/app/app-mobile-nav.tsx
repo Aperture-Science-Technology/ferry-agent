@@ -91,6 +91,15 @@ function useKeyboardOpen() {
 }
 
 /**
+ * Space reserved under page content so the fixed MobileBottomNav never covers
+ * the last rows. Tabs are h 72; nav also has a 1px top border, then safe-area
+ * padding. Mobile only — desktop resets to 0. Apply on the content shell
+ * (`main` / inset), not via overflow clipping.
+ */
+export const mobileNavContentPadClass =
+  "pb-[calc(4.5rem+1px+env(safe-area-inset-bottom,0px))] md:pb-0";
+
+/**
  * Pen Shell/MobileBottomNav + MobileMoreSheet (ba89b7b).
  * Fixed bottom tabs (h 72); Plus opens more sheet.
  */
@@ -118,6 +127,7 @@ export function AppMobileNav() {
     <>
       <nav
         aria-label={t("dashboard")}
+        data-testid="app-mobile-bottom-nav"
         className={cn(
           "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background md:hidden",
           "pb-[max(0px,env(safe-area-inset-bottom))] transition-transform duration-200 ease-out",
@@ -126,7 +136,10 @@ export function AppMobileNav() {
         )}
       >
         {/* Pen SC5Ea: h 72, gap 4, pad [8, 12, 16, 12] */}
-        <ul className="grid h-[72px] grid-cols-4 gap-1 px-3 pt-2 pb-4">
+        <ul
+          data-testid="app-mobile-bottom-nav-tabs"
+          className="grid h-[72px] grid-cols-4 gap-1 px-3 pt-2 pb-4"
+        >
           {PRIMARY.map((item) => {
             const active = Boolean(pathname?.startsWith(item.href));
             const Icon = item.icon;

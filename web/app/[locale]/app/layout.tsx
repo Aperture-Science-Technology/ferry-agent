@@ -20,9 +20,13 @@ export default async function DashboardLayout({
     <SidebarProvider defaultOpen>
       {/* Desktop: persistent 208px sidebar. Mobile: bottom nav only. */}
       <AppSidebar />
-      <SidebarInset className="min-w-0 overflow-x-hidden bg-background">
+      {/*
+        Mobile: reserve fixed MobileBottomNav (h 72) + safe-area under content
+        (see mobileNavContentPadClass). Desktop: md:pb-0 — no unused pad.
+      */}
+      <SidebarInset className="min-w-0 overflow-x-hidden bg-background pb-[calc(4.5rem+1px+env(safe-area-inset-bottom,0px))] md:pb-0">
         <DashboardHeader />
-        <div className="flex w-full min-w-0 flex-1 flex-col gap-6 px-5 pt-6 pb-[max(7rem,calc(4.5rem+env(safe-area-inset-bottom)))] md:gap-6 md:px-10 md:py-8 md:pb-8">
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-6 px-5 pt-6 md:gap-6 md:px-10 md:py-8">
           {children}
         </div>
       </SidebarInset>
