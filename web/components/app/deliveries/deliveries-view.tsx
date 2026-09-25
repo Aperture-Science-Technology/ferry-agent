@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, RefreshCw, Send } from "lucide-react";
+import { Loader2, RefreshCw, Send, Truck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   applyDeliveryFetchResult,
   hasActiveDeliveries,
+  isActiveDeliveryStatus,
   mergeDeliveryJobs,
   normalizeDeliveryStatus,
 } from "@/components/app/deliveries/deliveries-state";
@@ -19,18 +20,62 @@ import {
   DeliveryActions,
   DeliveryStatusRow,
 } from "@/components/app/deliveries/delivery-status-row";
-import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { PageHeader } from "@/components/app/page-header";
+import { Reveal } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
 import type { DeliveryJob, DeliveryMethod } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 5000;
 const POLL_MAX_MS = 5 * 60 * 1000;
 
-function formatAppDate(iso: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
+type DeliveryFilter = "all" | "delivered" | "in_progress" | "failed";
+
+function formatRelativeWhen(
+  iso: string,
+  locale: string,
+  labels: {
+    today: (time: string) => string;
+    yesterday: (time: string) => string;
+    other: (date: string, time: string) => string;
+  }
+) {
+  const date = new Date(iso);
+  const time = new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDiff = Math.round(
+    (startOfToday.getTime() - startOfDay.getTime()) / 86_400_000
+  );
+
+  if (dayDiff === 0) return labels.today(time);
+  if (dayDiff === 1) return labels.yesterday(time);
+
+  const datePart = new Intl.DateTimeFormat(locale, {
     dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(iso));
+  }).format(date);
+  return labels.other(datePart, time);
+}
+
+function matchesFilter(job: DeliveryJob, filter: DeliveryFilter): boolean {
+  const normalized = normalizeDeliveryStatus(job.status);
+  switch (filter) {
+    case "all":
+      return true;
+    case "delivered":
+      return normalized === "delivered";
+    case "failed":
+      return normalized === "failed";
+    case "in_progress":
+      return isActiveDeliveryStatus(job.status);
+    default:
+      return true;
+  }
 }
 
 export function DeliveriesView({
@@ -45,7 +90,6 @@ export function DeliveriesView({
   deliveriesUnavailable: boolean;
 }) {
   const t = useTranslations("deliveries");
-  const tBrand = useTranslations("brand");
   const tMethods = useTranslations("deliverDialog");
   const tCommon = useTranslations("common");
   const locale = useLocale();
@@ -58,6 +102,7 @@ export function DeliveriesView({
   const [refreshError, setRefreshError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<DeliveryFilter>("all");
 
   const pollStartedAt = useRef<number | null>(null);
   const refreshingRef = useRef(false);
@@ -76,6 +121,14 @@ export function DeliveriesView({
     return t("routeTo", {
       title: job.item_title ?? tCommon("dash"),
       device: job.device_label ?? tCommon("dash"),
+    });
+  }
+
+  function dateLabel(iso: string) {
+    return formatRelativeWhen(iso, locale, {
+      today: (time) => t("relativeToday", { time }),
+      yesterday: (time) => t("relativeYesterday", { time }),
+      other: (date, time) => t("relativeOther", { date, time }),
     });
   }
 
@@ -147,6 +200,52 @@ export function DeliveriesView({
     [detailId, deliveries]
   );
 
+  const activeCount = useMemo(
+    () => deliveries.filter((job) => isActiveDeliveryStatus(job.status)).length,
+    [deliveries]
+  );
+  const failedCount = useMemo(
+    () =>
+      deliveries.filter(
+        (job) => normalizeDeliveryStatus(job.status) === "failed"
+      ).length,
+    [deliveries]
+  );
+
+  const filteredDeliveries = useMemo(
+    () => deliveries.filter((job) => matchesFilter(job, filter)),
+    [deliveries, filter]
+  );
+
+  const queueSummary = useMemo(() => {
+    if (activeCount > 0 && failedCount > 0) {
+      return t("queueSummaryBoth", {
+        active: activeCount,
+        failed: failedCount,
+      });
+    }
+    if (activeCount > 0) {
+      return t("queueSummaryActive", { count: activeCount });
+    }
+    if (failedCount > 0) {
+      return t("queueSummaryFailed", { count: failedCount });
+    }
+    return null;
+  }, [activeCount, failedCount, t]);
+
+  const filterLabel = (value: DeliveryFilter) => {
+    switch (value) {
+      case "all":
+        return t("filterAll");
+      case "delivered":
+        return t("filterDelivered");
+      case "in_progress":
+        return t("filterInProgress");
+      case "failed":
+        return t("filterFailed");
+    }
+  };
+
   const refreshAction = (
     <Button
       variant="outline"
@@ -154,7 +253,7 @@ export function DeliveriesView({
       onClick={() => void refresh()}
       disabled={refreshing}
       aria-busy={refreshing}
-      className="whitespace-normal rounded-md"
+      className="whitespace-normal"
     >
       {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
       {t("refresh")}
@@ -167,88 +266,124 @@ export function DeliveriesView({
       variant="outline"
       onClick={() => void refresh()}
       disabled={refreshing}
-      className="w-fit shrink-0 whitespace-normal rounded-md"
+      className="w-fit shrink-0 whitespace-normal"
     >
       {refreshing ? <Loader2 className="animate-spin" /> : null}
       {t("retry")}
     </Button>
   );
 
+  const filterChips = (
+    <div
+      className="flex flex-wrap items-center gap-2 pb-2"
+      role="group"
+      aria-label={t("filtersLabel")}
+      data-testid="deliveries-filters"
+    >
+      {(
+        [
+          "all",
+          "delivered",
+          "in_progress",
+          "failed",
+        ] as const satisfies DeliveryFilter[]
+      ).map((value) => (
+        <button
+          key={value}
+          type="button"
+          className={cn(
+            buttonVariants({
+              variant: filter === value ? "default" : "ghost",
+            })
+          )}
+          aria-pressed={filter === value}
+          onClick={() => setFilter(value)}
+        >
+          {filterLabel(value)}
+        </button>
+      ))}
+      <span className="sr-only" aria-live="polite">
+        {t("filterActiveAnnouncement", { filter: filterLabel(filter) })}
+      </span>
+    </div>
+  );
+
   const rows = (
     <Reveal>
-      <div aria-busy={refreshing} data-testid="deliveries-status-rows">
-        <RevealGroup className="flex min-w-0 flex-col gap-3 md:gap-0">
-          {deliveries.map((job) => {
-            const normalized = normalizeDeliveryStatus(job.status);
-            const failed = normalized === "failed";
-            return (
-              <RevealItem key={job.id}>
-                <DeliveryStatusRow
-                  job={job}
-                  routeTitle={routeTitle(job)}
-                  methodLabel={methodLabel(job.method)}
-                  statusLabel={statusLabel(job.status)}
-                  dateLabel={formatAppDate(job.created_at, locale)}
-                  hints={
-                    <>
-                      {normalized === "delivered" ? (
-                        <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
-                          {t("statusHintDelivered")}
-                        </p>
-                      ) : null}
-                      {normalized === "unknown" ? (
-                        <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
-                          {t("statusHintUnknown")}
-                        </p>
-                      ) : null}
-                      {failed ? (
-                        <p className="text-xs leading-relaxed break-words whitespace-normal text-destructive">
-                          {t("failedHint")}
-                        </p>
-                      ) : null}
-                    </>
-                  }
-                  actions={
-                    <DeliveryActions
-                      job={job}
-                      emphasizeTrack={failed}
-                      onTrack={() => setDetailId(job.id)}
-                      trackLabel={failed ? t("trackFailed") : t("track")}
-                      downloadLabel={t("openDownload")}
-                      trackAria={
-                        failed
-                          ? t("trackFailedAria", {
-                              title: job.item_title ?? tCommon("dash"),
-                            })
-                          : t("trackAria", {
-                              title: job.item_title ?? tCommon("dash"),
-                            })
-                      }
-                    />
-                  }
-                />
-              </RevealItem>
-            );
-          })}
-        </RevealGroup>
-      </div>
+      <ul
+        aria-busy={refreshing}
+        aria-label={t("history")}
+        data-testid="deliveries-status-rows"
+        className="flex min-w-0 flex-col"
+      >
+        {filteredDeliveries.map((job) => {
+          const normalized = normalizeDeliveryStatus(job.status);
+          const failed = normalized === "failed";
+          const titleText = routeTitle(job);
+          return (
+            <li key={job.id}>
+              <DeliveryStatusRow
+                job={job}
+                routeTitle={titleText}
+                methodLabel={methodLabel(job.method)}
+                statusLabel={statusLabel(job.status)}
+                dateLabel={dateLabel(job.created_at)}
+                hints={
+                  <>
+                    {normalized === "delivered" ? (
+                      <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+                        {t("statusHintDelivered")}
+                      </p>
+                    ) : null}
+                    {normalized === "unknown" ? (
+                      <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+                        {t("statusHintUnknown")}
+                      </p>
+                    ) : null}
+                    {failed ? (
+                      <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
+                        {t("failedHint")}
+                      </p>
+                    ) : null}
+                  </>
+                }
+                actions={
+                  <DeliveryActions
+                    job={job}
+                    onTrack={() => setDetailId(job.id)}
+                    trackLabel={failed ? t("trackFailed") : t("track")}
+                    downloadLabel={t("openDownload")}
+                    trackAria={
+                      failed
+                        ? t("trackFailedAria", {
+                            title: job.item_title ?? tCommon("dash"),
+                          })
+                        : t("trackAria", {
+                            title: job.item_title ?? tCommon("dash"),
+                          })
+                    }
+                  />
+                }
+              />
+            </li>
+          );
+        })}
+      </ul>
     </Reveal>
   );
 
-  const body =
-    unavailable && deliveries.length === 0 ? (
-      <DeliveryEmpty
-        role="alert"
-        icon={Send}
-        title={t("unavailableTitle")}
-        description={t("emptyUnavailable")}
-        action={retryButton}
-      />
-    ) : deliveries.length === 0 ? (
+  const historyBody =
+    deliveries.length === 0 ? (
       <DeliveryEmpty
         icon={Send}
         title={t("emptyTitle")}
         description={t("emptyDescription")}
+      />
+    ) : filteredDeliveries.length === 0 ? (
+      <DeliveryEmpty
+        icon={Send}
+        title={t("filterNoMatch")}
+        description={t("filterNoMatchDescription")}
       />
     ) : (
       rows
@@ -256,42 +391,14 @@ export function DeliveriesView({
 
   return (
     <div
-      className="flex min-w-0 flex-col gap-2 md:gap-6"
+      className="flex min-w-0 flex-col gap-5"
       data-testid="deliveries-pen-layout"
     >
-      {/* Title stacks are dedicated (mF0035 vs Hd0003); refresh is shared once. */}
-      <div className="flex flex-col gap-2 md:min-h-[72px] md:flex-row md:items-center md:justify-between md:gap-4">
-        <header
-          data-testid="deliveries-header-mobile"
-          className="flex flex-col gap-2 md:hidden"
-        >
-          <p className="font-heading text-sm font-medium text-muted-foreground">
-            {tBrand("name")}
-          </p>
-          <h1 className="font-heading text-[22px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-xs font-medium text-muted-foreground">
-            {description}
-          </p>
-        </header>
-
-        <header
-          data-testid="deliveries-header-desktop"
-          className="hidden min-w-0 flex-1 flex-col gap-2 md:flex"
-        >
-          <h1 className="font-heading text-[28px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-sm font-medium text-muted-foreground">
-            {description}
-          </p>
-        </header>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {refreshAction}
-        </div>
-      </div>
+      <PageHeader
+        title={title}
+        description={description}
+        action={refreshAction}
+      />
 
       {refreshError && deliveries.length > 0 ? (
         <DeliveryFeedback
@@ -303,8 +410,45 @@ export function DeliveriesView({
         />
       ) : null}
 
-      {/* Pen Body — mobile gap 12 (mF0035); desktop Rows stack (SAPRI) */}
-      <div data-testid="deliveries-body">{body}</div>
+      {unavailable && deliveries.length === 0 ? (
+        <DeliveryEmpty
+          role="alert"
+          icon={Send}
+          title={t("unavailableTitle")}
+          description={t("emptyUnavailable")}
+          action={retryButton}
+        />
+      ) : (
+        <>
+          {queueSummary ? (
+            <DeliveryFeedback
+              icon={Truck}
+              title={queueSummary}
+              description={t("queueHintHelp")}
+              data-testid="deliveries-queue-hint"
+            />
+          ) : null}
+
+          <section
+            data-testid="deliveries-panel"
+            aria-label={t("history")}
+            className="flex flex-col gap-1 rounded-lg border border-border-strong bg-ferry-surface px-5 py-2"
+          >
+            <div className="flex items-center justify-between py-3">
+              <h2 className="text-base font-medium text-foreground">
+                {t("history")}
+              </h2>
+              <p className="text-xs font-medium text-muted-foreground">
+                {t("historyCount", { count: deliveries.length })}
+              </p>
+            </div>
+
+            {deliveries.length > 0 ? filterChips : null}
+
+            <div data-testid="deliveries-body">{historyBody}</div>
+          </section>
+        </>
+      )}
 
       <DeliveryDetailDialog
         key={detailId ?? "closed"}

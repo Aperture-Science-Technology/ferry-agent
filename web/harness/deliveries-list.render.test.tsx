@@ -160,8 +160,12 @@ describe("UI harness — deliveries list", () => {
     fireEvent.click(screen.getByRole("button", { name: "Actualiser" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("status")).toBeTruthy();
       expect(screen.getByText("Actualisation incomplète")).toBeTruthy();
+      expect(
+        screen.getAllByRole("status").some((el) =>
+          el.textContent?.includes("Actualisation incomplète")
+        )
+      ).toBe(true);
     });
     expect(screen.getAllByText(/Le Passage du Nord/).length).toBeGreaterThan(0);
     expect(screen.queryByText("Aucun envoi")).toBeNull();

@@ -1,10 +1,9 @@
+import type { HTMLAttributes, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Pen Feedback strip for deliveries partial/refresh — surface card, r md, pad 16, gap 12.
- * Same grammar as library lot; no PassageRule / StatePanel.
+ * Pen Feedback / Queue hint — ferry-surface, radius-md, pad 16, gap 12, border.
  */
 export function DeliveryFeedback({
   icon: Icon,
@@ -15,6 +14,7 @@ export function DeliveryFeedback({
   role = "status",
   className,
   children,
+  ...rest
 }: {
   icon?: LucideIcon;
   iconClassName?: string;
@@ -24,14 +24,15 @@ export function DeliveryFeedback({
   role?: "status" | "alert";
   className?: string;
   children?: ReactNode;
-}) {
+} & HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       role={role}
       className={cn(
-        "flex items-center gap-3 rounded-md border border-border bg-card p-4",
+        "flex items-center gap-3 rounded-md border border-border-strong bg-ferry-surface p-4",
         className
       )}
+      {...rest}
     >
       {Icon ? (
         <Icon
@@ -39,7 +40,7 @@ export function DeliveryFeedback({
           aria-hidden
         />
       ) : null}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="text-sm font-medium text-foreground">{title}</p>
         {description ? (
           <p className="text-xs font-medium text-muted-foreground">
@@ -54,7 +55,7 @@ export function DeliveryFeedback({
 }
 
 /**
- * Pen empty / unavailable — centered Fraunces 18 + 14 body (library EmptyState grammar).
+ * Pen empty / unavailable — centered body copy inside the history panel.
  */
 export function DeliveryEmpty({
   icon: Icon,
@@ -75,9 +76,7 @@ export function DeliveryEmpty({
       className="flex flex-col items-center justify-center gap-3 px-8 py-8 text-center"
     >
       <Icon className="size-7 text-muted-foreground" aria-hidden />
-      <p className="font-heading text-lg font-medium text-foreground text-balance">
-        {title}
-      </p>
+      <p className="text-lg font-medium text-balance text-foreground">{title}</p>
       {description ? (
         <p className="max-w-md text-sm font-medium text-muted-foreground">
           {description}
