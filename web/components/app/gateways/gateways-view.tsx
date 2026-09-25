@@ -333,19 +333,19 @@ export function GatewaysView({
         open={credentials !== null}
         onOpenChange={(open) => !open && setCredentials(null)}
       >
-        <DialogContent className="gap-4 p-6 sm:max-w-[420px]">
-          <DialogHeader className="gap-2">
-            <DialogTitle className="text-xl font-medium tracking-tight break-words whitespace-normal">
+        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto bg-popover p-7 sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-[22px] font-bold tracking-tight break-words whitespace-normal">
               {tCreate("createdTitle")}
             </DialogTitle>
-            <DialogDescription className="text-sm font-medium break-words whitespace-normal">
+            <DialogDescription className="break-words whitespace-normal">
               {tCreate("createdDescription")}
             </DialogDescription>
           </DialogHeader>
           {credentials ? (
             <GatewayCredentialsPanel credentials={credentials} />
           ) : null}
-          <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
+          <DialogFooter>
             <Button
               onClick={() => setCredentials(null)}
               className="whitespace-normal"
@@ -360,16 +360,16 @@ export function GatewaysView({
         open={revokeTarget !== null}
         onOpenChange={(open) => !open && !revoking && setRevokeTarget(null)}
       >
-        <DialogContent className="gap-4 p-6 sm:max-w-[400px]">
-          <DialogHeader className="gap-2">
-            <DialogTitle className="text-lg font-medium tracking-tight break-words whitespace-normal">
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="break-words whitespace-normal">
               {t("revokeConfirmTitle")}
             </DialogTitle>
-            <DialogDescription className="text-sm font-medium break-words whitespace-normal">
+            <DialogDescription className="break-words whitespace-normal">
               {t("revokeConfirmDescription")}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
+          <DialogFooter>
             <Button
               variant="ghost"
               onClick={() => setRevokeTarget(null)}
@@ -380,7 +380,6 @@ export function GatewaysView({
               {tCommon("cancel")}
             </Button>
             <Button
-              variant="destructive"
               onClick={() => void confirmRevoke()}
               disabled={revoking}
               className="whitespace-normal"
@@ -396,16 +395,16 @@ export function GatewaysView({
         open={deleteTarget !== null}
         onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
       >
-        <DialogContent className="gap-4 p-6 sm:max-w-[400px]">
-          <DialogHeader className="gap-2">
-            <DialogTitle className="text-lg font-medium tracking-tight break-words whitespace-normal">
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="break-words whitespace-normal">
               {t("deleteConfirmTitle")}
             </DialogTitle>
-            <DialogDescription className="text-sm font-medium break-words whitespace-normal">
+            <DialogDescription className="break-words whitespace-normal">
               {t("deleteConfirmDescription")}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
+          <DialogFooter>
             <Button
               variant="ghost"
               onClick={() => setDeleteTarget(null)}
@@ -416,7 +415,6 @@ export function GatewaysView({
               {tCommon("cancel")}
             </Button>
             <Button
-              variant="destructive"
               onClick={() => void confirmDelete()}
               disabled={deleting}
               className="whitespace-normal"

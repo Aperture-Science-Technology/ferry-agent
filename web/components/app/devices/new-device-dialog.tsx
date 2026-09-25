@@ -98,12 +98,12 @@ export function NewDeviceDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="gap-4 p-6 sm:max-w-[420px]">
-        <DialogHeader className="gap-2">
-          <DialogTitle className="font-heading text-xl font-medium tracking-tight">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
             {t("title")}
           </DialogTitle>
-          <DialogDescription className="text-sm font-medium break-words whitespace-normal">
+          <DialogDescription className="break-words whitespace-normal">
             {t("description")}
           </DialogDescription>
         </DialogHeader>
@@ -172,19 +172,19 @@ export function NewDeviceDialog({
             disabled={submitting}
           />
         </div>
-        <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
+        <DialogFooter>
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={() => handleOpenChange(false)}
             disabled={submitting}
-            className="whitespace-normal rounded-md"
+            className="whitespace-normal"
           >
             {tCommon("cancel")}
           </Button>
           <Button
             onClick={() => void submit()}
             disabled={submitting}
-            className="whitespace-normal rounded-md"
+            className="whitespace-normal"
           >
             {submitting ? <Loader2 className="animate-spin" /> : null}
             {tCommon("create")}

@@ -971,7 +971,7 @@ export function LibraryView({
         open={pendingDelete !== null}
         onOpenChange={(open) => !open && setPendingDelete(null)}
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>{tDetail("confirmTitle")}</DialogTitle>
             <DialogDescription>{tDetail("confirmDescription")}</DialogDescription>
@@ -985,7 +985,6 @@ export function LibraryView({
               {tCommon("cancel")}
             </Button>
             <Button
-              variant="destructive"
               onClick={() => void confirmDelete()}
               disabled={deleting}
             >

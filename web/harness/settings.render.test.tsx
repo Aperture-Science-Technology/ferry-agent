@@ -364,6 +364,19 @@ describe("UI harness — settings / OPDS", () => {
       )
     ).toBeTruthy();
 
+    // Pen Dialog/ConfirmDestructive anatomy
+    expect(dialog.className).toMatch(/sm:max-w-\[400px\]/);
+    const footer = dialog.querySelector('[data-slot="dialog-footer"]');
+    expect(footer).toBeTruthy();
+    expect(footer!.className).toMatch(/sm:justify-end/);
+    expect(
+      within(dialog).getByRole("button", { name: messages.common.cancel })
+    ).toBeTruthy();
+    const confirm = within(dialog).getByRole("button", {
+      name: messages.settings.readerCatalog.revoke,
+    });
+    expect(confirm.className).not.toMatch(/bg-destructive\/10/);
+
     fireEvent.click(
       within(dialog).getByRole("button", {
         name: messages.settings.readerCatalog.revoke,

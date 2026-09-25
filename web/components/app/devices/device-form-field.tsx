@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  * Shared by new/edit/cloud device dialogs (Dialog width 420, pad 24, gap 16).
  */
 export const deviceFormControlClass =
-  "h-auto min-h-10 w-full rounded-md border-border bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
+  "h-auto min-h-10 w-full rounded-md border border-border-strong bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
 
 export const deviceFormLabelClass =
   "text-xs font-medium text-muted-foreground";

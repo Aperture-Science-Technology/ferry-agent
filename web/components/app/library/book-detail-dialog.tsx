@@ -119,7 +119,7 @@ export function BookDetailDialog({
       <Dialog open={item !== null} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader className="min-w-0">
-            <DialogTitle className="font-heading text-xl tracking-tight break-words whitespace-normal">
+            <DialogTitle className="break-words whitespace-normal">
               {item?.title ?? ""}
             </DialogTitle>
             <DialogDescription className="break-words whitespace-normal">
@@ -274,16 +274,20 @@ export function BookDetailDialog({
       />
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[400px]" showCloseButton={!deleting}>
           <DialogHeader>
             <DialogTitle>{t("confirmTitle")}</DialogTitle>
             <DialogDescription>{t("confirmDescription")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmOpen(false)}
+              disabled={deleting}
+            >
               {tCommon("cancel")}
             </Button>
-            <Button variant="destructive" disabled={deleting} onClick={handleDelete}>
+            <Button disabled={deleting} onClick={handleDelete}>
               {deleting && <Loader2 className="animate-spin" />}
               {t("confirmButton")}
             </Button>

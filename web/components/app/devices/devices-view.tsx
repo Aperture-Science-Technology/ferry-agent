@@ -421,18 +421,18 @@ export function DevicesView({
         open={deleteTarget !== null}
         onOpenChange={(open) => !open && !deleting && setDeleteTarget(null)}
       >
-        <DialogContent className="gap-4 p-6 sm:max-w-[420px]">
-          <DialogHeader className="gap-2">
-            <DialogTitle className="text-xl font-medium tracking-tight">
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>
               {t("deleteConfirmTitle")}
             </DialogTitle>
-            <DialogDescription className="text-sm font-medium break-words whitespace-normal">
+            <DialogDescription className="break-words whitespace-normal">
               {t("deleteConfirmDescriptionNamed", { name: deleteName })}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
+          <DialogFooter>
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setDeleteTarget(null)}
               disabled={deleting}
               autoFocus
@@ -441,7 +441,6 @@ export function DevicesView({
               {tCommon("cancel")}
             </Button>
             <Button
-              variant="destructive"
               onClick={() => void confirmDelete()}
               disabled={deleting}
               className="whitespace-normal"

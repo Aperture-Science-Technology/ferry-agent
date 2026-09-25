@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Copy, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,8 +23,21 @@ import {
 import { copyTextToClipboard } from "@/components/app/gateways/gateways-state";
 import { useApiClient } from "@/lib/api-client";
 import type { Gateway, GatewayCredentials } from "@/lib/types";
+import { Label } from "@/components/ui/label";
 
-function CopyField({ label, value }: { label: string; value: string }) {
+/** Pen Dialog/GatewayCredentials value box — input fill, radius-md, padding [12,14]. */
+const credentialsValueBoxClass =
+  "flex min-w-0 items-center gap-2 rounded-md border border-input-border bg-input px-3.5 py-3";
+
+function CopyField({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   const t = useTranslations("createAccess");
   const tCommon = useTranslations("common");
   const fieldId = useId();
@@ -38,27 +52,35 @@ function CopyField({ label, value }: { label: string; value: string }) {
   }
 
   return (
-    <GatewayFormField label={label} htmlFor={fieldId}>
-      <div className="flex min-w-0 gap-2">
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={fieldId} className={gatewayFormLabelClass}>
+        {label}
+      </Label>
+      <div className={credentialsValueBoxClass}>
         <Input
           id={fieldId}
           readOnly
           value={value}
-          className={`${gatewayFormControlClass} min-w-0 font-mono text-xs break-all`}
+          className="h-auto min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[13px] font-semibold shadow-none focus-visible:ring-0"
           onFocus={(event) => event.currentTarget.select()}
         />
         <Button
           type="button"
-          variant="outline"
-          size="icon"
-          className="shrink-0 rounded-md"
+          variant="ghost"
+          size="icon-sm"
+          className="size-3.5 shrink-0 p-0"
           aria-label={t("copyAction")}
           onClick={() => void handleCopy()}
         >
-          <Copy />
+          <Copy className="size-3.5" />
         </Button>
       </div>
-    </GatewayFormField>
+      {hint ? (
+        <p className="text-[11px] font-medium break-words whitespace-normal text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -75,6 +97,7 @@ export function GatewayCredentialsPanel({
   const t = useTranslations("createAccess");
   const tCommon = useTranslations("common");
   const block = bothSecretsBlock(credentials);
+  const ttlMinutes = credentials.pairing_token_ttl_minutes ?? 15;
 
   async function handleCopyBoth() {
     const ok = await copyTextToClipboard(block);
@@ -87,36 +110,69 @@ export function GatewayCredentialsPanel({
 
   return (
     <div className="flex min-w-0 flex-col gap-4" data-credentials-panel>
-      <CopyField label={t("pairingToken")} value={credentials.pairing_token} />
-      <CopyField label={t("gatewayKey")} value={credentials.gateway_key} />
+      <Badge variant="secondary" className="w-fit" data-credentials-ttl>
+        {t("ttlBadge", { minutes: ttlMinutes })}
+      </Badge>
+      <CopyField
+        label={t("gatewayId")}
+        value={credentials.gateway_id}
+        hint={t("gatewayIdHint")}
+      />
+      <CopyField
+        label={t("pairingToken")}
+        value={credentials.pairing_token}
+        hint={t("pairingTokenHint")}
+      />
+      <CopyField
+        label={t("gatewayKey")}
+        value={credentials.gateway_key}
+        hint={t("gatewayKeyHint")}
+      />
       <div className="flex flex-col gap-1.5">
         <p className={`${gatewayFormLabelClass} break-words whitespace-normal`}>
           {t("bothSecrets")}
         </p>
-        <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
+        <p className="text-[11px] font-medium break-words whitespace-normal text-muted-foreground">
           {t("bothSecretsHint")}
         </p>
-        <div className="flex min-w-0 gap-2">
+        <div className={credentialsValueBoxClass}>
           <pre
             tabIndex={0}
             data-both-secrets
-            className="max-h-28 min-w-0 flex-1 overflow-auto rounded-md border border-border bg-ferry-surface-2 p-3 font-mono text-xs break-all whitespace-pre-wrap select-all"
+            className="max-h-28 min-w-0 flex-1 overflow-auto font-mono text-[13px] font-semibold break-all whitespace-pre-wrap select-all"
           >
             {block}
           </pre>
           <Button
             type="button"
-            variant="outline"
-            size="icon"
-            className="shrink-0 rounded-md"
+            variant="ghost"
+            size="icon-sm"
+            className="size-3.5 shrink-0 self-start p-0"
             aria-label={t("copyBothAction")}
             onClick={() => void handleCopyBoth()}
           >
-            <Copy />
+            <Copy className="size-3.5" />
           </Button>
         </div>
-        <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
+        <p className="text-[11px] font-medium break-words whitespace-normal text-muted-foreground">
           {t("copyFallbackHint")}
+        </p>
+      </div>
+      <div
+        className="flex flex-col gap-2 rounded-md bg-muted p-3.5"
+        data-credentials-next-steps
+      >
+        <p className="text-[13px] font-semibold break-words whitespace-normal">
+          {t("nextStepsTitle")}
+        </p>
+        <p className="text-xs font-medium break-words whitespace-normal">
+          {t("nextSteps1")}
+        </p>
+        <p className="text-xs font-medium break-words whitespace-normal">
+          {t("nextSteps2")}
+        </p>
+        <p className="text-xs font-medium break-words whitespace-normal">
+          {t("nextSteps3")}
         </p>
       </div>
     </div>
@@ -201,23 +257,27 @@ export function CreateGatewayDialog({
     >
       <DialogContent
         showCloseButton={!submitting || credentials !== null}
-        className="max-h-[min(90dvh,40rem)] gap-4 overflow-y-auto p-6 sm:max-w-[420px]"
+        className={
+          credentials
+            ? "max-h-[min(90dvh,40rem)] overflow-y-auto bg-popover p-7 sm:max-w-[500px]"
+            : "max-h-[min(90dvh,40rem)] overflow-y-auto"
+        }
       >
         {credentials ? (
           <>
-            <DialogHeader className="gap-2">
-              <DialogTitle className="font-heading text-xl font-medium tracking-tight break-words whitespace-normal">
+            <DialogHeader>
+              <DialogTitle className="text-[22px] font-bold tracking-tight break-words whitespace-normal">
                 {t("createdTitle")}
               </DialogTitle>
-              <DialogDescription className="text-sm font-medium break-words whitespace-normal">
+              <DialogDescription className="break-words whitespace-normal">
                 {t("createdDescription")}
               </DialogDescription>
             </DialogHeader>
             <GatewayCredentialsPanel credentials={credentials} />
-            <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
+            <DialogFooter>
               <Button
                 onClick={() => handleOpenChange(false)}
-                className="whitespace-normal rounded-md"
+                className="whitespace-normal"
               >
                 {tCommon("done")}
               </Button>
@@ -225,11 +285,11 @@ export function CreateGatewayDialog({
           </>
         ) : (
           <>
-            <DialogHeader className="gap-2">
-              <DialogTitle className="font-heading text-xl font-medium tracking-tight break-words whitespace-normal">
+            <DialogHeader>
+              <DialogTitle className="break-words whitespace-normal">
                 {t("title")}
               </DialogTitle>
-              <DialogDescription className="text-sm font-medium break-words whitespace-normal">
+              <DialogDescription className="break-words whitespace-normal">
                 {t("description")}
               </DialogDescription>
             </DialogHeader>
@@ -250,20 +310,20 @@ export function CreateGatewayDialog({
                 }}
               />
             </GatewayFormField>
-            <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
+            <DialogFooter>
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => handleOpenChange(false)}
                 disabled={submitting}
                 autoFocus
-                className="whitespace-normal rounded-md"
+                className="whitespace-normal"
               >
                 {tCommon("cancel")}
               </Button>
               <Button
                 onClick={() => void submit()}
                 disabled={submitting || !displayName.trim()}
-                className="whitespace-normal rounded-md"
+                className="whitespace-normal"
               >
                 {submitting ? <Loader2 className="animate-spin" /> : null}
                 {tCommon("create")}

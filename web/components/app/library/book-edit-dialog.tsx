@@ -29,6 +29,12 @@ interface EditForm {
   description: string;
 }
 
+/** Pen Form/Field control — surface-2, radius-md, ferry-border, padding 12. */
+const editFieldControlClass =
+  "h-auto min-h-10 w-full rounded-md border border-border-strong bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
+
+const editFieldLabelClass = "text-xs font-medium text-muted-foreground";
+
 function toForm(item: LibraryItem): EditForm {
   return {
     title: item.title,
@@ -98,9 +104,10 @@ export function BookEditDialog({
 
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
+      {/* Wider than SendBook 420: two-column metadata form needs the room. */}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="min-w-0">
-          <DialogTitle className="font-heading tracking-tight break-words whitespace-normal">
+          <DialogTitle className="break-words whitespace-normal">
             {t("title", { title: item?.title ?? "" })}
           </DialogTitle>
           <DialogDescription className="whitespace-normal">
@@ -110,57 +117,70 @@ export function BookEditDialog({
 
         {form && (
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label>{t("fieldTitle")}</Label>
-              <Input value={form.title} onChange={(event) => update("title", event.target.value)} />
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label className={editFieldLabelClass}>{t("fieldTitle")}</Label>
+              <Input
+                value={form.title}
+                onChange={(event) => update("title", event.target.value)}
+                className={editFieldControlClass}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>{t("fieldAuthor")}</Label>
-              <Input value={form.author} onChange={(event) => update("author", event.target.value)} />
+            <div className="flex flex-col gap-1.5">
+              <Label className={editFieldLabelClass}>{t("fieldAuthor")}</Label>
+              <Input
+                value={form.author}
+                onChange={(event) => update("author", event.target.value)}
+                className={editFieldControlClass}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>{t("fieldLanguage")}</Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className={editFieldLabelClass}>{t("fieldLanguage")}</Label>
               <Input
                 value={form.language}
                 onChange={(event) => update("language", event.target.value)}
+                className={editFieldControlClass}
               />
             </div>
-            <div className="space-y-2">
-              <Label>{t("fieldPublisher")}</Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className={editFieldLabelClass}>{t("fieldPublisher")}</Label>
               <Input
                 value={form.publisher}
                 onChange={(event) => update("publisher", event.target.value)}
+                className={editFieldControlClass}
               />
             </div>
-            <div className="space-y-2">
-              <Label>{t("fieldPublishedYear")}</Label>
+            <div className="flex flex-col gap-1.5">
+              <Label className={editFieldLabelClass}>{t("fieldPublishedYear")}</Label>
               <Input
                 type="number"
                 value={form.published_year}
                 onChange={(event) => update("published_year", event.target.value)}
+                className={editFieldControlClass}
               />
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>{t("fieldPageCount")}</Label>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label className={editFieldLabelClass}>{t("fieldPageCount")}</Label>
               <Input
                 type="number"
                 min={0}
                 value={form.page_count}
                 onChange={(event) => update("page_count", event.target.value)}
+                className={editFieldControlClass}
               />
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>{t("fieldDescription")}</Label>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label className={editFieldLabelClass}>{t("fieldDescription")}</Label>
               <Textarea
                 value={form.description}
                 onChange={(event) => update("description", event.target.value)}
+                className={editFieldControlClass}
               />
             </div>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {tCommon("cancel")}
           </Button>
           <Button onClick={submit} disabled={submitting}>

@@ -262,14 +262,14 @@ export function ReaderCatalogSection({
         onOpenChange={closeCreate}
         disablePointerDismissal={submitting}
       >
-        <DialogContent className="max-h-[min(90dvh,40rem)] gap-4 overflow-y-auto sm:max-w-md">
+        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-md">
           {created ? (
             <>
-              <DialogHeader className="gap-2">
-                <DialogTitle className="font-heading text-lg font-medium break-words whitespace-normal">
+              <DialogHeader>
+                <DialogTitle className="break-words whitespace-normal">
                   {t("createdTitle")}
                 </DialogTitle>
-                <DialogDescription className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
+                <DialogDescription className="break-words whitespace-normal text-muted-foreground">
                   {t("createdDescription")}
                 </DialogDescription>
               </DialogHeader>
@@ -328,7 +328,7 @@ export function ReaderCatalogSection({
                   description={t("oneTimeWarning")}
                 />
               </div>
-              <DialogFooter className="gap-2 sm:gap-2">
+              <DialogFooter>
                 <Button
                   type="button"
                   onClick={() => closeCreate(false)}
@@ -340,11 +340,11 @@ export function ReaderCatalogSection({
             </>
           ) : (
             <>
-              <DialogHeader className="gap-2">
-                <DialogTitle className="font-heading text-lg font-medium break-words whitespace-normal">
+              <DialogHeader>
+                <DialogTitle className="break-words whitespace-normal">
                   {t("createTitle")}
                 </DialogTitle>
-                <DialogDescription className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
+                <DialogDescription className="break-words whitespace-normal text-muted-foreground">
                   {t("createDescription")}
                 </DialogDescription>
               </DialogHeader>
@@ -372,10 +372,10 @@ export function ReaderCatalogSection({
                   description={createError}
                 />
               ) : null}
-              <DialogFooter className="gap-2 sm:gap-2">
+              <DialogFooter>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => closeCreate(false)}
                   disabled={submitting}
                   autoFocus
@@ -405,12 +405,12 @@ export function ReaderCatalogSection({
         onOpenChange={(open) => !open && !revoking && setRevokeTarget(null)}
         disablePointerDismissal={revoking}
       >
-        <DialogContent className="max-h-[min(90dvh,40rem)] gap-4 overflow-y-auto sm:max-w-[400px]">
-          <DialogHeader className="gap-2">
-            <DialogTitle className="font-heading text-lg font-medium break-words whitespace-normal">
+        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="break-words whitespace-normal">
               {t("revokeConfirmTitle")}
             </DialogTitle>
-            <DialogDescription className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
+            <DialogDescription className="break-words whitespace-normal text-muted-foreground">
               {t("revokeConfirmDescription")}
             </DialogDescription>
           </DialogHeader>
@@ -422,10 +422,10 @@ export function ReaderCatalogSection({
               description={revokeError}
             />
           ) : null}
-          <DialogFooter className="gap-2 sm:gap-2">
+          <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() => setRevokeTarget(null)}
               disabled={revoking}
               autoFocus
@@ -435,7 +435,6 @@ export function ReaderCatalogSection({
             </Button>
             <Button
               type="button"
-              variant="destructive"
               onClick={() => void confirmRevoke()}
               disabled={revoking}
               className="whitespace-normal"
