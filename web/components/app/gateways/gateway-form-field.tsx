@@ -3,14 +3,14 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 /**
- * Pen Form/Field lz3PJ — vertical gap 6, label 12/500 muted, input surface-2 r md.
- * Shared by create / recreate credentials dialogs (Dialog width 420, pad 24, gap 16).
+ * Pen Form/Field — vertical gap 6, label 12/500 muted, input surface-2 r md,
+ * ferry-border (border-strong), padding 12, text 14/500; optional hint 12/500.
  */
 export const gatewayFormControlClass =
-  "h-auto min-h-10 w-full rounded-md border border-border-strong bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
+  "h-auto min-h-10 w-full rounded-md border border-border-strong bg-ferry-surface-2 px-3 py-3 text-sm font-medium text-foreground shadow-none";
 
 export const gatewayFormLabelClass =
-  "text-xs font-medium text-muted-foreground";
+  "text-xs font-medium break-words whitespace-normal text-muted-foreground";
 
 export function GatewayFormField({
   label,
@@ -28,7 +28,10 @@ export function GatewayFormField({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div
+      data-testid="gateway-field"
+      className={cn("flex min-w-0 w-full flex-col gap-1.5", className)}
+    >
       <Label htmlFor={htmlFor} className={gatewayFormLabelClass}>
         {label}
       </Label>

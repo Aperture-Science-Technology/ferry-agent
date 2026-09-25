@@ -7,7 +7,6 @@ import { motion, useReducedMotion } from "motion/react";
 import {
   ChevronLeft,
   ChevronRight,
-  Library,
   Loader2,
   Plus,
   Search,
@@ -34,7 +33,9 @@ import { DeliverDialog } from "@/components/app/library/deliver-dialog";
 import { LibraryEmptyState } from "@/components/app/library/library-empty-state";
 import {
   LibraryEmpty,
-  LibraryFeedback,
+  LibraryFeedbackError,
+  LibraryFeedbackLoading,
+  LibraryFeedbackPartial,
 } from "@/components/app/library/library-feedback";
 import {
   applyLibraryItemsRefreshResult,
@@ -195,7 +196,8 @@ export function LibraryView({
   const [pendingDelete, setPendingDelete] = useState<LibraryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [retrying, setRetrying] = useState(false);
+  const [partialDismissed, setPartialDismissed] = useState(false);
+  const [unavailableDismissed, setUnavailableDismissed] = useState(false);
   const [browseMode, setBrowseMode] = useState<BrowseMode>("mine");
   const [addTab, setAddTab] = useState<AddTab>("search");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -399,9 +401,14 @@ export function LibraryView({
   }
 
   function handleRetry() {
-    setRetrying(true);
+    setPartialDismissed(false);
+    setUnavailableDismissed(false);
     router.refresh();
   }
+
+  const showPartial = itemsPartial && !partialDismissed;
+  const showUnavailable =
+    itemsUnavailable && items.length === 0 && !unavailableDismissed;
 
   function selectBook(item: LibraryItem) {
     setSelectedId((prev) => (prev === item.id ? null : item.id));
@@ -467,19 +474,6 @@ export function LibraryView({
     if (browseMode === "mine") return;
     void runSearch();
   }
-
-  const retryButton = (
-    <Button
-      size="sm"
-      variant="ghost"
-      onClick={handleRetry}
-      disabled={retrying}
-      className="w-fit"
-    >
-      {retrying ? <Loader2 className="animate-spin" /> : null}
-      {t("retryLoad")}
-    </Button>
-  );
 
   const paginationControls =
     displayedItems.length > LIBRARY_COLLECTION_PAGE_SIZE ? (
@@ -739,22 +733,25 @@ export function LibraryView({
         </div>
       )}
 
-      {itemsUnavailable && items.length === 0 ? (
-        <LibraryFeedback
-          role="alert"
-          icon={Library}
+      {showUnavailable ? (
+        <LibraryFeedbackError
           title={t("emptyUnavailableTitle")}
           description={t("emptyUnavailable")}
-          action={retryButton}
+          dismissLabel={tCommon("dismiss")}
+          onDismiss={() => setUnavailableDismissed(true)}
+          retryLabel={t("retryLoad")}
+          onRetry={handleRetry}
         />
       ) : browseMode === "sources" ? (
         <section aria-label={t("addRegion")} className="flex flex-col gap-5">
-          {itemsPartial && items.length > 0 ? (
-            <LibraryFeedback
-              icon={Library}
+          {showPartial && items.length > 0 ? (
+            <LibraryFeedbackPartial
               title={t("partialWarningTitle")}
               description={t("partialWarning")}
-              action={retryButton}
+              ignoreLabel={tCommon("ignore")}
+              onIgnore={() => setPartialDismissed(true)}
+              refreshLabel={t("retryLoad")}
+              onRefresh={handleRetry}
             />
           ) : null}
 
@@ -803,9 +800,7 @@ export function LibraryView({
                   aria-busy="true"
                   aria-live="polite"
                 >
-                  <LibraryFeedback
-                    icon={Loader2}
-                    iconClassName="animate-spin"
+                  <LibraryFeedbackLoading
                     title={t("feedbackLoadingTitle")}
                     description={t("searching")}
                   >
@@ -813,7 +808,7 @@ export function LibraryView({
                       <Skeleton className="h-16 w-full rounded-md" />
                       <Skeleton className="h-16 w-full rounded-md" />
                     </div>
-                  </LibraryFeedback>
+                  </LibraryFeedbackLoading>
                 </motion.div>
               ) : null}
 
@@ -907,12 +902,14 @@ export function LibraryView({
           aria-label={t("collectionRegion")}
           className="flex flex-col gap-6"
         >
-          {itemsPartial ? (
-            <LibraryFeedback
-              icon={Library}
+          {showPartial ? (
+            <LibraryFeedbackPartial
               title={t("partialWarningTitle")}
               description={t("partialWarning")}
-              action={retryButton}
+              ignoreLabel={tCommon("ignore")}
+              onIgnore={() => setPartialDismissed(true)}
+              refreshLabel={t("retryLoad")}
+              onRefresh={handleRetry}
             />
           ) : null}
 

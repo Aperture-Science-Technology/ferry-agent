@@ -15,6 +15,7 @@ import { DeliveryDetailDialog } from "@/components/app/deliveries/delivery-detai
 import {
   DeliveryEmpty,
   DeliveryFeedback,
+  DeliveryFeedbackPartial,
 } from "@/components/app/deliveries/delivery-feedback";
 import {
   DeliveryActions,
@@ -401,12 +402,13 @@ export function DeliveriesView({
       />
 
       {refreshError && deliveries.length > 0 ? (
-        <DeliveryFeedback
-          role="status"
+        <DeliveryFeedbackPartial
           title={t("refreshFailedTitle")}
           description={t("refreshFailedDescription")}
-          action={retryButton}
-          className="flex-col items-stretch sm:flex-row sm:items-center"
+          ignoreLabel={tCommon("ignore")}
+          onIgnore={() => setRefreshError(false)}
+          refreshLabel={t("refresh")}
+          onRefresh={() => void refresh()}
         />
       ) : null}
 

@@ -26,7 +26,7 @@ import {
 } from "@/components/app/gateways/gateway-connection-state";
 import {
   GatewayEmpty,
-  GatewayFeedback,
+  GatewayFeedbackPartial,
 } from "@/components/app/gateways/gateway-feedback";
 import { GatewayRecentActivity } from "@/components/app/gateways/gateway-activity";
 import { GatewayRow } from "@/components/app/gateways/gateway-row";
@@ -69,12 +69,29 @@ export function GatewaysView({
   const [now, setNow] = useState(() => Date.now());
   const [activityRefreshKey, setActivityRefreshKey] = useState(0);
   const [listRefreshFailed, setListRefreshFailed] = useState(false);
+  const [listRefreshing, setListRefreshing] = useState(false);
 
   const hasPending = gateways.some((gateway) => gateway.status === "pending");
   const hasPaired = gateways.some((gateway) => gateway.status === "paired");
   const needsClock = hasPending || hasPaired;
   const needsListPoll = hasPending || hasPaired;
   const primary = pickPrimaryGateway(gateways, now);
+
+  async function refreshGatewayList() {
+    if (listRefreshing) return;
+    setListRefreshing(true);
+    try {
+      const data = await call<Gateway[]>("/api/v1/gateways");
+      setGateways(data);
+      setListRefreshFailed(false);
+      setNow(Date.now());
+      setActivityRefreshKey((key) => key + 1);
+    } catch {
+      setListRefreshFailed(true);
+    } finally {
+      setListRefreshing(false);
+    }
+  }
 
   useEffect(() => {
     if (!needsClock) return;
@@ -314,10 +331,13 @@ export function GatewaysView({
       />
 
       {listRefreshFailed && gateways.length > 0 ? (
-        <GatewayFeedback
+        <GatewayFeedbackPartial
           title={t("listRefreshFailedTitle")}
           description={t("listRefreshFailed")}
-          className="flex-col items-stretch sm:flex-row sm:items-center"
+          ignoreLabel={tCommon("ignore")}
+          onIgnore={() => setListRefreshFailed(false)}
+          refreshLabel={tCommon("refresh")}
+          onRefresh={() => void refreshGatewayList()}
         />
       ) : null}
 

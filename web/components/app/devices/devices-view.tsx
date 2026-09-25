@@ -22,6 +22,8 @@ import {
 import {
   DeviceEmpty,
   DeviceFeedback,
+  DeviceFeedbackError,
+  DeviceFeedbackPartial,
 } from "@/components/app/devices/device-feedback";
 import {
   DeviceActions,
@@ -78,6 +80,7 @@ export function DevicesView({
     devicesUnavailable && initialDevices.length === 0
   );
   const [refreshError, setRefreshError] = useState(false);
+  const [cloudLinkDismissed, setCloudLinkDismissed] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Device | null>(null);
   const [linkTarget, setLinkTarget] = useState<Device | null>(null);
@@ -332,23 +335,24 @@ export function DevicesView({
         action={headerActions}
       />
 
-      {oauthPresentation === "error" ? (
-        <DeviceFeedback
-          role="status"
+      {oauthPresentation === "error" && !cloudLinkDismissed ? (
+        <DeviceFeedbackError
           data-cloud-link="error"
           title={t("cloudLinkFailedTitle")}
           description={t("cloudLinkFailedDescription")}
-          className="flex-col items-stretch sm:flex-row sm:items-center"
+          dismissLabel={tCommon("dismiss")}
+          onDismiss={() => setCloudLinkDismissed(true)}
         />
       ) : null}
 
       {refreshError && devices.length > 0 ? (
-        <DeviceFeedback
-          role="status"
+        <DeviceFeedbackPartial
           title={t("refreshFailedTitle")}
           description={t("refreshFailedDescription")}
-          action={retryButton}
-          className="flex-col items-stretch sm:flex-row sm:items-center"
+          ignoreLabel={tCommon("ignore")}
+          onIgnore={() => setRefreshError(false)}
+          refreshLabel={t("refresh")}
+          onRefresh={() => void refresh()}
         />
       ) : null}
 

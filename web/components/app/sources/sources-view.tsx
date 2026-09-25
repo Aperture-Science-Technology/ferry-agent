@@ -2,11 +2,14 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Cable, CircleAlert, Library, TriangleAlert } from "lucide-react";
+import { Cable, Library } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import {
   SourcesEmpty,
   SourcesFeedback,
+  SourcesFeedbackError,
+  SourcesFeedbackPartial,
 } from "@/components/app/sources/source-feedback";
 import {
   SourceConfigureButton,
@@ -56,12 +59,16 @@ export function SourcesView({
   sourcesUnavailable: boolean;
 }) {
   const t = useTranslations("sources");
+  const tCommon = useTranslations("common");
   const { call } = useApiClient();
+  const router = useRouter();
   const [sources, setSources] = useState(initialSources);
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(
     () => new Set()
   );
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [failedToggle, setFailedToggle] = useState<Source | null>(null);
+  const [partialDismissed, setPartialDismissed] = useState(false);
   const [gatewayPresentation, setGatewayPresentation] = useState<
     GatewayConnectionPresentation | null
   >(null);
@@ -91,7 +98,8 @@ export function SourcesView({
     sourcesUnavailable,
     updateError,
   });
-  const partial = hasPartialSources(sources, sourcesUnavailable);
+  const partial =
+    hasPartialSources(sources, sourcesUnavailable) && !partialDismissed;
   const displayedCount = SOURCE_DISPLAY_TYPES.length;
 
   function gatewayHintTitle(): string {
@@ -170,6 +178,7 @@ export function SourcesView({
   async function toggle(source: Source) {
     setPendingIds((prev) => new Set(prev).add(source.id));
     setUpdateError(null);
+    setFailedToggle(null);
     try {
       const updated = await call<Source>(`/api/v1/sources/${source.id}`, {
         method: "PATCH",
@@ -179,6 +188,7 @@ export function SourcesView({
       toast.success(updated.enabled ? t("toastEnabled") : t("toastDisabled"));
     } catch {
       setSources((prev) => applySourceToggleFailure(prev));
+      setFailedToggle(source);
       setUpdateError(t("toastUpdateFailed"));
       toast.error(t("toastUpdateFailed"));
     } finally {
@@ -289,19 +299,32 @@ export function SourcesView({
       ) : null}
 
       {partial ? (
-        <SourcesFeedback
-          icon={CircleAlert}
+        <SourcesFeedbackPartial
           title={t("partialTitle")}
           description={t("partialNote")}
+          ignoreLabel={tCommon("ignore")}
+          onIgnore={() => setPartialDismissed(true)}
+          refreshLabel={tCommon("refresh")}
+          onRefresh={() => {
+            setPartialDismissed(false);
+            router.refresh();
+          }}
         />
       ) : null}
 
       {updateError ? (
-        <SourcesFeedback
-          role="alert"
-          icon={TriangleAlert}
+        <SourcesFeedbackError
           title={t("updateErrorTitle")}
           description={updateError}
+          dismissLabel={tCommon("dismiss")}
+          onDismiss={() => {
+            setUpdateError(null);
+            setFailedToggle(null);
+          }}
+          retryLabel={tCommon("retry")}
+          onRetry={() => {
+            if (failedToggle) void toggle(failedToggle);
+          }}
         />
       ) : null}
 

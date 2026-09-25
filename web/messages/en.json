@@ -19,6 +19,10 @@
     "loading": "Loading…",
     "copyFailed": "Couldn't copy. Select the text and copy it manually.",
     "close": "Close",
+    "dismiss": "Dismiss",
+    "ignore": "Ignore",
+    "retry": "Try again",
+    "refresh": "Refresh",
     "toggleSidebar": "Open or close the menu",
     "sidebar": "Menu",
     "sidebarDescription": "Navigation for your Ferry Agent workspace."

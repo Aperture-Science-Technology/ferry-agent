@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ChevronRight, CircleAlert, Eraser, Loader2, TriangleAlert } from "lucide-react";
+import { ChevronRight, CircleAlert, Eraser, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
 import {
   SettingsEmpty,
-  SettingsFeedback,
+  SettingsFeedbackError,
 } from "@/components/app/settings/settings-feedback";
 import {
   SettingsFormField,
@@ -373,11 +373,13 @@ export function SettingsForm({
               </div>
 
               {saveError ? (
-                <SettingsFeedback
-                  role="alert"
-                  icon={TriangleAlert}
+                <SettingsFeedbackError
                   title={t("saveErrorTitle")}
                   description={saveError}
+                  dismissLabel={tCommon("dismiss")}
+                  onDismiss={() => setSaveError(null)}
+                  retryLabel={tCommon("retry")}
+                  onRetry={() => void save()}
                 />
               ) : null}
 

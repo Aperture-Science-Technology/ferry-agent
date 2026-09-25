@@ -129,6 +129,10 @@ describe("UI harness — Pen settings composition", () => {
 
     const fields = screen.getAllByTestId("settings-field");
     expect(fields.length).toBeGreaterThanOrEqual(2);
+    for (const field of fields) {
+      expect(field.className).toMatch(/gap-1\.5/);
+      expect(field.className).toMatch(/flex-col/);
+    }
 
     const formatGroup = screen.getByRole("group", {
       name: messagesFr.settings.defaultFormat,
