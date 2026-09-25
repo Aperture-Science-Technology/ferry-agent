@@ -317,7 +317,6 @@
     "modeMine": "Retrouver dans mes livres",
     "modeSources": "Chercher dans les sources",
     "browseModeLabel": "Parcourir la bibliothèque",
-    "recentSection": "Récents",
     "searchSourcesPlaceholder": "Chercher dans les sources",
     "feedbackLoadingTitle": "Chargement…",
     "feedbackLoadingBody": "Récupération de la bibliothèque.",
@@ -556,7 +555,6 @@
     "deleteConfirmDescription": "Après suppression, les téléchargements de ce module s’arrêtent. Votre bibliothèque en ligne reste disponible.",
     "toastDeleted": "Gateway supprimé.",
     "toastDeleteFailed": "Impossible de supprimer ce Gateway. Réessayez.",
-    "recentActivity": "Activité récente",
     "activityEmpty": "Aucune activité récente.",
     "activityUnavailableTitle": "Activité indisponible",
     "activityUnavailable": "Impossible de charger l’activité de ce Gateway pour le moment.",
@@ -610,8 +608,7 @@
     "jobQueueCount": "{count, plural, one {# tâche} other {# tâches}}",
     "jobQueueUnavailable": "La file s’affiche quand ce module est connecté.",
     "pair": "Appairer",
-    "recreate": "Recréer",
-    "primaryGatewayHint": "principal"
+    "recreate": "Recréer"
   },
   "createAccess": {
     "title": "Créer un Gateway",
@@ -741,8 +738,8 @@
     "statuses": {
       "queued": "Demandé",
       "sent": "En cours",
-      "delivered": "Terminé",
-      "failed": "Échoué",
+      "delivered": "Livré",
+      "failed": "Échec",
       "unknown": "Inconnu"
     }
   },

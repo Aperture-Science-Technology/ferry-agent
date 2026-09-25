@@ -259,12 +259,6 @@ export function GatewayRow({
         <div data-connection={presentation}>
           <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
             <span>{statusText}</span>
-            {isPrimary ? (
-              <span className="text-muted-foreground">
-                {" "}
-                · {t("primaryGatewayHint")}
-              </span>
-            ) : null}
           </p>
           {presentation === "offline" ? (
             <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">

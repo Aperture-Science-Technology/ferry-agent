@@ -110,7 +110,7 @@ describe("UI harness — Pen deliveries composition", () => {
         name: "Le Passage du Nord → Kindle Paperwhite",
       })
     ).toBeTruthy();
-    expect(within(rows[0]!).getByText("Terminé")).toBeTruthy();
+    expect(within(rows[0]!).getByText("Livré")).toBeTruthy();
     expect(
       within(rows[1]!).getByRole("heading", {
         name: "Ink & Transfer → Kobo Clara",
@@ -151,13 +151,13 @@ describe("UI harness — Pen deliveries composition", () => {
       screen.getByRole("heading", { level: 1, name: "Deliveries" })
     ).toBeTruthy();
     expect(screen.getAllByText("Transfer history").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Finished").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Delivered").length).toBeGreaterThan(0);
     expect(screen.getAllByText("In progress").length).toBeGreaterThan(0);
     expect(screen.getByText("History")).toBeTruthy();
     expect(screen.queryByText("Your deliveries")).toBeNull();
   });
 
-  it("keeps unknown status explicit and never maps it to Finished/Terminé", () => {
+  it("keeps unknown status explicit and never maps it to Livré", () => {
     renderDeliveries("fr", {
       initialDeliveries: [
         baseJob({ status: "in_transit" as DeliveryJob["status"] }),
@@ -165,7 +165,9 @@ describe("UI harness — Pen deliveries composition", () => {
     });
 
     expect(screen.getByText("Inconnu")).toBeTruthy();
-    expect(screen.queryByText("Terminé")).toBeNull();
+    const rows = screen.getAllByTestId("delivery-status-row");
+    expect(rows.length).toBe(1);
+    expect(within(rows[0]!).queryByText("Livré")).toBeNull();
     expect(screen.getByText(/Statut non reconnu/i)).toBeTruthy();
   });
 
@@ -194,25 +196,49 @@ describe("UI harness — Pen deliveries composition", () => {
           item_title: "Ferry Notes",
           status: "failed",
         }),
+        baseJob({
+          id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          item_title: "Catalogues silencieux",
+          status: "queued",
+        }),
       ],
     });
 
     const hint = screen.getByTestId("deliveries-queue-hint");
-    expect(within(hint).getByText(/1 en cours · 1 échec/)).toBeTruthy();
+    expect(within(hint).getByText(/2 en cours · 1 échec/)).toBeTruthy();
 
     const filters = screen.getByTestId("deliveries-filters");
     fireEvent.click(within(filters).getByRole("button", { name: "Livré" }));
-    expect(screen.getAllByTestId("delivery-status-row").length).toBe(1);
+    const deliveredRows = screen.getAllByTestId("delivery-status-row");
+    expect(deliveredRows.length).toBe(1);
     expect(screen.getByText(/Le Passage du Nord/)).toBeTruthy();
+    expect(within(deliveredRows[0]!).getByText("Livré")).toBeTruthy();
     expect(screen.queryByText(/Ink & Transfer/)).toBeNull();
+    expect(screen.queryByText(/Ferry Notes/)).toBeNull();
+    expect(screen.queryByText(/Catalogues silencieux/)).toBeNull();
+
+    fireEvent.click(within(filters).getByRole("button", { name: "En cours" }));
+    const activeRows = screen.getAllByTestId("delivery-status-row");
+    expect(activeRows.length).toBe(2);
+    expect(screen.getByText(/Ink & Transfer/)).toBeTruthy();
+    expect(screen.getByText(/Catalogues silencieux/)).toBeTruthy();
+    expect(
+      activeRows.some((row) => within(row).queryByText("Demandé"))
+    ).toBe(true);
+    expect(
+      activeRows.some((row) => within(row).queryByText("En cours"))
+    ).toBe(true);
+    expect(screen.queryByText(/Le Passage du Nord/)).toBeNull();
     expect(screen.queryByText(/Ferry Notes/)).toBeNull();
 
     fireEvent.click(within(filters).getByRole("button", { name: "Échec" }));
-    expect(screen.getAllByTestId("delivery-status-row").length).toBe(1);
+    const failedRows = screen.getAllByTestId("delivery-status-row");
+    expect(failedRows.length).toBe(1);
     expect(screen.getByText(/Ferry Notes/)).toBeTruthy();
+    expect(within(failedRows[0]!).getByText("Échec")).toBeTruthy();
 
     fireEvent.click(within(filters).getByRole("button", { name: "Tous" }));
-    expect(screen.getAllByTestId("delivery-status-row").length).toBe(3);
+    expect(screen.getAllByTestId("delivery-status-row").length).toBe(4);
   });
 
   it("hides the queue hint when nothing is active or failed", () => {

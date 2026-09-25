@@ -680,13 +680,16 @@ export function LibraryView({
       </div>
 
       {showMobileEmptyTop ? (
-        <div className="flex flex-col gap-2 px-5 pt-6 md:hidden">
+        <div className="flex flex-col gap-2 px-5 py-6 md:hidden">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">{tBrand("name")}</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              {tBrand("name")}
+            </p>
             <Button
               type="button"
               variant="ghost"
               size="icon"
+              className="size-[51px] rounded-full border border-border-strong bg-accent"
               aria-label={t("importShort")}
               onClick={openImport}
             >

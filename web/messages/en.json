@@ -317,7 +317,6 @@
     "modeMine": "Find in my books",
     "modeSources": "Search sources",
     "browseModeLabel": "Browse the library",
-    "recentSection": "Recent",
     "searchSourcesPlaceholder": "Search sources",
     "feedbackLoadingTitle": "Loading…",
     "feedbackLoadingBody": "Fetching your library.",
@@ -556,7 +555,6 @@
     "deleteConfirmDescription": "After deletion, downloads for this module will stop. Your online library stays available.",
     "toastDeleted": "Gateway deleted.",
     "toastDeleteFailed": "Couldn't delete this Gateway. Please try again.",
-    "recentActivity": "Recent activity",
     "activityEmpty": "No recent activity.",
     "activityUnavailableTitle": "Activity unavailable",
     "activityUnavailable": "Couldn't load this Gateway's activity right now.",
@@ -610,8 +608,7 @@
     "jobQueueCount": "{count, plural, one {# task} other {# tasks}}",
     "jobQueueUnavailable": "The queue appears when this module is connected.",
     "pair": "Pair",
-    "recreate": "Recreate",
-    "primaryGatewayHint": "primary"
+    "recreate": "Recreate"
   },
   "createAccess": {
     "title": "Create a Gateway",
@@ -741,7 +738,7 @@
     "statuses": {
       "queued": "Requested",
       "sent": "In progress",
-      "delivered": "Finished",
+      "delivered": "Delivered",
       "failed": "Failed",
       "unknown": "Unknown"
     }

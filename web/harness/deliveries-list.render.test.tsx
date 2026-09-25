@@ -86,7 +86,7 @@ function renderDeliveries(
 }
 
 describe("UI harness — deliveries list", () => {
-  it("shows Inconnu for an unrecognized status and never Terminé", () => {
+  it("shows Inconnu for an unrecognized status and never Livré", () => {
     renderDeliveries({
       initialDeliveries: [
         baseJob({ status: "in_transit" as DeliveryJob["status"] }),
@@ -95,7 +95,11 @@ describe("UI harness — deliveries list", () => {
 
     const unknownLabels = screen.getAllByText("Inconnu");
     expect(unknownLabels.length).toBeGreaterThan(0);
-    expect(screen.queryByText("Terminé")).toBeNull();
+    const rows = screen.getAllByTestId("delivery-status-row");
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(within(row).queryByText("Livré")).toBeNull();
+    }
     expect(
       screen.getAllByText(/Statut non reconnu|non reconnu/i).length
     ).toBeGreaterThan(0);
@@ -194,6 +198,6 @@ describe("UI harness — deliveries list", () => {
     expect(
       within(dialog).getByText("SMTP refusé par le serveur distant.")
     ).toBeTruthy();
-    expect(within(dialog).getByText("Échoué")).toBeTruthy();
+    expect(within(dialog).getByText("Échec")).toBeTruthy();
   });
 });
