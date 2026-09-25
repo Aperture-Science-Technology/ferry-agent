@@ -79,8 +79,10 @@ vi.mock("@/i18n/navigation", () => ({
       {children}
     </a>
   ),
+  usePathname: () => "/app/reglages",
   useRouter: () => ({
     refresh: refreshMock,
+    replace: vi.fn(),
   }),
 }));
 

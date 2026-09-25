@@ -2,18 +2,12 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { CircleAlert, Eraser, Loader2, TriangleAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { ChevronRight, CircleAlert, Eraser, Loader2, TriangleAlert } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { routing, type Locale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
 import {
   SettingsEmpty,
@@ -22,6 +16,7 @@ import {
 import {
   SettingsFormField,
   settingsFormControlClass,
+  settingsFormLabelClass,
 } from "@/components/app/settings/settings-form-field";
 import {
   buildSettingsPatchPayload,
@@ -56,6 +51,71 @@ function parseApiDetail(raw: string): string | null {
   return trimmed || null;
 }
 
+function PreferencesRow({
+  title,
+  subtitle,
+  href,
+  onClick,
+  ariaLabel,
+  showBorder = true,
+  chevron = true,
+}: {
+  title: string;
+  subtitle: string;
+  href?: string;
+  onClick?: () => void;
+  ariaLabel?: string;
+  showBorder?: boolean;
+  chevron?: boolean;
+}) {
+  const body = (
+    <>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-sm font-medium text-foreground">{title}</span>
+        <span className="text-xs font-medium text-muted-foreground">
+          {subtitle}
+        </span>
+      </div>
+      {chevron ? (
+        <ChevronRight
+          className="size-4 shrink-0 text-muted-foreground"
+          aria-hidden
+        />
+      ) : null}
+    </>
+  );
+
+  const rowClass = cn(
+    "flex w-full min-w-0 items-center gap-4 py-4 text-left",
+    showBorder && "border-b border-border",
+    (href || onClick) &&
+      "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={rowClass} aria-label={ariaLabel ?? title}>
+        {body}
+      </Link>
+    );
+  }
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className={rowClass}
+        onClick={onClick}
+        aria-label={ariaLabel ?? title}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return <div className={rowClass}>{body}</div>;
+}
+
 export function SettingsForm({
   title,
   description,
@@ -80,6 +140,8 @@ export function SettingsForm({
   const t = useTranslations("settings");
   const tBrand = useTranslations("brand");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const pathname = usePathname();
   const router = useRouter();
   const { call } = useApiClient();
   const [kindleEmail, setKindleEmail] = useState(initialKindleEmail);
@@ -120,6 +182,19 @@ export function SettingsForm({
         ? "dirty"
         : "ready";
 
+  function cancelEdits() {
+    setKindleEmail(saved.kindleEmail);
+    setDefaultFormat(saved.defaultFormat);
+    setSaveError(null);
+  }
+
+  function cycleLocale() {
+    const index = routing.locales.indexOf(locale as Locale);
+    const next = routing.locales[(index + 1) % routing.locales.length];
+    if (!next || next === locale) return;
+    router.replace(pathname, { locale: next });
+  }
+
   async function save() {
     setSaving(true);
     setSaveError(null);
@@ -152,16 +227,19 @@ export function SettingsForm({
     }
   }
 
+  const languageValue =
+    locale === "en" ? t("languageValueEn") : t("languageValueFr");
+
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col gap-3",
-        "pb-[max(0.5rem,env(safe-area-inset-bottom))] md:gap-6"
+        "flex min-w-0 flex-col gap-4",
+        "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       )}
       data-testid="settings-pen-layout"
       data-settings-state={settingsState}
     >
-      {/* Title stacks are dedicated (mF005b Top vs Hd0003); no shared DashboardHeader. */}
+      {/* Header/Page — already conforming; do not restyle. */}
       <div className="flex flex-col gap-2 md:min-h-[72px]">
         <header
           data-testid="settings-header-mobile"
@@ -200,139 +278,186 @@ export function SettingsForm({
         />
       ) : null}
 
-      <div data-testid="settings-body" className="flex min-w-0 flex-col gap-3 md:gap-6">
+      {/* Content — gap 12 */}
+      <div
+        data-testid="settings-body"
+        className="flex min-w-0 flex-col gap-3"
+      >
         <Reveal>
           <section
-            className="flex min-w-0 flex-col gap-3 md:gap-6"
+            className="flex min-w-0 flex-col gap-3"
             data-testid="settings-delivery"
           >
-            {/* Pen Sec1 — desktop only (absent from mF005b Body). */}
-            <h2 className="hidden font-heading text-base font-medium text-foreground md:block">
-              {t("deliveryPreferencesTitle")}
-            </h2>
-
-            {/* Pen desktop: account email; mobile Top/Body omits it */}
-            <SettingsFormField
-              htmlFor="settings-account-email"
-              label={t("email")}
-              hint={t("emailHint")}
-              className="hidden md:flex md:flex-col"
-            >
-              <Input
-                id="settings-account-email"
-                value={initialEmail}
-                readOnly
-                disabled
-                className={settingsFormControlClass}
-              />
-            </SettingsFormField>
-
-            <SettingsFormField
-              htmlFor="settings-kindle-email"
-              label={t("kindleEmail")}
-              hint={t("kindleEmailHint")}
-            >
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  id="settings-kindle-email"
-                  type="email"
-                  value={kindleEmail}
-                  onChange={(event) => setKindleEmail(event.target.value)}
-                  placeholder={t("kindleEmailPlaceholder")}
-                  disabled={settingsUnavailable}
-                  className={cn(settingsFormControlClass, "min-w-0 flex-1")}
-                  autoComplete="email"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={settingsUnavailable || !kindleEmail}
-                  onClick={() => setKindleEmail("")}
-                  className="w-full shrink-0 whitespace-normal sm:w-auto"
-                >
-                  <Eraser aria-hidden />
-                  {t("clearKindleEmail")}
-                </Button>
-              </div>
-            </SettingsFormField>
-
-            <SettingsFormField
-              htmlFor="settings-default-format"
-              label={t("defaultFormat")}
-              hint={t("defaultFormatHint")}
-            >
-              <Select
-                value={defaultFormat}
-                onValueChange={(value) => setDefaultFormat(value ?? "epub")}
-                disabled={settingsUnavailable}
-              >
-                <SelectTrigger
-                  id="settings-default-format"
-                  className={cn(settingsFormControlClass, "uppercase")}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FORMATS.map((format) => (
-                    <SelectItem
-                      key={format}
-                      value={format}
-                      className="uppercase"
-                    >
-                      {format}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </SettingsFormField>
-
-            {saveError ? (
-              <SettingsFeedback
-                role="alert"
-                icon={TriangleAlert}
-                title={t("saveErrorTitle")}
-                description={saveError}
-              />
-            ) : null}
-
-            <div className="flex min-w-0 flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p
-                className="min-w-0 text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground"
-                aria-live="polite"
-                data-settings-dirty={dirty ? "true" : "false"}
-              >
-                {dirty ? t("unsavedChanges") : t("allSaved")}
+            <div className="flex min-w-0 flex-col gap-1">
+              <h2 className="text-base font-medium text-foreground">
+                {t("accountTitle")}
+              </h2>
+              <p className="text-[13px] font-medium text-muted-foreground">
+                {t("accountDescription")}
               </p>
-              <Button
-                type="button"
-                onClick={() => void save()}
-                disabled={saving || settingsUnavailable || !dirty}
-                className="w-full shrink-0 whitespace-normal sm:w-auto"
-              >
-                {saving ? <Loader2 className="animate-spin" aria-hidden /> : null}
-                {tCommon("save")}
-              </Button>
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-5 rounded-lg border border-border bg-card p-6">
+              <div className="flex min-w-0 flex-col gap-4">
+                <SettingsFormField
+                  htmlFor="settings-kindle-email"
+                  label={t("kindleEmail")}
+                  hint={t("kindleEmailHint")}
+                >
+                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                    <Input
+                      id="settings-kindle-email"
+                      type="email"
+                      value={kindleEmail}
+                      onChange={(event) => setKindleEmail(event.target.value)}
+                      placeholder={t("kindleEmailPlaceholder")}
+                      disabled={settingsUnavailable}
+                      className={cn(settingsFormControlClass, "min-w-0 flex-1")}
+                      autoComplete="email"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={settingsUnavailable || !kindleEmail}
+                      onClick={() => setKindleEmail("")}
+                      className="w-full shrink-0 whitespace-normal sm:w-auto"
+                    >
+                      <Eraser aria-hidden />
+                      {t("clearKindleEmail")}
+                    </Button>
+                  </div>
+                </SettingsFormField>
+
+                <div
+                  data-testid="settings-field"
+                  className="flex min-w-0 flex-col gap-1.5"
+                >
+                  <p
+                    id="settings-default-format-label"
+                    className={settingsFormLabelClass}
+                  >
+                    {t("defaultFormat")}
+                  </p>
+                  <div
+                    role="group"
+                    aria-labelledby="settings-default-format-label"
+                    className="flex min-w-0 flex-wrap gap-2"
+                  >
+                    {FORMATS.map((format) => {
+                      const selected = defaultFormat === format;
+                      return (
+                        <button
+                          key={format}
+                          type="button"
+                          aria-pressed={selected}
+                          disabled={settingsUnavailable}
+                          onClick={() => setDefaultFormat(format)}
+                          className={cn(
+                            "rounded-full px-4 py-2.5 text-[13px] font-medium uppercase transition-colors",
+                            "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                            "disabled:pointer-events-none disabled:opacity-50",
+                            selected
+                              ? "bg-primary text-primary-foreground"
+                              : "border border-border bg-secondary text-secondary-foreground"
+                          )}
+                        >
+                          {format}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+                    {t("defaultFormatAppliedHint")}
+                  </p>
+                </div>
+              </div>
+
+              {saveError ? (
+                <SettingsFeedback
+                  role="alert"
+                  icon={TriangleAlert}
+                  title={t("saveErrorTitle")}
+                  description={saveError}
+                />
+              ) : null}
+
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p
+                  className="min-w-0 text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground"
+                  aria-live="polite"
+                  data-settings-dirty={dirty ? "true" : "false"}
+                >
+                  {dirty ? t("unsavedChanges") : t("allSaved")}
+                </p>
+                <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={cancelEdits}
+                    disabled={saving || settingsUnavailable || !dirty}
+                    className="w-full whitespace-normal sm:w-auto"
+                  >
+                    {tCommon("cancel")}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void save()}
+                    disabled={saving || settingsUnavailable || !dirty}
+                    className="w-full shrink-0 whitespace-normal sm:w-auto"
+                  >
+                    {saving ? (
+                      <Loader2 className="animate-spin" aria-hidden />
+                    ) : null}
+                    {tCommon("save")}
+                  </Button>
+                </div>
+              </div>
             </div>
           </section>
         </Reveal>
 
         <Reveal>
           <section
-            className="flex min-w-0 flex-col gap-3 md:gap-4"
+            className="flex min-w-0 flex-col gap-3"
             data-testid="settings-opds"
           >
-            <div className="hidden min-w-0 flex-col gap-1 md:flex">
-              <h2 className="font-heading text-base font-medium text-foreground">
-                {t("readerCatalogTitle")}
-              </h2>
-              <p className="text-sm font-medium text-muted-foreground">
-                {t("readerCatalogDescription")}
-              </p>
-            </div>
             <ReaderCatalogSection
               initialTokens={initialOpdsTokens}
               tokensUnavailable={opdsTokensUnavailable}
             />
+          </section>
+        </Reveal>
+
+        <Reveal>
+          <section
+            className="flex min-w-0 flex-col gap-3"
+            data-testid="settings-preferences"
+          >
+            <h2 className="text-base font-medium text-foreground">
+              {t("preferencesTitle")}
+            </h2>
+            <div className="flex min-w-0 flex-col rounded-lg border border-border bg-card px-5 py-2">
+              {/* Account email — exists in app, absent from Pen Compte → Préférences row */}
+              <PreferencesRow
+                title={t("email")}
+                subtitle={initialEmail || t("emailHint")}
+                showBorder
+                chevron={false}
+              />
+              <PreferencesRow
+                title={t("languageLabel")}
+                subtitle={languageValue}
+                onClick={cycleLocale}
+                ariaLabel={t("languageSwitchAria")}
+                showBorder
+              />
+              <PreferencesRow
+                title={t("documentationLabel")}
+                subtitle={t("documentationHint")}
+                href="/docs"
+                showBorder={false}
+              />
+            </div>
           </section>
         </Reveal>
       </div>

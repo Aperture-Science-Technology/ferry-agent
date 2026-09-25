@@ -821,7 +821,11 @@
       "actionsHintMobile": "QR · Copier · Révoquer",
       "actionsHintList": "Révoquer",
       "labelHint": "Affiché dans Réglages · Catalogue lecteur",
-      "qrPlaceholder": "QR"
+      "qrPlaceholder": "QR",
+      "statusActive": "Actif",
+      "statusRevoked": "Révoqué",
+      "tokenMeta": "Créé le {created} · Dernier usage · {lastUsed}",
+      "createdLabel": "Créé le {created}"
     },
     "devicesTitle": "Appareils",
     "devicesDescription": "Gérez vos liseuses et la façon dont les livres y arrivent.",
@@ -832,7 +836,19 @@
     "allSaved": "Tout est à jour.",
     "saveErrorTitle": "Enregistrement impossible",
     "sourcesSummary": "Activez Gutenberg ou Standard Ebooks, et retrouvez l'import et le Gateway depuis la page Sources.",
-    "sourcesCta": "Ouvrir Sources"
+    "sourcesCta": "Ouvrir Sources",
+    "accountTitle": "Compte",
+    "accountDescription": "E-mail Kindle et format d’envoi par défaut.",
+    "defaultFormatAppliedHint": "Appliqué aux nouveaux envois si le livre le permet",
+    "preferencesTitle": "Préférences",
+    "languageLabel": "Langue",
+    "languageValueFr": "Français",
+    "languageValueEn": "English",
+    "languageSwitchAria": "Changer de langue",
+    "documentationLabel": "Documentation",
+    "documentationHint": "Guide Ferry Agent",
+    "opdsTokensTitle": "Jetons OPDS",
+    "opdsTokensDescription": "Créer, lister et révoquer les jetons d’accès au catalogue OPDS."
   },
   "docs": {
     "metaTitle": "Guide | Ferry Agent",

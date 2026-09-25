@@ -821,7 +821,11 @@
       "actionsHintMobile": "QR · Copy · Revoke",
       "actionsHintList": "Revoke",
       "labelHint": "Shown in Settings · Reader catalog",
-      "qrPlaceholder": "QR"
+      "qrPlaceholder": "QR",
+      "statusActive": "Active",
+      "statusRevoked": "Revoked",
+      "tokenMeta": "Created {created} · Last used · {lastUsed}",
+      "createdLabel": "Created {created}"
     },
     "devicesTitle": "Devices",
     "devicesDescription": "Manage your e-readers and how books arrive on them.",
@@ -832,7 +836,19 @@
     "allSaved": "Everything is up to date.",
     "saveErrorTitle": "Couldn't save",
     "sourcesSummary": "Enable Gutenberg or Standard Ebooks, and find import and Gateway from the Sources page.",
-    "sourcesCta": "Open Sources"
+    "sourcesCta": "Open Sources",
+    "accountTitle": "Account",
+    "accountDescription": "Kindle email and default send format.",
+    "defaultFormatAppliedHint": "Applied to new sends when the book allows it",
+    "preferencesTitle": "Preferences",
+    "languageLabel": "Language",
+    "languageValueFr": "Français",
+    "languageValueEn": "English",
+    "languageSwitchAria": "Switch language",
+    "documentationLabel": "Documentation",
+    "documentationHint": "Ferry Agent guide",
+    "opdsTokensTitle": "OPDS tokens",
+    "opdsTokensDescription": "Create, list, and revoke tokens for OPDS catalog access."
   },
   "docs": {
     "metaTitle": "Guide | Ferry Agent",
