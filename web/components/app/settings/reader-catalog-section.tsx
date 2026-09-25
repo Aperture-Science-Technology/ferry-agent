@@ -23,7 +23,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CatalogQrCode } from "@/components/app/settings/catalog-qr-code";
-import { OpdsTokenCard } from "@/components/app/settings/opds-token-card";
+import {
+  OpdsTokenCard,
+  OpdsTokenStatusBadge,
+} from "@/components/app/settings/opds-token-card";
 import {
   SettingsEmpty,
   SettingsFeedback,
@@ -32,7 +35,10 @@ import {
   SettingsFormField,
   settingsFormControlClass,
 } from "@/components/app/settings/settings-form-field";
-import { formatTokenLastUsed } from "@/components/app/settings/settings-state";
+import {
+  formatTokenCreatedDate,
+  formatTokenLastUsed,
+} from "@/components/app/settings/settings-state";
 import { RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { copyTextToClipboard } from "@/components/app/gateways/gateways-state";
 import { useApiClient } from "@/lib/api-client";
@@ -47,6 +53,7 @@ export function ReaderCatalogSection({
   tokensUnavailable: boolean;
 }) {
   const t = useTranslations("settings.readerCatalog");
+  const tSettings = useTranslations("settings");
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const { call } = useApiClient();
@@ -158,7 +165,23 @@ export function ReaderCatalogSection({
   );
 
   return (
-    <div className="flex min-w-0 flex-col gap-3 md:gap-4" data-catalog-state={catalogState}>
+    <div
+      className="flex min-w-0 flex-col gap-3"
+      data-catalog-state={catalogState}
+    >
+      {/* Pen OPDS head — titles + Créer jeton */}
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h2 className="text-base font-medium text-foreground">
+            {tSettings("opdsTokensTitle")}
+          </h2>
+          <p className="text-[13px] font-medium text-muted-foreground">
+            {tSettings("opdsTokensDescription")}
+          </p>
+        </div>
+        {tokensUnavailable ? null : createAction}
+      </div>
+
       <SettingsFeedback
         icon={CircleAlert}
         title={t("warningTitle")}
@@ -186,20 +209,6 @@ export function ReaderCatalogSection({
         />
       ) : null}
 
-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="font-heading text-sm font-medium text-foreground">
-            {t("linksTitle")}
-          </h3>
-          {tokens.length > 0 ? (
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
-              {t("countLabel", { count: tokens.length })}
-            </p>
-          ) : null}
-        </div>
-        {tokensUnavailable ? null : createAction}
-      </div>
-
       {tokensUnavailable ? null : tokens.length === 0 ? (
         <SettingsEmpty
           icon={BookOpen}
@@ -208,40 +217,29 @@ export function ReaderCatalogSection({
           action={createAction}
         />
       ) : (
-        <div data-testid="opds-token-cards">
-          <RevealGroup className="flex min-w-0 flex-col gap-3">
+        <div
+          data-testid="opds-token-cards"
+          className="flex min-w-0 flex-col rounded-lg border border-border bg-card px-5 py-2"
+        >
+          <RevealGroup className="flex min-w-0 flex-col">
             {tokens.map((token) => (
               <RevealItem key={token.id}>
                 <OpdsTokenCard
                   tokenId={token.id}
-                  title={t("tokenTitle", { label: token.label })}
-                  meta={
-                    <>
-                      <span className="md:hidden">
-                        {formatTokenLastUsed(
-                          token.last_used_at,
-                          locale,
-                          t("neverUsed")
-                        )}
-                        {" · "}
-                        {t("actionsHintMobile")}
-                      </span>
-                      <span className="hidden md:inline">
-                        {formatTokenLastUsed(
-                          token.last_used_at,
-                          locale,
-                          t("neverUsed")
-                        )}
-                        {" · "}
-                        {t("actionsHint")}
-                      </span>
-                    </>
-                  }
+                  title={token.label}
+                  badge={<OpdsTokenStatusBadge label={t("statusActive")} />}
+                  meta={t("tokenMeta", {
+                    created: formatTokenCreatedDate(token.created_at, locale),
+                    lastUsed: formatTokenLastUsed(
+                      token.last_used_at,
+                      locale,
+                      t("neverUsed")
+                    ),
+                  })}
                   actions={
                     <Button
                       type="button"
-                      variant="outline"
-                      size="sm"
+                      variant="ghost"
                       className="whitespace-normal"
                       onClick={() => {
                         setRevokeError(null);
@@ -264,14 +262,14 @@ export function ReaderCatalogSection({
         onOpenChange={closeCreate}
         disablePointerDismissal={submitting}
       >
-        <DialogContent className="max-h-[min(90dvh,40rem)] gap-4 overflow-y-auto sm:max-w-md">
+        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-md">
           {created ? (
             <>
-              <DialogHeader className="gap-2">
-                <DialogTitle className="font-heading text-lg font-medium break-words whitespace-normal">
+              <DialogHeader>
+                <DialogTitle className="break-words whitespace-normal">
                   {t("createdTitle")}
                 </DialogTitle>
-                <DialogDescription className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
+                <DialogDescription className="break-words whitespace-normal text-muted-foreground">
                   {t("createdDescription")}
                 </DialogDescription>
               </DialogHeader>
@@ -330,7 +328,7 @@ export function ReaderCatalogSection({
                   description={t("oneTimeWarning")}
                 />
               </div>
-              <DialogFooter className="gap-2 sm:gap-2">
+              <DialogFooter>
                 <Button
                   type="button"
                   onClick={() => closeCreate(false)}
@@ -342,15 +340,14 @@ export function ReaderCatalogSection({
             </>
           ) : (
             <>
-              <DialogHeader className="gap-2">
-                <DialogTitle className="font-heading text-lg font-medium break-words whitespace-normal">
+              <DialogHeader>
+                <DialogTitle className="break-words whitespace-normal">
                   {t("createTitle")}
                 </DialogTitle>
-                <DialogDescription className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
+                <DialogDescription className="break-words whitespace-normal text-muted-foreground">
                   {t("createDescription")}
                 </DialogDescription>
               </DialogHeader>
-              {/* Pen Form/Field lz3PJ */}
               <SettingsFormField
                 htmlFor="catalog-link-label"
                 label={t("labelField")}
@@ -375,10 +372,10 @@ export function ReaderCatalogSection({
                   description={createError}
                 />
               ) : null}
-              <DialogFooter className="gap-2 sm:gap-2">
+              <DialogFooter>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => closeCreate(false)}
                   disabled={submitting}
                   autoFocus
@@ -403,18 +400,17 @@ export function ReaderCatalogSection({
         </DialogContent>
       </Dialog>
 
-      {/* Pen Dialog/RevokeOpds iUc27 — 400, pad 24, gap 16, r lg */}
       <Dialog
         open={revokeTarget !== null}
         onOpenChange={(open) => !open && !revoking && setRevokeTarget(null)}
         disablePointerDismissal={revoking}
       >
-        <DialogContent className="max-h-[min(90dvh,40rem)] gap-4 overflow-y-auto sm:max-w-[400px]">
-          <DialogHeader className="gap-2">
-            <DialogTitle className="font-heading text-lg font-medium break-words whitespace-normal">
+        <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="break-words whitespace-normal">
               {t("revokeConfirmTitle")}
             </DialogTitle>
-            <DialogDescription className="text-sm font-medium break-words whitespace-normal text-muted-foreground">
+            <DialogDescription className="break-words whitespace-normal text-muted-foreground">
               {t("revokeConfirmDescription")}
             </DialogDescription>
           </DialogHeader>
@@ -426,10 +422,10 @@ export function ReaderCatalogSection({
               description={revokeError}
             />
           ) : null}
-          <DialogFooter className="gap-2 sm:gap-2">
+          <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() => setRevokeTarget(null)}
               disabled={revoking}
               autoFocus
@@ -439,7 +435,6 @@ export function ReaderCatalogSection({
             </Button>
             <Button
               type="button"
-              variant="destructive"
               onClick={() => void confirmRevoke()}
               disabled={revoking}
               className="whitespace-normal"

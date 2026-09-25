@@ -102,6 +102,25 @@ describe("UI harness — library deliver dialog", () => {
     const submit = screen.getByRole("button", { name: "Envoyer" });
     expect(submit).toHaveProperty("disabled", true);
 
+    // Pen Dialog/SendBook anatomy
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toMatch(/sm:max-w-\[420px\]/);
+    expect(dialog.className).toMatch(/p-6/);
+    expect(dialog.className).toMatch(/gap-4/);
+    expect(
+      screen.getByRole("heading", {
+        name: messages.deliverDialog.title.replace("{title}", item.title),
+      })
+    ).toBeTruthy();
+    expect(screen.getByText(messages.deliverDialog.description)).toBeTruthy();
+    expect(screen.getByLabelText(messages.deliverDialog.device)).toBeTruthy();
+    const footer = dialog.querySelector('[data-slot="dialog-footer"]');
+    expect(footer).toBeTruthy();
+    expect(footer!.className).toMatch(/sm:justify-end/);
+    expect(
+      screen.getByRole("button", { name: messages.common.cancel })
+    ).toBeTruthy();
+
     fireEvent.click(submit);
 
     expect(

@@ -8,7 +8,7 @@
   <path fill="#FBFAF7" fill-opacity=".95" d="M68 46c0-1.2.8-2.2 1.9-2.5 6.2-1.6 12.2.4 14.1 2.2.3.3.5.7.5 1.1v28.4c0 1.2-1.1 2-2.2 1.7-4.2-1.1-8.3-.4-12.1 1.6-.8.4-1.7-.2-1.7-1.1V46Z"/>
   <path fill="#FBFAF7" fill-opacity=".82" d="M100 46c0-1.2-.8-2.2-1.9-2.5-6.2-1.6-12.2.4-14.1 2.2-.3.3-.5.7-.5 1.1v28.4c0 1.2 1.1 2 2.2 1.7 4.2-1.1 8.3-.4 12.1 1.6.8.4 1.7-.2 1.7-1.1V46Z"/>
   <path fill="#D4D0C8" fill-opacity=".45" d="M82.2 46.5h3.6v29h-3.6z"/>
-  <path fill="none" stroke="#9A4825" stroke-width="2" stroke-linecap="round" d="M74 58c2.8-3.2 5.8-4.6 8-4.6s5.2 1.4 8 4.6"/>
-  <circle cx="74" cy="58" r="1.6" fill="#9A4825"/>
-  <circle cx="90" cy="58" r="1.6" fill="#9A4825"/>
+  <path fill="none" stroke="#d4d4d4" stroke-width="2" stroke-linecap="round" d="M74 58c2.8-3.2 5.8-4.6 8-4.6s5.2 1.4 8 4.6"/>
+  <circle cx="74" cy="58" r="1.6" fill="#d4d4d4"/>
+  <circle cx="90" cy="58" r="1.6" fill="#d4d4d4"/>
 </svg>

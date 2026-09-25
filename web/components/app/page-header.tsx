@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 
-/** Pen Header/Page ePLzB title block — Fraunces 18/500 + optional 12/500 subtitle, min-height 72. */
+/**
+ * Pen Header/Page — h 88, pad 8, gap 16, space-between.
+ * Title specimen 28/700 (absent from type scale — specimen wins for screen).
+ */
 export function PageHeader({
   title,
   description,
@@ -11,17 +14,26 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-4">
+    <div className="flex h-[88px] min-h-[88px] flex-wrap items-center justify-between gap-4 p-2">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <h1 className="font-heading text-lg font-medium text-foreground text-balance">
+        <h1 className="text-[28px] font-bold text-foreground text-balance">
           {title}
         </h1>
         {description ? (
-          <p className="text-xs font-medium text-muted-foreground">{description}</p>
+          <p className="text-sm font-medium text-muted-foreground">
+            {description}
+          </p>
         ) : null}
       </div>
       {action ? (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>
+        // min-w-0 max-w-full (not shrink-0): action cluster may wrap under the
+        // title on narrow viewports instead of forcing document scrollWidth.
+        <div
+          data-testid="page-header-actions"
+          className="flex min-w-0 max-w-full flex-wrap items-center gap-3"
+        >
+          {action}
+        </div>
       ) : null}
     </div>
   );

@@ -1,10 +1,14 @@
-import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { Loader2 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
-import type { KnownSourceType, SourceAvailability } from "@/components/app/sources/sources-state";
+import { Folder, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
+import { cn } from "@/lib/utils";
+import type {
+  KnownSourceType,
+  SourceAvailability,
+} from "@/components/app/sources/sources-state";
 
-/** Pen SourceRow Sub — 12/500 muted; · separators on desktop group · status. */
+/** Pen SourceRow Sub — 12/500 muted. */
 export function SourceMetaLine({ children }: { children: ReactNode }) {
   return (
     <div className="min-w-0 text-xs font-medium break-words whitespace-normal text-muted-foreground">
@@ -13,7 +17,10 @@ export function SourceMetaLine({ children }: { children: ReactNode }) {
   );
 }
 
-/** Toggle trailing — business action (not in Pen mock Ny3Dd; required for Gutenberg / Standard Ebooks). */
+/**
+ * Pen Toggle — 44×24, pill, pad 2, fill ferry-text when on, knob 20×20 ferry-bg.
+ * Native button + role=switch (keyboard + aria-checked); not a decorative control.
+ */
 export function SourceToggle({
   checked,
   pending,
@@ -27,6 +34,7 @@ export function SourceToggle({
   ariaLabel: string;
   onToggle: () => void;
 }) {
+  const inert = disabled || pending;
   return (
     <div className="flex shrink-0 items-center gap-2">
       {pending ? (
@@ -35,24 +43,57 @@ export function SourceToggle({
           aria-hidden
         />
       ) : null}
-      <Switch
-        checked={checked}
-        disabled={disabled || pending}
-        onCheckedChange={onToggle}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
         aria-label={ariaLabel}
-      />
+        disabled={inert}
+        onClick={onToggle}
+        className={cn(
+          "inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors",
+          "outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+          checked ? "justify-end bg-foreground" : "justify-start bg-input",
+          inert && "cursor-not-allowed opacity-50"
+        )}
+      >
+        <span
+          className="pointer-events-none size-5 rounded-full bg-background"
+          aria-hidden
+        />
+      </button>
     </div>
   );
 }
 
+/** Pen Button/Ghost « Configurer » — navigates to a real app destination. */
+export function SourceConfigureButton({
+  href,
+  label,
+  ariaLabel,
+}: {
+  href: "/app/bibliotheque" | "/app/gateways";
+  label: string;
+  ariaLabel: string;
+}) {
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="min-w-0 whitespace-normal"
+      aria-label={ariaLabel}
+      render={<Link href={href}>{label}</Link>}
+    />
+  );
+}
+
 /**
- * Pen Source/SourceRow Ny3Dd — icon 18 + title 16/500 + sub 12/500,
- * gap 16, pad 12 0, bottom border. Trailing = status/actions (Switch or links).
+ * Pen Source/SourceRow — icon wrap 40×40 surface-2 + meta 16/500 + 12/500,
+ * gap 16, pad 12 0, bottom border (not on last). Trailing = Configurer + Toggle.
  */
 export function SourceRow({
   type,
   availability,
-  icon: Icon,
   title,
   meta,
   trailing,
@@ -60,7 +101,6 @@ export function SourceRow({
 }: {
   type: KnownSourceType;
   availability: SourceAvailability;
-  icon: LucideIcon;
   title: string;
   meta: ReactNode;
   trailing?: ReactNode;
@@ -71,13 +111,15 @@ export function SourceRow({
       data-testid="source-row"
       data-source-type={type}
       data-source-availability={availability}
-      className="flex min-w-0 flex-col gap-2 border-b border-border py-3 last:border-b-0"
+      className="flex min-w-0 flex-col gap-2 border-b border-border-strong py-3 last:border-b-0"
     >
       <div className="flex min-w-0 items-center gap-4">
-        <Icon
-          className="size-[18px] shrink-0 text-foreground"
+        <div
+          className="flex size-10 shrink-0 items-center justify-center rounded-sm bg-ferry-surface-2"
           aria-hidden
-        />
+        >
+          <Folder className="size-[18px] text-foreground" />
+        </div>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <h2 className="min-w-0 text-base font-medium break-words whitespace-normal text-foreground">
             {title}

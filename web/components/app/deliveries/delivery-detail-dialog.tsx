@@ -156,7 +156,7 @@ export function DeliveryDetailDialog({
     <Dialog open={jobId !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(90vh,40rem)] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-heading text-xl tracking-tight text-balance">
+          <DialogTitle className="text-balance">
             {t("title")}
           </DialogTitle>
           <DialogDescription className="leading-relaxed whitespace-normal">

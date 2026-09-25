@@ -19,14 +19,14 @@ function CoverFallback({
   return (
     <div
       className={cn(
-        "flex h-full w-full items-center justify-center bg-ferry-surface-2 px-2 text-center",
+        "flex h-full w-full items-center justify-center rounded-sm bg-secondary p-2 text-center",
         className
       )}
       {...(decorative
         ? { "aria-hidden": true }
         : { role: "img", "aria-label": label })}
     >
-      {/* Pen YoLR8: plain “Couverture” / “Cover” — no icon, no artificial uppercase. */}
+      {/* Pen Library/CoverPlaceholder YoLR8: « Couverture » 12/500, no icon. */}
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
     </div>
   );
@@ -116,7 +116,7 @@ export function LibraryCoverImage({
       fill
       unoptimized
       className={cn("object-cover", className)}
-      sizes="(max-width: 640px) 100vw, 140px"
+      sizes="96px"
       onError={() => setFailed(true)}
     />
   );
@@ -148,8 +148,8 @@ export function SearchCoverImage({
     <Image
       src={coverUrl}
       alt=""
-      width={40}
-      height={40}
+      width={96}
+      height={128}
       unoptimized
       className={cn("h-full w-full object-cover", className)}
       onError={() => setFailed(true)}

@@ -269,6 +269,27 @@ describe("UI harness — gateways", () => {
     expect(block!.textContent).toContain("GATEWAY_KEY=");
     expect(block!.textContent).toContain(PAIRING_TOKEN);
     expect(block!.textContent).toContain(GATEWAY_KEY);
+
+    // Pen Dialog/GatewayCredentials anatomy
+    const credentialsDialog = screen.getByRole("dialog");
+    expect(credentialsDialog.className).toMatch(/sm:max-w-\[500px\]/);
+    expect(credentialsDialog.className).toMatch(/p-7/);
+    expect(document.querySelector("[data-credentials-ttl]")).toBeTruthy();
+    expect(document.querySelector("[data-credentials-next-steps]")).toBeTruthy();
+    expect(
+      screen.getByLabelText(messages.createAccess.gatewayId)
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(messages.createAccess.pairingToken)
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(messages.createAccess.gatewayKey)
+    ).toBeTruthy();
+    const credentialsFooter = credentialsDialog.querySelector(
+      '[data-slot="dialog-footer"]'
+    );
+    expect(credentialsFooter).toBeTruthy();
+    expect(credentialsFooter!.className).toMatch(/sm:justify-end/);
   });
 
   it("opens revoke confirmation for a paired gateway", async () => {
@@ -291,6 +312,21 @@ describe("UI harness — gateways", () => {
     expect(
       within(dialog).getByText(messages.access.revokeConfirmDescription)
     ).toBeTruthy();
+
+    // Pen Dialog/ConfirmDestructive anatomy
+    expect(dialog.className).toMatch(/sm:max-w-\[400px\]/);
+    const footer = dialog.querySelector('[data-slot="dialog-footer"]');
+    expect(footer).toBeTruthy();
+    expect(footer!.className).toMatch(/sm:justify-end/);
+    const cancel = within(dialog).getByRole("button", {
+      name: messages.common.cancel,
+    });
+    expect(cancel.className).not.toMatch(/bg-destructive/);
+    const confirm = within(dialog).getByRole("button", {
+      name: messages.access.revoke,
+    });
+    // Primary confirm (not destructive tint) — Pen Actions
+    expect(confirm.className).not.toMatch(/bg-destructive\/10/);
 
     callMock.mockResolvedValueOnce(undefined);
     fireEvent.click(

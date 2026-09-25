@@ -27,6 +27,12 @@ import type { Device, DeliveryJob, DeliveryMethod, LibraryItem, MethodAvailabili
 
 const FORMATS = ["epub", "mobi", "azw3", "pdf"] as const;
 
+/** Pen Form/Field control — surface-2, radius-md, ferry-border, padding 12, 14/500. */
+const deliverFieldControlClass =
+  "h-auto min-h-10 w-full rounded-md border border-border-strong bg-ferry-surface-2 px-3 py-3 text-sm font-medium";
+
+const deliverFieldLabelClass = "text-xs font-medium text-muted-foreground";
+
 /** Modes de livraison disponibles pour `deviceId` (voir
  * GET /api/v1/devices/{id}/methods). Le parent doit la remonter avec
  * `key={deviceId}` pour que le changement d'appareil reinitialise
@@ -99,7 +105,7 @@ function DeliveryMethodField({
 
   return (
     <Select value={value} onValueChange={(next) => next && onChange(next as DeliveryMethod)}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger className={deliverFieldControlClass}>
         <SelectValue placeholder={t("methodPlaceholder")} />
       </SelectTrigger>
       <SelectContent>
@@ -189,20 +195,22 @@ export function DeliverDialog({
 
   return (
     <Dialog open={item !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <DialogHeader className="min-w-0">
-          <DialogTitle className="font-heading tracking-tight break-words whitespace-normal">
+          <DialogTitle className="break-words whitespace-normal">
             {t("title", { title: item?.title ?? "" })}
           </DialogTitle>
           <DialogDescription className="whitespace-normal">
             {t("description")}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="deliver-device">{t("device")}</Label>
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="deliver-device" className={deliverFieldLabelClass}>
+              {t("device")}
+            </Label>
             <Select value={deviceId} onValueChange={(value) => handleDeviceChange(value ?? "")}>
-              <SelectTrigger id="deliver-device" className="w-full min-w-0">
+              <SelectTrigger id="deliver-device" className={`${deliverFieldControlClass} min-w-0`}>
                 <SelectValue placeholder={t("devicePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
@@ -220,15 +228,17 @@ export function DeliverDialog({
             </Select>
           </div>
           {deviceId && (
-            <div className="min-w-0 space-y-2">
-              <Label>{t("methodLabel")}</Label>
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <Label className={deliverFieldLabelClass}>{t("methodLabel")}</Label>
               <DeliveryMethodField key={deviceId} deviceId={deviceId} value={method} onChange={setMethod} />
             </div>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="deliver-format">{t("formatOptional")}</Label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="deliver-format" className={deliverFieldLabelClass}>
+              {t("formatOptional")}
+            </Label>
             <Select value={format} onValueChange={(value) => value && setFormat(value)}>
-              <SelectTrigger id="deliver-format" className="w-full">
+              <SelectTrigger id="deliver-format" className={deliverFieldControlClass}>
                 <SelectValue placeholder={t("formatPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
@@ -241,8 +251,8 @@ export function DeliverDialog({
             </Select>
           </div>
         </div>
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {tCommon("cancel")}
           </Button>
           <Button onClick={submit} disabled={!deviceId || !method || submitting}>

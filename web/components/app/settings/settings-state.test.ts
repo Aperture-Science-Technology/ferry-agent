@@ -8,6 +8,7 @@ import { describe, it } from "node:test";
 import {
   applyTokenListFetchResult,
   buildSettingsPatchPayload,
+  formatTokenCreatedDate,
   formatTokenLastUsed,
   resolveQrRenderState,
   settingsAreDirty,
@@ -83,6 +84,17 @@ describe("formatTokenLastUsed", () => {
     assert.notEqual(en, "Never");
     assert.equal(typeof fr, "string");
     assert.equal(typeof en, "string");
+  });
+});
+
+describe("formatTokenCreatedDate", () => {
+  it("formats a calendar date for OPDS row meta", () => {
+    const value = "2026-01-15T12:00:00.000Z";
+    const fr = formatTokenCreatedDate(value, "fr");
+    const en = formatTokenCreatedDate(value, "en");
+    assert.match(fr, /2026/);
+    assert.match(en, /2026/);
+    assert.equal(formatTokenCreatedDate("not-a-date", "fr"), "not-a-date");
   });
 });
 

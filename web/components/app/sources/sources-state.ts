@@ -68,6 +68,42 @@ export function sourceRowKind(type: KnownSourceType): SourceRowKind {
   return "toggleable";
 }
 
+/**
+ * Real configure destinations only — open-access catalogs have no local folder.
+ */
+export function sourceConfigureHref(
+  type: KnownSourceType
+): "/app/bibliotheque" | "/app/gateways" | null {
+  if (type === "upload") return "/app/bibliotheque";
+  if (type === "torrent_gateway") return "/app/gateways";
+  return null;
+}
+
+/**
+ * Gateway hint first line — never claim "connected" without a real connected primary.
+ * `null` / missing list → not connected (no inventing online).
+ */
+export type GatewayHintKind =
+  | "connected"
+  | "offline"
+  | "pending"
+  | "expired"
+  | "revoked"
+  | "unknown"
+  | "none";
+
+export function gatewayHintKind(
+  presentation: string | null | undefined
+): GatewayHintKind {
+  if (presentation === "connected") return "connected";
+  if (presentation === "offline") return "offline";
+  if (presentation === "pending") return "pending";
+  if (presentation === "expired") return "expired";
+  if (presentation === "revoked") return "revoked";
+  if (presentation === "unknown") return "unknown";
+  return "none";
+}
+
 export function findSourceByType<T extends SourceLike>(
   sources: T[],
   type: KnownSourceType

@@ -5,8 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 
 /**
- * Pen L00010 Gateway actions row — surface, pad 16, gap 6, r md, border.
- * Not a SaaS card grid; title 16 + muted 12 + CTA.
+ * Torrents via Gateway — ferry-surface card, title 16 + muted 12 + Ghost CTA.
  */
 export function GatewayTorrentAction() {
   const t = useTranslations("access");
@@ -14,7 +13,7 @@ export function GatewayTorrentAction() {
   return (
     <div
       data-testid="gateway-torrent-action"
-      className="flex min-w-0 flex-col gap-1.5 rounded-md border border-border bg-card p-4"
+      className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-border-strong bg-ferry-surface p-5"
     >
       <p className="text-base font-medium break-words whitespace-normal text-foreground">
         {t("torrentActionTitle")}
@@ -23,9 +22,9 @@ export function GatewayTorrentAction() {
         {t("torrentActionDescription")}
       </p>
       <Button
-        variant="outline"
+        variant="ghost"
         size="sm"
-        className="mt-2 w-fit min-w-0 whitespace-normal rounded-md"
+        className="mt-2 w-fit min-w-0 whitespace-normal"
         render={<Link href="/app/sources">{t("torrentActionCta")}</Link>}
       />
     </div>
