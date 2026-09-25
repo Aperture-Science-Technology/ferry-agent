@@ -110,7 +110,7 @@ export function DeviceActions({
   disabled?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
       <Button
         size="sm"
         variant="ghost"
@@ -176,7 +176,7 @@ export function DeviceRow({
       data-testid="device-row"
       data-device-id={device.id}
       aria-label={ariaLabel}
-      className="flex w-full min-w-0 items-center gap-4 border-b border-border-strong py-3 last:border-b-0"
+      className="flex w-full min-w-0 flex-wrap items-center gap-4 border-b border-border-strong py-3 last:border-b-0"
     >
       <div
         className="flex size-10 shrink-0 items-center justify-center rounded-sm bg-ferry-surface"
@@ -207,7 +207,12 @@ export function DeviceRow({
         ) : null}
       </div>
       {actions ? (
-        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+        <div
+          data-testid="device-row-actions"
+          className="flex min-w-0 max-w-full flex-wrap items-center gap-2"
+        >
+          {actions}
+        </div>
       ) : null}
     </article>
   );

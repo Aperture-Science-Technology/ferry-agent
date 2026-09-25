@@ -178,6 +178,20 @@ describe("UI harness — Pen devices composition", () => {
     expect(document.querySelector("thead")).toBeNull();
   });
 
+  it("keeps DeviceRow actions compressible so narrow viewports do not overflow", () => {
+    // Regression for horizontal overflow at ~390px: actions were shrink-0 in a
+    // nowrap row, so the line grew to ~550px and scrolled the whole page.
+    renderDevices("fr");
+    const row = screen.getAllByTestId("device-row")[0]!;
+    expect(row.className).toMatch(/flex-wrap/);
+    expect(row.className).toMatch(/min-w-0/);
+    const actions = within(row).getByTestId("device-row-actions");
+    expect(actions.className).toMatch(/min-w-0/);
+    expect(actions.className).toMatch(/max-w-full/);
+    expect(actions.className).toMatch(/flex-wrap/);
+    expect(actions.className).not.toMatch(/(?:^|\s)shrink-0(?:\s|$)/);
+  });
+
   it("hides the default-destination hint when no devices exist", () => {
     renderDevices("fr", { initialDevices: [] });
     expect(screen.queryByTestId("devices-default-dest")).toBeNull();
