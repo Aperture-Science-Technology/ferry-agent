@@ -52,6 +52,24 @@ export function formatTokenLastUsed(
   }
 }
 
+/** Compact calendar date for OPDS row meta (Pen « Créé le … »). */
+export function formatTokenCreatedDate(
+  value: string,
+  locale: string
+): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  try {
+    return date.toLocaleDateString(locale, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return value;
+  }
+}
+
 export type QrRenderState = "loading" | "ready" | "error";
 
 /**

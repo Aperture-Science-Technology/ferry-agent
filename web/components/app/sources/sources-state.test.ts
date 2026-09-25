@@ -10,9 +10,11 @@ import {
   applySourceToggleSuccess,
   canToggleSource,
   findSourceByType,
+  gatewayHintKind,
   hasPartialSources,
   SOURCE_DISPLAY_TYPES,
   sourceAvailability,
+  sourceConfigureHref,
   sourceGroup,
   sourceRowKind,
   sourcesSurfaceState,
@@ -49,6 +51,21 @@ describe("sourceRowKind / sourceGroup / display order", () => {
       "upload",
       "torrent_gateway",
     ]);
+  });
+
+  it("maps configure href only for real local destinations", () => {
+    assert.equal(sourceConfigureHref("upload"), "/app/bibliotheque");
+    assert.equal(sourceConfigureHref("torrent_gateway"), "/app/gateways");
+    assert.equal(sourceConfigureHref("gutenberg"), null);
+    assert.equal(sourceConfigureHref("standard_ebooks"), null);
+  });
+
+  it("never claims gateway connected without a connected presentation", () => {
+    assert.equal(gatewayHintKind("connected"), "connected");
+    assert.equal(gatewayHintKind("offline"), "offline");
+    assert.equal(gatewayHintKind(null), "none");
+    assert.equal(gatewayHintKind(undefined), "none");
+    assert.notEqual(gatewayHintKind(null), "connected");
   });
 });
 

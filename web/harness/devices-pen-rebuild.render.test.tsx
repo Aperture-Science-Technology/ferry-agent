@@ -1,6 +1,6 @@
 /**
- * Pen devices rebuild: DeviceRow composition (TJFgO / mF003e), no desktop table,
- * dedicated mobile header, unique page title, FR/EN labels, API tier only.
+ * Pen devices rebuild (ba89b7b): PageHeader + default-dest hint + registered panel,
+ * DeviceRows (not a table), FR/EN labels, API tier only.
  * Run: npm run test:ui-harness
  */
 import { render, screen, within } from "@testing-library/react";
@@ -119,39 +119,41 @@ describe("UI harness — Pen devices composition", () => {
     expect(within(rows[1]!).getByText("Arrive via le cloud")).toBeTruthy();
   });
 
-  it("exposes dedicated mobile and desktop headers (mF003e / Hd0003)", () => {
+  it("uses PageHeader with refresh and new-device controls", () => {
     renderDevices("fr");
-    const mobile = screen.getByTestId("devices-header-mobile");
-    const desktop = screen.getByTestId("devices-header-desktop");
-    expect(mobile.className).toMatch(/md:hidden/);
-    expect(desktop.className).toMatch(/hidden/);
-    expect(desktop.className).toMatch(/md:flex/);
-    expect(within(mobile).getByText("Ferry Agent")).toBeTruthy();
-    expect(mobile.querySelector("h1")?.textContent).toBe("Appareils");
-    expect(desktop.querySelector("h1")?.textContent).toBe("Appareils");
-    expect(desktop.querySelector("h1")?.className).toMatch(/text-\[28px\]/);
-    expect(mobile.querySelector("h1")?.className).toMatch(/text-\[22px\]/);
-    expect(within(desktop).queryByText("Ferry Agent")).toBeNull();
+    const layout = screen.getByTestId("devices-pen-layout");
+    const title = within(layout).getByRole("heading", {
+      level: 1,
+      name: "Appareils",
+    });
+    expect(title.className).toMatch(/text-\[28px\]/);
+    expect(title.className).toMatch(/font-bold/);
     expect(screen.getAllByRole("button", { name: "Actualiser" }).length).toBe(1);
     expect(screen.getAllByRole("button", { name: "Nouvel appareil" }).length).toBe(1);
   });
 
   it("shows Pen page header copy in FR and EN without SaaS section chrome", () => {
     const { unmount } = renderDevices("fr");
-    expect(screen.getByTestId("devices-header-mobile").querySelector("h1")?.textContent).toBe(
-      "Appareils"
-    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Appareils" })
+    ).toBeTruthy();
     expect(screen.getAllByText("Destinations enregistrées").length).toBeGreaterThan(0);
+    expect(screen.getByText("Appareils enregistrés")).toBeTruthy();
+    expect(screen.getByText("2 appareils")).toBeTruthy();
+    expect(
+      screen.getByText("Destination par défaut : Kindle Paperwhite")
+    ).toBeTruthy();
     expect(screen.queryByText("Vos appareils")).toBeNull();
     unmount();
 
     renderDevices("en");
-    expect(screen.getByTestId("devices-header-mobile").querySelector("h1")?.textContent).toBe(
-      "Devices"
-    );
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Devices" })
+    ).toBeTruthy();
     expect(screen.getAllByText("Registered destinations").length).toBeGreaterThan(0);
     expect(screen.getByText("Arrives by email (Kindle)")).toBeTruthy();
     expect(screen.getByText("Arrives via the cloud")).toBeTruthy();
+    expect(screen.getByText("Registered devices")).toBeTruthy();
     expect(screen.queryByText("Your devices")).toBeNull();
   });
 
@@ -171,7 +173,28 @@ describe("UI harness — Pen devices composition", () => {
     const layout = screen.getByTestId("devices-pen-layout");
     expect(layout.className).toMatch(/min-w-0/);
     expect(screen.getByTestId("devices-body")).toBeTruthy();
+    expect(screen.getByTestId("devices-panel")).toBeTruthy();
     expect(document.querySelectorAll("[data-testid='device-row']").length).toBe(2);
     expect(document.querySelector("thead")).toBeNull();
+  });
+
+  it("keeps DeviceRow actions compressible so narrow viewports do not overflow", () => {
+    // Regression for horizontal overflow at ~390px: actions were shrink-0 in a
+    // nowrap row, so the line grew to ~550px and scrolled the whole page.
+    renderDevices("fr");
+    const row = screen.getAllByTestId("device-row")[0]!;
+    expect(row.className).toMatch(/flex-wrap/);
+    expect(row.className).toMatch(/min-w-0/);
+    const actions = within(row).getByTestId("device-row-actions");
+    expect(actions.className).toMatch(/min-w-0/);
+    expect(actions.className).toMatch(/max-w-full/);
+    expect(actions.className).toMatch(/flex-wrap/);
+    expect(actions.className).not.toMatch(/(?:^|\s)shrink-0(?:\s|$)/);
+  });
+
+  it("hides the default-destination hint when no devices exist", () => {
+    renderDevices("fr", { initialDevices: [] });
+    expect(screen.queryByTestId("devices-default-dest")).toBeNull();
+    expect(screen.queryByText(/Destination par défaut/)).toBeNull();
   });
 });

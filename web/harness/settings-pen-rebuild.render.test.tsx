@@ -1,6 +1,6 @@
 /**
- * Pen Settings rebuild: Header/PageTitle (EYJrN / mF005b) + Form/Field + OPDS cards,
- * no table / SaaS section chrome / Sources·Devices shortcuts / EmptyState·StatePanel.
+ * Pen Settings rebuild: Header/PageTitle + Form/Field + OPDS rows in Settings,
+ * Compte / OPDS / Préférences sections (no standalone OPDS route).
  * Run: npm run test:ui-harness
  */
 import { render, screen, within } from "@testing-library/react";
@@ -61,8 +61,10 @@ vi.mock("@/i18n/navigation", () => ({
       {children}
     </a>
   ),
+  usePathname: () => "/app/reglages",
   useRouter: () => ({
     refresh: vi.fn(),
+    replace: vi.fn(),
   }),
 }));
 
@@ -96,53 +98,69 @@ function renderSettings(locale: "fr" | "en", tokens: OpdsToken[] = [baseToken()]
 }
 
 describe("UI harness — Pen settings composition", () => {
-  it("renders Pen Form/Fields and OPDS cards (not a table)", () => {
+  it("renders Pen Form/Fields and OPDS rows (not a table)", () => {
     renderSettings("fr");
 
     expect(screen.getByTestId("settings-pen-layout")).toBeTruthy();
     expect(screen.getByTestId("settings-delivery")).toBeTruthy();
     expect(screen.getByTestId("settings-opds")).toBeTruthy();
+    expect(screen.getByTestId("settings-preferences")).toBeTruthy();
     expect(screen.getByTestId("settings-body")).toBeTruthy();
     expect(document.querySelector("table")).toBeNull();
 
     expect(
       screen.getByRole("heading", {
         level: 2,
-        name: messagesFr.settings.deliveryPreferencesTitle,
-        hidden: true,
+        name: messagesFr.settings.accountTitle,
       })
     ).toBeTruthy();
     expect(
       screen.getByRole("heading", {
         level: 2,
-        name: messagesFr.settings.readerCatalogTitle,
-        hidden: true,
+        name: messagesFr.settings.opdsTokensTitle,
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", {
+        level: 2,
+        name: messagesFr.settings.preferencesTitle,
       })
     ).toBeTruthy();
 
     const fields = screen.getAllByTestId("settings-field");
     expect(fields.length).toBeGreaterThanOrEqual(2);
+    for (const field of fields) {
+      expect(field.className).toMatch(/gap-1\.5/);
+      expect(field.className).toMatch(/flex-col/);
+    }
+
+    const formatGroup = screen.getByRole("group", {
+      name: messagesFr.settings.defaultFormat,
+    });
+    expect(
+      within(formatGroup).getByRole("button", { name: "epub", pressed: true })
+    ).toBeTruthy();
+    expect(
+      within(formatGroup).getByRole("button", { name: "pdf", pressed: false })
+    ).toBeTruthy();
 
     const cards = screen.getAllByTestId("opds-token-card");
     expect(cards.length).toBe(1);
     expect(
       within(cards[0]!).getByRole("heading", {
-        name: messagesFr.settings.readerCatalog.tokenTitle.replace(
-          "{label}",
-          "Kobo Clara"
-        ),
+        name: "Kobo Clara",
       })
     ).toBeTruthy();
     expect(
-      within(cards[0]!).getAllByText((_, node) => {
-        if (node?.tagName !== "SPAN") return false;
+      within(cards[0]!).getByText(messagesFr.settings.readerCatalog.statusActive)
+    ).toBeTruthy();
+    expect(
+      within(cards[0]!).getByText((_, node) => {
+        if (!node || node.children.length > 0) return false;
         const text = node.textContent ?? "";
-        return (
-          text.includes(messagesFr.settings.readerCatalog.actionsHintMobile) ||
-          text.includes(messagesFr.settings.readerCatalog.actionsHint)
-        );
-      }).length
-    ).toBeGreaterThanOrEqual(1);
+        return text.includes(messagesFr.settings.readerCatalog.neverUsed);
+      })
+    ).toBeTruthy();
   });
 
   it("exposes dedicated mobile and desktop headers (mF005b / Hd0003)", () => {
@@ -172,8 +190,13 @@ describe("UI harness — Pen settings composition", () => {
     expect(screen.queryByText(messagesFr.settings.devicesTitle)).toBeNull();
     expect(screen.queryByText(messagesFr.settings.sourcesCta)).toBeNull();
     expect(screen.getByLabelText(messagesFr.settings.kindleEmail)).toBeTruthy();
-    expect(screen.getByLabelText(messagesFr.settings.defaultFormat)).toBeTruthy();
+    expect(
+      screen.getByRole("group", { name: messagesFr.settings.defaultFormat })
+    ).toBeTruthy();
     expect(document.querySelector("[data-testid='state-panel']")).toBeNull();
+    expect(screen.getByText(messagesFr.settings.email)).toBeTruthy();
+    expect(screen.getByText(messagesFr.settings.languageLabel)).toBeTruthy();
+    expect(screen.getByText(messagesFr.settings.documentationLabel)).toBeTruthy();
     unmount();
 
     renderSettings("en");

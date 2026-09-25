@@ -1,7 +1,6 @@
 /**
- * Pen Gateway rebuild: ConnectionState + GatewayRow (gEtgk / mF0047), no desktop
- * table, dedicated mobile header, unique page title, FR/EN labels.
- * Run: npm run test:ui-harness
+ * Pen Gateway rebuild (ba89b7b): PageHeader + ConnectionState + module details +
+ * jobs panel + compact N-gateway list. Run: npm run test:ui-harness
  */
 import { render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
@@ -129,19 +128,15 @@ describe("UI harness — Pen gateways composition", () => {
     expect(within(rows[1]!).getByText(messagesFr.access.statusPending)).toBeTruthy();
   });
 
-  it("exposes dedicated mobile and desktop headers (mF0047 / Hd0003)", () => {
+  it("uses PageHeader with guide and create controls", () => {
     renderGateways("fr");
-    const mobile = screen.getByTestId("gateways-header-mobile");
-    const desktop = screen.getByTestId("gateways-header-desktop");
-    expect(mobile.className).toMatch(/md:hidden/);
-    expect(desktop.className).toMatch(/hidden/);
-    expect(desktop.className).toMatch(/md:flex/);
-    expect(within(mobile).getByText("Ferry Agent")).toBeTruthy();
-    expect(mobile.querySelector("h1")?.textContent).toBe("Gateway");
-    expect(desktop.querySelector("h1")?.textContent).toBe("Gateway");
-    expect(desktop.querySelector("h1")?.className).toMatch(/text-\[28px\]/);
-    expect(mobile.querySelector("h1")?.className).toMatch(/text-\[22px\]/);
-    expect(within(desktop).queryByText("Ferry Agent")).toBeNull();
+    const layout = screen.getByTestId("gateways-pen-layout");
+    const title = within(layout).getByRole("heading", {
+      level: 1,
+      name: "Gateway",
+    });
+    expect(title.className).toMatch(/text-\[28px\]/);
+    expect(title.className).toMatch(/font-bold/);
     expect(screen.getAllByRole("link", { name: messagesFr.access.guideLink }).length).toBe(1);
     expect(
       screen.getAllByRole("button", { name: messagesFr.access.createLink }).length
@@ -151,13 +146,15 @@ describe("UI harness — Pen gateways composition", () => {
   it("shows Pen page header and ConnectionState without SaaS section chrome", () => {
     const { unmount } = renderGateways("fr");
     expect(
-      screen.getByTestId("gateways-header-mobile").querySelector("h1")?.textContent
-    ).toBe("Gateway");
+      screen.getByRole("heading", { level: 1, name: "Gateway" })
+    ).toBeTruthy();
     expect(
       screen.getAllByText("Module local optionnel — complémentaire du cloud").length
     ).toBeGreaterThan(0);
     expect(document.querySelector("[data-gateway-connection-panel]")).toBeTruthy();
     expect(screen.getByText(messagesFr.access.cloudLocalBody)).toBeTruthy();
+    expect(screen.getByText(messagesFr.access.moduleDetailsTitle)).toBeTruthy();
+    expect(screen.getByText(messagesFr.access.jobQueueTitle)).toBeTruthy();
     expect(screen.queryByText(messagesFr.access.sectionTitle)).toBeNull();
     expect(screen.getByTestId("gateway-torrent-action")).toBeTruthy();
     expect(screen.getByText(messagesFr.access.torrentActionTitle)).toBeTruthy();
@@ -165,8 +162,8 @@ describe("UI harness — Pen gateways composition", () => {
 
     renderGateways("en");
     expect(
-      screen.getByTestId("gateways-header-mobile").querySelector("h1")?.textContent
-    ).toBe("Gateway");
+      screen.getByRole("heading", { level: 1, name: "Gateway" })
+    ).toBeTruthy();
     expect(
       screen.getAllByText("Optional local module — complements the cloud").length
     ).toBeGreaterThan(0);

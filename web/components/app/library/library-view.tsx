@@ -7,22 +7,35 @@ import { motion, useReducedMotion } from "motion/react";
 import {
   ChevronLeft,
   ChevronRight,
-  Library,
   Loader2,
+  Plus,
   Search,
   SearchX,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { BookDetailDialog } from "@/components/app/library/book-detail-dialog";
+import { BookGridItem } from "@/components/app/library/book-grid-item";
+import { BookRow } from "@/components/app/library/book-row";
 import { DeliverDialog } from "@/components/app/library/deliver-dialog";
+import { LibraryEmptyState } from "@/components/app/library/library-empty-state";
 import {
   LibraryEmpty,
-  LibraryFeedback,
+  LibraryFeedbackError,
+  LibraryFeedbackLoading,
+  LibraryFeedbackPartial,
 } from "@/components/app/library/library-feedback";
 import {
   applyLibraryItemsRefreshResult,
@@ -31,13 +44,10 @@ import {
   libraryCollectionPageState,
   pageAfterLibraryCriteriaChange,
   paginateLibraryItems,
-  recentLibraryItems,
 } from "@/components/app/library/library-collection";
-import {
-  LibraryCoverImage,
-  SearchCoverImage,
-} from "@/components/app/library/cover-image";
+import { SearchCoverImage } from "@/components/app/library/cover-image";
 import { UploadDropzone } from "@/components/app/library/upload-dropzone";
+import { PageHeader } from "@/components/app/page-header";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { ApiError, useApiClient } from "@/lib/api-client";
 import { useGatewayJob } from "@/lib/use-gateway-job";
@@ -51,6 +61,7 @@ import type {
 
 type BrowseMode = "mine" | "sources";
 type AddTab = "search" | "import";
+type ViewMode = "grid" | "list";
 
 function mapFetchError(
   error: string | null,
@@ -123,14 +134,14 @@ function SearchResultActions({
 }) {
   if (result.owned) {
     return (
-      <Button size="sm" variant="secondary" disabled className="rounded-sm">
+      <Button size="sm" variant="secondary" disabled>
         {t("inLibrary")}
       </Button>
     );
   }
   if (isPending) {
     return (
-      <Button size="sm" variant="outline" disabled className="rounded-sm">
+      <Button size="sm" variant="ghost" disabled>
         <Loader2 className="animate-spin" />
         {t("fetching")}
       </Button>
@@ -139,85 +150,12 @@ function SearchResultActions({
   return (
     <Button
       size="sm"
-      className="rounded-sm"
       disabled={addingId === resultKey}
       onClick={() => onAdd(result)}
     >
       {addingId === resultKey ? <Loader2 className="animate-spin" /> : null}
       {t("add")}
     </Button>
-  );
-}
-
-/** Pen Library/BookRow B3CiDv */
-function BookRow({
-  item,
-  selected,
-  canDeliver,
-  onSelect,
-  onOpenDetail,
-  onDeliver,
-  t,
-  tCommon,
-}: {
-  item: LibraryItem;
-  selected: boolean;
-  canDeliver: boolean;
-  onSelect: () => void;
-  onOpenDetail: () => void;
-  onDeliver: () => void;
-  t: ReturnType<typeof useTranslations<"library">>;
-  tCommon: ReturnType<typeof useTranslations<"common">>;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-4 border-b border-border py-3",
-        selected && "bg-muted/40"
-      )}
-    >
-      <button
-        type="button"
-        className="relative h-14 w-10 shrink-0 overflow-hidden rounded-[9px] bg-ferry-surface-2 focus-visible:ring-2 focus-visible:ring-ring"
-        aria-pressed={selected}
-        aria-label={item.title}
-        onClick={onSelect}
-        onDoubleClick={onOpenDetail}
-      >
-        <LibraryCoverImage
-          itemId={item.id}
-          hasCover={Boolean(item.cover_url)}
-          alt={item.title}
-        />
-      </button>
-      <button
-        type="button"
-        className="min-w-0 flex-1 text-left"
-        onClick={onSelect}
-        onDoubleClick={onOpenDetail}
-      >
-        <p className="line-clamp-1 text-base font-medium text-foreground">
-          {item.title}
-        </p>
-        <p className="line-clamp-1 text-xs font-medium text-muted-foreground">
-          {item.author || tCommon("dash")}
-          <span className="mx-1.5 text-border">·</span>
-          {item.original_format.toUpperCase()}
-        </p>
-      </button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="shrink-0 rounded-sm border-border px-3 py-2 text-sm font-medium"
-        disabled={!canDeliver}
-        aria-disabled={!canDeliver}
-        aria-label={t("deliverOf", { title: item.title })}
-        onClick={onDeliver}
-      >
-        {t("deliver")}
-      </Button>
-    </div>
   );
 }
 
@@ -239,9 +177,11 @@ export function LibraryView({
   const t = useTranslations("library");
   const tCommon = useTranslations("common");
   const tBrand = useTranslations("brand");
+  const tDetail = useTranslations("bookDetail");
   const { call } = useApiClient();
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState("");
@@ -253,16 +193,21 @@ export function LibraryView({
   const [items, setItems] = useState(initialItems);
   const [detailItem, setDetailItem] = useState<LibraryItem | null>(null);
   const [deliverItem, setDeliverItem] = useState<LibraryItem | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<LibraryItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [retrying, setRetrying] = useState(false);
-  const [browseMode, setBrowseMode] = useState<BrowseMode>(
-    initialItems.length === 0 && !itemsUnavailable ? "sources" : "mine"
-  );
+  const [partialDismissed, setPartialDismissed] = useState(false);
+  const [unavailableDismissed, setUnavailableDismissed] = useState(false);
+  const [browseMode, setBrowseMode] = useState<BrowseMode>("mine");
   const [addTab, setAddTab] = useState<AddTab>("search");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   const canDeliver = devices.length > 0;
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
   const headerSendEnabled = Boolean(selectedItem && canDeliver);
+  const headerDescription = t("headerDescription");
+  const showMobileEmptyTop =
+    items.length === 0 && !itemsUnavailable && browseMode === "mine";
 
   useEffect(() => {
     if (browseMode !== "sources" || addTab !== "search") return;
@@ -298,11 +243,6 @@ export function LibraryView({
         sortBy: "added",
       }),
     [items, collectionQuery]
-  );
-
-  const recentItems = useMemo(
-    () => recentLibraryItems(displayedItems),
-    [displayedItems]
   );
 
   const pageSlice = useMemo(
@@ -461,9 +401,14 @@ export function LibraryView({
   }
 
   function handleRetry() {
-    setRetrying(true);
+    setPartialDismissed(false);
+    setUnavailableDismissed(false);
     router.refresh();
   }
+
+  const showPartial = itemsPartial && !partialDismissed;
+  const showUnavailable =
+    itemsUnavailable && items.length === 0 && !unavailableDismissed;
 
   function selectBook(item: LibraryItem) {
     setSelectedId((prev) => (prev === item.id ? null : item.id));
@@ -478,6 +423,37 @@ export function LibraryView({
   function handleHeaderSend() {
     if (!selectedItem || !canDeliver) return;
     setDeliverItem(selectedItem);
+  }
+
+  function openSourcesSearch() {
+    setBrowseMode("sources");
+    setAddTab("search");
+  }
+
+  function openImport() {
+    setBrowseMode("sources");
+    setAddTab("import");
+  }
+
+  function backToLibrary() {
+    setBrowseMode("mine");
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await call(`/api/v1/books/${pendingDelete.id}`, { method: "DELETE" });
+      setItems((prev) => prev.filter((it) => it.id !== pendingDelete.id));
+      if (selectedId === pendingDelete.id) setSelectedId(null);
+      if (detailItem?.id === pendingDelete.id) setDetailItem(null);
+      toast.success(tDetail("toastDeleted"));
+      setPendingDelete(null);
+    } catch {
+      toast.error(tDetail("toastDeleteFailed"));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const headerSearchValue = browseMode === "mine" ? collectionQuery : query;
@@ -499,19 +475,6 @@ export function LibraryView({
     void runSearch();
   }
 
-  const retryButton = (
-    <Button
-      size="sm"
-      variant="outline"
-      onClick={handleRetry}
-      disabled={retrying}
-      className="w-fit rounded-sm"
-    >
-      {retrying ? <Loader2 className="animate-spin" /> : null}
-      {t("retryLoad")}
-    </Button>
-  );
-
   const paginationControls =
     displayedItems.length > LIBRARY_COLLECTION_PAGE_SIZE ? (
       <nav
@@ -528,8 +491,7 @@ export function LibraryView({
         <div className="flex shrink-0 items-center gap-2">
           <Button
             size="sm"
-            variant="outline"
-            className="rounded-sm"
+            variant="ghost"
             onClick={() => setCollectionPage(Math.max(1, pageSlice.page - 1))}
             disabled={pageSlice.page <= 1}
             aria-label={t("paginationPrevious")}
@@ -545,8 +507,7 @@ export function LibraryView({
           </span>
           <Button
             size="sm"
-            variant="outline"
-            className="rounded-sm"
+            variant="ghost"
             onClick={() =>
               setCollectionPage(Math.min(pageSlice.pageCount, pageSlice.page + 1))
             }
@@ -561,14 +522,13 @@ export function LibraryView({
     ) : null;
 
   const searchField = (
-    <div className="relative flex w-full items-center gap-2 rounded-md border border-border bg-ferry-surface-2 px-3 py-2.5 md:w-[280px]">
-      <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+    <>
       <Label htmlFor="library-header-search" className="sr-only">
         {browseMode === "mine"
           ? t("collectionSearchLabel")
           : t("searchSourcesLabel")}
       </Label>
-      <Input
+      <SearchInput
         ref={searchInputRef}
         id="library-header-search"
         value={headerSearchValue}
@@ -577,12 +537,124 @@ export function LibraryView({
           if (event.key === "Enter") onHeaderSearchSubmit();
         }}
         placeholder={headerSearchPlaceholder}
-        className="h-auto border-0 bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
         autoComplete="off"
         spellCheck={false}
         disabled={browseMode === "sources" && searching}
       />
+    </>
+  );
+
+  const headerActions = (
+    <>
+      {!isMobile ? searchField : null}
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={browseMode === "mine" ? openSourcesSearch : backToLibrary}
+      >
+        {browseMode === "mine" ? t("searchSourcesTab") : t("modeMine")}
+      </Button>
+      <Button
+        type="button"
+        data-testid="library-header-send"
+        disabled={!headerSendEnabled}
+        aria-disabled={!headerSendEnabled}
+        onClick={handleHeaderSend}
+      >
+        {t("deliver")}
+      </Button>
+    </>
+  );
+
+  const viewChips = (
+    <div
+      className="flex items-center gap-2"
+      role="group"
+      aria-label={t("viewModeLabel")}
+    >
+      <button
+        type="button"
+        className={cn(
+          buttonVariants({
+            variant: viewMode === "grid" ? "default" : "ghost",
+          })
+        )}
+        aria-pressed={viewMode === "grid"}
+        onClick={() => setViewMode("grid")}
+      >
+        {t("chipGrid")}
+      </button>
+      <button
+        type="button"
+        className={cn(
+          buttonVariants({
+            variant: viewMode === "list" ? "default" : "ghost",
+          })
+        )}
+        aria-pressed={viewMode === "list"}
+        onClick={() => setViewMode("list")}
+      >
+        {t("chipList")}
+      </button>
+      <span className="sr-only" aria-live="polite">
+        {viewMode === "grid" ? t("gridView") : t("listView")}
+      </span>
     </div>
+  );
+
+  const toolsRow = (
+    <div
+      className="flex flex-wrap items-center justify-between gap-3"
+      data-testid="library-tools"
+    >
+      <p className="text-sm font-medium text-foreground">
+        {itemsPartial
+          ? t("toolsCountPartial", { count: displayedItems.length })
+          : t("toolsCount", { count: displayedItems.length })}
+      </p>
+      {viewChips}
+    </div>
+  );
+
+  const bookList = (
+    <ul className="flex flex-col" data-testid="library-book-list">
+      {pageSlice.items.map((item) => (
+        <li key={item.id}>
+          <BookRow
+            item={item}
+            selected={selectedId === item.id}
+            canDeliver={canDeliver}
+            onSelect={() => selectBook(item)}
+            onOpenDetail={() => setDetailItem(item)}
+            onDeliver={() => openDeliver(item)}
+            onDelete={() => setPendingDelete(item)}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+
+  const bookGrid = (
+    <RevealGroup stagger={prefersReducedMotion ? 0 : 0.04}>
+      <ul
+        data-testid="library-book-grid"
+        className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-5 gap-y-6"
+      >
+        {pageSlice.items.map((item) => (
+          <li key={item.id}>
+            <RevealItem>
+              <BookGridItem
+                item={item}
+                selected={selectedId === item.id}
+                authorFallback={tCommon("dash")}
+                onSelect={() => selectBook(item)}
+                onOpenDetail={() => setDetailItem(item)}
+              />
+            </RevealItem>
+          </li>
+        ))}
+      </ul>
+    </RevealGroup>
   );
 
   return (
@@ -598,105 +670,115 @@ export function LibraryView({
         />
       ))}
 
-      {/* Pen Header/Page ePLzB (desktop) / Top mF0028 (mobile) */}
-      <header className="flex min-h-[72px] flex-col justify-center gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-1">
-          <p className="font-heading text-sm font-medium text-muted-foreground md:hidden">
-            {tBrand("name")}
-          </p>
-          <h1 className="font-heading text-[22px] font-medium text-foreground md:text-lg">
-            {title}
-          </h1>
-          <p className="text-xs font-medium text-muted-foreground">{description}</p>
-        </div>
-
-        <div className="hidden w-full min-w-0 items-center justify-end gap-2 md:flex md:w-auto">
-          {searchField}
-          <Button
-            type="button"
-            data-testid="library-header-send"
-            className="rounded-md px-3.5 py-2.5 text-sm font-medium disabled:pointer-events-none disabled:bg-card disabled:text-disabled disabled:opacity-50"
-            disabled={!headerSendEnabled}
-            aria-disabled={!headerSendEnabled}
-            onClick={handleHeaderSend}
-          >
-            {t("deliver")}
-          </Button>
-        </div>
-      </header>
-
-      {/* Pen Library tools — mode chips (desktop a0ck4H); mobile search in body */}
-      <div className="flex flex-col gap-3 md:gap-4">
-        <div
-          className="flex flex-wrap items-center gap-4"
-          role="tablist"
-          aria-label={t("browseModeLabel")}
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={browseMode === "mine"}
-            className={cn(
-              "rounded-sm border px-3 py-2 text-sm font-medium",
-              browseMode === "mine"
-                ? "border-border bg-card text-foreground"
-                : "border-border bg-transparent text-muted-foreground"
-            )}
-            onClick={() => setBrowseMode("mine")}
-          >
-            {t("modeMine")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={browseMode === "sources"}
-            className={cn(
-              "rounded-sm border px-3 py-2 text-sm font-medium",
-              browseMode === "sources"
-                ? "border-border bg-card text-foreground"
-                : "border-border bg-transparent text-muted-foreground"
-            )}
-            onClick={() => {
-              setBrowseMode("sources");
-              setAddTab("search");
-            }}
-          >
-            {t("modeSources")}
-          </button>
-        </div>
-
-        <div className="md:hidden">{searchField}</div>
+      {/* Pen Header/Page — desktop; mobile empty Top when collection empty */}
+      <div className="hidden md:block">
+        <PageHeader
+          title={title}
+          description={headerDescription || description}
+          action={headerActions}
+        />
       </div>
 
-      {itemsUnavailable && items.length === 0 ? (
-        <LibraryFeedback
-          role="alert"
-          icon={Library}
+      {showMobileEmptyTop ? (
+        <div className="flex flex-col gap-2 px-5 py-6 md:hidden">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-muted-foreground">
+              {tBrand("name")}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-[51px] rounded-full border border-border-strong bg-accent"
+              aria-label={t("importShort")}
+              onClick={openImport}
+            >
+              <Plus />
+            </Button>
+          </div>
+          <h1 className="text-[22px] font-semibold text-foreground">{title}</h1>
+          <p className="text-[13px] font-medium text-muted-foreground">
+            {t("emptyMobileSubtitle")}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 md:hidden">
+          <p className="text-sm font-medium text-muted-foreground">
+            {tBrand("name")}
+          </p>
+          <h1 className="text-[22px] font-semibold text-foreground">{title}</h1>
+          <p className="text-[13px] font-medium text-muted-foreground">
+            {headerDescription || description}
+          </p>
+          <div className="flex flex-col gap-2 pt-1">
+            {isMobile ? searchField : null}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={
+                  browseMode === "mine" ? openSourcesSearch : backToLibrary
+                }
+              >
+                {browseMode === "mine" ? t("searchSourcesTab") : t("modeMine")}
+              </Button>
+              <Button
+                type="button"
+                data-testid="library-header-send-mobile"
+                disabled={!headerSendEnabled}
+                aria-disabled={!headerSendEnabled}
+                onClick={handleHeaderSend}
+              >
+                {t("deliver")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUnavailable ? (
+        <LibraryFeedbackError
           title={t("emptyUnavailableTitle")}
           description={t("emptyUnavailable")}
-          action={retryButton}
+          dismissLabel={tCommon("dismiss")}
+          onDismiss={() => setUnavailableDismissed(true)}
+          retryLabel={t("retryLoad")}
+          onRetry={handleRetry}
         />
       ) : browseMode === "sources" ? (
         <section aria-label={t("addRegion")} className="flex flex-col gap-5">
-          {itemsPartial && items.length > 0 ? (
-            <LibraryFeedback
-              icon={Library}
+          {showPartial && items.length > 0 ? (
+            <LibraryFeedbackPartial
               title={t("partialWarningTitle")}
               description={t("partialWarning")}
-              action={retryButton}
+              ignoreLabel={tCommon("ignore")}
+              onIgnore={() => setPartialDismissed(true)}
+              refreshLabel={t("retryLoad")}
+              onRefresh={handleRetry}
             />
           ) : null}
 
-          <Tabs
-            value={addTab}
-            onValueChange={(value) => setAddTab((value as AddTab) ?? "search")}
-          >
-            <TabsList variant="line" className="mb-2 w-full max-w-md sm:w-auto">
-              <TabsTrigger value="search">{t("searchSourcesTab")}</TabsTrigger>
-              <TabsTrigger value="import">{t("importTab")}</TabsTrigger>
-            </TabsList>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant={addTab === "search" ? "default" : "ghost"}
+              aria-pressed={addTab === "search"}
+              onClick={() => setAddTab("search")}
+            >
+              {t("searchSourcesTab")}
+            </Button>
+            <Button
+              type="button"
+              variant={addTab === "import" ? "default" : "ghost"}
+              aria-pressed={addTab === "import"}
+              onClick={() => setAddTab("import")}
+            >
+              {t("importTab")}
+            </Button>
+          </div>
 
-            <TabsContent value="search" className="flex flex-col gap-5">
+          {addTab === "search" ? (
+            <div className="flex flex-col gap-5">
               <p className="max-w-2xl text-sm text-muted-foreground">
                 {t("searchHelp")}
               </p>
@@ -704,7 +786,6 @@ export function LibraryView({
                 <Button
                   onClick={() => void runSearch()}
                   disabled={searching || !query.trim()}
-                  className="rounded-md"
                 >
                   {searching ? <Loader2 className="animate-spin" /> : <Search />}
                   {t("search")}
@@ -722,9 +803,7 @@ export function LibraryView({
                   aria-busy="true"
                   aria-live="polite"
                 >
-                  <LibraryFeedback
-                    icon={Loader2}
-                    iconClassName="animate-spin"
+                  <LibraryFeedbackLoading
                     title={t("feedbackLoadingTitle")}
                     description={t("searching")}
                   >
@@ -732,7 +811,7 @@ export function LibraryView({
                       <Skeleton className="h-16 w-full rounded-md" />
                       <Skeleton className="h-16 w-full rounded-md" />
                     </div>
-                  </LibraryFeedback>
+                  </LibraryFeedbackLoading>
                 </motion.div>
               ) : null}
 
@@ -756,7 +835,7 @@ export function LibraryView({
                           return (
                             <li key={resultKey}>
                               <article className="flex items-center gap-4 border-b border-border py-3">
-                                <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-[9px] bg-ferry-surface-2">
+                                <div className="relative h-32 w-24 shrink-0 overflow-hidden rounded-sm bg-secondary">
                                   <SearchCoverImage
                                     coverUrl={result.cover_url}
                                     className="absolute inset-0 size-full"
@@ -791,9 +870,9 @@ export function LibraryView({
                   )}
                 </Reveal>
               ) : null}
-            </TabsContent>
-
-            <TabsContent value="import" className="flex flex-col gap-3">
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
               <p className="max-w-2xl text-sm text-muted-foreground">
                 {t("uploadHelp")}
               </p>
@@ -803,51 +882,41 @@ export function LibraryView({
                   setBrowseMode("mine");
                 }}
               />
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </section>
       ) : items.length === 0 ? (
-        <LibraryEmpty
-          icon={Library}
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-          action={
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:justify-center">
-              <Button
-                className="rounded-md"
-                onClick={() => {
-                  setBrowseMode("sources");
-                  setAddTab("search");
-                }}
-              >
-                {t("searchSourcesTab")}
-              </Button>
-              <Button
-                variant="outline"
-                className="rounded-md"
-                onClick={() => {
-                  setBrowseMode("sources");
-                  setAddTab("import");
-                }}
-              >
-                {t("importTab")}
-              </Button>
-            </div>
-          }
-        />
+        <div className="flex flex-1 items-center justify-center px-5 md:px-0">
+          <LibraryEmptyState
+            title={t("emptyTitle")}
+            description={t("emptyDescription")}
+            actions={
+              <>
+                <Button onClick={openImport}>{t("importShort")}</Button>
+                <Button variant="ghost" onClick={openSourcesSearch}>
+                  {t("searchSourcesTab")}
+                </Button>
+              </>
+            }
+          />
+        </div>
       ) : (
         <section
           aria-label={t("collectionRegion")}
-          className="flex flex-col gap-5 md:gap-6"
+          className="flex flex-col gap-6"
         >
-          {itemsPartial ? (
-            <LibraryFeedback
-              icon={Library}
+          {showPartial ? (
+            <LibraryFeedbackPartial
               title={t("partialWarningTitle")}
               description={t("partialWarning")}
-              action={retryButton}
+              ignoreLabel={tCommon("ignore")}
+              onIgnore={() => setPartialDismissed(true)}
+              refreshLabel={t("retryLoad")}
+              onRefresh={handleRetry}
             />
           ) : null}
+
+          {toolsRow}
 
           {displayedItems.length === 0 ? (
             <LibraryEmpty
@@ -856,9 +925,8 @@ export function LibraryView({
               description={t("noMatchDescription")}
               action={
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="rounded-sm"
                   onClick={() => setCollectionQuery("")}
                 >
                   {t("resetFilters")}
@@ -867,107 +935,7 @@ export function LibraryView({
             />
           ) : (
             <>
-              {/* Pen Book grid AuAXZ / dZwIa — desktop only */}
-              <div
-                data-testid="library-book-grid"
-                className="hidden gap-5 md:flex md:flex-wrap"
-              >
-                <RevealGroup
-                  className="flex flex-wrap gap-5"
-                  stagger={prefersReducedMotion ? 0 : 0.04}
-                >
-                  {pageSlice.items.map((item) => {
-                    const selected = selectedId === item.id;
-                    return (
-                      <RevealItem key={item.id}>
-                        <article className="flex w-[140px] flex-col gap-2.5">
-                          <button
-                            type="button"
-                            className={cn(
-                              "relative h-[186px] w-[140px] overflow-hidden rounded-[9px] bg-ferry-surface-2 text-left",
-                              "focus-visible:ring-2 focus-visible:ring-ring",
-                              selected && "ring-2 ring-ring"
-                            )}
-                            aria-pressed={selected}
-                            aria-label={item.title}
-                            onClick={() => selectBook(item)}
-                            onDoubleClick={() => setDetailItem(item)}
-                          >
-                            <LibraryCoverImage
-                              itemId={item.id}
-                              hasCover={Boolean(item.cover_url)}
-                              alt={item.title}
-                            />
-                          </button>
-                          <button
-                            type="button"
-                            className="min-w-0 text-left"
-                            onClick={() => selectBook(item)}
-                            onDoubleClick={() => setDetailItem(item)}
-                          >
-                            <h3 className="line-clamp-2 w-full text-sm font-medium text-foreground">
-                              {item.title}
-                            </h3>
-                            <p className="line-clamp-1 text-xs font-medium text-muted-foreground">
-                              {item.author || tCommon("dash")}
-                            </p>
-                          </button>
-                        </article>
-                      </RevealItem>
-                    );
-                  })}
-                </RevealGroup>
-              </div>
-
-              {/* Mobile mF0028: collection as BookRows (no Récents heading) */}
-              <div className="flex w-full flex-col md:hidden" data-testid="library-mobile-rows">
-                <ul className="flex flex-col">
-                  {pageSlice.items.map((item) => (
-                    <li key={item.id}>
-                      <BookRow
-                        item={item}
-                        selected={selectedId === item.id}
-                        canDeliver={canDeliver}
-                        onSelect={() => selectBook(item)}
-                        onOpenDetail={() => setDetailItem(item)}
-                        onDeliver={() => openDeliver(item)}
-                        t={t}
-                        tCommon={tCommon}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Pen Book list — Récents simultaneous with grid (desktop) */}
-              <div
-                data-testid="library-recent-section"
-                className="hidden w-full flex-col md:flex"
-              >
-                <h2 className="text-sm font-medium text-muted-foreground">
-                  {t("recentSection")}
-                </h2>
-                <ul className="flex flex-col">
-                  {(recentItems.length > 0
-                    ? recentItems
-                    : pageSlice.items.slice(0, 3)
-                  ).map((item) => (
-                    <li key={item.id}>
-                      <BookRow
-                        item={item}
-                        selected={selectedId === item.id}
-                        canDeliver={canDeliver}
-                        onSelect={() => selectBook(item)}
-                        onOpenDetail={() => setDetailItem(item)}
-                        onDeliver={() => openDeliver(item)}
-                        t={t}
-                        tCommon={tCommon}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
+              {viewMode === "grid" ? bookGrid : bookList}
               {paginationControls}
             </>
           )}
@@ -998,6 +966,34 @@ export function LibraryView({
           setDeliverItem(null);
         }}
       />
+
+      <Dialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>{tDetail("confirmTitle")}</DialogTitle>
+            <DialogDescription>{tDetail("confirmDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setPendingDelete(null)}
+              disabled={deleting}
+            >
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              onClick={() => void confirmDelete()}
+              disabled={deleting}
+            >
+              {deleting ? <Loader2 className="animate-spin" /> : null}
+              {tDetail("confirmButton")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Fraunces, Source_Serif_4 } from "next/font/google";
+import { Inter_Tight } from "next/font/google";
 import { notFound } from "next/navigation";
 import { ClerkProvider } from "@clerk/nextjs";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
@@ -8,21 +8,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { routing } from "@/i18n/routing";
 
-const sourceSerif = Source_Serif_4({
-  variable: "--font-source-serif",
+const interTight = Inter_Tight({
+  variable: "--font-primary",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "900"],
   display: "swap",
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  axes: ["opsz", "SOFT", "WONK"],
+  style: "normal",
 });
 
 export function generateStaticParams() {
@@ -60,9 +51,9 @@ export default async function LocaleLayout({
   return (
     <html
       lang={locale}
-      className={`${sourceSerif.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${interTight.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
         <ClerkProvider dynamic>
           <NextIntlClientProvider messages={messages}>
             <TooltipProvider>
