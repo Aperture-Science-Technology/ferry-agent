@@ -1,5 +1,7 @@
 # Ferry Agent
 
+Le flux canonique de développement, validation, promotion et nettoyage est documenté dans [docs/DEVELOPMENT-AND-DEPLOYMENT.md](docs/DEVELOPMENT-AND-DEPLOYMENT.md). `AGENTS.md` contient les règles spécifiques aux agents.
+
 Core backend du « pont ebooks multi-liseuses » Ferry Agent : recherche sur des
 sources légales (Project Gutenberg, Standard Ebooks), upload utilisateur,
 conversion de formats, et mise en file de livraisons vers des liseuses
