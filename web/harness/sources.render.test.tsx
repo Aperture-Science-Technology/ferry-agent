@@ -81,6 +81,11 @@ function baseSource(overrides: Partial<Source> = {}): Source {
   };
 }
 
+function routeCall(path: string, init?: RequestInit) {
+  if (path === "/api/v1/gateways") return Promise.resolve([]);
+  throw new Error(`unexpected call: ${path} ${init?.method ?? "GET"}`);
+}
+
 function renderSources(
   props: {
     initialSources?: Source[];
@@ -103,6 +108,7 @@ function renderSources(
 describe("UI harness — sources", () => {
   beforeEach(() => {
     callMock.mockReset();
+    callMock.mockImplementation(routeCall);
   });
 
   it("keeps unavailable, empty, partial and success distinct", () => {
@@ -190,7 +196,13 @@ describe("UI harness — sources", () => {
   });
 
   it("restores the previous enabled state when PATCH fails", async () => {
-    callMock.mockRejectedValueOnce(new Error("patch failed"));
+    callMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === "/api/v1/gateways") return [];
+      if (path.startsWith("/api/v1/sources/") && init?.method === "PATCH") {
+        throw new Error("patch failed");
+      }
+      return routeCall(path, init);
+    });
 
     renderSources({
       initialSources: [
@@ -212,10 +224,18 @@ describe("UI harness — sources", () => {
         messages.sources.providers.gutenberg.name
       )
     );
+    expect(disableSwitch.getAttribute("role")).toBe("switch");
+    expect(disableSwitch.getAttribute("aria-checked")).toBe("true");
     fireEvent.click(disableSwitch);
 
     await waitFor(() => {
-      expect(callMock).toHaveBeenCalled();
+      expect(callMock).toHaveBeenCalledWith(
+        "/api/v1/sources/11111111-1111-4111-8111-111111111111",
+        expect.objectContaining({
+          method: "PATCH",
+          body: JSON.stringify({ enabled: false }),
+        })
+      );
     });
 
     await waitFor(() => {
@@ -232,9 +252,13 @@ describe("UI harness — sources", () => {
   });
 
   it("toggles a known source on successful PATCH", async () => {
-    callMock.mockResolvedValueOnce(
-      baseSource({ type: "gutenberg", enabled: false })
-    );
+    callMock.mockImplementation(async (path: string, init?: RequestInit) => {
+      if (path === "/api/v1/gateways") return [];
+      if (path.startsWith("/api/v1/sources/") && init?.method === "PATCH") {
+        return baseSource({ type: "gutenberg", enabled: false });
+      }
+      return routeCall(path, init);
+    });
 
     renderSources({
       initialSources: [

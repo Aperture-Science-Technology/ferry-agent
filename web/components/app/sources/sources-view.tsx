@@ -1,75 +1,90 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import {
-  BookOpen,
-  CircleAlert,
-  Feather,
-  Library,
-  Share2,
-  TriangleAlert,
-  Upload,
-  type LucideIcon,
-} from "lucide-react";
+import { Cable, CircleAlert, Library, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import {
   SourcesEmpty,
   SourcesFeedback,
 } from "@/components/app/sources/source-feedback";
 import {
+  SourceConfigureButton,
   SourceRow,
   SourceToggle,
 } from "@/components/app/sources/source-row";
+import { PageHeader } from "@/components/app/page-header";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { summarizeConnection } from "@/components/app/gateways/gateway-connection-state";
+import type { GatewayConnectionPresentation } from "@/components/app/gateways/gateways-state";
 import { useApiClient } from "@/lib/api-client";
-import type { Source } from "@/lib/types";
+import type { Gateway, Source } from "@/lib/types";
 import {
   applySourceToggleFailure,
   applySourceToggleSuccess,
   canToggleSource,
   findSourceByType,
+  gatewayHintKind,
   hasPartialSources,
   SOURCE_DISPLAY_TYPES,
   sourceAvailability,
+  sourceConfigureHref,
   sourceGroup,
   sourcesSurfaceState,
   type KnownSourceType,
   type SourceAvailability,
 } from "@/components/app/sources/sources-state";
 
-const PROVIDER_META: Record<
-  KnownSourceType,
-  { key: string; icon: LucideIcon }
-> = {
-  gutenberg: { key: "gutenberg", icon: BookOpen },
-  standard_ebooks: { key: "standardEbooks", icon: Feather },
-  upload: { key: "upload", icon: Upload },
-  torrent_gateway: { key: "torrentGateway", icon: Share2 },
+const PROVIDER_KEYS: Record<KnownSourceType, string> = {
+  gutenberg: "gutenberg",
+  standard_ebooks: "standardEbooks",
+  upload: "upload",
+  torrent_gateway: "torrentGateway",
 };
 
 export function SourcesView({
   title,
   description,
-  descriptionMobile,
   initialSources,
   sourcesUnavailable,
 }: {
   title: string;
   description: string;
+  /** Kept for page.tsx contract; PageHeader uses desktop description. */
   descriptionMobile: string;
   initialSources: Source[];
   sourcesUnavailable: boolean;
 }) {
   const t = useTranslations("sources");
-  const tBrand = useTranslations("brand");
   const { call } = useApiClient();
   const [sources, setSources] = useState(initialSources);
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(
     () => new Set()
   );
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [gatewayPresentation, setGatewayPresentation] = useState<
+    GatewayConnectionPresentation | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await call<Gateway[]>("/api/v1/gateways");
+        if (cancelled) return;
+        if (!Array.isArray(data)) {
+          setGatewayPresentation(null);
+          return;
+        }
+        setGatewayPresentation(summarizeConnection(data, Date.now()));
+      } catch {
+        if (!cancelled) setGatewayPresentation(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [call]);
 
   const surfaceState = sourcesSurfaceState({
     sources,
@@ -77,6 +92,26 @@ export function SourcesView({
     updateError,
   });
   const partial = hasPartialSources(sources, sourcesUnavailable);
+  const displayedCount = SOURCE_DISPLAY_TYPES.length;
+
+  function gatewayHintTitle(): string {
+    switch (gatewayHintKind(gatewayPresentation)) {
+      case "connected":
+        return t("gatewayHintTitleConnected");
+      case "offline":
+        return t("gatewayHintTitleOffline");
+      case "pending":
+        return t("gatewayHintTitlePending");
+      case "expired":
+        return t("gatewayHintTitleExpired");
+      case "revoked":
+        return t("gatewayHintTitleRevoked");
+      case "unknown":
+        return t("gatewayHintTitleUnknown");
+      default:
+        return t("gatewayHintTitleNone");
+    }
+  }
 
   function availabilityLabel(availability: SourceAvailability): string {
     switch (availability) {
@@ -95,6 +130,10 @@ export function SourcesView({
     }
   }
 
+  /**
+   * Pen specimen « Via Gateway · 1 248 livres » — SourceOut has no book count;
+   * derive qualifier · real status (never invent a livre total).
+   */
   function rowMeta(
     type: KnownSourceType,
     availability: SourceAvailability
@@ -102,35 +141,18 @@ export function SourcesView({
     if (type === "upload") {
       return (
         <>
-          <span className="md:hidden">{t("alwaysActive")}</span>
-          <span className="hidden md:inline">
-            {t("alwaysActive")}
-            {" · "}
-            <Link
-              href="/app/bibliotheque"
-              className="underline-offset-2 hover:underline"
-            >
-              {t("uploadShelf")}
-            </Link>
-          </span>
+          {t("groupLocal")}
+          {" · "}
+          {t("alwaysActive")}
         </>
       );
     }
     if (type === "torrent_gateway") {
       return (
         <>
-          <Link
-            href="/app/gateways"
-            className="md:hidden underline-offset-2 hover:underline"
-          >
-            {t("gatewayLocalShort")}
-          </Link>
-          <Link
-            href="/app/gateways"
-            className="hidden md:inline underline-offset-2 hover:underline"
-          >
-            {t("gatewayLocal")}
-          </Link>
+          {t("gatewayLocalShort")}
+          {" · "}
+          {availabilityLabel(availability)}
         </>
       );
     }
@@ -138,13 +160,9 @@ export function SourcesView({
       sourceGroup(type) === "openAccess"
         ? t("groupOpenAccess")
         : t("groupLocal");
-    const label = availabilityLabel(availability);
     return (
       <>
-        <span className="md:hidden">{label}</span>
-        <span className="hidden md:inline">
-          {group} · {label}
-        </span>
+        {group} · {availabilityLabel(availability)}
       </>
     );
   }
@@ -173,31 +191,42 @@ export function SourcesView({
   }
 
   function renderRow(type: KnownSourceType) {
-    const meta = PROVIDER_META[type];
+    const providerKey = PROVIDER_KEYS[type];
     const source = findSourceByType(sources, type);
     const availability = sourceAvailability(type, sources, sourcesUnavailable);
     const pending = source ? pendingIds.has(source.id) : false;
     const toggleable = canToggleSource(type, sources, sourcesUnavailable);
     const enabled = availability === "enabled";
-    const name = t(`providers.${meta.key}.name`);
+    const name = t(`providers.${providerKey}.name`);
+    const configureHref = sourceConfigureHref(type);
 
-    const trailing =
-      toggleable && source ? (
-        <SourceToggle
-          checked={enabled}
-          pending={pending}
-          onToggle={() => void toggle(source)}
-          ariaLabel={
-            enabled
-              ? t("disableAria", { name })
-              : t("enableAria", { name })
-          }
-        />
-      ) : undefined;
+    const trailing = (
+      <>
+        {configureHref ? (
+          <SourceConfigureButton
+            href={configureHref}
+            label={t("configure")}
+            ariaLabel={t("configureAria", { name })}
+          />
+        ) : null}
+        {toggleable && source ? (
+          <SourceToggle
+            checked={enabled}
+            pending={pending}
+            onToggle={() => void toggle(source)}
+            ariaLabel={
+              enabled
+                ? t("disableAria", { name })
+                : t("enableAria", { name })
+            }
+          />
+        ) : null}
+      </>
+    );
 
     const footer =
       availability === "unknown" ? (
-        <p className="pl-[34px] text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+        <p className="pl-[52px] text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
           {t("unknownHint")}
         </p>
       ) : null;
@@ -207,7 +236,6 @@ export function SourcesView({
         <SourceRow
           type={type}
           availability={availability}
-          icon={meta.icon}
           title={name}
           meta={rowMeta(type, availability)}
           trailing={trailing}
@@ -220,7 +248,7 @@ export function SourcesView({
   const rows = (
     <Reveal>
       <div data-testid="sources-rows">
-        <RevealGroup className="flex min-w-0 flex-col gap-3 md:gap-0">
+        <RevealGroup className="flex min-w-0 flex-col">
           {SOURCE_DISPLAY_TYPES.map((type) => renderRow(type))}
         </RevealGroup>
       </div>
@@ -229,44 +257,19 @@ export function SourcesView({
 
   return (
     <div
-      className="flex min-w-0 flex-col gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:gap-6"
+      className="flex min-w-0 flex-col gap-5 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       data-testid="sources-pen-layout"
       data-sources-state={surfaceState}
     >
-      {/* Title stacks are dedicated (mF0050 Top vs Hd0003); no shared DashboardHeader. */}
-      <div className="flex flex-col gap-2 md:min-h-[72px]">
-        <header
-          data-testid="sources-header-mobile"
-          className="flex flex-col gap-2 md:hidden"
-        >
-          <p className="font-heading text-sm font-medium text-muted-foreground">
-            {tBrand("name")}
-          </p>
-          <h1 className="font-heading text-[22px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-xs font-medium text-muted-foreground">
-            {descriptionMobile}
-          </p>
-        </header>
+      <PageHeader title={title} description={description} />
 
-        <header
-          data-testid="sources-header-desktop"
-          className="hidden min-w-0 flex-1 flex-col gap-2 md:flex"
-        >
-          <h1 className="font-heading text-[28px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-sm font-medium text-muted-foreground">
-            {description}
-          </p>
-        </header>
-      </div>
-
-      {/* Pen Hint oXf2k — desktop only (absent from mF0050 Body). */}
-      <p className="hidden max-w-3xl text-sm font-medium leading-relaxed break-words whitespace-normal text-muted-foreground md:block">
-        {t("supportedHint")}
-      </p>
+      <SourcesFeedback
+        icon={Cable}
+        title={gatewayHintTitle()}
+        description={t("gatewayHintBody")}
+        data-testid="sources-gateway-hint"
+        data-gateway-hint={gatewayHintKind(gatewayPresentation)}
+      />
 
       {sourcesUnavailable ? (
         <SourcesEmpty
@@ -302,8 +305,21 @@ export function SourcesView({
         />
       ) : null}
 
-      {/* Pen Body — mobile gap 12 (mF0050); desktop Rows stack (EYiIt). */}
-      <div data-testid="sources-body">{rows}</div>
+      <section
+        data-testid="sources-panel"
+        aria-label={t("localSourcesTitle")}
+        className="flex flex-col gap-1 rounded-lg border border-border-strong bg-ferry-surface px-5 py-2"
+      >
+        <div className="flex items-center justify-between py-3">
+          <h2 className="text-base font-medium text-foreground">
+            {t("localSourcesTitle")}
+          </h2>
+          <p className="text-xs font-medium text-muted-foreground">
+            {t("localSourcesCount", { count: displayedCount })}
+          </p>
+        </div>
+        <div data-testid="sources-body">{rows}</div>
+      </section>
     </div>
   );
 }

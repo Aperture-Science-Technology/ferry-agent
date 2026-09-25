@@ -1,16 +1,18 @@
 /**
- * Pen Sources rebuild: SourceRows (FXBHb / mF0050), no table/SaaS cards,
- * dedicated mobile/desktop headers, FR/EN provider identity.
+ * Pen Sources rebuild (ba89b7b): PageHeader + gateway hint + local panel,
+ * SourceRows (not a table), FR/EN provider identity, real toggle API.
  * Run: npm run test:ui-harness
  */
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { SourcesView } from "@/components/app/sources/sources-view";
 import type { Source } from "@/lib/types";
 import messagesFr from "@/messages/fr.json";
 import messagesEn from "@/messages/en.json";
+
+const callMock = vi.fn();
 
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({
@@ -27,7 +29,7 @@ vi.mock("@/lib/api-client", () => ({
     }
   },
   useApiClient: () => ({
-    call: vi.fn(),
+    call: callMock,
   }),
 }));
 
@@ -103,7 +105,15 @@ function renderSources(locale: "fr" | "en") {
 }
 
 describe("UI harness — Pen sources composition", () => {
-  it("renders SourceRows (not a table) with provider → meta hierarchy", () => {
+  beforeEach(() => {
+    callMock.mockReset();
+    callMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/gateways") return [];
+      throw new Error(`unexpected call: ${path}`);
+    });
+  });
+
+  it("renders SourceRows (not a table) with provider → meta hierarchy", async () => {
     renderSources("fr");
 
     expect(screen.getByTestId("sources-pen-layout")).toBeTruthy();
@@ -138,70 +148,81 @@ describe("UI harness — Pen sources composition", () => {
       })
     ).toBeTruthy();
     expect(rows[3]!.getAttribute("data-source-availability")).toBe("gateway");
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("sources-gateway-hint").getAttribute("data-gateway-hint")
+      ).toBe("none");
+    });
   });
 
-  it("exposes dedicated mobile and desktop headers (mF0050 / Hd0003)", () => {
+  it("uses PageHeader with Sources title (Header/Page already conforme)", () => {
     renderSources("fr");
-    const mobile = screen.getByTestId("sources-header-mobile");
-    const desktop = screen.getByTestId("sources-header-desktop");
-    expect(mobile.className).toMatch(/md:hidden/);
-    expect(desktop.className).toMatch(/hidden/);
-    expect(desktop.className).toMatch(/md:flex/);
-    expect(within(mobile).getByText("Ferry Agent")).toBeTruthy();
-    expect(mobile.querySelector("h1")?.textContent).toBe("Sources");
-    expect(desktop.querySelector("h1")?.textContent).toBe("Sources");
-    expect(desktop.querySelector("h1")?.className).toMatch(/text-\[28px\]/);
-    expect(mobile.querySelector("h1")?.className).toMatch(/text-\[22px\]/);
-    expect(within(desktop).queryByText("Ferry Agent")).toBeNull();
-    expect(
-      within(mobile).getByText(messagesFr.pages.sources.descriptionMobile)
-    ).toBeTruthy();
-    expect(
-      within(desktop).getByText(messagesFr.pages.sources.description)
-    ).toBeTruthy();
+    const layout = screen.getByTestId("sources-pen-layout");
+    const title = within(layout).getByRole("heading", {
+      level: 1,
+      name: "Sources",
+    });
+    expect(title.className).toMatch(/text-\[28px\]/);
+    expect(title.className).toMatch(/font-bold/);
+    expect(screen.queryByTestId("sources-header-mobile")).toBeNull();
+    expect(screen.queryByTestId("sources-header-desktop")).toBeNull();
   });
 
-  it("shows Pen page header and desktop-only supported hint without SaaS section chrome", () => {
+  it("shows gateway hint and local panel without SaaS section chrome", async () => {
     const { unmount } = renderSources("fr");
     expect(
-      screen.getByTestId("sources-header-desktop").querySelector("h1")
-        ?.textContent
-    ).toBe("Sources");
-    const hint = screen.getByText(messagesFr.sources.supportedHint, {
-      hidden: true,
-    });
-    expect(hint.className).toMatch(/hidden/);
-    expect(hint.className).toMatch(/md:block/);
+      screen.getByRole("heading", { level: 1, name: "Sources" })
+    ).toBeTruthy();
+    expect(screen.getByTestId("sources-gateway-hint")).toBeTruthy();
+    expect(screen.getByText(messagesFr.sources.gatewayHintBody)).toBeTruthy();
+    expect(screen.getByTestId("sources-panel")).toBeTruthy();
+    expect(screen.getByText(messagesFr.sources.localSourcesTitle)).toBeTruthy();
+    expect(screen.getByText("4 sources")).toBeTruthy();
     expect(screen.queryByText(messagesFr.sources.sectionTitle)).toBeNull();
     expect(screen.queryByText(messagesFr.sources.openAccessTitle)).toBeNull();
-    expect(screen.queryByText(messagesFr.sources.localTitle)).toBeNull();
+    expect(screen.queryByText(messagesFr.sources.supportedHint)).toBeNull();
     unmount();
 
     renderSources("en");
     expect(
-      screen.getByTestId("sources-header-desktop").querySelector("h1")
-        ?.textContent
-    ).toBe("Sources");
-    expect(
-      screen.getByText(messagesEn.sources.supportedHint, { hidden: true })
+      screen.getByRole("heading", { level: 1, name: "Sources" })
     ).toBeTruthy();
-    expect(screen.queryByText(messagesEn.sources.sectionTitle)).toBeNull();
+    expect(screen.getByText(messagesEn.sources.gatewayHintBody)).toBeTruthy();
+    expect(screen.getByText(messagesEn.sources.localSourcesTitle)).toBeTruthy();
     expect(
       screen.getByRole("heading", {
         name: messagesEn.sources.providers.gutenberg.name,
       })
     ).toBeTruthy();
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("sources-gateway-hint").getAttribute("data-gateway-hint")
+      ).toBe("none");
+    });
+  });
+
+  it("does not claim Gateway connected when the list is empty", async () => {
+    renderSources("fr");
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("sources-gateway-hint").getAttribute("data-gateway-hint")
+      ).toBe("none");
+    });
+    expect(screen.getByText(messagesFr.sources.gatewayHintTitleNone)).toBeTruthy();
+    expect(
+      screen.queryByText(messagesFr.sources.gatewayHintTitleConnected)
+    ).toBeNull();
   });
 
   it("does not crush into a desktop table markup at mobile density", () => {
     renderSources("fr");
     const layout = screen.getByTestId("sources-pen-layout");
     expect(layout.className).toMatch(/min-w-0/);
+    expect(layout.className).toMatch(/gap-5/);
     expect(screen.getByTestId("sources-body")).toBeTruthy();
+    expect(screen.getByTestId("sources-panel")).toBeTruthy();
     expect(layout.querySelector("table")).toBeNull();
     expect(screen.getAllByTestId("source-row").length).toBe(4);
-    const rows = screen.getByTestId("sources-rows").firstElementChild;
-    expect(rows?.className).toMatch(/gap-3/);
-    expect(rows?.className).toMatch(/md:gap-0/);
   });
 });
