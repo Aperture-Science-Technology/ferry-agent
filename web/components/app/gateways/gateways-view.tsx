@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Radio, Plus, Ban, Trash2, Loader2 } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,13 +19,19 @@ import {
   GatewayCredentialsPanel,
   gatewayFromCredentials,
 } from "@/components/app/gateways/create-gateway-dialog";
-import { GatewayConnectionState } from "@/components/app/gateways/gateway-connection-state";
+import {
+  GatewayConnectionState,
+  GatewayModuleDetails,
+  pickPrimaryGateway,
+} from "@/components/app/gateways/gateway-connection-state";
 import {
   GatewayEmpty,
   GatewayFeedback,
 } from "@/components/app/gateways/gateway-feedback";
+import { GatewayRecentActivity } from "@/components/app/gateways/gateway-activity";
 import { GatewayRow } from "@/components/app/gateways/gateway-row";
 import { GatewayTorrentAction } from "@/components/app/gateways/gateway-torrent-action";
+import { PageHeader } from "@/components/app/page-header";
 import { CloudGatewayIllustration } from "@/components/illustrations";
 import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
@@ -49,8 +55,6 @@ export function GatewaysView({
   const t = useTranslations("access");
   const tCreate = useTranslations("createAccess");
   const tCommon = useTranslations("common");
-  const tBrand = useTranslations("brand");
-  const locale = useLocale();
   const { call } = useApiClient();
   const [gateways, setGateways] = useState(initialGateways);
   const [createOpen, setCreateOpen] = useState(false);
@@ -70,6 +74,7 @@ export function GatewaysView({
   const hasPaired = gateways.some((gateway) => gateway.status === "paired");
   const needsClock = hasPending || hasPaired;
   const needsListPoll = hasPending || hasPaired;
+  const primary = pickPrimaryGateway(gateways, now);
 
   useEffect(() => {
     if (!needsClock) return;
@@ -173,7 +178,7 @@ export function GatewaysView({
   const createAction = (
     <Button
       onClick={() => setCreateOpen(true)}
-      className="min-w-0 whitespace-normal rounded-md"
+      className="min-w-0 whitespace-normal"
     >
       <Plus />
       {t("createLink")}
@@ -182,14 +187,14 @@ export function GatewaysView({
 
   const guideLink = (
     <Button
-      variant="outline"
-      className="min-w-0 whitespace-normal rounded-md"
+      variant="ghost"
+      className="min-w-0 whitespace-normal"
       render={<Link href="/docs">{t("guideLink")}</Link>}
     />
   );
 
   const headerActions = (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-3">
       {guideLink}
       {createAction}
     </div>
@@ -198,19 +203,17 @@ export function GatewaysView({
   const rows = (
     <Reveal>
       <div data-testid="gateways-rows">
-        <RevealGroup className="flex min-w-0 flex-col gap-3 md:gap-0">
+        <RevealGroup className="flex min-w-0 flex-col">
           {gateways.map((gateway) => (
             <RevealItem key={gateway.gateway_id}>
               <GatewayRow
                 gateway={gateway}
                 now={now}
-                locale={locale}
-                neverLabel={tCommon("never")}
+                isPrimary={primary?.gateway_id === gateway.gateway_id}
                 recreating={recreatingId === gateway.gateway_id}
                 revoking={
                   revoking && revokeTarget?.gateway_id === gateway.gateway_id
                 }
-                activityRefreshKey={activityRefreshKey}
                 onRecreate={() => void recreate(gateway)}
                 onRevoke={() => setRevokeTarget(gateway)}
                 onDelete={() => setDeleteTarget(gateway)}
@@ -225,6 +228,52 @@ export function GatewaysView({
     </Reveal>
   );
 
+  const readyBody =
+    primary != null ? (
+      <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-start">
+        <div className="flex min-w-0 flex-1 flex-col gap-5">
+          <GatewayConnectionState
+            gateway={primary}
+            now={now}
+            neverLabel={tCommon("never")}
+            pairing={primary.status === "pending"}
+            revoking={
+              revoking && revokeTarget?.gateway_id === primary.gateway_id
+            }
+            recreating={recreatingId === primary.gateway_id}
+            onPair={() => void recreate(primary)}
+            onRevoke={() => setRevokeTarget(primary)}
+            onRecreate={() => void recreate(primary)}
+          />
+          <GatewayModuleDetails gateway={primary} />
+          {rows}
+          <GatewayTorrentAction />
+        </div>
+        <div className="flex w-full flex-col gap-5 lg:w-[480px] lg:shrink-0">
+          {primary.status === "paired" ? (
+            <GatewayRecentActivity
+              gatewayId={primary.gateway_id}
+              refreshKey={activityRefreshKey}
+            />
+          ) : (
+            <section
+              aria-label={t("jobQueueTitle")}
+              className="flex w-full flex-col gap-3 rounded-lg border border-border-strong bg-ferry-surface p-5"
+            >
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <h2 className="text-base font-medium text-foreground">
+                  {t("jobQueueTitle")}
+                </h2>
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">
+                {t("jobQueueUnavailable")}
+              </p>
+            </section>
+          )}
+        </div>
+      </div>
+    ) : null;
+
   const body =
     gatewaysUnavailable && gateways.length === 0 ? (
       <div role="alert" data-gateways-state="unavailable">
@@ -235,7 +284,7 @@ export function GatewaysView({
         />
       </div>
     ) : gateways.length === 0 ? (
-      <div data-gateways-state="empty">
+      <div data-gateways-state="empty" className="flex min-w-0 flex-col gap-5">
         <GatewayEmpty
           visual={<CloudGatewayIllustration />}
           title={t("emptyTitle")}
@@ -247,59 +296,22 @@ export function GatewaysView({
             </div>
           }
         />
-      </div>
-    ) : (
-      <div data-gateways-state="ready" className="flex min-w-0 flex-col gap-6">
-        {rows}
         <GatewayTorrentAction />
       </div>
+    ) : (
+      <div data-gateways-state="ready">{readyBody}</div>
     );
 
   return (
     <div
-      className="flex min-w-0 flex-col gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:gap-6"
+      className="flex min-w-0 flex-col gap-5 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
       data-testid="gateways-pen-layout"
     >
-      {/* Title stacks are dedicated (mF0047 Top vs Hd0003); actions are shared once. */}
-      <div className="flex flex-col gap-2 md:min-h-[72px] md:flex-row md:items-center md:justify-between md:gap-4">
-        <header
-          data-testid="gateways-header-mobile"
-          className="flex flex-col gap-2 md:hidden"
-        >
-          <p className="font-heading text-sm font-medium text-muted-foreground">
-            {tBrand("name")}
-          </p>
-          <h1 className="font-heading text-[22px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-xs font-medium text-muted-foreground">
-            {description}
-          </p>
-        </header>
-
-        <header
-          data-testid="gateways-header-desktop"
-          className="hidden min-w-0 flex-1 flex-col gap-2 md:flex"
-        >
-          <h1 className="font-heading text-[28px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-sm font-medium text-muted-foreground">
-            {description}
-          </p>
-        </header>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {headerActions}
-        </div>
-      </div>
-
-      <GatewayConnectionState gateways={gateways} now={now} />
-
-      <p className="max-w-3xl text-sm font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
-        <span className="md:hidden">{t("pageHintMobile")}</span>
-        <span className="hidden md:inline">{t("pageHint")}</span>
-      </p>
+      <PageHeader
+        title={title}
+        description={description}
+        action={headerActions}
+      />
 
       {listRefreshFailed && gateways.length > 0 ? (
         <GatewayFeedback
@@ -310,10 +322,6 @@ export function GatewaysView({
       ) : null}
 
       <div data-testid="gateways-body">{body}</div>
-
-      {gateways.length === 0 && !gatewaysUnavailable ? (
-        <GatewayTorrentAction />
-      ) : null}
 
       <CreateGatewayDialog
         open={createOpen}
@@ -327,7 +335,7 @@ export function GatewaysView({
       >
         <DialogContent className="gap-4 p-6 sm:max-w-[420px]">
           <DialogHeader className="gap-2">
-            <DialogTitle className="font-heading text-xl font-medium tracking-tight break-words whitespace-normal">
+            <DialogTitle className="text-xl font-medium tracking-tight break-words whitespace-normal">
               {tCreate("createdTitle")}
             </DialogTitle>
             <DialogDescription className="text-sm font-medium break-words whitespace-normal">
@@ -340,7 +348,7 @@ export function GatewaysView({
           <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
             <Button
               onClick={() => setCredentials(null)}
-              className="whitespace-normal rounded-md"
+              className="whitespace-normal"
             >
               {tCommon("done")}
             </Button>
@@ -354,7 +362,7 @@ export function GatewaysView({
       >
         <DialogContent className="gap-4 p-6 sm:max-w-[400px]">
           <DialogHeader className="gap-2">
-            <DialogTitle className="font-heading text-lg font-medium tracking-tight break-words whitespace-normal">
+            <DialogTitle className="text-lg font-medium tracking-tight break-words whitespace-normal">
               {t("revokeConfirmTitle")}
             </DialogTitle>
             <DialogDescription className="text-sm font-medium break-words whitespace-normal">
@@ -363,11 +371,11 @@ export function GatewaysView({
           </DialogHeader>
           <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setRevokeTarget(null)}
               disabled={revoking}
               autoFocus
-              className="whitespace-normal rounded-md"
+              className="whitespace-normal"
             >
               {tCommon("cancel")}
             </Button>
@@ -375,7 +383,7 @@ export function GatewaysView({
               variant="destructive"
               onClick={() => void confirmRevoke()}
               disabled={revoking}
-              className="whitespace-normal rounded-md"
+              className="whitespace-normal"
             >
               {revoking ? <Loader2 className="animate-spin" /> : <Ban />}
               {t("revoke")}
@@ -390,7 +398,7 @@ export function GatewaysView({
       >
         <DialogContent className="gap-4 p-6 sm:max-w-[400px]">
           <DialogHeader className="gap-2">
-            <DialogTitle className="font-heading text-lg font-medium tracking-tight break-words whitespace-normal">
+            <DialogTitle className="text-lg font-medium tracking-tight break-words whitespace-normal">
               {t("deleteConfirmTitle")}
             </DialogTitle>
             <DialogDescription className="text-sm font-medium break-words whitespace-normal">
@@ -399,11 +407,11 @@ export function GatewaysView({
           </DialogHeader>
           <DialogFooter className="mx-0 mb-0 gap-2 rounded-none border-0 bg-transparent p-0 sm:justify-end">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setDeleteTarget(null)}
               disabled={deleting}
               autoFocus
-              className="whitespace-normal rounded-md"
+              className="whitespace-normal"
             >
               {tCommon("cancel")}
             </Button>
@@ -411,7 +419,7 @@ export function GatewaysView({
               variant="destructive"
               onClick={() => void confirmDelete()}
               disabled={deleting}
-              className="whitespace-normal rounded-md"
+              className="whitespace-normal"
             >
               {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
               {t("delete")}

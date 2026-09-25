@@ -1,10 +1,9 @@
 "use client";
 
-import { Ban, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { Ban, Loader2, Radio, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ConnectionDot } from "@/components/app/gateways/gateway-connection-state";
-import { GatewayRecentActivity } from "@/components/app/gateways/gateway-activity";
 import {
   gatewayConnectionPresentation,
   minutesUntil,
@@ -14,13 +13,6 @@ import { Button } from "@/components/ui/button";
 import type { Gateway } from "@/lib/types";
 
 type AccessTranslations = ReturnType<typeof useTranslations<"access">>;
-
-function formatAppDate(iso: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
 
 function formatDuration(ms: number, t: AccessTranslations): string {
   const minutes = Math.max(1, Math.round(ms / 60_000));
@@ -59,15 +51,6 @@ export function connectionLabel(
   }
 }
 
-function OfflineHint() {
-  const t = useTranslations("access");
-  return (
-    <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
-      {t("offlineLibraryHint")}
-    </p>
-  );
-}
-
 /** Statut — copper dot + label; offline keeps library hint. */
 export function GatewayStatusLine({
   gateway,
@@ -84,11 +67,15 @@ export function GatewayStatusLine({
     <div className="min-w-0 space-y-1" data-connection={presentation}>
       <div className="flex min-w-0 items-center gap-2">
         <ConnectionDot presentation={presentation} />
-        <span className="text-sm font-medium break-words whitespace-normal text-foreground">
+        <span className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
           {label}
         </span>
       </div>
-      {presentation === "offline" ? <OfflineHint /> : null}
+      {presentation === "offline" ? (
+        <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+          {t("offlineLibraryHint")}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -125,7 +112,7 @@ export function GatewayPairingState({
 
   return (
     <div
-      className="flex max-w-lg flex-col gap-2 border-t border-border pt-3"
+      className="flex max-w-lg flex-col gap-2 border-t border-border-strong pt-3"
       data-pairing={expired ? "expired" : "pending"}
     >
       <p className="text-sm font-medium break-words whitespace-normal text-foreground">
@@ -137,9 +124,9 @@ export function GatewayPairingState({
       <div className="flex flex-wrap items-center gap-3">
         <Button
           size="sm"
-          variant={expired ? "default" : "outline"}
+          variant={expired ? "default" : "ghost"}
           disabled={recreating}
-          className="min-w-0 whitespace-normal rounded-md"
+          className="min-w-0 whitespace-normal"
           onClick={onRecreate}
         >
           {recreating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
@@ -153,42 +140,6 @@ export function GatewayPairingState({
         </Link>
       </div>
     </div>
-  );
-}
-
-function GatewayDetail({
-  gateway,
-  now,
-  recreating,
-  activityRefreshKey,
-  onRecreate,
-}: {
-  gateway: Gateway;
-  now: number;
-  recreating: boolean;
-  activityRefreshKey: number;
-  onRecreate: () => void;
-}) {
-  if (gateway.status === "pending") {
-    return (
-      <GatewayPairingState
-        gateway={gateway}
-        now={now}
-        recreating={recreating}
-        onRecreate={onRecreate}
-      />
-    );
-  }
-
-  if (gateway.status === "revoked") {
-    return null;
-  }
-
-  return (
-    <GatewayRecentActivity
-      gatewayId={gateway.gateway_id}
-      refreshKey={activityRefreshKey}
-    />
   );
 }
 
@@ -214,13 +165,13 @@ export function GatewayActions({
   deleteLabel: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
       {gateway.status === "paired" ? (
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           disabled={revoking}
-          className="min-w-0 whitespace-normal rounded-md"
+          className="min-w-0 whitespace-normal"
           onClick={onRevoke}
         >
           {revoking ? <Loader2 className="animate-spin" /> : <Ban />}
@@ -230,9 +181,9 @@ export function GatewayActions({
       {gateway.status === "revoked" ? (
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           disabled={recreating}
-          className="min-w-0 whitespace-normal rounded-md"
+          className="min-w-0 whitespace-normal"
           onClick={onRecreate}
         >
           {recreating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
@@ -241,8 +192,8 @@ export function GatewayActions({
       ) : null}
       <Button
         size="sm"
-        variant="destructive"
-        className="min-w-0 whitespace-normal rounded-md"
+        variant="ghost"
+        className="min-w-0 whitespace-normal"
         onClick={onDelete}
       >
         <Trash2 />
@@ -253,63 +204,83 @@ export function GatewayActions({
 }
 
 /**
- * Pen-aligned Gateway row — name → status → last activity → detail → actions.
- * Paper list row (DeviceRow / StatusRow grammar): border-b, py-3, no SaaS card.
+ * Compact list row under module details — icon + meta 14/500 + 12/500 + Ghost actions.
+ * Adaptation for N gateways while Pen draws a single module.
  */
 export function GatewayRow({
   gateway,
   now,
-  locale,
-  neverLabel,
   recreating,
   revoking,
-  activityRefreshKey,
   onRecreate,
   onRevoke,
   onDelete,
   revokeLabel,
   recreateLabel,
   deleteLabel,
+  isPrimary,
 }: {
   gateway: Gateway;
   now: number;
-  locale: string;
-  neverLabel: string;
+  locale?: string;
+  neverLabel?: string;
   recreating: boolean;
   revoking: boolean;
-  activityRefreshKey: number;
+  activityRefreshKey?: number;
   onRecreate: () => void;
   onRevoke: () => void;
   onDelete: () => void;
   revokeLabel: string;
   recreateLabel: string;
   deleteLabel: string;
+  isPrimary?: boolean;
 }) {
+  const t = useTranslations("access");
+  const presentation = gatewayConnectionPresentation(gateway, now);
+  const statusText = connectionLabel(presentation, gateway, now, t);
+
   return (
     <article
       data-testid="gateway-row"
       data-gateway-id={gateway.gateway_id}
-      className="flex min-w-0 flex-col gap-3 border-b border-border py-3 last:border-b-0"
+      data-gateway-primary={isPrimary ? "true" : undefined}
+      className="flex w-full min-w-0 items-center gap-3 border-b border-border-strong py-3 last:border-b-0"
     >
-      <div className="flex min-w-0 flex-col gap-1">
-        <h2 className="min-w-0 text-base font-medium break-words whitespace-normal text-foreground">
+      <div
+        className="flex size-4 shrink-0 items-center justify-center text-foreground"
+        aria-hidden
+      >
+        <Radio className="size-4" />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <h2 className="min-w-0 text-sm font-medium break-words whitespace-normal text-foreground">
           {gateway.name}
         </h2>
-        <GatewayStatusLine gateway={gateway} now={now} />
-        <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
-          {gateway.last_seen_at
-            ? formatAppDate(gateway.last_seen_at, locale)
-            : neverLabel}
-        </p>
+        <div data-connection={presentation}>
+          <p className="text-xs font-medium break-words whitespace-normal text-muted-foreground">
+            <span>{statusText}</span>
+            {isPrimary ? (
+              <span className="text-muted-foreground">
+                {" "}
+                · {t("primaryGatewayHint")}
+              </span>
+            ) : null}
+          </p>
+          {presentation === "offline" ? (
+            <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+              {t("offlineLibraryHint")}
+            </p>
+          ) : null}
+        </div>
+        {gateway.status === "pending" ? (
+          <GatewayPairingState
+            gateway={gateway}
+            now={now}
+            recreating={recreating}
+            onRecreate={onRecreate}
+          />
+        ) : null}
       </div>
-
-      <GatewayDetail
-        gateway={gateway}
-        now={now}
-        recreating={recreating}
-        activityRefreshKey={activityRefreshKey}
-        onRecreate={onRecreate}
-      />
 
       <GatewayActions
         gateway={gateway}

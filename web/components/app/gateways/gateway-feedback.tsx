@@ -3,8 +3,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Pen Feedback strip for gateways partial/refresh — surface card, r md, pad 16, gap 12.
- * Same grammar as library/deliveries/devices lots; no PassageRule / StatePanel.
+ * Pen Feedback strip for gateways — ferry-surface, radius-md, pad 16, gap 12.
  */
 export function GatewayFeedback({
   icon: Icon,
@@ -30,7 +29,7 @@ export function GatewayFeedback({
     <div
       role={role}
       className={cn(
-        "flex items-center gap-3 rounded-md border border-border bg-card p-4",
+        "flex items-center gap-3 rounded-md border border-border-strong bg-ferry-surface p-4",
         className
       )}
       {...rest}
@@ -55,10 +54,7 @@ export function GatewayFeedback({
   );
 }
 
-/**
- * Pen empty / unavailable — centered Fraunces 18 + 14 body (library EmptyState grammar).
- * Optional `visual` for CloudGatewayIllustration; otherwise Lucide icon.
- */
+/** Empty / unavailable — centered title 18 + body 14. */
 export function GatewayEmpty({
   icon: Icon,
   visual,
@@ -83,9 +79,7 @@ export function GatewayEmpty({
         (Icon ? (
           <Icon className="size-7 text-muted-foreground" aria-hidden />
         ) : null)}
-      <p className="font-heading text-lg font-medium text-foreground text-balance">
-        {title}
-      </p>
+      <p className="text-lg font-medium text-foreground text-balance">{title}</p>
       {description ? (
         <p className="max-w-md text-sm font-medium text-muted-foreground">
           {description}
