@@ -423,7 +423,12 @@
     "refreshFailedDescription": "The list couldn't be updated. Your known devices stay visible.",
     "deleteConfirmDescriptionNamed": "“{name}” will be removed. Books will no longer be sent to this device.",
     "cloudLinkFailedTitle": "Cloud link interrupted",
-    "cloudLinkFailedDescription": "The cloud account could not be linked. No new connection was saved."
+    "cloudLinkFailedDescription": "The cloud account could not be linked. No new connection was saved.",
+    "registeredTitle": "Registered devices",
+    "registeredCount": "{count, plural, one {# device} other {# devices}}",
+    "defaultDestination": "Default destination: {name}",
+    "defaultDestinationHint": "Sends from the library use this device, unless you choose another.",
+    "editAria": "Edit “{name}”"
   },
   "editDevice": {
     "title": "Edit device",

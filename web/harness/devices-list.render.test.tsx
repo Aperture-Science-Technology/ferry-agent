@@ -106,9 +106,10 @@ describe("UI harness — devices list", () => {
       ],
     });
 
-    expect(screen.getByText("Salon")).toBeTruthy();
-    expect(screen.getByText("Kindle")).toBeTruthy();
-    expect(screen.getByText(/— Paperwhite/)).toBeTruthy();
+    const namedRow = screen.getByTestId("device-row");
+    expect(within(namedRow).getByText("Salon")).toBeTruthy();
+    expect(within(namedRow).getByText("Kindle")).toBeTruthy();
+    expect(within(namedRow).getByText(/— Paperwhite/)).toBeTruthy();
     unmount();
 
     const { unmount: unmountModel } = renderDevices({
@@ -121,9 +122,10 @@ describe("UI harness — devices list", () => {
       ],
     });
 
-    expect(screen.getByText("Kobo")).toBeTruthy();
-    expect(screen.getByText(/— Clara BW/)).toBeTruthy();
-    expect(screen.queryByText("Salon")).toBeNull();
+    const modelRow = screen.getByTestId("device-row");
+    expect(within(modelRow).getByText("Kobo")).toBeTruthy();
+    expect(within(modelRow).getByText(/— Clara BW/)).toBeTruthy();
+    expect(within(modelRow).queryByText("Salon")).toBeNull();
     unmountModel();
 
     renderDevices({
@@ -136,8 +138,9 @@ describe("UI harness — devices list", () => {
       ],
     });
 
-    expect(screen.getByText("Tolino")).toBeTruthy();
-    expect(screen.queryByText(/— /)).toBeNull();
+    const brandRow = screen.getByTestId("device-row");
+    expect(within(brandRow).getByText("Tolino")).toBeTruthy();
+    expect(within(brandRow).queryByText(/— /)).toBeNull();
   });
 
   it("shows cloud OAuth error without linked/success labels", async () => {
@@ -234,7 +237,7 @@ describe("UI harness — devices list", () => {
       initialDevices: [baseDevice({ name: "À modifier" })],
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Modifier" }));
+    fireEvent.click(screen.getByRole("button", { name: /Modifier « À modifier »/ }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Modifier l'appareil")).toBeTruthy();

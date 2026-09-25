@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link2, Pencil, Trash2 } from "lucide-react";
+import { Link2, Pencil, Tablet, Trash2 } from "lucide-react";
 import { BrandBadge } from "@/components/app/devices/brand-badge";
 import { cloudLinkPresentation } from "@/components/app/devices/devices-state";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,10 @@ export function DeviceIdentity({
   return (
     <span
       className={cn(
-        "inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-medium",
-        muted ? "text-muted-foreground" : "text-foreground"
+        "inline-flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 font-medium",
+        muted
+          ? "text-xs text-muted-foreground"
+          : "text-base text-foreground"
       )}
     >
       <BrandBadge brand={device.brand} className="min-w-0 max-w-full" />
@@ -36,7 +38,7 @@ export function DeviceMetaLine({ parts }: { parts: string[] }) {
   const visible = parts.filter(Boolean);
   if (visible.length === 0) return null;
   return (
-    <p className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+    <span className="inline text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
       {visible.map((part, index) => (
         <span key={`${part}-${index}`}>
           {index > 0 ? (
@@ -47,7 +49,7 @@ export function DeviceMetaLine({ parts }: { parts: string[] }) {
           <span>{part}</span>
         </span>
       ))}
-    </p>
+    </span>
   );
 }
 
@@ -68,7 +70,7 @@ export function DeviceCloudState({
   const presentation = cloudLinkPresentation(device);
   if (presentation !== "linked") {
     return (
-      <span className="shrink-0 text-sm font-medium break-words whitespace-normal text-muted-foreground">
+      <span className="shrink-0 text-xs font-medium break-words whitespace-normal text-muted-foreground">
         {notLinked}
       </span>
     );
@@ -80,7 +82,7 @@ export function DeviceCloudState({
         ? linkedDrive
         : linked;
   return (
-    <span className="max-w-[40%] shrink-0 text-sm font-medium break-words whitespace-normal text-muted-foreground">
+    <span className="shrink-0 text-xs font-medium break-words whitespace-normal text-muted-foreground">
       {label}
     </span>
   );
@@ -94,6 +96,7 @@ export function DeviceActions({
   editLabel,
   linkLabel,
   deleteLabel,
+  editAria,
   disabled,
 }: {
   device: Device;
@@ -103,16 +106,18 @@ export function DeviceActions({
   editLabel: string;
   linkLabel: string;
   deleteLabel: string;
+  editAria?: string;
   disabled?: boolean;
 }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       <Button
         size="sm"
-        variant="outline"
-        className="min-w-0 whitespace-normal rounded-md"
+        variant="ghost"
+        className="min-w-0 whitespace-normal"
         onClick={onEdit}
         disabled={disabled}
+        aria-label={editAria || undefined}
       >
         <Pencil />
         {editLabel}
@@ -120,8 +125,8 @@ export function DeviceActions({
       {device.delivery_tier === "B" ? (
         <Button
           size="sm"
-          variant="outline"
-          className="min-w-0 whitespace-normal rounded-md"
+          variant="ghost"
+          className="min-w-0 whitespace-normal"
           onClick={onLink}
           disabled={disabled}
         >
@@ -131,8 +136,8 @@ export function DeviceActions({
       ) : null}
       <Button
         size="sm"
-        variant="destructive"
-        className="min-w-0 whitespace-normal rounded-md"
+        variant="ghost"
+        className="min-w-0 whitespace-normal"
         onClick={onDelete}
         disabled={disabled}
       >
@@ -144,8 +149,8 @@ export function DeviceActions({
 }
 
 /**
- * Pen Device/DeviceRow yTrhR — mark 40×40 surface r-sm + meta + state, gap 16,
- * pad 12 0, bottom border. Actions sit below (business, not in Pen mock).
+ * Pen Device/DeviceRow yTrhR — icon wrap 40×40 + meta (16/500 + 12/500) + actions,
+ * gap 16, pad 12 0, bottom border.
  */
 export function DeviceRow({
   device,
@@ -154,6 +159,7 @@ export function DeviceRow({
   meta,
   cloud,
   actions,
+  ariaLabel,
 }: {
   device: Device;
   title: ReactNode;
@@ -161,30 +167,48 @@ export function DeviceRow({
   meta: ReactNode;
   cloud: ReactNode;
   actions: ReactNode;
+  ariaLabel?: string;
 }) {
+  const hasSubtitle = Boolean(identity || meta || cloud);
+
   return (
     <article
       data-testid="device-row"
       data-device-id={device.id}
-      className="flex min-w-0 flex-col gap-3 border-b border-border py-3 last:border-b-0"
+      aria-label={ariaLabel}
+      className="flex w-full min-w-0 items-center gap-4 border-b border-border-strong py-3 last:border-b-0"
     >
-      <div className="flex min-w-0 items-center gap-4">
-        <BrandBadge
-          brand={device.brand}
-          showLabel={false}
-          size="lg"
-          className="shrink-0"
-        />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2 className="min-w-0 text-base font-medium break-words whitespace-normal text-foreground">
-            {title}
-          </h2>
-          {identity}
-          {meta}
-        </div>
-        {cloud}
+      <div
+        className="flex size-10 shrink-0 items-center justify-center rounded-sm bg-ferry-surface"
+        aria-hidden
+      >
+        <Tablet className="size-[18px] text-foreground" />
       </div>
-      {actions}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <h2 className="min-w-0 text-base font-medium break-words whitespace-normal text-foreground">
+          {title}
+        </h2>
+        {hasSubtitle ? (
+          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+            {identity}
+            {identity && meta ? (
+              <span className="text-border" aria-hidden>
+                ·
+              </span>
+            ) : null}
+            {meta}
+            {(identity || meta) && cloud ? (
+              <span className="text-border" aria-hidden>
+                ·
+              </span>
+            ) : null}
+            {cloud}
+          </div>
+        ) : null}
+      </div>
+      {actions ? (
+        <div className="flex shrink-0 items-center gap-2">{actions}</div>
+      ) : null}
     </article>
   );
 }

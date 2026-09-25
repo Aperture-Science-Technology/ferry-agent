@@ -3,8 +3,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Pen Feedback strip for devices partial/OAuth error — surface card, r md, pad 16, gap 12.
- * Same grammar as library/deliveries lots; no PassageRule / StatePanel.
+ * Pen Feedback / default-dest hint — ferry-surface, radius-md, pad 16, gap 12, border.
  */
 export function DeviceFeedback({
   icon: Icon,
@@ -30,7 +29,7 @@ export function DeviceFeedback({
     <div
       role={role}
       className={cn(
-        "flex items-center gap-3 rounded-md border border-border bg-card p-4",
+        "flex items-center gap-3 rounded-md border border-border-strong bg-ferry-surface p-4",
         className
       )}
       {...rest}
@@ -41,7 +40,7 @@ export function DeviceFeedback({
           aria-hidden
         />
       ) : null}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="text-sm font-medium text-foreground">{title}</p>
         {description ? (
           <p className="text-xs font-medium text-muted-foreground">
@@ -56,7 +55,7 @@ export function DeviceFeedback({
 }
 
 /**
- * Pen empty / unavailable — centered Fraunces 18 + 14 body (library EmptyState grammar).
+ * Pen empty / unavailable — centered body copy inside the registered panel.
  */
 export function DeviceEmpty({
   icon: Icon,
@@ -77,9 +76,7 @@ export function DeviceEmpty({
       className="flex flex-col items-center justify-center gap-3 px-8 py-8 text-center"
     >
       <Icon className="size-7 text-muted-foreground" aria-hidden />
-      <p className="font-heading text-lg font-medium text-foreground text-balance">
-        {title}
-      </p>
+      <p className="text-lg font-medium text-balance text-foreground">{title}</p>
       {description ? (
         <p className="max-w-md text-sm font-medium text-muted-foreground">
           {description}

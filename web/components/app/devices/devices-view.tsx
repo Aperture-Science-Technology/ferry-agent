@@ -39,7 +39,8 @@ import {
   cloudLinkPresentation,
   deviceDisplayName,
 } from "@/components/app/devices/devices-state";
-import { Reveal, RevealGroup, RevealItem } from "@/components/motion/reveal";
+import { PageHeader } from "@/components/app/page-header";
+import { Reveal } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
 import type { Device } from "@/lib/types";
 
@@ -69,7 +70,6 @@ export function DevicesView({
   const tCloud = useTranslations("cloudLink");
   const tEditDevice = useTranslations("editDevice");
   const tNewDevice = useTranslations("newDevice");
-  const tBrand = useTranslations("brand");
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const { call } = useApiClient();
@@ -184,31 +184,44 @@ export function DevicesView({
       : tCommon("never");
   }
 
-  const createAction = (
-    <Button
-      onClick={() => setCreateOpen(true)}
-      className="min-w-0 whitespace-normal rounded-md"
-    >
-      <Plus />
-      {t("newDevice")}
-    </Button>
-  );
+  function displayName(device: Device) {
+    return deviceDisplayName(device, brandLabel(device.brand));
+  }
+
+  /** First registered device stands in as default — API has no is_default field. */
+  const defaultDevice = devices.length > 0 ? devices[0]! : null;
 
   const headerActions = (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <>
       <Button
         variant="outline"
         size="sm"
         onClick={() => void refresh()}
         disabled={refreshing}
         aria-busy={refreshing}
-        className="whitespace-normal rounded-md"
+        className="whitespace-normal"
       >
         {refreshing ? <Loader2 className="animate-spin" /> : <RefreshCw />}
         {t("refresh")}
       </Button>
-      {createAction}
-    </div>
+      <Button
+        onClick={() => setCreateOpen(true)}
+        className="min-w-0 whitespace-normal"
+      >
+        <Plus />
+        {t("newDevice")}
+      </Button>
+    </>
+  );
+
+  const createAction = (
+    <Button
+      onClick={() => setCreateOpen(true)}
+      className="min-w-0 whitespace-normal"
+    >
+      <Plus />
+      {t("newDevice")}
+    </Button>
   );
 
   const retryButton = (
@@ -217,7 +230,7 @@ export function DevicesView({
       variant="outline"
       onClick={() => void refresh()}
       disabled={refreshing}
-      className="w-fit shrink-0 whitespace-normal rounded-md"
+      className="w-fit shrink-0 whitespace-normal"
     >
       {refreshing ? <Loader2 className="animate-spin" /> : null}
       {t("retry")}
@@ -230,76 +243,74 @@ export function DevicesView({
 
   const rows = (
     <Reveal>
-      <div aria-busy={refreshing} data-testid="devices-rows">
-        <RevealGroup className="flex min-w-0 flex-col gap-3 md:gap-0">
-          {devices.map((device) => {
-            const hasCustomName = Boolean(device.name?.trim());
-            const delivery = t(`tiers.${device.delivery_tier}`);
-            const profile = conversionProfileLabel(
-              device.conversion_profile,
-              tEditDevice
-            );
-            return (
-              <RevealItem key={device.id}>
-                <DeviceRow
-                  device={device}
-                  title={
-                    hasCustomName ? (
-                      <span className="break-words whitespace-normal">
-                        {device.name!.trim()}
-                      </span>
-                    ) : (
-                      <DeviceIdentity device={device} muted={false} />
-                    )
-                  }
-                  identity={
-                    hasCustomName ? <DeviceIdentity device={device} /> : null
-                  }
-                  meta={
-                    <DeviceMetaLine
-                      parts={[profile, delivery, syncLabel(device)]}
-                    />
-                  }
-                  cloud={
-                    <DeviceCloudState
-                      device={device}
-                      linkedDropbox={t("linkedDropbox")}
-                      linkedDrive={t("linkedDrive")}
-                      linked={t("linked")}
-                      notLinked={t("notLinked")}
-                    />
-                  }
-                  actions={
-                    <DeviceActions
-                      device={device}
-                      onEdit={() => setEditTarget(device)}
-                      onLink={() => setLinkTarget(device)}
-                      onDelete={() => setDeleteTarget(device)}
-                      editLabel={t("edit")}
-                      linkLabel={t("linkCloud")}
-                      deleteLabel={t("delete")}
-                      disabled={deleting}
-                    />
-                  }
-                />
-              </RevealItem>
-            );
-          })}
-        </RevealGroup>
-      </div>
+      <ul
+        aria-busy={refreshing}
+        aria-label={t("registeredTitle")}
+        data-testid="devices-rows"
+        className="flex min-w-0 flex-col"
+      >
+        {devices.map((device) => {
+          const hasCustomName = Boolean(device.name?.trim());
+          const name = displayName(device);
+          const delivery = t(`tiers.${device.delivery_tier}`);
+          const profile = conversionProfileLabel(
+            device.conversion_profile,
+            tEditDevice
+          );
+          return (
+            <li key={device.id}>
+              <DeviceRow
+                device={device}
+                ariaLabel={name}
+                title={
+                  hasCustomName ? (
+                    <span className="break-words whitespace-normal">
+                      {device.name!.trim()}
+                    </span>
+                  ) : (
+                    <DeviceIdentity device={device} muted={false} />
+                  )
+                }
+                identity={
+                  hasCustomName ? <DeviceIdentity device={device} /> : null
+                }
+                meta={
+                  <DeviceMetaLine
+                    parts={[profile, delivery, syncLabel(device)]}
+                  />
+                }
+                cloud={
+                  <DeviceCloudState
+                    device={device}
+                    linkedDropbox={t("linkedDropbox")}
+                    linkedDrive={t("linkedDrive")}
+                    linked={t("linked")}
+                    notLinked={t("notLinked")}
+                  />
+                }
+                actions={
+                  <DeviceActions
+                    device={device}
+                    onEdit={() => setEditTarget(device)}
+                    onLink={() => setLinkTarget(device)}
+                    onDelete={() => setDeleteTarget(device)}
+                    editLabel={t("edit")}
+                    linkLabel={t("linkCloud")}
+                    deleteLabel={t("delete")}
+                    editAria={t("editAria", { name })}
+                    disabled={deleting}
+                  />
+                }
+              />
+            </li>
+          );
+        })}
+      </ul>
     </Reveal>
   );
 
-  const body =
-    unavailable && devices.length === 0 ? (
-      <DeviceEmpty
-        role="alert"
-        icon={Tablet}
-        title={t("unavailableTitle")}
-        description={t("emptyUnavailable")}
-        action={retryButton}
-      />
-    ) : devices.length === 0 ? (
+  const listBody =
+    devices.length === 0 ? (
       <DeviceEmpty
         icon={Tablet}
         title={t("emptyTitle")}
@@ -312,42 +323,14 @@ export function DevicesView({
 
   return (
     <div
-      className="flex min-w-0 flex-col gap-2 md:gap-6"
+      className="flex min-w-0 flex-col gap-5"
       data-testid="devices-pen-layout"
     >
-      {/* Title stacks are dedicated (mF003e vs Hd0003); actions are shared once. */}
-      <div className="flex flex-col gap-2 md:min-h-[72px] md:flex-row md:items-center md:justify-between md:gap-4">
-        <header
-          data-testid="devices-header-mobile"
-          className="flex flex-col gap-2 md:hidden"
-        >
-          <p className="font-heading text-sm font-medium text-muted-foreground">
-            {tBrand("name")}
-          </p>
-          <h1 className="font-heading text-[22px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-xs font-medium text-muted-foreground">
-            {description}
-          </p>
-        </header>
-
-        <header
-          data-testid="devices-header-desktop"
-          className="hidden min-w-0 flex-1 flex-col gap-2 md:flex"
-        >
-          <h1 className="font-heading text-[28px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-sm font-medium text-muted-foreground">
-            {description}
-          </p>
-        </header>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {headerActions}
-        </div>
-      </div>
+      <PageHeader
+        title={title}
+        description={description}
+        action={headerActions}
+      />
 
       {oauthPresentation === "error" ? (
         <DeviceFeedback
@@ -369,8 +352,45 @@ export function DevicesView({
         />
       ) : null}
 
-      {/* Pen Body — mobile gap 12 (mF003e); desktop Rows stack (EZrKA) */}
-      <div data-testid="devices-body">{body}</div>
+      {unavailable && devices.length === 0 ? (
+        <DeviceEmpty
+          role="alert"
+          icon={Tablet}
+          title={t("unavailableTitle")}
+          description={t("emptyUnavailable")}
+          action={retryButton}
+        />
+      ) : (
+        <>
+          {defaultDevice ? (
+            <DeviceFeedback
+              icon={Tablet}
+              title={t("defaultDestination", {
+                name: displayName(defaultDevice),
+              })}
+              description={t("defaultDestinationHint")}
+              data-testid="devices-default-dest"
+            />
+          ) : null}
+
+          <section
+            data-testid="devices-panel"
+            aria-label={t("registeredTitle")}
+            className="flex flex-col gap-1 rounded-lg border border-border-strong bg-ferry-surface px-5 py-2"
+          >
+            <div className="flex items-center justify-between py-3">
+              <h2 className="text-base font-medium text-foreground">
+                {t("registeredTitle")}
+              </h2>
+              <p className="text-xs font-medium text-muted-foreground">
+                {t("registeredCount", { count: devices.length })}
+              </p>
+            </div>
+
+            <div data-testid="devices-body">{listBody}</div>
+          </section>
+        </>
+      )}
 
       <NewDeviceDialog
         open={createOpen}
@@ -403,7 +423,7 @@ export function DevicesView({
       >
         <DialogContent className="gap-4 p-6 sm:max-w-[420px]">
           <DialogHeader className="gap-2">
-            <DialogTitle className="font-heading text-xl font-medium tracking-tight">
+            <DialogTitle className="text-xl font-medium tracking-tight">
               {t("deleteConfirmTitle")}
             </DialogTitle>
             <DialogDescription className="text-sm font-medium break-words whitespace-normal">
@@ -416,7 +436,7 @@ export function DevicesView({
               onClick={() => setDeleteTarget(null)}
               disabled={deleting}
               autoFocus
-              className="whitespace-normal rounded-md"
+              className="whitespace-normal"
             >
               {tCommon("cancel")}
             </Button>
@@ -424,7 +444,7 @@ export function DevicesView({
               variant="destructive"
               onClick={() => void confirmDelete()}
               disabled={deleting}
-              className="whitespace-normal rounded-md"
+              className="whitespace-normal"
             >
               {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
               {t("delete")}
