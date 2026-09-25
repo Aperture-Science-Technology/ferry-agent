@@ -163,25 +163,18 @@ describe("UI harness — Pen settings composition", () => {
     ).toBeTruthy();
   });
 
-  it("exposes dedicated mobile and desktop headers (mF005b / Hd0003)", () => {
+  it("uses PageHeader with a single Settings title (Header/Page specimen 28/700)", () => {
     renderSettings("fr");
-    const mobile = screen.getByTestId("settings-header-mobile");
-    const desktop = screen.getByTestId("settings-header-desktop");
-    expect(mobile.className).toMatch(/md:hidden/);
-    expect(desktop.className).toMatch(/hidden/);
-    expect(desktop.className).toMatch(/md:flex/);
-    expect(within(mobile).getByText("Ferry Agent")).toBeTruthy();
-    expect(mobile.querySelector("h1")?.textContent).toBe("Réglages");
-    expect(desktop.querySelector("h1")?.textContent).toBe("Réglages");
-    expect(desktop.querySelector("h1")?.className).toMatch(/text-\[28px\]/);
-    expect(mobile.querySelector("h1")?.className).toMatch(/text-\[22px\]/);
-    expect(within(desktop).queryByText("Ferry Agent")).toBeNull();
-    expect(
-      within(mobile).getByText(messagesFr.pages.settings.descriptionMobile)
-    ).toBeTruthy();
-    expect(
-      within(desktop).getByText(messagesFr.pages.settings.description)
-    ).toBeTruthy();
+    const layout = screen.getByTestId("settings-pen-layout");
+    const titles = within(layout).getAllByRole("heading", {
+      level: 1,
+      name: "Réglages",
+    });
+    expect(titles.length).toBe(1);
+    expect(titles[0]!.className).toMatch(/text-\[28px\]/);
+    expect(titles[0]!.className).toMatch(/font-bold/);
+    expect(screen.queryByTestId("settings-header-mobile")).toBeNull();
+    expect(screen.queryByTestId("settings-header-desktop")).toBeNull();
   });
 
   it("drops Sources/Devices shortcut chrome and keeps FR/EN field identity", () => {
@@ -201,13 +194,10 @@ describe("UI harness — Pen settings composition", () => {
 
     renderSettings("en");
     expect(
-      screen.getByTestId("settings-header-desktop").querySelector("h1")
-        ?.textContent
+      screen.getByRole("heading", { level: 1, name: "Settings" }).textContent
     ).toBe("Settings");
     expect(
-      within(screen.getByTestId("settings-header-desktop")).getByText(
-        messagesEn.pages.settings.description
-      )
+      screen.getByText(messagesEn.pages.settings.description)
     ).toBeTruthy();
     expect(screen.getByLabelText(messagesEn.settings.kindleEmail)).toBeTruthy();
     expect(screen.queryByText(messagesEn.settings.sourcesCta)).toBeNull();

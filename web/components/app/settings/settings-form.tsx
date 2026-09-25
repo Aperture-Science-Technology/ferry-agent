@@ -22,6 +22,7 @@ import {
   buildSettingsPatchPayload,
   settingsAreDirty,
 } from "@/components/app/settings/settings-state";
+import { PageHeader } from "@/components/app/page-header";
 import { Reveal } from "@/components/motion/reveal";
 import { ApiError, useApiClient } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -119,7 +120,6 @@ function PreferencesRow({
 export function SettingsForm({
   title,
   description,
-  descriptionMobile,
   initialEmail,
   initialKindleEmail,
   initialDefaultFormat,
@@ -129,6 +129,7 @@ export function SettingsForm({
 }: {
   title: string;
   description: string;
+  /** Kept for page.tsx contract; PageHeader uses desktop description. */
   descriptionMobile: string;
   initialEmail: string;
   initialKindleEmail: string;
@@ -138,7 +139,6 @@ export function SettingsForm({
   opdsTokensUnavailable: boolean;
 }) {
   const t = useTranslations("settings");
-  const tBrand = useTranslations("brand");
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const pathname = usePathname();
@@ -239,35 +239,7 @@ export function SettingsForm({
       data-testid="settings-pen-layout"
       data-settings-state={settingsState}
     >
-      {/* Header/Page — already conforming; do not restyle. */}
-      <div className="flex flex-col gap-2 md:min-h-[72px]">
-        <header
-          data-testid="settings-header-mobile"
-          className="flex flex-col gap-2 md:hidden"
-        >
-          <p className="font-heading text-sm font-medium text-muted-foreground">
-            {tBrand("name")}
-          </p>
-          <h1 className="font-heading text-[22px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-xs font-medium text-muted-foreground">
-            {descriptionMobile}
-          </p>
-        </header>
-
-        <header
-          data-testid="settings-header-desktop"
-          className="hidden min-w-0 flex-1 flex-col gap-2 md:flex"
-        >
-          <h1 className="font-heading text-[28px] font-medium text-foreground">
-            {title}
-          </h1>
-          <p className="text-sm font-medium text-muted-foreground">
-            {description}
-          </p>
-        </header>
-      </div>
+      <PageHeader title={title} description={description} />
 
       {settingsUnavailable ? (
         <SettingsEmpty
