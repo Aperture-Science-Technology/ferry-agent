@@ -79,13 +79,6 @@ function renderFr(ui: React.ReactElement) {
   );
 }
 
-function assertNoCardWall(root: HTMLElement) {
-  expect(root.className).not.toMatch(/bg-card|rounded-2xl|shadow-lg/);
-  expect(root.querySelector("[class*='rounded-2xl']")).toBeNull();
-  expect(root.querySelector("[class*='shadow-lg']")).toBeNull();
-  expect(root.querySelectorAll("[class*='bg-card']").length).toBe(0);
-}
-
 describe("UI harness — landing editorial sections", () => {
   it("keeps Why Ferry product truth: hosted library, open-access sources, optional Gateway", () => {
     renderFr(<ValueProps />);
@@ -136,22 +129,30 @@ describe("UI harness — landing editorial sections", () => {
     expect(section.innerHTML).not.toMatch(/hover:translate/);
   });
 
-  it("keeps #mcp as an editorial aside with docs CTA, without AI badge language", () => {
+  it("keeps #mcp as AI Agents accordion with routing diagram", () => {
     renderFr(<McpSpotlight />);
 
-    const section = screen.getByTestId("landing-mcp");
-    expect(section.id).toBe("mcp");
-    assertNoCardWall(section);
+    const block = screen.getByTestId("landing-mcp");
+    expect(block.id).toBe("mcp");
 
     expect(
       screen.getByRole("heading", {
         level: 2,
-        name: /même bibliothèque/i,
+        name: messages.mcpSpotlight.title,
       })
     ).toBeTruthy();
-    expect(section.textContent).not.toMatch(/pour les assistants ia aussi/i);
+    expect(block.textContent).toContain(messages.mcpSpotlight.eyebrow);
+    expect(block.textContent).toContain(messages.mcpSpotlight.body);
 
-    const cta = screen.getByRole("link", { name: /voir le guide/i });
-    expect(cta.getAttribute("href")).toBe("/docs");
+    const triggers = within(block).getAllByRole("button");
+    expect(triggers).toHaveLength(3);
+    expect(triggers.map((el) => el.textContent)).toEqual([
+      messages.mcpSpotlight.agents.claude.name,
+      messages.mcpSpotlight.agents.chatgpt.name,
+      messages.mcpSpotlight.agents.mistral.name,
+    ]);
+
+    expect(block.querySelector("svg")).toBeTruthy();
+    expect(block.textContent).not.toMatch(/Delivery Autopilot|Open Library|Apple Books/);
   });
 });

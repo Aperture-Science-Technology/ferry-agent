@@ -84,11 +84,23 @@
     }
   },
   "mcpSpotlight": {
-    "eyebrow": "Conversation",
-    "title": "The same library, also in an assistant.",
-    "body": "Search, add, and send your books from an assistant (Claude, ChatGPT…), with the same connection as the online workspace.",
-    "aside": "Same account, same books — another path for them to travel.",
-    "cta": "See the guide"
+    "eyebrow": "AI AGENTS",
+    "title": "Agents that find books and deliver them to your e-reader.",
+    "body": "An MCP-compatible assistant — Claude, ChatGPT, Mistral, or another — can search open-access sources, prepare a title in Ferry, and start the delivery, without leaving the conversation.",
+    "agents": {
+      "claude": {
+        "name": "Claude",
+        "body": "Search open-access sources, add the EPUB to your Ferry library, and start delivery to Kindle or Kobo in one reply."
+      },
+      "chatgpt": {
+        "name": "ChatGPT",
+        "body": "Ask the same from ChatGPT: same sources, same library, same delivery tracking."
+      },
+      "mistral": {
+        "name": "Mistral",
+        "body": "Mistral connects to the same MCP server: search and delivery go through your Ferry account."
+      }
+    }
   },
   "faq": {
     "eyebrow": "Help",
