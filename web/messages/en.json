@@ -105,27 +105,6 @@
       }
     }
   },
-  "howItWorks": {
-    "title": "How it works.",
-    "subtitle": "Three steps to send a book to your e-reader from your online library.",
-    "steps": {
-      "add": {
-        "number": "01",
-        "title": "Add",
-        "body": "Import a file or search the available sources. Your book joins your online library."
-      },
-      "choose": {
-        "number": "02",
-        "title": "Choose",
-        "body": "Select an e-reader and a delivery mode that works with that device."
-      },
-      "send": {
-        "number": "03",
-        "title": "Send",
-        "body": "Start the delivery and follow its status in Ferry Agent."
-      }
-    }
-  },
   "mcpSpotlight": {
     "eyebrow": "Conversation",
     "title": "The same library, also in an assistant.",
@@ -938,6 +917,64 @@
       "builtBy": "Built by Aperture Science Technology",
       "demoTitle": "Demo coming soon",
       "demoBody": "A short walkthrough of Ferry — find, prepare, send."
+    },
+    "how": {
+      "title": "Everything you need to find a book and get it on your e-reader.",
+      "subtitle": "Powerful tools to search open-access sources, prepare titles in your library, and deliver them to any device.",
+      "cards": {
+        "library": {
+          "title": "Your Online Library",
+          "body": "Review your titles — with their source and format, ready to go to your e-reader."
+        },
+        "send": {
+          "title": "Send to Any Device",
+          "body": "Deliver prepared books to Kindle, Kobo, Tolino, or a USB-connected reader — whichever path your device supports."
+        },
+        "search": {
+          "title": "Smart Book Search",
+          "body": "Search open-access sources and add the right title to your library."
+        },
+        "sources": {
+          "title": "Open-Access Sources",
+          "body": "Gutenberg, Standard Ebooks, and your own files in one library."
+        },
+        "queue": {
+          "title": "Delivery queue",
+          "body": "Track every send — queued, in progress, delivered — and see at a glance when something fails."
+        }
+      },
+      "visual": {
+        "libraryHeading": "My library",
+        "libraryCount": "128 titles",
+        "sourceGutenberg": "Gutenberg",
+        "sourceStdEbooks": "Std Ebooks",
+        "sourceImport": "Import",
+        "bookPride": "Pride and Prejudice",
+        "bookFrankenstein": "Frankenstein",
+        "bookMoby": "Moby-Dick",
+        "bookGatsby": "The Great Gatsby",
+        "bookGatsbyShort": "Gatsby",
+        "metaAusten": "Austen · EPUB",
+        "metaShelley": "Shelley · EPUB",
+        "metaMelville": "Melville · EPUB",
+        "gatsbyMeta": "EPUB · 312 KB",
+        "sending": "Sending",
+        "sendTo": "Send to",
+        "sendButton": "Send to Kindle",
+        "deviceKindle": "Kindle Paperwhite",
+        "deviceKobo": "Kobo Clara 2E",
+        "deviceTolino": "Tolino Shine",
+        "searchQuery": "pride and",
+        "authorAusten": "Jane Austen",
+        "annotatedEdition": "Annotated edition",
+        "projectGutenberg": "Project Gutenberg",
+        "standardEbooks": "Standard Ebooks",
+        "yourFiles": "Your files",
+        "localGateway": "Local Gateway",
+        "connected": "Connected",
+        "optional": "Optional",
+        "queueHeading": "Delivery queue"
+      }
     }
   }
 }

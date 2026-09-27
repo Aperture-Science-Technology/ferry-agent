@@ -105,27 +105,6 @@
       }
     }
   },
-  "howItWorks": {
-    "title": "Comment ça marche.",
-    "subtitle": "Trois gestes pour envoyer un livre à votre liseuse depuis votre bibliothèque en ligne.",
-    "steps": {
-      "add": {
-        "number": "01",
-        "title": "Ajoutez",
-        "body": "Importez un fichier ou cherchez dans les sources proposées. Votre livre rejoint votre bibliothèque en ligne."
-      },
-      "choose": {
-        "number": "02",
-        "title": "Choisissez",
-        "body": "Sélectionnez une liseuse et un mode d’envoi compatible avec cet appareil."
-      },
-      "send": {
-        "number": "03",
-        "title": "Envoyez",
-        "body": "Lancez l’envoi et suivez son état dans Ferry Agent."
-      }
-    }
-  },
   "mcpSpotlight": {
     "eyebrow": "Conversation",
     "title": "La même bibliothèque, aussi dans un assistant.",
@@ -938,6 +917,64 @@
       "builtBy": "Conçu par Aperture Science Technology",
       "demoTitle": "Démo bientôt disponible",
       "demoBody": "Un aperçu court de Ferry — trouver, préparer, envoyer."
+    },
+    "how": {
+      "title": "Tout ce qu'il faut pour trouver un livre et le faire arriver sur votre liseuse.",
+      "subtitle": "Des outils simples pour chercher dans les sources en accès libre, préparer vos titres dans la bibliothèque et les livrer vers vos appareils.",
+      "cards": {
+        "library": {
+          "title": "Votre bibliothèque en ligne",
+          "body": "Passez vos titres en revue — avec leur source et leur format, prêts à partir vers votre liseuse."
+        },
+        "send": {
+          "title": "Envoyer vers n'importe quel appareil",
+          "body": "Livrez vos livres préparés vers Kindle, Kobo, Tolino ou un appareil branché en USB — selon ce que votre liseuse sait faire."
+        },
+        "search": {
+          "title": "Recherche de livres",
+          "body": "Cherchez dans les sources en accès libre et ajoutez le titre qui correspond à votre bibliothèque."
+        },
+        "sources": {
+          "title": "Sources en accès libre",
+          "body": "Gutenberg, Standard Ebooks et vos propres fichiers réunis dans une seule bibliothèque."
+        },
+        "queue": {
+          "title": "File de livraison",
+          "body": "Suivez chaque envoi — demandé, en cours, livré — et sachez tout de suite quand ça coince."
+        }
+      },
+      "visual": {
+        "libraryHeading": "Ma bibliothèque",
+        "libraryCount": "128 titres",
+        "sourceGutenberg": "Gutenberg",
+        "sourceStdEbooks": "Std Ebooks",
+        "sourceImport": "Import",
+        "bookPride": "Pride and Prejudice",
+        "bookFrankenstein": "Frankenstein",
+        "bookMoby": "Moby-Dick",
+        "bookGatsby": "The Great Gatsby",
+        "bookGatsbyShort": "Gatsby",
+        "metaAusten": "Austen · EPUB",
+        "metaShelley": "Shelley · EPUB",
+        "metaMelville": "Melville · EPUB",
+        "gatsbyMeta": "EPUB · 312 KB",
+        "sending": "Envoi",
+        "sendTo": "Envoyer vers",
+        "sendButton": "Envoyer vers Kindle",
+        "deviceKindle": "Kindle Paperwhite",
+        "deviceKobo": "Kobo Clara 2E",
+        "deviceTolino": "Tolino Shine",
+        "searchQuery": "pride and",
+        "authorAusten": "Jane Austen",
+        "annotatedEdition": "Édition annotée",
+        "projectGutenberg": "Project Gutenberg",
+        "standardEbooks": "Standard Ebooks",
+        "yourFiles": "Vos fichiers",
+        "localGateway": "Gateway local",
+        "connected": "Connecté",
+        "optional": "Optionnel",
+        "queueHeading": "File de livraison"
+      }
     }
   }
 }

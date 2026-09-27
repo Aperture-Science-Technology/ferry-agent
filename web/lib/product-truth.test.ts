@@ -113,8 +113,8 @@ describe("product truth in marketing i18n", () => {
     assert.match(en.hero.subtitle, /online library/i);
     assert.match(fr.landing.hero.demoTitle, /bientôt/i);
     assert.match(en.landing.hero.demoTitle, /coming soon/i);
-    assert.match(fr.howItWorks.steps.add.body, /bibliothèque en ligne/i);
-    assert.match(en.howItWorks.steps.add.body, /online library/i);
+    assert.match(fr.landing.how.cards.library.title, /bibliothèque en ligne/i);
+    assert.match(en.landing.how.cards.library.title, /online library/i);
 
     const frHero = heroProductCopy(fr);
     const enHero = heroProductCopy(en);
