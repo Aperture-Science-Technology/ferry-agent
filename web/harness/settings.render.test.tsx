@@ -15,7 +15,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import { CatalogQrCode } from "@/components/app/settings/catalog-qr-code";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
-import { SettingsForm } from "@/components/app/settings/settings-form";
+import {
+  SettingsForm,
+  type MailSettingsView,
+} from "@/components/app/settings/settings-form";
 import type { OpdsToken, OpdsTokenCreated } from "@/lib/types";
 import messages from "@/messages/fr.json";
 
@@ -124,6 +127,8 @@ function renderSettings(
     settingsUnavailable?: boolean;
     initialOpdsTokens?: OpdsToken[];
     opdsTokensUnavailable?: boolean;
+    initialMailSettings?: MailSettingsView | null;
+    mailSettingsUnavailable?: boolean;
   } = {}
 ) {
   return render(
@@ -138,6 +143,12 @@ function renderSettings(
         settingsUnavailable={props.settingsUnavailable ?? false}
         initialOpdsTokens={props.initialOpdsTokens ?? []}
         opdsTokensUnavailable={props.opdsTokensUnavailable ?? false}
+        initialMailSettings={
+          props.initialMailSettings === undefined
+            ? null
+            : props.initialMailSettings
+        }
+        mailSettingsUnavailable={props.mailSettingsUnavailable ?? false}
       />
     </NextIntlClientProvider>
   );
@@ -393,5 +404,48 @@ describe("UI harness — settings / OPDS", () => {
     await waitFor(() => {
       expect(document.querySelector(`[data-token-id="${token.id}"]`)).toBeNull();
     });
+  });
+
+  it("shows the Send-to-Kindle sender address when mail settings are configured", () => {
+    renderSettings({
+      initialMailSettings: {
+        configured: true,
+        sender_address: "send@ferry-agent.aperture-agency.org",
+      },
+    });
+
+    const section = screen.getByTestId("settings-send-to-kindle");
+    expect(
+      within(section).getByRole("heading", {
+        name: messages.settings.sendToKindleTitle,
+      })
+    ).toBeTruthy();
+
+    const address = screen.getByTestId(
+      "settings-sender-address"
+    ) as HTMLInputElement;
+    expect(address.value).toBe("send@ferry-agent.aperture-agency.org");
+    expect(
+      screen.queryByTestId("settings-mail-not-configured")
+    ).toBeNull();
+  });
+
+  it("shows a soft warning when mail is not configured", () => {
+    renderSettings({
+      initialMailSettings: {
+        configured: false,
+        sender_address: "send@ferry-agent.aperture-agency.org",
+      },
+    });
+
+    const warning = screen.getByTestId("settings-mail-not-configured");
+    expect(
+      within(warning).getByText(messages.settings.mailNotConfiguredTitle)
+    ).toBeTruthy();
+    expect(
+      within(warning).getByText(messages.settings.mailNotConfiguredDescription)
+    ).toBeTruthy();
+    expect(warning.getAttribute("data-feedback-state")).toBe("partial");
+    expect(warning.getAttribute("role")).toBe("status");
   });
 });

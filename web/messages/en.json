@@ -498,6 +498,9 @@
         "Era"
       ]
     },
+    "emailAddress": "Send-to-Kindle address",
+    "emailAddressHint": "Amazon assigns one address per device. Leave blank to use the address saved in your profile.",
+    "emailAddressPlaceholder": "your-name@kindle.com",
     "toastCreated": "Device added.",
     "toastFailed": "Couldn't add the device right now. Please try again."
   },
@@ -855,7 +858,20 @@
     "documentationLabel": "Documentation",
     "documentationHint": "Ferry Agent guide",
     "opdsTokensTitle": "OPDS tokens",
-    "opdsTokensDescription": "Create, list, and revoke tokens for OPDS catalog access."
+    "opdsTokensDescription": "Create, list, and revoke tokens for OPDS catalog access.",
+    "sendToKindleTitle": "Send to Kindle",
+    "sendToKindleDescription": "A book is sent by email to your Kindle device.",
+    "sendToKindleStep1": "Add the sender address below to your “Approved Personal Document Email List” on amazon.com/mycd.",
+    "sendToKindleStep2": "Then start the delivery from Ferry Agent.",
+    "sendToKindleNoBounce": "Amazon does not send bounce messages: without approval, the document is silently dropped and nothing tells you why.",
+    "sendToKindleAmazonLink": "Open amazon.com/mycd",
+    "senderAddressLabel": "Sender address to approve",
+    "senderAddressCopyAria": "Copy sender address",
+    "senderAddressUnavailable": "The sender address is not configured yet.",
+    "mailNotConfiguredTitle": "Email sending not ready yet",
+    "mailNotConfiguredDescription": "Send to Kindle will be available once email delivery is set up.",
+    "mailSettingsUnavailableTitle": "Send settings unavailable",
+    "mailSettingsUnavailable": "Couldn't load send settings right now. Please try again later."
   },
   "docs": {
     "metaTitle": "Guide | Ferry Agent",

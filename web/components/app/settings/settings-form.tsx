@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ChevronRight, CircleAlert, Eraser, Loader2 } from "lucide-react";
+import { ChevronRight, CircleAlert, Copy, Eraser, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LocaleMenu } from "@/components/locale-switcher";
+import { copyTextToClipboard } from "@/components/app/gateways/gateways-state";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
 import {
   SettingsEmpty,
   SettingsFeedbackError,
+  SettingsFeedbackPartial,
 } from "@/components/app/settings/settings-feedback";
 import {
   SettingsFormField,
@@ -30,9 +32,21 @@ import type { OpdsToken } from "@/lib/types";
 
 const FORMATS = ["epub", "mobi", "azw3", "pdf"] as const;
 
+const AMAZON_MYCD_URL = "https://www.amazon.com/mycd";
+
 type SavedSettings = {
   kindle_email: string | null;
   default_format: string;
+};
+
+/** Read-only mailer status from GET /api/v1/mail/settings. */
+export type MailSettingsView = {
+  configured: boolean;
+  sender_address: string;
+  reply_to: string | null;
+  allowed_domains: string[];
+  hourly_quota: number;
+  daily_quota: number;
 };
 
 function parseApiDetail(raw: string): string | null {
@@ -126,6 +140,8 @@ export function SettingsForm({
   settingsUnavailable,
   initialOpdsTokens,
   opdsTokensUnavailable,
+  initialMailSettings = null,
+  mailSettingsUnavailable = false,
 }: {
   title: string;
   description: string;
@@ -137,6 +153,8 @@ export function SettingsForm({
   settingsUnavailable: boolean;
   initialOpdsTokens: OpdsToken[];
   opdsTokensUnavailable: boolean;
+  initialMailSettings?: MailSettingsView | null;
+  mailSettingsUnavailable?: boolean;
 }) {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
@@ -180,10 +198,21 @@ export function SettingsForm({
         ? "dirty"
         : "ready";
 
+  const senderAddress = initialMailSettings?.sender_address?.trim() ?? "";
+
   function cancelEdits() {
     setKindleEmail(saved.kindleEmail);
     setDefaultFormat(saved.defaultFormat);
     setSaveError(null);
+  }
+
+  async function handleCopySender(address: string) {
+    const ok = await copyTextToClipboard(address);
+    if (ok) {
+      toast.success(tCommon("copied"));
+    } else {
+      toast.error(tCommon("copyFailed"));
+    }
   }
 
   async function save() {
@@ -374,6 +403,97 @@ export function SettingsForm({
                   </Button>
                 </div>
               </div>
+            </div>
+          </section>
+        </Reveal>
+
+        <Reveal>
+          <section
+            className="flex min-w-0 flex-col gap-3"
+            data-testid="settings-send-to-kindle"
+          >
+            <div className="flex min-w-0 flex-col gap-1">
+              <h2 className="text-base font-medium text-foreground">
+                {t("sendToKindleTitle")}
+              </h2>
+              <p className="text-[13px] font-medium text-muted-foreground">
+                {t("sendToKindleDescription")}
+              </p>
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-5 rounded-lg border border-border bg-card p-6">
+              {mailSettingsUnavailable ? (
+                <SettingsEmpty
+                  role="status"
+                  icon={CircleAlert}
+                  title={t("mailSettingsUnavailableTitle")}
+                  description={t("mailSettingsUnavailable")}
+                />
+              ) : (
+                <div className="flex min-w-0 flex-col gap-4">
+                  {initialMailSettings && !initialMailSettings.configured ? (
+                    <SettingsFeedbackPartial
+                      title={t("mailNotConfiguredTitle")}
+                      description={t("mailNotConfiguredDescription")}
+                      data-testid="settings-mail-not-configured"
+                    />
+                  ) : null}
+
+                  {senderAddress ? (
+                    <SettingsFormField
+                      htmlFor="settings-sender-address"
+                      label={t("senderAddressLabel")}
+                    >
+                      <div className="flex min-w-0 gap-2">
+                        <Input
+                          id="settings-sender-address"
+                          readOnly
+                          value={senderAddress}
+                          className={cn(
+                            settingsFormControlClass,
+                            "min-w-0 flex-1 font-mono text-xs break-all"
+                          )}
+                          onFocus={(event) => event.currentTarget.select()}
+                          data-testid="settings-sender-address"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          aria-label={t("senderAddressCopyAria")}
+                          onClick={() => void handleCopySender(senderAddress)}
+                        >
+                          <Copy aria-hidden />
+                        </Button>
+                      </div>
+                    </SettingsFormField>
+                  ) : (
+                    <p
+                      className="text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground"
+                      data-testid="settings-sender-unavailable"
+                    >
+                      {t("senderAddressUnavailable")}
+                    </p>
+                  )}
+
+                  <div className="flex min-w-0 flex-col gap-2 text-xs font-medium leading-relaxed break-words whitespace-normal text-muted-foreground">
+                    <p>{t("sendToKindleStep1")}</p>
+                    <p>
+                      <a
+                        href={AMAZON_MYCD_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline underline-offset-3 hover:text-foreground"
+                      >
+                        {t("sendToKindleAmazonLink")}
+                      </a>
+                    </p>
+                    <p>{t("sendToKindleStep2")}</p>
+                    <p>{t("sendToKindleNoBounce")}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         </Reveal>

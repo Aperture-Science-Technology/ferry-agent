@@ -498,6 +498,9 @@
         "Era"
       ]
     },
+    "emailAddress": "Adresse Send-to-Kindle",
+    "emailAddressHint": "Amazon attribue une adresse par appareil. Laissez vide pour utiliser l’adresse enregistrée dans votre profil.",
+    "emailAddressPlaceholder": "votre-nom@kindle.com",
     "toastCreated": "Appareil ajouté.",
     "toastFailed": "Impossible d'ajouter l'appareil pour le moment. Réessayez."
   },
@@ -855,7 +858,20 @@
     "documentationLabel": "Documentation",
     "documentationHint": "Guide Ferry Agent",
     "opdsTokensTitle": "Jetons OPDS",
-    "opdsTokensDescription": "Créer, lister et révoquer les jetons d’accès au catalogue OPDS."
+    "opdsTokensDescription": "Créer, lister et révoquer les jetons d’accès au catalogue OPDS.",
+    "sendToKindleTitle": "Envoi vers Kindle",
+    "sendToKindleDescription": "Un livre part par email vers votre appareil Kindle.",
+    "sendToKindleStep1": "Ajoutez l’adresse d’envoi ci-dessous à votre liste « Approved Personal Document Email List » sur amazon.com/mycd.",
+    "sendToKindleStep2": "Ensuite, lancez la livraison depuis Ferry Agent.",
+    "sendToKindleNoBounce": "Amazon ne renvoie aucun rebond : sans approbation, le document est abandonné en silence et rien n’indique pourquoi.",
+    "sendToKindleAmazonLink": "Ouvrir amazon.com/mycd",
+    "senderAddressLabel": "Adresse d’envoi à approuver",
+    "senderAddressCopyAria": "Copier l’adresse d’envoi",
+    "senderAddressUnavailable": "L’adresse d’envoi n’est pas encore configurée.",
+    "mailNotConfiguredTitle": "Envoi par email pas encore prêt",
+    "mailNotConfiguredDescription": "L’envoi vers Kindle sera disponible dès que le service d’email sera configuré.",
+    "mailSettingsUnavailableTitle": "Réglages d’envoi indisponibles",
+    "mailSettingsUnavailable": "Impossible de charger les réglages d’envoi pour le moment. Réessayez plus tard."
   },
   "docs": {
     "metaTitle": "Guide | Ferry Agent",

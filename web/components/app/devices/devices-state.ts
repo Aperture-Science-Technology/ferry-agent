@@ -13,6 +13,25 @@ export type DeviceListItem = {
 };
 
 /**
+ * Client-side mirror of `api.devices._compute_tier`: only Kindle is tier A
+ * (Send-to-Kindle). Model does not change that mapping today.
+ */
+export function isKindleDeliveryBrand(brand: string): boolean {
+  return brand === "kindle";
+}
+
+/**
+ * Payload for DeviceCreate/Patch `email_address` — empty input becomes null
+ * (same convention as profile `kindle_email`).
+ */
+export function buildDeviceEmailPayload(
+  emailAddress: string
+): string | null {
+  const trimmed = emailAddress.trim();
+  return trimmed ? trimmed : null;
+}
+
+/**
  * Prefer the user-given name; otherwise brand (+ model) label.
  * Never returns an empty string when brandLabel is provided.
  */

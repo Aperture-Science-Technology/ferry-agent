@@ -5,7 +5,7 @@
  */
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DeliverDialog } from "@/components/app/library/deliver-dialog";
 import type { Device, LibraryItem, MethodAvailability } from "@/lib/types";
@@ -64,7 +64,19 @@ const unavailableMethods: MethodAvailability[] = [
   { method: "usb", available: false, reason_code: null },
 ];
 
+const availableEmailMethods: MethodAvailability[] = [
+  { method: "email", available: true, reason_code: null },
+  { method: "dropbox", available: false, reason_code: "cloud_not_linked" },
+  { method: "drive", available: false, reason_code: "cloud_not_linked" },
+  { method: "browser_code", available: false, reason_code: null },
+  { method: "usb", available: false, reason_code: null },
+];
+
 describe("UI harness — library deliver dialog", () => {
+  beforeEach(() => {
+    callMock.mockReset();
+  });
+
   it("keeps Envoyer disabled and skips POST when no method is available", async () => {
     callMock.mockImplementation(async (path: string) => {
       if (path === "/api/v1/users/me") {
@@ -133,5 +145,57 @@ describe("UI harness — library deliver dialog", () => {
           init.method === "POST"
       )
     ).toBe(false);
+  });
+
+  it("offers only epub and pdf for a tier A Kindle device", async () => {
+    callMock.mockImplementation(async (path: string) => {
+      if (path === "/api/v1/users/me") {
+        return { default_format: "mobi" };
+      }
+      if (path === `/api/v1/devices/${device.id}/methods`) {
+        return availableEmailMethods;
+      }
+      throw new Error(`Unexpected call: ${path}`);
+    });
+
+    render(
+      <NextIntlClientProvider locale="fr" messages={messages}>
+        <DeliverDialog
+          item={item}
+          devices={[device]}
+          onOpenChange={() => undefined}
+        />
+      </NextIntlClientProvider>
+    );
+
+    const deviceTrigger = screen.getByRole("combobox", { name: /appareil/i });
+    fireEvent.click(deviceTrigger);
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Kindle Paperwhite" })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(messages.deliverDialog.methods.email)).toBeTruthy();
+    });
+
+    const formatTrigger = screen.getByRole("combobox", {
+      name: messages.deliverDialog.formatOptional,
+    });
+    fireEvent.click(formatTrigger);
+
+    const epub = await screen.findByRole("option", {
+      name: messages.deliverDialog.formats.epub,
+    });
+    const pdf = screen.getByRole("option", {
+      name: messages.deliverDialog.formats.pdf,
+    });
+    expect(epub).toBeTruthy();
+    expect(pdf).toBeTruthy();
+    expect(
+      screen.queryByRole("option", { name: messages.deliverDialog.formats.mobi })
+    ).toBeNull();
+    expect(
+      screen.queryByRole("option", { name: messages.deliverDialog.formats.azw3 })
+    ).toBeNull();
   });
 });

@@ -27,6 +27,10 @@ import {
   DeviceFormField,
   deviceFormControlClass,
 } from "@/components/app/devices/device-form-field";
+import {
+  buildDeviceEmailPayload,
+  isKindleDeliveryBrand,
+} from "@/components/app/devices/devices-state";
 import { useApiClient } from "@/lib/api-client";
 import type { ConversionPreset, Device, DevicePatch } from "@/lib/types";
 
@@ -49,13 +53,17 @@ export function EditDeviceDialog({
   const nameId = useId();
   const brandId = useId();
   const modelId = useId();
+  const emailId = useId();
   const [name, setName] = useState(device?.name ?? "");
   const [brand, setBrand] = useState<Device["brand"]>(device?.brand ?? "kindle");
   const [model, setModel] = useState(device?.model ?? "");
+  const [emailAddress, setEmailAddress] = useState(device?.email_address ?? "");
   const [conversionProfile, setConversionProfile] = useState<ConversionPreset | null>(
     device?.conversion_profile ?? null
   );
   const [submitting, setSubmitting] = useState(false);
+
+  const showKindleEmail = isKindleDeliveryBrand(brand);
 
   const modelOptions =
     brand !== "other" && (MODEL_BRANDS as readonly string[]).includes(brand)
@@ -81,6 +89,9 @@ export function EditDeviceDialog({
         brand,
         model: model || null,
         conversion_profile: conversionProfile,
+        email_address: showKindleEmail
+          ? buildDeviceEmailPayload(emailAddress)
+          : null,
       };
       const updated = await call<Device>(`/api/v1/devices/${device.id}`, {
         method: "PATCH",
@@ -166,6 +177,25 @@ export function EditDeviceDialog({
               />
             )}
           </DeviceFormField>
+          {showKindleEmail ? (
+            <DeviceFormField
+              label={tNewDevice("emailAddress")}
+              htmlFor={emailId}
+              hint={tNewDevice("emailAddressHint")}
+            >
+              <Input
+                id={emailId}
+                type="email"
+                value={emailAddress}
+                onChange={(event) => setEmailAddress(event.target.value)}
+                placeholder={tNewDevice("emailAddressPlaceholder")}
+                disabled={submitting}
+                className={deviceFormControlClass}
+                autoComplete="email"
+                data-testid="device-email-address"
+              />
+            </DeviceFormField>
+          ) : null}
           <ConversionProfileField
             value={conversionProfile}
             onChange={setConversionProfile}
