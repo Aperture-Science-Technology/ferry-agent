@@ -45,10 +45,19 @@
   },
   "footer": {
     "builtBy": "Built by Aperture Science Technology",
+    "tagline": "Find, prepare, and send books to your e-reader. Built by Aperture Science Technology.",
+    "copyright": "© 2026 Ferry Agent. Built by Aperture Science Technology.",
     "nav": "Footer links",
+    "product": "Product",
+    "resources": "Resources",
     "howItWorks": "How it works",
+    "delivered": "On your device",
+    "library": "Library",
+    "sources": "Sources",
     "faq": "FAQ",
     "docs": "Guide",
+    "deliveries": "Deliveries",
+    "gateways": "Gateways",
     "dashboard": "Library"
   },
   "hero": {
@@ -103,12 +112,13 @@
     }
   },
   "faq": {
-    "eyebrow": "Help",
-    "title": "Common questions.",
+    "eyebrow": "FAQ",
+    "title": "Questions. Answers.",
+    "lead": "The essentials before you open the workspace — library, Gateway, devices, and your data.",
     "items": {
       "cloudFirst": {
         "q": "Where are my books and settings?",
-        "a": "In Ferry Agent online: library, devices, settings, and delivery history are hosted on our infrastructure. Only the Gateway, if you install it, runs on your machine."
+        "a": "In your Ferry Agent account — library, devices, settings, and delivery history stay online with you."
       },
       "gatewayNeeded": {
         "q": "Do I need the Gateway to get started?",
@@ -124,7 +134,7 @@
       },
       "agent": {
         "q": "Can I automate deliveries?",
-        "a": "Yes. An assistant (Claude, ChatGPT…) can search, add, and send for you, using the same connection as the online library."
+        "a": "An MCP-compatible assistant can search, add, and start a delivery for you, with your account. There is no automatic rule on the server."
       }
     }
   },

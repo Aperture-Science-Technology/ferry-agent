@@ -2,56 +2,105 @@
 
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { BrandLogo } from "@/components/brand-logo";
-import { PassageRule } from "@/components/passage-rule";
+import { BrandMark } from "@/components/brand-logo";
 
-const FOOTER_LINKS = [
-  { href: "/#how-it-works", key: "howItWorks" as const },
-  { href: "/#faq", key: "faq" as const },
-  { href: "/docs", key: "docs" as const },
-  { href: "/app/bibliotheque", key: "dashboard" as const },
-] as const;
+type FooterLinkKey =
+  | "howItWorks"
+  | "delivered"
+  | "library"
+  | "sources"
+  | "docs"
+  | "faq"
+  | "deliveries"
+  | "gateways";
+
+const PRODUCT_LINKS: readonly { href: string; key: FooterLinkKey }[] = [
+  { href: "/#how-it-works", key: "howItWorks" },
+  { href: "/#delivered", key: "delivered" },
+  { href: "/app/bibliotheque", key: "library" },
+  { href: "/app/sources", key: "sources" },
+];
+
+const RESOURCE_LINKS: readonly { href: string; key: FooterLinkKey }[] = [
+  { href: "/docs", key: "docs" },
+  { href: "/#faq", key: "faq" },
+  { href: "/app/livraisons", key: "deliveries" },
+  { href: "/app/gateways", key: "gateways" },
+];
 
 /**
- * Marketing footer — BrandLogo lockup, paper rule, existing routes/anchors.
- * Focus rings match the header; no SaaS chrome.
+ * Marketing footer — brand + two real-link columns, no dead hrefs, no socials.
  */
 export function SiteFooter() {
   const t = useTranslations("footer");
+  const tBrand = useTranslations("brand");
 
   return (
-    <footer
-      data-testid="landing-footer"
-      className="border-t border-border"
-    >
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-10">
-        <PassageRule tone="muted" />
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0 space-y-2">
+    <footer data-testid="landing-footer" className="px-6 pb-16 md:pb-20">
+      <div className="mx-auto flex w-full max-w-[880px] flex-col gap-8 border-t border-white/15 pt-8">
+        <div className="flex flex-col gap-8 lg:flex-row lg:gap-12">
+          <div className="flex w-full flex-col gap-4 lg:w-70 lg:shrink-0">
             <Link
               href="/"
-              className="inline-flex min-w-0 rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              className="inline-flex w-fit items-center gap-2.5 rounded-sm text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
-              <BrandLogo className="text-foreground" />
+              <BrandMark className="size-7" />
+              <span className="text-base font-bold tracking-tight">
+                {tBrand("name")}
+              </span>
             </Link>
-            <p className="text-sm text-muted-foreground">{t("builtBy")}</p>
+            <p className="text-sm leading-normal text-muted-foreground text-pretty">
+              {t("tagline")}
+            </p>
           </div>
+
           <nav
-            className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground"
+            className="flex min-w-0 flex-1 justify-between gap-6"
             aria-label={t("nav")}
           >
-            {FOOTER_LINKS.map((link) => (
-              <Link
-                key={link.key}
-                href={link.href}
-                className="rounded-sm transition-colors duration-125 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-              >
-                {t(link.key)}
-              </Link>
-            ))}
+            <FooterColumn title={t("product")} links={PRODUCT_LINKS} t={t} />
+            <FooterColumn title={t("resources")} links={RESOURCE_LINKS} t={t} />
           </nav>
+        </div>
+
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <p className="text-xs text-muted-foreground">{t("copyright")}</p>
+          <Link
+            href="/docs"
+            className="w-fit text-xs text-muted-foreground transition-colors duration-125 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          >
+            {t("docs")}
+          </Link>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterColumn({
+  title,
+  links,
+  t,
+}: {
+  title: string;
+  links: readonly { href: string; key: FooterLinkKey }[];
+  t: (key: FooterLinkKey) => string;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-[13px] font-semibold text-foreground">{title}</p>
+      <ul className="flex flex-col gap-3">
+        {links.map((link) => (
+          <li key={link.key}>
+            <Link
+              href={link.href}
+              className="text-[13px] text-muted-foreground transition-colors duration-125 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            >
+              {t(link.key)}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

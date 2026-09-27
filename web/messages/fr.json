@@ -45,10 +45,19 @@
   },
   "footer": {
     "builtBy": "Conçu par Aperture Science Technology",
+    "tagline": "Trouver, préparer, envoyer des livres vers votre liseuse. Conçu par Aperture Science Technology.",
+    "copyright": "© 2026 Ferry Agent. Conçu par Aperture Science Technology.",
     "nav": "Liens du pied de page",
+    "product": "Produit",
+    "resources": "Ressources",
     "howItWorks": "Comment ça marche",
+    "delivered": "Sur votre liseuse",
+    "library": "Bibliothèque",
+    "sources": "Sources",
     "faq": "FAQ",
     "docs": "Guide",
+    "deliveries": "Livraisons",
+    "gateways": "Gateways",
     "dashboard": "Bibliothèque"
   },
   "hero": {
@@ -103,12 +112,13 @@
     }
   },
   "faq": {
-    "eyebrow": "Aide",
-    "title": "Questions fréquentes.",
+    "eyebrow": "FAQ",
+    "title": "Questions. Réponses.",
+    "lead": "L'essentiel avant d'ouvrir l'espace — bibliothèque, Gateway, appareils et vos données.",
     "items": {
       "cloudFirst": {
         "q": "Où sont mes livres et mes réglages ?",
-        "a": "Dans Ferry Agent en ligne : bibliothèque, appareils, réglages et historique d'envois sont hébergés sur notre infrastructure. Seul le Gateway, s'il est installé, tourne sur votre machine."
+        "a": "Dans votre compte Ferry Agent : bibliothèque, appareils, réglages et historique d'envois restent en ligne avec vous."
       },
       "gatewayNeeded": {
         "q": "Ai-je besoin du Gateway pour commencer ?",
@@ -124,7 +134,7 @@
       },
       "agent": {
         "q": "Puis-je automatiser les envois ?",
-        "a": "Oui. Un assistant (Claude, ChatGPT…) peut chercher, ajouter et envoyer à votre place, avec la même connexion que la bibliothèque en ligne."
+        "a": "Un assistant compatible MCP peut chercher, ajouter et lancer un envoi à votre place, avec votre compte. Il n'y a pas de règle automatique côté serveur."
       }
     }
   },
