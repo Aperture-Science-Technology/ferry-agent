@@ -1,5 +1,6 @@
 /**
  * Landing FAQ + footer harness: accordion a11y, anchors, no SaaS/AI residue.
+ * Pen geometry detail lives in faq-footer-pen.render.test.tsx.
  * Run: npm run test:ui-harness
  */
 import { fireEvent, render, screen, within } from "@testing-library/react";
@@ -33,61 +34,56 @@ function renderFr(ui: React.ReactElement) {
   );
 }
 
-function assertNoCardWall(root: HTMLElement) {
-  expect(root.className).not.toMatch(/bg-card|rounded-2xl|shadow-lg/);
-  expect(root.querySelector("[class*='rounded-2xl']")).toBeNull();
-  expect(root.querySelector("[class*='shadow-lg']")).toBeNull();
-  expect(root.querySelectorAll("[class*='bg-card']").length).toBe(0);
-}
-
 describe("UI harness — landing FAQ and footer", () => {
-  it("renders #faq as an editorial accordion without Reveal fade or SaaS cards", () => {
+  it("renders #faq as an accessible single-open accordion without Reveal fade", () => {
     renderFr(<Faq />);
 
     const section = screen.getByTestId("landing-faq");
     expect(section.id).toBe("faq");
-    assertNoCardWall(section);
 
     expect(
       screen.getByRole("heading", {
         level: 2,
-        name: /questions fréquentes/i,
+        name: /questions\. réponses/i,
       })
     ).toBeTruthy();
 
     const triggers = within(section).getAllByRole("button");
     expect(triggers.length).toBe(5);
-    expect(section.querySelector("[data-slot='accordion']")).toBeTruthy();
     expect(section.innerHTML).not.toMatch(/Reveal|opacity:\s*0/);
 
     for (const trigger of triggers) {
       expect(trigger.className).toMatch(/focus-visible:ring/);
+      expect(trigger.getAttribute("aria-controls")).toBeTruthy();
     }
 
-    fireEvent.click(triggers[0]!);
-    expect(section.textContent).toMatch(/en ligne|héberg/i);
+    expect(triggers[0]!.getAttribute("aria-expanded")).toBe("true");
+    expect(section.textContent).toMatch(/en ligne/i);
 
     fireEvent.click(triggers[1]!);
+    expect(triggers[0]!.getAttribute("aria-expanded")).toBe("false");
+    expect(triggers[1]!.getAttribute("aria-expanded")).toBe("true");
     expect(section.textContent).toMatch(/gutenberg/i);
 
     fireEvent.click(triggers[4]!);
-    expect(section.textContent).toMatch(/claude|chatgpt/i);
+    expect(section.textContent).toMatch(/mcp/i);
+    expect(section.textContent).toMatch(/règle automatique/i);
     expect(section.textContent).not.toMatch(/assistant ia/i);
 
     expect(messages.faq.items.agent.a).not.toMatch(/assistant ia|\bIA\b/i);
     expect(enMessages.faq.items.agent.a).not.toMatch(/\bAI\b/i);
-    expect(messages.faq.items.cloudFirst.a).toMatch(/en ligne|héberg/i);
-    expect(enMessages.faq.items.cloudFirst.a).toMatch(/online|hosted/i);
+    expect(messages.faq.items.cloudFirst.a).toMatch(/en ligne/i);
+    expect(enMessages.faq.items.cloudFirst.a).toMatch(/online/i);
   });
 
-  it("keeps footer routes and BrandLogo lockup with library wording", () => {
+  it("keeps footer routes with BrandMark lockup and real destinations only", () => {
     renderFr(<SiteFooter />);
 
     const footer = screen.getByTestId("landing-footer");
-    assertNoCardWall(footer);
 
-    expect(within(footer).getByText(/ferry agent/i)).toBeTruthy();
-    expect(within(footer).getByText(/aperture science/i)).toBeTruthy();
+    expect(within(footer).getByRole("link", { name: /ferry agent/i })).toBeTruthy();
+    expect(footer.textContent).toMatch(/aperture science/i);
+    expect(footer.textContent).toContain(messages.footer.copyright);
 
     const home = within(footer).getByRole("link", { name: /ferry agent/i });
     expect(home.getAttribute("href")).toBe("/");
@@ -101,6 +97,11 @@ describe("UI harness — landing FAQ and footer", () => {
       )
     ).toBe("/#how-it-works");
     expect(
+      within(nav).getByRole("link", { name: /sur votre liseuse/i }).getAttribute(
+        "href"
+      )
+    ).toBe("/#delivered");
+    expect(
       within(nav).getByRole("link", { name: /^faq$/i }).getAttribute("href")
     ).toBe("/#faq");
     expect(
@@ -111,12 +112,24 @@ describe("UI harness — landing FAQ and footer", () => {
         "href"
       )
     ).toBe("/app/bibliotheque");
+    expect(
+      within(nav).getByRole("link", { name: /^sources$/i }).getAttribute("href")
+    ).toBe("/app/sources");
+    expect(
+      within(nav).getByRole("link", { name: /livraisons/i }).getAttribute("href")
+    ).toBe("/app/livraisons");
+    expect(
+      within(nav).getByRole("link", { name: /gateways/i }).getAttribute("href")
+    ).toBe("/app/gateways");
 
     expect(footer.textContent).not.toMatch(/\bEspace\b/);
     expect(footer.textContent).not.toMatch(/Workspace/i);
 
-    for (const link of within(nav).getAllByRole("link")) {
+    for (const link of within(footer).getAllByRole("link")) {
       expect(link.className).toMatch(/focus-visible:ring/);
+      const href = link.getAttribute("href");
+      expect(href).toBeTruthy();
+      expect(href).not.toBe("#");
     }
   });
 });

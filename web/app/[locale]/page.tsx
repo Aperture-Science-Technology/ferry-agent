@@ -23,8 +23,9 @@ export default async function Home({
         <Hero />
         <HowItWorks />
         <Delivered />
-        <ValueProps />
-        <McpSpotlight />
+        <ValueProps>
+          <McpSpotlight />
+        </ValueProps>
         <Faq />
       </main>
       <SiteFooter />

@@ -29,8 +29,49 @@ const FORBIDDEN_EN = [
   "is not confirmed here",
 ];
 
+/** Phrases that promise a confirmed delivery in hero-facing product copy. */
+const FORBIDDEN_HERO_DELIVERY_FR = [
+  "livraison confirmée",
+  "envoi confirmé",
+  "livre livré avec succès",
+  "déjà livré",
+];
+
+const FORBIDDEN_HERO_DELIVERY_EN = [
+  "confirmed delivery",
+  "delivery confirmed",
+  "successfully delivered",
+  "already delivered",
+];
+
+const HERO_PRODUCT_KEYS = [
+  "badge",
+  "titleBefore",
+  "titleHighlight",
+  "subtitle",
+] as const;
+
+const LANDING_HERO_KEYS = [
+  "ctaPrimary",
+  "ctaSecondary",
+  "builtBy",
+  "demoTitle",
+  "demoBody",
+] as const;
+
 function load(locale: "fr" | "en"): string {
   return readFileSync(join(messagesDir, `${locale}.json`), "utf8");
+}
+
+function heroProductCopy(messages: {
+  hero: Record<string, string>;
+  landing: { hero: Record<string, string> };
+}): string {
+  const parts = [
+    ...HERO_PRODUCT_KEYS.map((key) => messages.hero[key]),
+    ...LANDING_HERO_KEYS.map((key) => messages.landing.hero[key]),
+  ];
+  return parts.join("\n");
 }
 
 describe("product truth in marketing i18n", () => {
@@ -65,14 +106,31 @@ describe("product truth in marketing i18n", () => {
     assert.match(en.faq.items.cloudFirst.a, /online|hosted/i);
   });
 
-  it("landing hero presents an online library, not local-only storage", () => {
+  it("landing hero presents an online library and a coming-soon demo, not a confirmed delivery", () => {
     const fr = JSON.parse(load("fr"));
     const en = JSON.parse(load("en"));
-    assert.match(fr.hero.titleBefore, /bibliothèque en ligne/i);
-    assert.match(en.hero.titleBefore, /online library/i);
-    assert.match(fr.hero.sceneCaption, /pas une confirmation d.envoi/i);
-    assert.match(en.hero.sceneCaption, /not a delivery confirmation/i);
-    assert.match(fr.howItWorks.steps.add.body, /bibliothèque en ligne/i);
-    assert.match(en.howItWorks.steps.add.body, /online library/i);
+    assert.match(fr.hero.subtitle, /bibliothèque en ligne/i);
+    assert.match(en.hero.subtitle, /online library/i);
+    assert.match(fr.landing.hero.demoTitle, /bientôt/i);
+    assert.match(en.landing.hero.demoTitle, /coming soon/i);
+    assert.match(fr.landing.how.cards.library.title, /bibliothèque en ligne/i);
+    assert.match(en.landing.how.cards.library.title, /online library/i);
+
+    const frHero = heroProductCopy(fr);
+    const enHero = heroProductCopy(en);
+    for (const phrase of [...FORBIDDEN_FR, ...FORBIDDEN_HERO_DELIVERY_FR]) {
+      assert.equal(
+        frHero.includes(phrase),
+        false,
+        `Forbidden FR phrase in hero product keys: ${phrase}`
+      );
+    }
+    for (const phrase of [...FORBIDDEN_EN, ...FORBIDDEN_HERO_DELIVERY_EN]) {
+      assert.equal(
+        enHero.includes(phrase),
+        false,
+        `Forbidden EN phrase in hero product keys: ${phrase}`
+      );
+    }
   });
 });
