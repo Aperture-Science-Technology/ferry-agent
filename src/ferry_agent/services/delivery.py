@@ -10,6 +10,7 @@ par defaut de l'utilisateur / d'origine si non precise). Aucun fallback
 silencieux vers un autre format : echec explicite si la conversion echoue.
 """
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -18,6 +19,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ferry_agent.config import get_settings
 from ferry_agent.db import async_session_factory
 from ferry_agent.models import (
     DeliveryJob,
@@ -95,7 +97,11 @@ async def _deliver_tier_a(
     user: User,
     requested_format: str | None = None,
 ) -> None:
-    """Send-to-Kindle / envoi email direct (SMTP)."""
+    """Send-to-Kindle / envoi email direct (SMTP).
+
+    Succes terminal = ``sent`` (accepte par le relais). ``delivered`` n'est
+    jamais pose ici : aucune preuve Kindle n'existe cote SMTP.
+    """
     if not user.kindle_email:
         await _fail(db, job, "adresse kindle_email manquante sur l'utilisateur")
         return
@@ -119,22 +125,40 @@ async def _deliver_tier_a(
             await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
             return
 
-        job.status = DeliveryStatus.sent
-        await db.commit()
+        settings = get_settings()
+        max_attempts = settings.smtp_retry_max_attempts
+        for n in range(1, max_attempts + 1):
+            job.attempts = n
+            await db.commit()
+            try:
+                relay_response = await mailer.send_file(file_path, filename, user.kindle_email, kindle=True)
+            except mailer.MessageTooLargeForRelay as exc:
+                # Message actionnable integral (repli tier C) — jamais un generique.
+                await _fail(db, job, str(exc))
+                return
+            except Exception as exc:
+                if not mailer.is_transient_error(exc) or n >= max_attempts:
+                    if mailer.is_transient_error(exc):
+                        await _fail(
+                            db,
+                            job,
+                            (
+                                f"L'envoi n'a pas abouti après {n} tentatives "
+                                "(le relais n'a pas répondu correctement). "
+                                f"Réessayez dans quelques minutes. ({exc})"
+                            ),
+                        )
+                    else:
+                        await _fail(db, job, str(exc))
+                    return
+                await asyncio.sleep(settings.smtp_retry_backoff_seconds * 2 ** (n - 1))
+                continue
 
-        try:
-            await mailer.send_file(file_path, filename, user.kindle_email, kindle=True)
-        except mailer.MessageTooLargeForRelay as exc:
-            # Message actionnable integral (repli tier C) — jamais un generique.
-            await _fail(db, job, str(exc))
+            job.status = DeliveryStatus.sent
+            job.relay_response = relay_response
+            job.delivered_at = None
+            await db.commit()
             return
-        except Exception as exc:
-            await _fail(db, job, str(exc))
-            return
-
-        job.status = DeliveryStatus.delivered
-        job.delivered_at = _utcnow()
-        await db.commit()
     finally:
         _cleanup_derivative(file_path, item, cached_derivative)
 

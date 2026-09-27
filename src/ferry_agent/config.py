@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     # Plafond encode du relais (Resend = 40 Mo) ; compare a amazon_send_to_kindle_max_bytes.
     smtp_max_message_bytes: int = 40 * 1024 * 1024
     amazon_send_to_kindle_max_bytes: int = 50 * 1024 * 1024
+    # Tentatives SMTP (erreurs transitoires 4xx / deconnexion) ; backoff exponentiel.
+    smtp_retry_max_attempts: int = 3
+    smtp_retry_backoff_seconds: float = 2.0
+    # En-tete d'idempotence (ex. Resend) : valeur derivee du contenu, stable entre essais.
+    smtp_idempotency_header: str | None = "Resend-Idempotency-Key"
+    # Jobs encore `queued` apres un redemarrage : balayeur periodique.
+    delivery_stuck_after_minutes: int = 15
+    delivery_sweeper_interval_seconds: int = 300
 
     # URL publique de base pour les liens courts du mini-catalogue tier C.
     public_base_url: str = "https://ferry-agent.aperture-agency.org"

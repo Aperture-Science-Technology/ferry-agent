@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import email
+import smtplib
 import ssl
 import time
 from datetime import UTC, datetime, timedelta
@@ -367,3 +368,69 @@ def test_starttls_end_to_end_with_aiosmtpd(monkeypatch, tmp_path: Path) -> None:
 
     # Evite un faux positif si l'import aiosmtpd echoue silencieusement.
     assert aiosmtpd is not None
+
+
+def test_is_transient_error_classification() -> None:
+    assert mailer.is_transient_error(smtplib.SMTPResponseException(421, b"try later")) is True
+    assert mailer.is_transient_error(smtplib.SMTPResponseException(550, b"no such user")) is False
+    assert mailer.is_transient_error(smtplib.SMTPServerDisconnected("bye")) is True
+    assert mailer.is_transient_error(mailer.MessageTooLargeForRelay("too big")) is False
+    assert mailer.is_transient_error(mailer.MailerNotConfigured("no smtp")) is False
+
+
+def test_idempotency_header_stable_across_builds(monkeypatch, tmp_path: Path) -> None:
+    epub = tmp_path / "livre.epub"
+    epub.write_bytes(b"PK\x03\x04same-bytes")
+    _configure_smtp(
+        monkeypatch,
+        SMTP_FROM="send@ferry-agent.test",
+        SMTP_IDEMPOTENCY_HEADER="Resend-Idempotency-Key",
+    )
+
+    msg1 = mailer.build_message(str(epub), "livre.epub", "reader@kindle.com", kindle=True)
+    msg2 = mailer.build_message(str(epub), "livre.epub", "reader@kindle.com", kindle=True)
+
+    key1 = msg1["Resend-Idempotency-Key"]
+    key2 = msg2["Resend-Idempotency-Key"]
+    assert key1
+    assert key1 == key2
+    assert len(key1) == 32
+
+
+def test_send_sync_returns_acceptance_trace_with_message_id(monkeypatch, tmp_path: Path) -> None:
+    epub = tmp_path / "x.epub"
+    epub.write_bytes(b"PK\x03\x04fake-epub")
+    captured: dict = {}
+
+    class FakeSMTP:
+        def __init__(self, host, port, timeout=None):
+            captured["host"], captured["port"] = host, port
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def ehlo(self):
+            return (250, b"ok")
+
+        def starttls(self, *, context=None):
+            return None
+
+        def login(self, user, password):
+            return None
+
+        def send_message(self, message):
+            captured["message"] = message
+            return {}
+
+    monkeypatch.setattr(mailer.smtplib, "SMTP", FakeSMTP)
+    _configure_smtp(monkeypatch)
+
+    result = mailer._send_sync(str(epub), "x.epub", "reader@kindle.com", kindle=True)
+
+    message_id = captured["message"]["Message-ID"]
+    assert message_id
+    assert result == f"smtp.test:587 accepted {message_id}"
+    assert message_id in result

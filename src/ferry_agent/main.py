@@ -16,6 +16,7 @@ from ferry_agent.db import async_session_factory
 from ferry_agent.models import ShortCode
 from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services.converters import calibre_status_line
+from ferry_agent.services.delivery_sweeper import reap_stuck_jobs
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,15 +32,11 @@ async def _purge_loop(settings: Settings) -> None:
     while True:
         try:
             async with async_session_factory() as db:
-                deleted_jobs = await gateway_service.purge_finished_jobs(
-                    db, settings.gateway_job_retention_days
-                )
+                deleted_jobs = await gateway_service.purge_finished_jobs(db, settings.gateway_job_retention_days)
                 logger.info("purge gateway_jobs: %d ligne(s) supprimee(s)", deleted_jobs)
 
                 short_result = await db.execute(
-                    delete(ShortCode).where(
-                        ShortCode.expires_at < datetime.now(timezone.utc)
-                    )
+                    delete(ShortCode).where(ShortCode.expires_at < datetime.now(timezone.utc))
                 )
                 await db.commit()
                 logger.info(
@@ -49,6 +46,24 @@ async def _purge_loop(settings: Settings) -> None:
         except Exception:
             logger.exception("echec de la tache de purge")
         await asyncio.sleep(settings.gateway_job_purge_interval_seconds)
+
+
+async def _sweep_loop(settings: Settings) -> None:
+    """Balaye les DeliveryJob restes ``queued`` apres un redemarrage.
+
+    S'execute dans **chaque** replique du core. Prevoir un ``pg_advisory_lock``
+    le jour ou le core est scale horizontalement, pour n'avoir qu'un seul
+    worker qui balaye a la fois.
+    """
+    while True:
+        try:
+            async with async_session_factory() as db:
+                reaped = await reap_stuck_jobs(db, settings.delivery_stuck_after_minutes)
+                if reaped:
+                    logger.info("delivery sweeper: %d job(s) repris", reaped)
+        except Exception:
+            logger.exception("echec de la tache delivery-sweeper")
+        await asyncio.sleep(settings.delivery_sweeper_interval_seconds)
 
 
 @asynccontextmanager
@@ -72,12 +87,23 @@ async def lifespan(app: FastAPI):
         settings.gateway_job_retention_days,
         settings.gateway_job_purge_interval_seconds,
     )
+    sweep_task = asyncio.create_task(_sweep_loop(settings), name="delivery-sweeper")
+    logger.info(
+        "Tache delivery-sweeper activee (stuck_after=%d min, interval=%d s)",
+        settings.delivery_stuck_after_minutes,
+        settings.delivery_sweeper_interval_seconds,
+    )
 
     yield
 
     purge_task.cancel()
+    sweep_task.cancel()
     try:
         await purge_task
+    except asyncio.CancelledError:
+        pass
+    try:
+        await sweep_task
     except asyncio.CancelledError:
         pass
 

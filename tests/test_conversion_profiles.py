@@ -274,7 +274,7 @@ async def test_tier_a_passes_profile_args_into_epub_conversion(monkeypatch: pyte
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         mailed["file_path"] = file_path
         mailed["filename"] = filename
-        return None
+        return "smtp.test:587 accepted <msg@test>"
 
     monkeypatch.setattr(delivery.converters, "convert_with_profile_cache", fake_convert_with_profile_cache)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
@@ -296,7 +296,7 @@ async def test_tier_a_passes_profile_args_into_epub_conversion(monkeypatch: pyte
     assert seen["target_format"] == "epub"
     assert job.target_format == "epub"
     assert mailed["filename"].endswith(".epub")
-    assert job.status == DeliveryStatus.delivered
+    assert job.status == DeliveryStatus.sent
 
 
 async def test_materialize_epub_to_epub_with_preset_forces_conversion(
@@ -456,7 +456,7 @@ async def test_tier_a_epub_source_to_epub_target_applies_device_preset(
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         mailed["file_path"] = file_path
         mailed["filename"] = filename
-        return None
+        return "smtp.test:587 accepted <msg@test>"
 
     monkeypatch.setattr(delivery.converters, "convert_with_profile_cache", fake_convert_with_profile_cache)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
@@ -478,4 +478,4 @@ async def test_tier_a_epub_source_to_epub_target_applies_device_preset(
     assert seen["convert_kind"] == "to_epub"
     assert mailed["file_path"] == str(derived)
     assert mailed["file_path"] != item.storage_path
-    assert job.status == DeliveryStatus.delivered
+    assert job.status == DeliveryStatus.sent

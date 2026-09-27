@@ -8,11 +8,15 @@ plutot que de planter au premier envoi.
 
 TLS : toujours un contexte verifiant (`ssl.create_default_context()`), jamais
 le defaut smtplib (`_create_stdlib_context` = CERT_NONE).
+
+La valeur retournee par `send_file` / `_send_sync` est une trace d'acceptation
+par le relais — jamais une preuve de livraison sur la Kindle.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import smtplib
 import ssl
@@ -47,9 +51,41 @@ def is_configured() -> bool:
     return True
 
 
+def is_transient_error(exc: BaseException) -> bool:
+    """Vrai si l'erreur SMTP/reseau merite un nouvel essai.
+
+    Les 4xx et les deconnexions/timeouts sont transitoires. Un 5xx,
+    ``MailerNotConfigured`` et ``MessageTooLargeForRelay`` ne le sont jamais.
+    ``SMTPException`` herite de ``OSError`` en Python 3 : on exclut donc les
+    erreurs SMTP non classees 4xx avant le filet ``OSError``.
+    """
+    if isinstance(exc, (MailerNotConfigured, MessageTooLargeForRelay)):
+        return False
+    code = getattr(exc, "smtp_code", None)
+    if isinstance(code, int):
+        return 400 <= code < 500
+    if isinstance(
+        exc,
+        (
+            smtplib.SMTPServerDisconnected,
+            smtplib.SMTPConnectError,
+            smtplib.SMTPHeloError,
+        ),
+    ):
+        return True
+    if isinstance(exc, smtplib.SMTPException):
+        return False
+    return isinstance(exc, (TimeoutError, ConnectionError, OSError))
+
+
 def encoded_size_bound(raw_bytes: int) -> int:
     """Majorant de la taille du message une fois encode en base64."""
     return int(raw_bytes * _MIME_OVERHEAD_FACTOR)
+
+
+def _idempotency_key(recipient_email: str, filename: str, size_bytes: int) -> str:
+    payload = f"{recipient_email}:{filename}:{size_bytes}"
+    return hashlib.sha256(payload.encode()).hexdigest()[:32]
 
 
 def build_message(file_path: str, filename: str, recipient_email: str, *, kindle: bool) -> EmailMessage:
@@ -68,12 +104,15 @@ def build_message(file_path: str, filename: str, recipient_email: str, *, kindle
 
     content_type = content_type_for_filename(filename)
     maintype, _, subtype = content_type.partition("/")
+    file_bytes = Path(file_path).read_bytes()
     message.add_attachment(
-        Path(file_path).read_bytes(),
+        file_bytes,
         maintype=maintype,
         subtype=subtype or "octet-stream",
         filename=filename,
     )
+    if settings.smtp_idempotency_header:
+        message[settings.smtp_idempotency_header] = _idempotency_key(recipient_email, filename, len(file_bytes))
     return message
 
 
@@ -94,7 +133,7 @@ def _connect() -> smtplib.SMTP:
     return smtp
 
 
-def _send_sync(file_path: str, filename: str, recipient_email: str, kindle: bool) -> None:
+def _send_sync(file_path: str, filename: str, recipient_email: str, kindle: bool) -> str:
     settings = get_settings()
     message = build_message(file_path, filename, recipient_email, kindle=kindle)
     raw_size = len(message.as_bytes())
@@ -106,17 +145,22 @@ def _send_sync(file_path: str, filename: str, recipient_email: str, kindle: bool
         )
     with _connect() as smtp:
         smtp.login(settings.smtp_user, settings.smtp_password)
-        smtp.send_message(message)
+        refused = smtp.send_message(message)
+        if refused:
+            raise smtplib.SMTPRecipientsRefused(refused)
+    message_id = message["Message-ID"] or ""
+    return f"{settings.smtp_host}:{settings.smtp_port} accepted {message_id}"
 
 
-async def send_file(file_path: str, filename: str, recipient_email: str, kindle: bool = False) -> None:
+async def send_file(file_path: str, filename: str, recipient_email: str, kindle: bool = False) -> str | None:
     if not is_configured():
         raise MailerNotConfigured("SMTP non configure (SMTP_HOST/SMTP_USER/SMTP_PASSWORD)")
 
     loop = asyncio.get_running_loop()
     try:
-        await loop.run_in_executor(None, _send_sync, file_path, filename, recipient_email, kindle)
+        result = await loop.run_in_executor(None, _send_sync, file_path, filename, recipient_email, kindle)
     except Exception:
         logger.exception("envoi email echoue vers %s (kindle=%s, fichier=%s)", recipient_email, kindle, filename)
         raise
     logger.info("email envoye vers %s (kindle=%s, fichier=%s)", recipient_email, kindle, filename)
+    return result

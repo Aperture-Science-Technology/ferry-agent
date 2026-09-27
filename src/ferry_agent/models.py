@@ -178,6 +178,10 @@ class DeliveryJob(Base):
     # Format exact demande (epub/mobi/azw3/pdf) ; sert surtout au telechargement
     # tier C pour ne jamais servir un autre format que celui choisi.
     target_format: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Tentatives d'envoi SMTP (tier A) ; incremente avant chaque essai.
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
+    # Trace factuelle d'acceptation par le relais (pas une preuve Kindle).
+    relay_response: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
     delivered_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(String, nullable=True)
