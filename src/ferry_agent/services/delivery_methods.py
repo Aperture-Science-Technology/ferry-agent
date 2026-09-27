@@ -26,11 +26,25 @@ class MethodAvailability(BaseModel):
     reason_code: str | None = None
 
 
-def available_delivery_methods(device: Device, smtp_configured: bool) -> list[MethodAvailability]:
+def available_delivery_methods(
+    device: Device,
+    smtp_configured: bool,
+    *,
+    kindle_email: str | None = None,
+) -> list[MethodAvailability]:
     """Modes candidats pour le tier du device, chacun annote de sa disponibilite
     reelle et, si indisponible, d'un code de raison stable (traduit cote
     frontend) plutot que d'un message en dur."""
     if device.delivery_tier == DeliveryTier.A:
+        effective = device.email_address or kindle_email
+        if not effective:
+            return [
+                MethodAvailability(
+                    method=DeliveryMethod.email,
+                    available=False,
+                    reason_code="kindle_email_missing",
+                )
+            ]
         return [
             MethodAvailability(
                 method=DeliveryMethod.email,
@@ -61,9 +75,15 @@ def available_delivery_methods(device: Device, smtp_configured: bool) -> list[Me
     return []
 
 
-def is_method_allowed(device: Device, method: DeliveryMethod, smtp_configured: bool) -> bool:
+def is_method_allowed(
+    device: Device,
+    method: DeliveryMethod,
+    smtp_configured: bool,
+    *,
+    kindle_email: str | None = None,
+) -> bool:
     """True si `method` correspond a un mode reellement disponible pour ce device."""
     return any(
         candidate.method == method and candidate.available
-        for candidate in available_delivery_methods(device, smtp_configured)
+        for candidate in available_delivery_methods(device, smtp_configured, kindle_email=kindle_email)
     )

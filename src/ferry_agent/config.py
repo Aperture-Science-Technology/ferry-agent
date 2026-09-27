@@ -34,9 +34,33 @@ class Settings(BaseSettings):
     # vides desactive l'envoi (mailer.is_configured() -> False) sans crash.
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587
+    # "starttls" (587) ou "ssl" (TLS implicite, typ. 465 / Resend).
+    smtp_security: str = "starttls"
     smtp_user: str | None = None
     smtp_password: str | None = None
     smtp_from: str | None = None
+    smtp_reply_to: str | None = None
+    smtp_timeout_seconds: int = 30
+    # Plafond encode du relais (Resend = 40 Mo) ; compare a amazon_send_to_kindle_max_bytes.
+    smtp_max_message_bytes: int = 40 * 1024 * 1024
+    amazon_send_to_kindle_max_bytes: int = 50 * 1024 * 1024
+    # Tentatives SMTP (erreurs transitoires 4xx / deconnexion) ; backoff exponentiel.
+    smtp_retry_max_attempts: int = 3
+    smtp_retry_backoff_seconds: float = 2.0
+    # En-tete d'idempotence (ex. Resend) : valeur derivee du contenu, stable entre essais.
+    smtp_idempotency_header: str | None = "Resend-Idempotency-Key"
+    # Jobs encore `queued` apres un redemarrage : balayeur periodique.
+    delivery_stuck_after_minutes: int = 15
+    delivery_sweeper_interval_seconds: int = 300
+
+    # Domaines Send-to-Kindle acceptes (liste blanche anti-abus du relais).
+    kindle_email_domains: str = (
+        "kindle.com,kindle.co.uk,kindle.de,kindle.fr,kindle.it,kindle.es,"
+        "kindle.com.br,kindle.com.au,kindle.co.jp,free.kindle.com"
+    )
+    # Quotas d'envoi email : horaire par utilisateur, journalier global (compte Resend).
+    email_send_hourly_quota: int = 30
+    email_send_daily_quota: int = 80
 
     # URL publique de base pour les liens courts du mini-catalogue tier C.
     public_base_url: str = "https://ferry-agent.aperture-agency.org"

@@ -39,6 +39,22 @@ Paramètres importants : `PAIRING_TOKEN_TTL_MINUTES`,
 `GATEWAY_ONLINE_SECONDS`, `GATEWAY_SEARCH_WAIT_SECONDS`,
 `MAX_FETCH_BYTES` et, facultativement, `VIRUSTOTAL_API_KEY`.
 
+## Envoi vers Kindle (SMTP)
+
+Pour activer la livraison par email (Send-to-Kindle) :
+
+1. Renseigner dans `.env` : `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`,
+   `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (et optionnellement
+   `SMTP_REPLY_TO`). Un `SMTP_USER` / `SMTP_PASSWORD` vide désactive
+   l'envoi sans faire planter l'app.
+2. Vérifier le domaine d'envoi chez le fournisseur (SPF, DKIM, DMARC) —
+   l'expéditeur (`SMTP_FROM`) doit être sur ce domaine.
+3. Faire approuver cette adresse d'expéditeur dans le compte Amazon de
+   chaque utilisateur (liste des documents personnels).
+
+Voir [ADR 0010](docs/adr/0010-envoi-email-resend-send-to-kindle.md) pour le
+raisonnement (Relais Resend, statut `sent`, formats, quotas).
+
 ## Structure
 
 ```

@@ -2,6 +2,7 @@
 envoi SMTP reel : `mailer.send_file` et `mailer.is_configured` sont
 monkeypatches."""
 
+import smtplib
 import uuid
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import pytest
 from fastapi import BackgroundTasks, HTTPException
 
 from ferry_agent.api import deliveries
+from ferry_agent.config import get_settings
 from ferry_agent.api.deps import CurrentUser
 from ferry_agent.models import (
     DeliveryJob,
@@ -21,9 +23,16 @@ from ferry_agent.models import (
     User,
 )
 from ferry_agent.schemas import DeliveryCreate
-from ferry_agent.services import delivery
+from ferry_agent.services import delivery, mailer
 
 from tests.fakes import FakeSession
+
+
+@pytest.fixture(autouse=True)
+def _clear_settings_cache():
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 def make_user(**overrides) -> User:
@@ -78,6 +87,7 @@ async def test_deliver_tier_a_sends_native_format_and_marks_delivered(monkeypatc
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename, recipient_email=recipient_email, kindle=kindle)
+        return "smtp.test:587 accepted <msg@test>"
 
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
@@ -90,8 +100,9 @@ async def test_deliver_tier_a_sends_native_format_and_marks_delivered(monkeypatc
 
     await delivery._deliver_tier_a(db, job, item, device, user)
 
-    assert job.status == DeliveryStatus.delivered
-    assert job.delivered_at is not None
+    assert job.status == DeliveryStatus.sent
+    assert job.delivered_at is None
+    assert job.relay_response
     assert sent["kindle"] is True
     assert sent["recipient_email"] == user.kindle_email
     assert sent["file_path"] == item.storage_path
@@ -100,17 +111,13 @@ async def test_deliver_tier_a_sends_native_format_and_marks_delivered(monkeypatc
 async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    converted = {}
+    """default_format=mobi (legacy) → EPUB pour Send-to-Kindle (Amazon 2023)."""
     sent = {}
-
-    async def fake_epub_to_mobi(epub_path, mobi_path=None, extra_args=None):
-        converted["called_with"] = epub_path
-        return str(Path(epub_path).with_suffix(".mobi"))
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename)
+        return "smtp.test:587 accepted <msg@test>"
 
-    monkeypatch.setattr(delivery.converters, "epub_to_mobi", fake_epub_to_mobi)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
 
@@ -122,9 +129,12 @@ async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
 
     await delivery._deliver_tier_a(db, job, item, device, user)
 
-    assert converted["called_with"] == item.storage_path
-    assert sent["filename"] == "book.mobi"
-    assert job.status == DeliveryStatus.delivered
+    assert sent["filename"].endswith(".epub")
+    assert sent["filename"] == "book.epub"
+    assert job.target_format == "epub"
+    assert job.status == DeliveryStatus.sent
+    assert job.delivered_at is None
+    assert job.relay_response
 
 
 async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
@@ -146,6 +156,7 @@ async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         assert Path(file_path).exists()
+        return "smtp.test:587 accepted <msg@test>"
 
     monkeypatch.setattr(delivery.converters, "epub_to_mobi", fake_epub_to_mobi)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
@@ -159,7 +170,9 @@ async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
 
     await delivery._deliver_tier_a(db, job, item, device, user)
 
-    assert job.status == DeliveryStatus.delivered
+    assert job.status == DeliveryStatus.sent
+    assert job.delivered_at is None
+    assert job.relay_response
     assert epub_path.exists()
     assert list(library_dir.glob("*.mobi")) == []
 
@@ -167,33 +180,29 @@ async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
 async def test_deliver_tier_a_converts_requested_format_even_if_brand_is_not_kindle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Le format demande prime : pas de succes silencieux dans le format d'origine."""
-    converted = {}
+    """mobi demande (legacy) → EPUB, meme si la marque n'est pas Kindle."""
     sent = {}
-
-    async def fake_epub_to_mobi(epub_path, mobi_path=None, extra_args=None):
-        converted["called_with"] = epub_path
-        return str(Path(epub_path).with_suffix(".mobi"))
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename)
+        return "smtp.test:587 accepted <msg@test>"
 
-    monkeypatch.setattr(delivery.converters, "epub_to_mobi", fake_epub_to_mobi)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
 
-    user = make_user(default_format="mobi")
+    user = make_user(default_format="epub")
     device = make_device(brand=DeviceBrand.kobo)
     item = make_item()
     job = make_job()
     db = FakeSession()
 
-    await delivery._deliver_tier_a(db, job, item, device, user)
+    await delivery._deliver_tier_a(db, job, item, device, user, requested_format="mobi")
 
-    assert converted["called_with"] == item.storage_path
-    assert sent["filename"] == "book.mobi"
-    assert job.status == DeliveryStatus.delivered
-    assert job.target_format == "mobi"
+    assert sent["filename"] == "book.epub"
+    assert job.status == DeliveryStatus.sent
+    assert job.delivered_at is None
+    assert job.relay_response
+    assert job.target_format == "epub"
 
 
 async def test_deliver_tier_a_converts_epub_to_pdf_when_requested(
@@ -208,6 +217,7 @@ async def test_deliver_tier_a_converts_epub_to_pdf_when_requested(
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename)
+        return "smtp.test:587 accepted <msg@test>"
 
     monkeypatch.setattr(delivery.converters, "epub_to_pdf", fake_epub_to_pdf)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
@@ -223,7 +233,9 @@ async def test_deliver_tier_a_converts_epub_to_pdf_when_requested(
 
     assert converted["called_with"] == item.storage_path
     assert sent["filename"] == "book.pdf"
-    assert job.status == DeliveryStatus.delivered
+    assert job.status == DeliveryStatus.sent
+    assert job.delivered_at is None
+    assert job.relay_response
     assert job.target_format == "pdf"
 
 
@@ -238,6 +250,7 @@ async def test_deliver_tier_a_fails_when_requested_format_cannot_be_produced(
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename)
+        return "smtp.test:587 accepted <msg@test>"
 
     monkeypatch.setattr(delivery.converters, "convert_to_epub", raising_to_epub)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
@@ -261,7 +274,7 @@ async def test_deliver_tier_a_fails_without_kindle_email(monkeypatch: pytest.Mon
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
 
     user = make_user(kindle_email=None)
-    device = make_device()
+    device = make_device(email_address=None)
     item = make_item()
     job = make_job()
     db = FakeSession()
@@ -269,7 +282,82 @@ async def test_deliver_tier_a_fails_without_kindle_email(monkeypatch: pytest.Mon
     await delivery._deliver_tier_a(db, job, item, device, user)
 
     assert job.status == DeliveryStatus.failed
-    assert job.error and "kindle_email" in job.error
+    assert job.error is not None
+    assert "Send-to-Kindle manquante" in job.error
+
+
+async def test_deliver_tier_a_prefers_device_email_over_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent = {}
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(recipient_email=recipient_email)
+        return "smtp.test:587 accepted <msg@test>"
+
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(kindle_email="profile@kindle.com")
+    device = make_device(email_address="device@kindle.com")
+    item = make_item()
+    job = make_job()
+    db = FakeSession([0, 0])
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.sent
+    assert sent["recipient_email"] == "device@kindle.com"
+
+
+async def test_deliver_tier_a_falls_back_to_profile_kindle_email(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent = {}
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(recipient_email=recipient_email)
+        return "smtp.test:587 accepted <msg@test>"
+
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(kindle_email="profile@kindle.com")
+    device = make_device(email_address=None)
+    item = make_item()
+    job = make_job()
+    db = FakeSession([0, 0])
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.sent
+    assert sent["recipient_email"] == "profile@kindle.com"
+
+
+async def test_deliver_tier_a_rejects_non_kindle_recipient_without_send(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent = {}
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(recipient_email=recipient_email)
+        return "smtp.test:587 accepted <msg@test>"
+
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(kindle_email="spam@gmail.com")
+    device = make_device(email_address=None)
+    item = make_item()
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.failed
+    assert job.error is not None
+    assert "Send-to-Kindle" in job.error
+    assert sent == {}
 
 
 async def test_deliver_tier_a_fails_when_smtp_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -309,26 +397,27 @@ async def test_deliver_tier_a_marks_failed_on_send_error(monkeypatch: pytest.Mon
 async def test_deliver_tier_a_fails_when_calibre_unavailable_no_pdf_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sans Calibre : failed + message actionnable, aucun envoi (pas de PDF)."""
+    """azw3 demande → EPUB ; sans Calibre pour PDF→EPUB : failed, aucun envoi."""
     sent = {}
 
-    async def raising_azw3(*_args, **_kwargs):
-        raise RuntimeError("ebook-convert indisponible: conversion vers AZW3 impossible")
+    async def raising_to_epub(*_args, **_kwargs):
+        raise RuntimeError("ebook-convert indisponible: conversion vers EPUB impossible")
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename)
+        return "smtp.test:587 accepted <msg@test>"
 
-    monkeypatch.setattr(delivery.converters, "epub_to_azw3", raising_azw3)
+    monkeypatch.setattr(delivery.converters, "convert_to_epub", raising_to_epub)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
 
-    user = make_user(default_format="azw3")
+    user = make_user(default_format="epub")
     device = make_device(brand=DeviceBrand.kindle)
-    item = make_item(original_format="epub")
+    item = make_item(original_format="pdf", storage_path="/tmp/fake-library/book.pdf")
     job = make_job()
     db = FakeSession()
 
-    await delivery._deliver_tier_a(db, job, item, device, user)
+    await delivery._deliver_tier_a(db, job, item, device, user, requested_format="azw3")
 
     assert job.status == DeliveryStatus.failed
     assert job.error == delivery.converters.CONVERSION_FAILED_USER_MESSAGE
@@ -336,11 +425,77 @@ async def test_deliver_tier_a_fails_when_calibre_unavailable_no_pdf_fallback(
     assert job.delivered_at is None
 
 
+async def test_deliver_tier_a_surfaces_too_large_message_to_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """MessageTooLargeForRelay → failed avec le message integral + cleanup derive."""
+    derivative = tmp_path / "book-derived.epub"
+    derivative.write_bytes(b"PK\x03\x04fake-epub")
+    too_large_msg = (
+        "Message encode de 40000 Ko > plafond 25000 Ko : utilisez le telechargement navigateur (tier C) pour ce livre."
+    )
+
+    async def fake_materialize(**_kwargs):
+        return str(derivative), False
+
+    async def raising_send(*_args, **_kwargs):
+        raise mailer.MessageTooLargeForRelay(too_large_msg)
+
+    monkeypatch.setattr(delivery.converters, "materialize_target_format", fake_materialize)
+    monkeypatch.setattr(delivery.mailer, "send_file", raising_send)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user()
+    device = make_device()
+    item = make_item(storage_path=str(tmp_path / "book.epub"))
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.failed
+    assert job.error == too_large_msg
+    assert "tier C" in job.error
+    assert not derivative.exists()
+
+
+async def test_deliver_tier_a_never_sends_legacy_format(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Aucun filename transmis au mailer ne doit finir en .mobi/.azw/.azw3/.prc."""
+    legacy_suffixes = (".mobi", ".azw", ".azw3", ".prc")
+    sent_filenames: list[str] = []
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent_filenames.append(filename)
+        return "smtp.test:587 accepted <msg@test>"
+
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    for legacy in ("mobi", "azw", "azw3", "prc"):
+        user = make_user(default_format=legacy)
+        device = make_device(brand=DeviceBrand.kindle)
+        item = make_item()
+        job = make_job()
+        db = FakeSession()
+        await delivery._deliver_tier_a(db, job, item, device, user)
+        assert job.status == DeliveryStatus.sent
+        assert job.delivered_at is None
+        assert job.relay_response
+        assert job.target_format == "epub"
+
+    assert sent_filenames
+    for name in sent_filenames:
+        lower = name.lower()
+        assert not any(lower.endswith(sfx) for sfx in legacy_suffixes)
+        assert lower.endswith(".epub")
+
+
 async def test_deliver_routes_tier_a_via_full_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     sent = {}
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent["kindle"] = kindle
+        return "smtp.test:587 accepted <msg@test>"
 
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
@@ -354,7 +509,9 @@ async def test_deliver_routes_tier_a_via_full_lookup(monkeypatch: pytest.MonkeyP
     url = await delivery.deliver(db, job)
 
     assert url is None
-    assert job.status == DeliveryStatus.delivered
+    assert job.status == DeliveryStatus.sent
+    assert job.delivered_at is None
+    assert job.relay_response
     assert sent["kindle"] is True
 
 
@@ -365,7 +522,8 @@ async def test_create_delivery_schedules_background_task_for_tier_a_device(
     user_id = uuid.uuid4()
     item = make_item(user_id=user_id)
     device = make_device(user_id=user_id, delivery_tier=DeliveryTier.A)
-    db = FakeSession([item, device])
+    profile = make_user(id=user_id)
+    db = FakeSession([item, device, profile])
     background_tasks = BackgroundTasks()
 
     payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.email)
@@ -386,7 +544,8 @@ async def test_create_delivery_rejects_method_incoherent_with_device_tier(
     user_id = uuid.uuid4()
     item = make_item(user_id=user_id)
     device = make_device(user_id=user_id, brand=DeviceBrand.kobo, delivery_tier=DeliveryTier.C)
-    db = FakeSession([item, device])
+    profile = make_user(id=user_id)
+    db = FakeSession([item, device, profile])
     background_tasks = BackgroundTasks()
 
     payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.email)
@@ -408,7 +567,8 @@ async def test_create_delivery_rejects_email_when_smtp_not_configured(
     user_id = uuid.uuid4()
     item = make_item(user_id=user_id)
     device = make_device(user_id=user_id, delivery_tier=DeliveryTier.A)
-    db = FakeSession([item, device])
+    profile = make_user(id=user_id)
+    db = FakeSession([item, device, profile])
     background_tasks = BackgroundTasks()
 
     payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.email)
@@ -419,3 +579,126 @@ async def test_create_delivery_rejects_email_when_smtp_not_configured(
         )
 
     assert exc_info.value.status_code == 400
+
+
+def _zero_smtp_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SMTP_RETRY_BACKOFF_SECONDS", "0")
+    get_settings.cache_clear()
+
+
+async def test_deliver_tier_a_retries_transient_then_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Erreur transitoire puis succes → attempts == 2, status sent."""
+    _zero_smtp_backoff(monkeypatch)
+    calls = {"n": 0}
+
+    async def flaky_send(*_args, **_kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise smtplib.SMTPServerDisconnected("connection lost")
+        return "smtp.test:587 accepted <retry@test>"
+
+    monkeypatch.setattr(delivery.mailer, "send_file", flaky_send)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user()
+    device = make_device()
+    item = make_item()
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert calls["n"] == 2
+    assert job.attempts == 2
+    assert job.status == DeliveryStatus.sent
+    assert job.delivered_at is None
+    assert job.relay_response == "smtp.test:587 accepted <retry@test>"
+
+
+async def test_deliver_tier_a_exhausts_transient_retries(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Erreurs transitoires jusqu'a epuisement → failed + message actionnable."""
+    _zero_smtp_backoff(monkeypatch)
+    max_attempts = get_settings().smtp_retry_max_attempts
+    calls = {"n": 0}
+
+    async def always_transient(*_args, **_kwargs):
+        calls["n"] += 1
+        raise smtplib.SMTPServerDisconnected("still down")
+
+    monkeypatch.setattr(delivery.mailer, "send_file", always_transient)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user()
+    device = make_device()
+    item = make_item()
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert calls["n"] == max_attempts
+    assert job.attempts == max_attempts
+    assert job.status == DeliveryStatus.failed
+    assert job.error is not None
+    assert f"après {max_attempts} tentatives" in job.error
+    assert "still down" in job.error
+
+
+async def test_deliver_tier_a_permanent_5xx_fails_immediately(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Refus permanent 5xx → un seul essai, failed."""
+    _zero_smtp_backoff(monkeypatch)
+    calls = {"n": 0}
+
+    async def permanent_refuse(*_args, **_kwargs):
+        calls["n"] += 1
+        raise smtplib.SMTPResponseException(550, b"mailbox unavailable")
+
+    monkeypatch.setattr(delivery.mailer, "send_file", permanent_refuse)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user()
+    device = make_device()
+    item = make_item()
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert calls["n"] == 1
+    assert job.attempts == 1
+    assert job.status == DeliveryStatus.failed
+    assert job.error is not None
+    assert "550" in job.error or "mailbox unavailable" in job.error
+
+
+async def test_deliver_tier_a_message_too_large_fails_without_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Depassement de taille → un seul essai, failed, message contenant tier C."""
+    _zero_smtp_backoff(monkeypatch)
+    calls = {"n": 0}
+    too_large_msg = (
+        "Message encode de 40000 Ko > plafond 25000 Ko : "
+        "utilisez le telechargement navigateur (tier C) pour ce livre."
+    )
+
+    async def raising_send(*_args, **_kwargs):
+        calls["n"] += 1
+        raise mailer.MessageTooLargeForRelay(too_large_msg)
+
+    monkeypatch.setattr(delivery.mailer, "send_file", raising_send)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user()
+    device = make_device()
+    item = make_item()
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert calls["n"] == 1
+    assert job.attempts == 1
+    assert job.status == DeliveryStatus.failed
+    assert job.error == too_large_msg
+    assert "tier C" in job.error

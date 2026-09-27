@@ -15,12 +15,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
-from ferry_agent.models import Device, DeviceBrand, DeliveryTier
+from ferry_agent.models import Device, DeviceBrand, DeliveryTier, User
 from ferry_agent.schemas import DeviceCreate, DeviceLinkCallback, DeviceLinkUrlOut, DeviceOut, DevicePatch
 from ferry_agent.services import cloud_links
 from ferry_agent.services import conversion_profiles
 from ferry_agent.services import crypto
 from ferry_agent.services import devices as device_service
+from ferry_agent.services import mail_policy
 from ferry_agent.services import mailer
 from ferry_agent.services.delivery_methods import MethodAvailability, available_delivery_methods
 
@@ -41,6 +42,7 @@ def _compute_tier(brand: DeviceBrand, model: str | None) -> DeliveryTier:
     if brand == DeviceBrand.tolino:
         return DeliveryTier.C
     return DeliveryTier.D
+
 
 router = APIRouter(prefix="/api/v1/devices", tags=["devices"])
 
@@ -68,6 +70,7 @@ def _device_out(device: Device) -> DeviceOut:
         model=device.model,
         delivery_tier=device.delivery_tier,
         conversion_profile=conversion_profiles.resolve_preset_id(device.conversion_profile),
+        email_address=device.email_address,
         cloud_provider=cloud_provider,
         cloud_linked=cloud_linked,
         last_synced_at=device.last_synced_at,
@@ -89,6 +92,11 @@ async def create_device(
     db: AsyncSession = Depends(get_db),
 ) -> DeviceOut:
     """Crée un Device pour l'utilisateur ; calcule delivery_tier selon la marque/modèle."""
+    if payload.email_address is not None and not mail_policy.is_allowed_recipient(payload.email_address):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(mail_policy.RecipientNotAllowed()),
+        )
     tier = _compute_tier(payload.brand, payload.model)
     device = Device(
         user_id=user.id,
@@ -97,6 +105,7 @@ async def create_device(
         model=payload.model,
         delivery_tier=tier,
         conversion_profile=conversion_profiles.to_storage(payload.conversion_profile),
+        email_address=payload.email_address,
     )
     db.add(device)
     await db.commit()
@@ -151,6 +160,12 @@ async def update_device(
     brand_or_model_changed = "brand" in updates or "model" in updates
     if "conversion_profile" in updates:
         updates["conversion_profile"] = conversion_profiles.to_storage(updates["conversion_profile"])
+    if "email_address" in updates and updates["email_address"] is not None:
+        if not mail_policy.is_allowed_recipient(updates["email_address"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(mail_policy.RecipientNotAllowed()),
+            )
     for field, value in updates.items():
         setattr(device, field, value)
 
@@ -183,14 +198,15 @@ async def get_delivery_methods(
     sert pour proposer uniquement les modes utilisables au lieu de laisser
     choisir un tier technique A/B/C/D a la main."""
     device = await _get_owned_device(db, device_id, user)
-    return available_delivery_methods(device, mailer.is_configured())
+    user_result = await db.execute(select(User).where(User.id == user.id))
+    db_user = user_result.scalar_one_or_none()
+    kindle_email = db_user.kindle_email if db_user else None
+    return available_delivery_methods(device, mailer.is_configured(), kindle_email=kindle_email)
 
 
 def _check_provider(provider: str) -> None:
     if provider not in _PROVIDERS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="provider doit etre 'dropbox' ou 'drive'"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="provider doit etre 'dropbox' ou 'drive'")
 
 
 def _require_fernet_key() -> None:
@@ -273,9 +289,7 @@ async def _exchange_and_store_link(
             )
             access_token = tokens.get("access_token")
             if not access_token:
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY, detail="reponse Dropbox sans access_token"
-                )
+                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="reponse Dropbox sans access_token")
             link_ref = {"provider": "dropbox", "token": access_token}
         else:
             if not settings.google_client_id or not settings.google_client_secret:
@@ -289,9 +303,7 @@ async def _exchange_and_store_link(
             )
             refresh_token = tokens.get("refresh_token")
             if not refresh_token:
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY, detail="reponse Google sans refresh_token"
-                )
+                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="reponse Google sans refresh_token")
             link_ref = {"provider": "drive", "refresh_token": refresh_token}
         device.link_ref = cloud_links.serialize_link_ref(link_ref)
     except cloud_links.CloudLinkError as exc:

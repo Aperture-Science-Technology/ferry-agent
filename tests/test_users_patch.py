@@ -13,6 +13,7 @@ from ferry_agent.services.errors import (
     INVALID_DEFAULT_FORMAT_MESSAGE,
     INVALID_KINDLE_EMAIL_MESSAGE,
 )
+from ferry_agent.services import mail_policy
 from tests.fakes import clear_app_deps, override_app_deps
 
 _NOW = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
@@ -117,6 +118,27 @@ class TestUsersPatch:
                 )
             assert resp.status_code == 422
             assert resp.json()["detail"] == INVALID_KINDLE_EMAIL_MESSAGE
+            assert user.kindle_email == "reader@kindle.com"
+        finally:
+            clear_app_deps()
+
+    def test_rejects_non_kindle_kindle_email(self):
+        user = _fake_user()
+
+        async def fake_db():
+            db = AsyncMock()
+            db.get = AsyncMock(return_value=user)
+            yield db
+
+        _override(fake_db)
+        try:
+            with TestClient(app) as client:
+                resp = client.patch(
+                    "/api/v1/users/me",
+                    json={"kindle_email": "reader@gmail.com"},
+                )
+            assert resp.status_code == 400
+            assert resp.json()["detail"] == str(mail_policy.RecipientNotAllowed())
             assert user.kindle_email == "reader@kindle.com"
         finally:
             clear_app_deps()

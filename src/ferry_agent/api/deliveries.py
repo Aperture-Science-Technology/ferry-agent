@@ -22,9 +22,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.db import get_db
-from ferry_agent.models import DeliveryJob, DeliveryTier, Device, DeviceBrand, LibraryItem
+from ferry_agent.models import DeliveryJob, DeliveryMethod, DeliveryTier, Device, DeviceBrand, LibraryItem, User
 from ferry_agent.schemas import DeliveryCreate, DeliveryOut
 from ferry_agent.services import delivery as delivery_service
+from ferry_agent.services import mail_policy
 from ferry_agent.services import mailer
 from ferry_agent.services.delivery_methods import is_method_allowed
 
@@ -80,26 +81,32 @@ async def create_delivery(
     db: AsyncSession = Depends(get_db),
 ) -> DeliveryOut:
     item_result = await db.execute(
-        select(LibraryItem).where(
-            LibraryItem.id == payload.library_item_id, LibraryItem.user_id == user.id
-        )
+        select(LibraryItem).where(LibraryItem.id == payload.library_item_id, LibraryItem.user_id == user.id)
     )
     item = item_result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="library_item introuvable")
 
-    device_result = await db.execute(
-        select(Device).where(Device.id == payload.device_id, Device.user_id == user.id)
-    )
+    device_result = await db.execute(select(Device).where(Device.id == payload.device_id, Device.user_id == user.id))
     device = device_result.scalar_one_or_none()
     if device is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="device introuvable")
 
-    if not is_method_allowed(device, payload.method, mailer.is_configured()):
+    user_result = await db.execute(select(User).where(User.id == user.id))
+    db_user = user_result.scalar_one_or_none()
+    kindle_email = db_user.kindle_email if db_user else None
+
+    if not is_method_allowed(device, payload.method, mailer.is_configured(), kindle_email=kindle_email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"method '{payload.method.value}' indisponible pour ce device (tier {device.delivery_tier.value})",
         )
+
+    if payload.method == DeliveryMethod.email:
+        try:
+            await mail_policy.enforce_send_quota(db, user.id)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc)) from exc
 
     job = DeliveryJob(
         library_item_id=item.id,

@@ -80,7 +80,17 @@ function baseToken(overrides: Partial<OpdsToken> = {}): OpdsToken {
   };
 }
 
-function renderSettings(locale: "fr" | "en", tokens: OpdsToken[] = [baseToken()]) {
+function renderSettings(
+  locale: "fr" | "en",
+  tokens: OpdsToken[] = [baseToken()],
+  mailSettings: {
+    configured: boolean;
+    sender_address: string;
+  } | null = {
+    configured: true,
+    sender_address: "send@ferry-agent.aperture-agency.org",
+  }
+) {
   const messages = locale === "fr" ? messagesFr : messagesEn;
   return render(
     <NextIntlClientProvider locale={locale} messages={messages}>
@@ -94,6 +104,7 @@ function renderSettings(locale: "fr" | "en", tokens: OpdsToken[] = [baseToken()]
         settingsUnavailable={false}
         initialOpdsTokens={tokens}
         opdsTokensUnavailable={false}
+        initialMailSettings={mailSettings}
       />
     </NextIntlClientProvider>
   );
@@ -252,5 +263,55 @@ describe("UI harness — Pen settings composition", () => {
     expect(layout.querySelector("table")).toBeNull();
     expect(document.querySelector("thead")).toBeNull();
     expect(screen.getAllByTestId("opds-token-card").length).toBe(2);
+  });
+
+  it("renders Send-to-Kindle labels from FR and EN message files", () => {
+    const { unmount } = renderSettings("fr");
+    const sectionFr = screen.getByTestId("settings-send-to-kindle");
+    expect(
+      within(sectionFr).getByRole("heading", {
+        name: messagesFr.settings.sendToKindleTitle,
+      })
+    ).toBeTruthy();
+    expect(
+      within(sectionFr).getByText(messagesFr.settings.sendToKindleDescription)
+    ).toBeTruthy();
+    expect(
+      within(sectionFr).getByText(messagesFr.settings.senderAddressLabel)
+    ).toBeTruthy();
+    expect(
+      within(sectionFr).getByText(messagesFr.settings.sendToKindleStep1)
+    ).toBeTruthy();
+    expect(
+      within(sectionFr).getByText(messagesFr.settings.sendToKindleStep2)
+    ).toBeTruthy();
+    expect(
+      within(sectionFr).getByText(messagesFr.settings.sendToKindleNoBounce)
+    ).toBeTruthy();
+    expect(
+      within(sectionFr).getByRole("link", {
+        name: messagesFr.settings.sendToKindleAmazonLink,
+      })
+    ).toBeTruthy();
+    unmount();
+
+    renderSettings("en");
+    const sectionEn = screen.getByTestId("settings-send-to-kindle");
+    expect(
+      within(sectionEn).getByRole("heading", {
+        name: messagesEn.settings.sendToKindleTitle,
+      })
+    ).toBeTruthy();
+    expect(
+      within(sectionEn).getByText(messagesEn.settings.sendToKindleDescription)
+    ).toBeTruthy();
+    expect(
+      within(sectionEn).getByText(messagesEn.settings.senderAddressLabel)
+    ).toBeTruthy();
+    expect(
+      within(sectionEn).getByRole("link", {
+        name: messagesEn.settings.sendToKindleAmazonLink,
+      })
+    ).toBeTruthy();
   });
 });
