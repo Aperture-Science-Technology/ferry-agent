@@ -30,7 +30,15 @@ from ferry_agent.models import (
     LibraryItem,
     User,
 )
-from ferry_agent.services import cloud_links, conversion_profiles, converters, kindle_formats, mailer, tierc
+from ferry_agent.services import (
+    cloud_links,
+    conversion_profiles,
+    converters,
+    kindle_formats,
+    mail_policy,
+    mailer,
+    tierc,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -102,8 +110,12 @@ async def _deliver_tier_a(
     Succes terminal = ``sent`` (accepte par le relais). ``delivered`` n'est
     jamais pose ici : aucune preuve Kindle n'existe cote SMTP.
     """
-    if not user.kindle_email:
-        await _fail(db, job, "adresse kindle_email manquante sur l'utilisateur")
+    recipient = device.email_address or user.kindle_email
+    if not recipient:
+        await _fail(db, job, "adresse Send-to-Kindle manquante (appareil ou profil)")
+        return
+    if not mail_policy.is_allowed_recipient(recipient):
+        await _fail(db, job, str(mail_policy.RecipientNotAllowed()))
         return
     if not mailer.is_configured():
         await _fail(db, job, "SMTP non configure (envoi email desactive)")
@@ -125,13 +137,19 @@ async def _deliver_tier_a(
             await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
             return
 
+        try:
+            await mail_policy.enforce_send_quota(db, user.id)
+        except RuntimeError as exc:
+            await _fail(db, job, str(exc))
+            return
+
         settings = get_settings()
         max_attempts = settings.smtp_retry_max_attempts
         for n in range(1, max_attempts + 1):
             job.attempts = n
             await db.commit()
             try:
-                relay_response = await mailer.send_file(file_path, filename, user.kindle_email, kindle=True)
+                relay_response = await mailer.send_file(file_path, filename, recipient, kindle=True)
             except mailer.MessageTooLargeForRelay as exc:
                 # Message actionnable integral (repli tier C) — jamais un generique.
                 await _fail(db, job, str(exc))

@@ -208,9 +208,9 @@ async def test_create_delivery_returns_download_url_for_tier_c(monkeypatch: pyte
         storage_path="/tmp/fake-library/book.epub",
     )
     device = Device(id=uuid.uuid4(), user_id=user_id, brand=DeviceBrand.kobo, delivery_tier=DeliveryTier.C)
-    # create_delivery valide item+device, puis delivery.deliver() les
-    # re-resout (item, device, user) avant de creer la session.
-    db = FakeSession([item, device, item, device, user, None])
+    # create_delivery : item+device+user (garde kindle), puis delivery.deliver()
+    # re-resout item, device, user avant de creer la session (unicite code = None).
+    db = FakeSession([item, device, user, item, device, user, None])
 
     payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.browser_code)
     result = await deliveries.create_delivery(

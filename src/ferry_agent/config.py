@@ -53,6 +53,15 @@ class Settings(BaseSettings):
     delivery_stuck_after_minutes: int = 15
     delivery_sweeper_interval_seconds: int = 300
 
+    # Domaines Send-to-Kindle acceptes (liste blanche anti-abus du relais).
+    kindle_email_domains: str = (
+        "kindle.com,kindle.co.uk,kindle.de,kindle.fr,kindle.it,kindle.es,"
+        "kindle.com.br,kindle.com.au,kindle.co.jp,free.kindle.com"
+    )
+    # Quotas d'envoi email : horaire par utilisateur, journalier global (compte Resend).
+    email_send_hourly_quota: int = 30
+    email_send_daily_quota: int = 80
+
     # URL publique de base pour les liens courts du mini-catalogue tier C.
     public_base_url: str = "https://ferry-agent.aperture-agency.org"
 

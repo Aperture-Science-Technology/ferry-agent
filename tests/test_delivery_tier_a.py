@@ -274,7 +274,7 @@ async def test_deliver_tier_a_fails_without_kindle_email(monkeypatch: pytest.Mon
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
 
     user = make_user(kindle_email=None)
-    device = make_device()
+    device = make_device(email_address=None)
     item = make_item()
     job = make_job()
     db = FakeSession()
@@ -282,7 +282,82 @@ async def test_deliver_tier_a_fails_without_kindle_email(monkeypatch: pytest.Mon
     await delivery._deliver_tier_a(db, job, item, device, user)
 
     assert job.status == DeliveryStatus.failed
-    assert job.error and "kindle_email" in job.error
+    assert job.error is not None
+    assert "Send-to-Kindle manquante" in job.error
+
+
+async def test_deliver_tier_a_prefers_device_email_over_profile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent = {}
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(recipient_email=recipient_email)
+        return "smtp.test:587 accepted <msg@test>"
+
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(kindle_email="profile@kindle.com")
+    device = make_device(email_address="device@kindle.com")
+    item = make_item()
+    job = make_job()
+    db = FakeSession([0, 0])
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.sent
+    assert sent["recipient_email"] == "device@kindle.com"
+
+
+async def test_deliver_tier_a_falls_back_to_profile_kindle_email(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent = {}
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(recipient_email=recipient_email)
+        return "smtp.test:587 accepted <msg@test>"
+
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(kindle_email="profile@kindle.com")
+    device = make_device(email_address=None)
+    item = make_item()
+    job = make_job()
+    db = FakeSession([0, 0])
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.sent
+    assert sent["recipient_email"] == "profile@kindle.com"
+
+
+async def test_deliver_tier_a_rejects_non_kindle_recipient_without_send(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent = {}
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent.update(recipient_email=recipient_email)
+        return "smtp.test:587 accepted <msg@test>"
+
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(kindle_email="spam@gmail.com")
+    device = make_device(email_address=None)
+    item = make_item()
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert job.status == DeliveryStatus.failed
+    assert job.error is not None
+    assert "Send-to-Kindle" in job.error
+    assert sent == {}
 
 
 async def test_deliver_tier_a_fails_when_smtp_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -447,7 +522,8 @@ async def test_create_delivery_schedules_background_task_for_tier_a_device(
     user_id = uuid.uuid4()
     item = make_item(user_id=user_id)
     device = make_device(user_id=user_id, delivery_tier=DeliveryTier.A)
-    db = FakeSession([item, device])
+    profile = make_user(id=user_id)
+    db = FakeSession([item, device, profile])
     background_tasks = BackgroundTasks()
 
     payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.email)
@@ -468,7 +544,8 @@ async def test_create_delivery_rejects_method_incoherent_with_device_tier(
     user_id = uuid.uuid4()
     item = make_item(user_id=user_id)
     device = make_device(user_id=user_id, brand=DeviceBrand.kobo, delivery_tier=DeliveryTier.C)
-    db = FakeSession([item, device])
+    profile = make_user(id=user_id)
+    db = FakeSession([item, device, profile])
     background_tasks = BackgroundTasks()
 
     payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.email)
@@ -490,7 +567,8 @@ async def test_create_delivery_rejects_email_when_smtp_not_configured(
     user_id = uuid.uuid4()
     item = make_item(user_id=user_id)
     device = make_device(user_id=user_id, delivery_tier=DeliveryTier.A)
-    db = FakeSession([item, device])
+    profile = make_user(id=user_id)
+    db = FakeSession([item, device, profile])
     background_tasks = BackgroundTasks()
 
     payload = DeliveryCreate(library_item_id=item.id, device_id=device.id, method=DeliveryMethod.email)

@@ -33,7 +33,9 @@ def make_device(**overrides) -> Device:
 
 def test_tier_a_available_when_smtp_configured() -> None:
     device = make_device(delivery_tier=DeliveryTier.A)
-    methods = available_delivery_methods(device, smtp_configured=True)
+    methods = available_delivery_methods(
+        device, smtp_configured=True, kindle_email="reader@kindle.com"
+    )
     assert len(methods) == 1
     assert methods[0].method == DeliveryMethod.email
     assert methods[0].available is True
@@ -42,11 +44,29 @@ def test_tier_a_available_when_smtp_configured() -> None:
 
 def test_tier_a_unavailable_when_smtp_not_configured() -> None:
     device = make_device(delivery_tier=DeliveryTier.A)
-    methods = available_delivery_methods(device, smtp_configured=False)
+    methods = available_delivery_methods(
+        device, smtp_configured=False, kindle_email="reader@kindle.com"
+    )
     assert len(methods) == 1
     assert methods[0].method == DeliveryMethod.email
     assert methods[0].available is False
     assert methods[0].reason_code == "smtp_not_configured"
+
+
+def test_tier_a_unavailable_when_kindle_email_missing() -> None:
+    device = make_device(delivery_tier=DeliveryTier.A, email_address=None)
+    methods = available_delivery_methods(device, smtp_configured=True, kindle_email=None)
+    assert len(methods) == 1
+    assert methods[0].method == DeliveryMethod.email
+    assert methods[0].available is False
+    assert methods[0].reason_code == "kindle_email_missing"
+
+
+def test_tier_a_available_via_device_email_address_without_profile() -> None:
+    device = make_device(delivery_tier=DeliveryTier.A, email_address="device@kindle.com")
+    methods = available_delivery_methods(device, smtp_configured=True, kindle_email=None)
+    assert methods[0].available is True
+    assert methods[0].reason_code is None
 
 
 # --- tier B (Kobo haut de gamme / cloud) -------------------------------------
@@ -117,7 +137,12 @@ def test_is_method_allowed_false_for_mismatched_method() -> None:
 
 def test_is_method_allowed_false_when_unavailable_even_if_candidate() -> None:
     device = make_device(delivery_tier=DeliveryTier.A)
-    assert is_method_allowed(device, DeliveryMethod.email, smtp_configured=False) is False
+    assert (
+        is_method_allowed(
+            device, DeliveryMethod.email, smtp_configured=False, kindle_email="reader@kindle.com"
+        )
+        is False
+    )
 
 
 # --- GET /api/v1/devices/{id}/methods ----------------------------------------
