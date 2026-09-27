@@ -3,14 +3,19 @@
  * Compte / OPDS / Préférences sections (no standalone OPDS route).
  * Run: npm run test:ui-harness
  */
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SettingsForm } from "@/components/app/settings/settings-form";
 import type { OpdsToken } from "@/lib/types";
 import messagesFr from "@/messages/fr.json";
 import messagesEn from "@/messages/en.json";
+
+const routerMock = vi.hoisted(() => ({
+  refresh: vi.fn(),
+  replace: vi.fn(),
+}));
 
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({
@@ -62,10 +67,7 @@ vi.mock("@/i18n/navigation", () => ({
     </a>
   ),
   usePathname: () => "/app/reglages",
-  useRouter: () => ({
-    refresh: vi.fn(),
-    replace: vi.fn(),
-  }),
+  useRouter: () => routerMock,
 }));
 
 function baseToken(overrides: Partial<OpdsToken> = {}): OpdsToken {
@@ -98,6 +100,11 @@ function renderSettings(locale: "fr" | "en", tokens: OpdsToken[] = [baseToken()]
 }
 
 describe("UI harness — Pen settings composition", () => {
+  beforeEach(() => {
+    routerMock.refresh.mockClear();
+    routerMock.replace.mockClear();
+  });
+
   it("renders Pen Form/Fields and OPDS rows (not a table)", () => {
     renderSettings("fr");
 
@@ -177,7 +184,7 @@ describe("UI harness — Pen settings composition", () => {
     expect(screen.queryByTestId("settings-header-desktop")).toBeNull();
   });
 
-  it("drops Sources/Devices shortcut chrome and keeps FR/EN field identity", () => {
+  it("drops Sources/Devices shortcut chrome and keeps preferences identity", () => {
     const { unmount } = renderSettings("fr");
     expect(screen.queryByText(messagesFr.settings.sourcesTitle)).toBeNull();
     expect(screen.queryByText(messagesFr.settings.devicesTitle)).toBeNull();
@@ -202,6 +209,34 @@ describe("UI harness — Pen settings composition", () => {
     expect(screen.getByLabelText(messagesEn.settings.kindleEmail)).toBeTruthy();
     expect(screen.queryByText(messagesEn.settings.sourcesCta)).toBeNull();
     expect(document.querySelector("table")).toBeNull();
+  });
+
+  it("opens an explicit language menu; first click does not change locale", () => {
+    renderSettings("fr");
+
+    const trigger = screen.getByRole("button", {
+      name: messagesFr.locale.choose,
+    });
+    expect(screen.getByText(messagesFr.settings.languageLabel)).toBeTruthy();
+    expect(screen.getByText(messagesFr.settings.languageValueFr)).toBeTruthy();
+
+    fireEvent.click(trigger);
+
+    expect(routerMock.replace).not.toHaveBeenCalled();
+
+    const french = screen.getByRole("menuitemradio", {
+      name: messagesFr.settings.languageValueFr,
+    });
+    const english = screen.getByRole("menuitemradio", {
+      name: messagesFr.settings.languageValueEn,
+    });
+    expect(french.getAttribute("aria-checked")).toBe("true");
+    expect(english.getAttribute("aria-checked")).toBe("false");
+
+    fireEvent.click(english);
+    expect(routerMock.replace).toHaveBeenCalledWith("/app/reglages", {
+      locale: "en",
+    });
   });
 
   it("does not crush OPDS tokens into desktop table markup", () => {
