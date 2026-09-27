@@ -30,7 +30,7 @@ export function Hero() {
       data-testid="landing-hero"
       className="relative overflow-hidden"
     >
-      <div className="relative mx-auto flex w-full max-w-[1152px] flex-col items-center px-6 pt-20 text-center sm:pt-[146px]">
+      <div className="relative mx-auto flex w-full max-w-[1200px] flex-col items-center px-6 pt-20 text-center sm:pt-[146px]">
         <div
           aria-hidden
           className="pointer-events-none absolute top-5 left-1/2 h-[220px] w-[520px] -translate-x-1/2 rounded-[100%] bg-[radial-gradient(ellipse_at_center,var(--foreground)_0%,transparent_70%)] opacity-[0.09]"

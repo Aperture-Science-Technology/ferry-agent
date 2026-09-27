@@ -1,6 +1,6 @@
 /**
- * Landing « How it works » Pen LLhzT harness: 5 product cards, typography classes,
- * 2+3 grid, decorative visuals (aria-hidden, no focusables), real delivery statuses.
+ * Landing « On your device » Pen LLhzT harness: 4 device cards, typography classes,
+ * 1/2/4 grid, decorative visuals (aria-hidden, no focusables), id="delivered".
  * Run: npm run test:ui-harness
  */
 import { readFileSync } from "node:fs";
@@ -10,21 +10,8 @@ import { render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 
-import { HowItWorks } from "@/components/marketing/how-it-works";
+import { Delivered } from "@/components/marketing/delivered";
 import messages from "@/messages/fr.json";
-
-vi.mock("next/image", () => ({
-  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
-    const { alt, src, className } = props;
-    return (
-      <img
-        alt={alt ?? ""}
-        src={typeof src === "string" ? src : ""}
-        className={className}
-      />
-    );
-  },
-}));
 
 vi.mock("motion/react", async () => {
   const React = await import("react");
@@ -49,19 +36,19 @@ vi.mock("motion/react", async () => {
 
 const COMPONENT_PATH = join(
   dirname(fileURLToPath(import.meta.url)),
-  "../components/marketing/how-it-works.tsx"
+  "../components/marketing/delivered.tsx"
 );
 
-describe("UI harness — landing How it works Pen LLhzT", () => {
-  it("renders five i18n cards, contract typography, 2+3 grid, and safe visuals", () => {
+describe("UI harness — landing On your device Pen LLhzT", () => {
+  it("renders four i18n cards, contract typography, responsive grid, and safe visuals", () => {
     const { container } = render(
       <NextIntlClientProvider locale="fr" messages={messages}>
-        <HowItWorks />
+        <Delivered />
       </NextIntlClientProvider>
     );
 
-    const section = screen.getByTestId("landing-how-it-works");
-    expect(section.id).toBe("how-it-works");
+    const section = screen.getByTestId("landing-on-your-device");
+    expect(section.id).toBe("delivered");
 
     const h2 = within(section).getByRole("heading", { level: 2 });
     expect(h2.className).toMatch(/text-3xl/);
@@ -70,46 +57,34 @@ describe("UI harness — landing How it works Pen LLhzT", () => {
     expect(h2.className).toMatch(/md:leading-10/);
     expect(h2.className).toMatch(/lg:text-5xl/);
     expect(h2.className).toMatch(/lg:leading-none/);
-    expect(h2.className).toMatch(/font-semibold/);
-    expect(h2.className).toMatch(/tracking-\[-1\.2px\]/);
 
     const cardTitles = [
-      messages.landing.how.cards.library.title,
-      messages.landing.how.cards.send.title,
-      messages.landing.how.cards.search.title,
-      messages.landing.how.cards.sources.title,
-      messages.landing.how.cards.queue.title,
+      messages.landing.devices.cards.kindle.title,
+      messages.landing.devices.cards.kobo.title,
+      messages.landing.devices.cards.tolino.title,
+      messages.landing.devices.cards.usb.title,
     ];
     const h3s = within(section).getAllByRole("heading", { level: 3 });
-    expect(h3s).toHaveLength(5);
+    expect(h3s).toHaveLength(4);
     expect(h3s.map((el) => el.textContent)).toEqual(cardTitles);
 
     const articles = within(section).getAllByRole("article");
-    expect(articles).toHaveLength(5);
+    expect(articles).toHaveLength(4);
 
-    const gridRows = section.querySelectorAll(":scope > div > div.flex.flex-col.gap-2 > div");
-    expect(gridRows).toHaveLength(2);
-    expect(within(gridRows[0] as HTMLElement).getAllByRole("article")).toHaveLength(
-      2
-    );
-    expect(within(gridRows[1] as HTMLElement).getAllByRole("article")).toHaveLength(
-      3
-    );
+    const grid = section.querySelector(".grid.grid-cols-1");
+    expect(grid).toBeTruthy();
+    expect(grid!.className).toMatch(/grid-cols-1/);
+    expect(grid!.className).toMatch(/md:grid-cols-2/);
+    expect(grid!.className).toMatch(/lg:grid-cols-4/);
+    expect(grid!.className).toMatch(/gap-4/);
 
     const visuals = section.querySelectorAll('[aria-hidden="true"]');
-    expect(visuals.length).toBeGreaterThanOrEqual(5);
+    expect(visuals.length).toBeGreaterThanOrEqual(4);
     for (const visual of visuals) {
       expect(
         visual.querySelector("button, a, input, select, textarea, [tabindex]")
       ).toBeNull();
     }
-
-    const queueCard = articles[4];
-    expect(queueCard.textContent).toContain(
-      messages.deliveries.statuses.delivered
-    );
-    expect(queueCard.textContent).toContain(messages.deliveries.statuses.queued);
-    expect(queueCard.textContent).toContain(messages.deliveries.statuses.sent);
 
     const forbidden = [
       "Reading",
@@ -128,8 +103,6 @@ describe("UI harness — landing How it works Pen LLhzT", () => {
 
     const source = readFileSync(COMPONENT_PATH, "utf8");
     expect(source).not.toMatch(/style=\{\{/);
-    expect(source).toMatch(/deliveries\.statuses/);
-    expect(source).not.toMatch(/statusDelivered|statusQueued|statusSent/);
 
     expect(messages.landing.how.visual.queueHeading).toBe("3 envois");
   });

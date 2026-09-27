@@ -83,28 +83,6 @@
       }
     }
   },
-  "delivered": {
-    "title": "On your device.",
-    "subtitle": "Four ways to send a book to a supported device. A finished send does not confirm that the book was opened.",
-    "items": {
-      "kindle": {
-        "name": "Kindle",
-        "body": "Delivery by email to your device."
-      },
-      "kobo": {
-        "name": "Kobo",
-        "body": "Sync with a cloud-linked device."
-      },
-      "tolino": {
-        "name": "Tolino",
-        "body": "A temporary code in the browser."
-      },
-      "usb": {
-        "name": "USB",
-        "body": "Manual transfer to a plugged-in e-reader."
-      }
-    }
-  },
   "mcpSpotlight": {
     "eyebrow": "Conversation",
     "title": "The same library, also in an assistant.",
@@ -973,7 +951,39 @@
         "localGateway": "Local Gateway",
         "connected": "Connected",
         "optional": "Optional",
-        "queueHeading": "Delivery queue"
+        "queueHeading": "3 sends"
+      }
+    },
+    "devices": {
+      "title": "On your device — without the friction.",
+      "subtitle": "Email, sync, browser code, or cable — Ferry Agent matches how your e-reader already works.",
+      "cards": {
+        "kindle": {
+          "title": "Kindle",
+          "body": "Arrives by email on its own — no cables, no extra apps."
+        },
+        "kobo": {
+          "title": "Kobo",
+          "body": "One sync away. The next connection pulls the title in."
+        },
+        "tolino": {
+          "title": "Tolino",
+          "body": "A code in your browser unlocks the download instantly."
+        },
+        "usb": {
+          "title": "USB",
+          "body": "Always available by hand when you prefer a direct copy."
+        }
+      },
+      "visual": {
+        "kindleFrom": "From: ferry@agent",
+        "kindleSubject": "Your book is on the way",
+        "attachment": "Frankenstein.epub",
+        "syncing": "Syncing library…",
+        "browserCodeLabel": "BROWSER CODE",
+        "browserCode": "8F2K-Q9",
+        "browserCodeHint": "Enter on tolino.com",
+        "usbPath": "/Volumes/EREADER"
       }
     }
   }

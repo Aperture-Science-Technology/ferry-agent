@@ -48,6 +48,11 @@ vi.mock("motion/react", async () => {
           children?: React.ReactNode;
         }
       ) => React.createElement("li", props),
+      article: (
+        props: React.HTMLAttributes<HTMLElement> & {
+          children?: React.ReactNode;
+        }
+      ) => React.createElement("article", props),
     },
     useReducedMotion: () => false,
   };
@@ -106,17 +111,15 @@ describe("UI harness — landing editorial sections", () => {
     expect(headings).toHaveLength(3);
   });
 
-  it("keeps #delivered as a destination register with supported channels and send limits", () => {
+  it("keeps #delivered as On your device with four supported channels", () => {
     renderFr(<Delivered />);
 
-    const section = screen.getByTestId("landing-delivered");
+    const section = screen.getByTestId("landing-on-your-device");
     expect(section.id).toBe("delivered");
-    assertNoCardWall(section);
 
     expect(
       screen.getByRole("heading", { level: 2, name: /sur votre liseuse/i })
     ).toBeTruthy();
-    expect(section.textContent).toMatch(/ne confirme pas/i);
 
     for (const name of ["Kindle", "Kobo", "Tolino", "USB"]) {
       expect(
@@ -124,10 +127,10 @@ describe("UI harness — landing editorial sections", () => {
       ).toBeTruthy();
     }
 
-    expect(section.textContent).toMatch(/email/i);
-    expect(section.textContent).toMatch(/cloud/i);
+    expect(section.textContent).toMatch(/e-mail|email/i);
+    expect(section.textContent).toMatch(/synchronisation/i);
     expect(section.textContent).toMatch(/code/i);
-    expect(section.textContent).toMatch(/manuel|branch/i);
+    expect(section.textContent).toMatch(/câble|main/i);
 
     // No hover-translate chrome from the previous SaaS list treatment
     expect(section.innerHTML).not.toMatch(/hover:translate/);

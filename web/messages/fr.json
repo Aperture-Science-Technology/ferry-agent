@@ -83,28 +83,6 @@
       }
     }
   },
-  "delivered": {
-    "title": "Sur votre liseuse.",
-    "subtitle": "Quatre façons d’envoyer un livre vers un appareil pris en charge. Un envoi terminé ne confirme pas que le livre a été ouvert.",
-    "items": {
-      "kindle": {
-        "name": "Kindle",
-        "body": "Envoi par email vers votre appareil."
-      },
-      "kobo": {
-        "name": "Kobo",
-        "body": "Synchronisation avec un appareil lié au cloud."
-      },
-      "tolino": {
-        "name": "Tolino",
-        "body": "Un code temporaire dans le navigateur."
-      },
-      "usb": {
-        "name": "USB",
-        "body": "Transfert manuel sur une liseuse branchée."
-      }
-    }
-  },
   "mcpSpotlight": {
     "eyebrow": "Conversation",
     "title": "La même bibliothèque, aussi dans un assistant.",
@@ -973,7 +951,39 @@
         "localGateway": "Gateway local",
         "connected": "Connecté",
         "optional": "Optionnel",
-        "queueHeading": "File de livraison"
+        "queueHeading": "3 envois"
+      }
+    },
+    "devices": {
+      "title": "Sur votre liseuse — sans la friction.",
+      "subtitle": "E-mail, synchronisation, code navigateur ou câble — Ferry Agent s'adapte à ce que votre liseuse sait déjà faire.",
+      "cards": {
+        "kindle": {
+          "title": "Kindle",
+          "body": "Arrive par e-mail tout seul — sans câble, sans application à installer."
+        },
+        "kobo": {
+          "title": "Kobo",
+          "body": "À une synchronisation près : la prochaine connexion récupère le titre."
+        },
+        "tolino": {
+          "title": "Tolino",
+          "body": "Un code dans votre navigateur débloque le téléchargement."
+        },
+        "usb": {
+          "title": "USB",
+          "body": "Toujours disponible à la main, pour une copie directe."
+        }
+      },
+      "visual": {
+        "kindleFrom": "De : ferry@agent",
+        "kindleSubject": "Votre livre est en route",
+        "attachment": "Frankenstein.epub",
+        "syncing": "Synchronisation…",
+        "browserCodeLabel": "CODE NAVIGATEUR",
+        "browserCode": "8F2K-Q9",
+        "browserCodeHint": "À saisir sur tolino.com",
+        "usbPath": "/Volumes/EREADER"
       }
     }
   }
