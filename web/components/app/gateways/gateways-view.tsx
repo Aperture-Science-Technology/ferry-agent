@@ -400,6 +400,7 @@ export function GatewaysView({
               {tCommon("cancel")}
             </Button>
             <Button
+              variant="destructive"
               onClick={() => void confirmRevoke()}
               disabled={revoking}
               className="whitespace-normal"
@@ -435,6 +436,7 @@ export function GatewaysView({
               {tCommon("cancel")}
             </Button>
             <Button
+              variant="destructive"
               onClick={() => void confirmDelete()}
               disabled={deleting}
               className="whitespace-normal"

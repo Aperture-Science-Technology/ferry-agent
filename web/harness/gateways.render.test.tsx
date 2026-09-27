@@ -325,8 +325,8 @@ describe("UI harness — gateways", () => {
     const confirm = within(dialog).getByRole("button", {
       name: messages.access.revoke,
     });
-    // Primary confirm (not destructive tint) — Pen Actions
-    expect(confirm.className).not.toMatch(/bg-destructive\/10/);
+    // Solid red destructive confirm — operator override of Pen monochrome
+    expect(confirm.className).toMatch(/bg-destructive(?!\/)/);
 
     callMock.mockResolvedValueOnce(undefined);
     fireEvent.click(
