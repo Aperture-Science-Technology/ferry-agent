@@ -445,6 +445,7 @@ export function DevicesView({
               {tCommon("cancel")}
             </Button>
             <Button
+              variant="destructive"
               onClick={() => void confirmDelete()}
               disabled={deleting}
               className="whitespace-normal"

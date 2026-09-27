@@ -435,6 +435,7 @@ export function ReaderCatalogSection({
             </Button>
             <Button
               type="button"
+              variant="destructive"
               onClick={() => void confirmRevoke()}
               disabled={revoking}
               className="whitespace-normal"
