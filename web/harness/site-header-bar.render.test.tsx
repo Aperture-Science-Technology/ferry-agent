@@ -63,6 +63,10 @@ describe("UI harness — public site header bar (Pen LLhzT Nav)", () => {
     expect(header.innerHTML).not.toMatch(/style=\{\{/);
     expect(header.querySelector("[style]")).toBeNull();
 
+    const bar = header.querySelector(".lg\\:max-w-\\[880px\\]");
+    expect(bar).toBeTruthy();
+    expect(bar!.className).toMatch(/lg:border-white\/15/);
+
     const brand = within(header).getByRole("link", { name: /ferry agent/i });
     expect(brand.className).toMatch(/shrink-0/);
     const brandWordmark = brand.querySelector(".whitespace-nowrap");

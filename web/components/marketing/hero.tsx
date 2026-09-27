@@ -38,7 +38,7 @@ export function Hero() {
 
         <BrandMark className="relative size-7" />
 
-        <p className="relative mt-6 rounded-full border border-border bg-muted px-2.5 py-1 text-xs text-muted-foreground uppercase">
+        <p className="relative mt-6 rounded-full border border-white/15 bg-secondary px-2.5 py-1 text-xs text-muted-foreground uppercase">
           {t("badge")}
         </p>
 
@@ -89,7 +89,7 @@ export function Hero() {
         <div className="relative mt-10 w-full">
           <div
             data-testid="landing-hero-media"
-            className="relative aspect-[3/2] w-full overflow-hidden rounded-xl border border-border"
+            className="relative aspect-[3/2] w-full overflow-hidden rounded-xl border border-white/15"
           >
             <Image
               src="/landing/hero-demo.jpg"
@@ -99,7 +99,7 @@ export function Hero() {
               sizes="(max-width: 1152px) 100vw, 1152px"
               className="object-cover"
             />
-            <div aria-hidden className="absolute inset-0 bg-background/50" />
+            <div aria-hidden className="absolute inset-0 bg-background/60" />
             <div
               aria-hidden
               className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-[65%] to-background"
@@ -120,7 +120,7 @@ export function Hero() {
               <p className="text-sm font-medium text-white">
                 {tLanding("demoTitle")}
               </p>
-              <p className="max-w-sm px-4 text-[13px] text-white/80">
+              <p className="max-w-sm px-4 text-[13px] text-white">
                 {tLanding("demoBody")}
               </p>
             </div>

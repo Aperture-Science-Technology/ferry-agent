@@ -88,6 +88,8 @@ describe("UI harness — landing hero Pen LLhzT composition", () => {
 
     const eyebrow = screen.getByText(/en ligne, pour votre liseuse/i);
     expect(eyebrow.className).toMatch(/uppercase/);
+    expect(eyebrow.className).toMatch(/bg-secondary/);
+    expect(eyebrow.className).toMatch(/border-white\/15/);
 
     expect(
       screen.getByRole("button", { name: /ouvrir l'espace/i })
@@ -97,11 +99,12 @@ describe("UI harness — landing hero Pen LLhzT composition", () => {
 
     const media = screen.getByTestId("landing-hero-media");
     expect(media.className).toMatch(/aspect-\[3\/2\]/);
+    expect(media.className).toMatch(/border-white\/15/);
 
     const mediaLayers = media.querySelectorAll(":scope > [aria-hidden]");
     expect(mediaLayers.length).toBeGreaterThanOrEqual(3);
     const layerClasses = [...mediaLayers].map((el) => el.className);
-    expect(layerClasses.some((c) => c.includes("bg-background/50"))).toBe(true);
+    expect(layerClasses.some((c) => c.includes("bg-background/60"))).toBe(true);
     expect(
       layerClasses.some(
         (c) =>
@@ -120,7 +123,12 @@ describe("UI harness — landing hero Pen LLhzT composition", () => {
       )
     ).toBe(true);
 
-    expect(screen.getByText(/démo bientôt disponible/i)).toBeTruthy();
+    const demoTitle = screen.getByText(/démo bientôt disponible/i);
+    expect(demoTitle).toBeTruthy();
+    expect(demoTitle.className).toMatch(/(?:^|\s)text-white(?:\s|$)/);
+    const demoBody = screen.getByText(/un aperçu court de ferry/i);
+    expect(demoBody.className).toMatch(/(?:^|\s)text-white(?:\s|$)/);
+    expect(demoBody.className).not.toMatch(/text-white\/80/);
     const play = screen.getByRole("button", {
       name: /démo bientôt disponible/i,
     });

@@ -48,7 +48,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 bg-background">
       <div className="px-6 lg:flex lg:justify-center lg:px-12 lg:pt-2">
-        <div className="flex h-16 w-full items-center justify-between gap-3 lg:h-[70px] lg:max-w-[880px] lg:border lg:border-border lg:bg-transparent lg:px-4 lg:py-4">
+        <div className="flex h-16 w-full items-center justify-between gap-3 lg:h-[70px] lg:max-w-[880px] lg:border lg:border-white/15 lg:bg-transparent lg:px-4 lg:py-4">
           <Link
             href="/"
             className="inline-flex shrink-0 items-center rounded-sm focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
