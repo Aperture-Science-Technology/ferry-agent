@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { ChevronRight, CircleAlert, Eraser, Loader2 } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
-import { routing, type Locale } from "@/i18n/routing";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LocaleMenu } from "@/components/locale-switcher";
 import { ReaderCatalogSection } from "@/components/app/settings/reader-catalog-section";
 import {
   SettingsEmpty,
@@ -140,8 +140,6 @@ export function SettingsForm({
 }) {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
-  const pathname = usePathname();
   const router = useRouter();
   const { call } = useApiClient();
   const [kindleEmail, setKindleEmail] = useState(initialKindleEmail);
@@ -188,13 +186,6 @@ export function SettingsForm({
     setSaveError(null);
   }
 
-  function cycleLocale() {
-    const index = routing.locales.indexOf(locale as Locale);
-    const next = routing.locales[(index + 1) % routing.locales.length];
-    if (!next || next === locale) return;
-    router.replace(pathname, { locale: next });
-  }
-
   async function save() {
     setSaving(true);
     setSaveError(null);
@@ -226,9 +217,6 @@ export function SettingsForm({
       setSaving(false);
     }
   }
-
-  const languageValue =
-    locale === "en" ? t("languageValueEn") : t("languageValueFr");
 
   return (
     <div
@@ -418,13 +406,7 @@ export function SettingsForm({
                 showBorder
                 chevron={false}
               />
-              <PreferencesRow
-                title={t("languageLabel")}
-                subtitle={languageValue}
-                onClick={cycleLocale}
-                ariaLabel={t("languageSwitchAria")}
-                showBorder
-              />
+              <LocaleMenu showBorder />
               <PreferencesRow
                 title={t("documentationLabel")}
                 subtitle={t("documentationHint")}

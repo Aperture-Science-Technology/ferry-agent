@@ -117,6 +117,46 @@ describe("UI harness — app shell", () => {
     expect(library.closest("[aria-current='page']")).toBeNull();
   });
 
+  it("keeps a single flat Pen-ordered nav in the desktop sidebar", () => {
+    // Lot 12 / Shell/Sidebar (DQYhS): six items, Sources before Gateway,
+    // no group labels, no locale control in the sidebar.
+    pathnameRef.current = "/app/bibliotheque";
+
+    renderShell(
+      <SidebarProvider defaultOpen>
+        <AppSidebar />
+      </SidebarProvider>
+    );
+
+    const nav = screen.getByTestId("sidebar-nav");
+    const links = within(nav).getAllByRole("link");
+    expect(links.map((link) => link.textContent?.trim())).toEqual([
+      "Bibliothèque",
+      "Livraisons",
+      "Appareils",
+      "Sources",
+      "Gateway",
+      "Réglages",
+    ]);
+
+    expect(screen.queryByText("Principal")).toBeNull();
+    expect(screen.queryByText("Chez vous")).toBeNull();
+    expect(screen.queryByRole("button", { name: /FR|EN|Langue/i })).toBeNull();
+    expect(screen.queryByText("FR")).toBeNull();
+
+    expect(screen.getByText("Compte")).toBeTruthy();
+    expect(screen.queryByText(/alex@example\.com/)).toBeNull();
+
+    const footerCard = screen.getByTestId("sidebar-footer-card");
+    expect(footerCard.className).toMatch(/(?:^|\s)w-full(?:\s|$)/);
+    expect(footerCard.className).toMatch(/(?:^|\s)p-2(?:\s|$)/);
+
+    const sidebar = footerCard.closest("[data-slot='sidebar']");
+    expect(sidebar).toBeTruthy();
+    expect(sidebar!.className).toMatch(/(?:^|\s)p-0(?:\s|$)/);
+    expect(sidebar!.className).not.toMatch(/(?:^|\s)p-2(?:\s|$)/);
+  });
+
   it("keeps PageHeader actions compressible so narrow viewports do not overflow", () => {
     // Regression for Lot 7c: PageHeader actions used shrink-0, so Appareils /
     // Gateway header clusters (~314–344px) forced document scrollWidth past 320.
