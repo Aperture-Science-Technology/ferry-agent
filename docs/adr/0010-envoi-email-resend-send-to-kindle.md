@@ -30,10 +30,12 @@ aucun rebond si l'expéditeur n'est pas approuvé.
    n'existe ; prétendre le contraire serait un mensonge produit.
 5. **`mobi` / `azw3` ne sont plus des formats de livraison Kindle valides** ;
    la conversion vise EPUB (ou PDF) avant envoi.
-6. **Liste blanche de domaines de destination** (`KINDLE_EMAIL_DOMAINS`) et
-   **quotas** horaire par utilisateur (`EMAIL_SEND_HOURLY_QUOTA`) + journalier
-   global (`EMAIL_SEND_DAILY_QUOTA`) : le relais appartient à la plateforme et
-   l'offre est plafonnée pour **tout le compte**.
+6. **Liste blanche de domaines de destination** (politique produit définie dans
+   le code, `src/ferry_agent/config.py`) et **quotas** surchargeables par
+   l'environnement — horaire par utilisateur (`EMAIL_SEND_HOURLY_QUOTA`) +
+   journalier global (`EMAIL_SEND_DAILY_QUOTA`), transmis par le compose : le
+   relais appartient à la plateforme et l'offre est plafonnée pour **tout le
+   compte**.
 7. Adresse de destination : celle de l'**appareil** si renseignée, sinon celle
    du **profil**.
 
