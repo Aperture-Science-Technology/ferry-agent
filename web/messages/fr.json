@@ -62,15 +62,15 @@
     "sceneCaption": "Exemple visuel : un livre passe de la bibliothèque Ferry en ligne vers une liseuse. Ce n’est pas une confirmation d’envoi."
   },
   "valueProps": {
-    "eyebrow": "La plateforme",
-    "title": "Pourquoi Ferry Agent.",
-    "lead": "Une bibliothèque hébergée en ligne, des sources légales en accès libre, et un module local seulement quand vos sources le demandent.",
+    "eyebrow": "POURQUOI FERRY AGENT",
+    "title": "Votre bibliothèque en ligne — et sous votre contrôle.",
+    "lead": "Livres, appareils et envois restent dans un seul espace — pas dispersés entre téléchargements et câbles.",
     "sceneCloud": "En ligne",
     "sceneGateway": "Chez vous",
     "sceneCaption": "Votre bibliothèque vit en ligne. Le Gateway relie seulement certaines sources locales.",
     "items": {
       "cloudFirst": {
-        "title": "Votre bibliothèque en ligne.",
+        "title": "Votre bibliothèque, en ligne.",
         "body": "Livres, appareils, réglages et historique d'envois sont hébergés dans Ferry Agent. Vous y accédez depuis n'importe où, avec votre compte."
       },
       "legal": {

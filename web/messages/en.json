@@ -62,9 +62,9 @@
     "sceneCaption": "Visual example: a book moves from the Ferry online library to an e-reader. This is not a delivery confirmation."
   },
   "valueProps": {
-    "eyebrow": "The platform",
-    "title": "Why Ferry Agent.",
-    "lead": "A hosted online library, legal open-access sources, and a local module only when your sources need it.",
+    "eyebrow": "WHY FERRY AGENT",
+    "title": "Your library, online — and under your control.",
+    "lead": "Books, devices, and delivery stay in one workspace — not scattered across downloads and cables.",
     "sceneCloud": "Online",
     "sceneGateway": "At home",
     "sceneCaption": "Your library lives online. The Gateway only connects certain local sources.",

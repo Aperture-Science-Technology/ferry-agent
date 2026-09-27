@@ -1,6 +1,6 @@
 /**
- * Landing editorial sections harness: value props, delivered destinations, MCP aside.
- * Asserts composition grammar (no SaaS card wall), anchors, product truth, docs CTA.
+ * Landing editorial sections harness: Why Ferry product truth, delivered destinations, MCP aside.
+ * Detailed Why Ferry Pen geometry lives in why-ferry-pen.render.test.tsx.
  * Run: npm run test:ui-harness
  */
 import { render, screen, within } from "@testing-library/react";
@@ -24,6 +24,19 @@ vi.mock("@/i18n/navigation", () => ({
   ),
   usePathname: () => "/",
   useRouter: () => ({ replace: vi.fn() }),
+}));
+
+vi.mock("next/image", () => ({
+  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
+    const { alt, src, className } = props;
+    return (
+      <img
+        alt={alt ?? ""}
+        src={typeof src === "string" ? src : ""}
+        className={className}
+      />
+    );
+  },
 }));
 
 vi.mock("motion/react", async () => {
@@ -74,41 +87,28 @@ function assertNoCardWall(root: HTMLElement) {
 }
 
 describe("UI harness — landing editorial sections", () => {
-  it("renders value props as an editorial chapter with cloud/Gateway transfer, not a card grid", () => {
+  it("keeps Why Ferry product truth: hosted library, open-access sources, optional Gateway", () => {
     renderFr(<ValueProps />);
 
     const section = screen.getByTestId("landing-value-props");
-    assertNoCardWall(section);
+    expect(section.className).toMatch(/bg-white\/3/);
 
-    const title = screen.getByRole("heading", {
-      level: 2,
-      name: /pourquoi ferry agent/i,
-    });
-    expect(title).toBeTruthy();
+    expect(
+      screen.getByRole("heading", {
+        level: 2,
+        name: /bibliothèque en ligne/i,
+      })
+    ).toBeTruthy();
     expect(section.textContent).toMatch(/héberg/i);
     expect(section.textContent).toMatch(/gutenberg/i);
     expect(section.textContent).toMatch(/gateway/i);
-
-    const transfer = screen.getByTestId("landing-value-transfer");
-    expect(transfer.querySelector("img")?.getAttribute("src")).toBe(
-      "/illustrations/cloud-gateway.svg"
-    );
-    expect(within(transfer).getByText("En ligne")).toBeTruthy();
-    expect(within(transfer).getByText("Chez vous")).toBeTruthy();
-    expect(
-      within(transfer).getByText(/bibliothèque vit en ligne/i)
-    ).toBeTruthy();
-
-    const valueList = within(section).getAllByRole("list").find(
-      (el) => el.tagName === "OL"
-    );
-    expect(valueList).toBeTruthy();
-    expect(within(valueList as HTMLElement).getAllByRole("listitem")).toHaveLength(
-      3
-    );
+    expect(section.textContent).toMatch(/optionnel/i);
 
     const headings = within(section).getAllByRole("heading", { level: 3 });
     expect(headings).toHaveLength(3);
+    expect(headings[0].textContent).toBe(
+      messages.valueProps.items.cloudFirst.title
+    );
   });
 
   it("keeps #delivered as On your device with four supported channels", () => {
