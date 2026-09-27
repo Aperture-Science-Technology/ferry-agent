@@ -158,4 +158,45 @@ describe("UI harness — public site header mobile menu", () => {
     });
     expect(how.className).toMatch(/focus-visible:ring/);
   });
+
+  it("exposes a language control: desktop FR/EN pair and mobile menu with both languages", async () => {
+    render(
+      <NextIntlClientProvider locale="fr" messages={messages}>
+        <SiteHeader />
+      </NextIntlClientProvider>
+    );
+
+    const desktopPair = screen.getByRole("group", {
+      name: messages.locale.choose,
+    });
+    expect(
+      within(desktopPair).getByRole("button", { name: messages.locale.fr })
+    ).toBeTruthy();
+    expect(
+      within(desktopPair).getByRole("button", { name: messages.locale.en })
+    ).toBeTruthy();
+    expect(
+      within(desktopPair)
+        .getByRole("button", { name: messages.locale.fr })
+        .getAttribute("aria-pressed")
+    ).toBe("true");
+
+    const mobileTrigger = screen.getByRole("button", {
+      name: messages.locale.choose,
+    });
+    expect(mobileTrigger.textContent).toContain(messages.locale.fr);
+
+    fireEvent.click(mobileTrigger);
+
+    expect(
+      await screen.findByRole("menuitemradio", {
+        name: messages.settings.languageValueFr,
+      })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("menuitemradio", {
+        name: messages.settings.languageValueEn,
+      })
+    ).toBeTruthy();
+  });
 });

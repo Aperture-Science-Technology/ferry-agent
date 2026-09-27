@@ -4,7 +4,7 @@
     "description": "Get your books onto your e-reader. Online library, free book sources, delivery to Kindle, Kobo, Tolino and more. Optional Gateway for your local sources."
   },
   "locale": {
-    "switch": "Language",
+    "choose": "Choose language",
     "fr": "FR",
     "en": "EN"
   },
@@ -173,8 +173,6 @@
     "docs": "Guide",
     "account": "Account",
     "language": "Language",
-    "groupPrimary": "Main",
-    "groupLocal": "At home",
     "moreMenu": "Menu",
     "moreDescription": "Gateway, sources, settings, guide, and account."
   },
@@ -854,7 +852,6 @@
     "languageLabel": "Language",
     "languageValueFr": "Français",
     "languageValueEn": "English",
-    "languageSwitchAria": "Switch language",
     "documentationLabel": "Documentation",
     "documentationHint": "Ferry Agent guide",
     "opdsTokensTitle": "OPDS tokens",

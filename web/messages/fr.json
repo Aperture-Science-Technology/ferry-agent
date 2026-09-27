@@ -4,7 +4,7 @@
     "description": "Mettez vos livres sur votre liseuse. Bibliothèque en ligne, sources en accès libre, envoi vers Kindle, Kobo, Tolino et plus. Gateway optionnel pour vos sources locales."
   },
   "locale": {
-    "switch": "Langue",
+    "choose": "Choisir la langue",
     "fr": "FR",
     "en": "EN"
   },
@@ -173,8 +173,6 @@
     "docs": "Guide",
     "account": "Compte",
     "language": "Langue",
-    "groupPrimary": "Principal",
-    "groupLocal": "Chez vous",
     "moreMenu": "Menu",
     "moreDescription": "Gateway, sources, réglages, guide et compte."
   },
@@ -854,7 +852,6 @@
     "languageLabel": "Langue",
     "languageValueFr": "Français",
     "languageValueEn": "English",
-    "languageSwitchAria": "Changer de langue",
     "documentationLabel": "Documentation",
     "documentationHint": "Guide Ferry Agent",
     "opdsTokensTitle": "Jetons OPDS",

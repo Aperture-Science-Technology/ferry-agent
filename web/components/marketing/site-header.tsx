@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 import { MenuIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { BrandLogo } from "@/components/brand-logo";
+import { LocaleMenu, LocalePair } from "@/components/locale-switcher";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +26,8 @@ const NAV_LINKS = [
 
 export function SiteHeader() {
   const t = useTranslations("header");
+  const tLocale = useTranslations("locale");
+  const locale = useLocale() as Locale;
   const [menuOpen, setMenuOpen] = useState(false);
 
   function closeMenu() {
@@ -57,8 +60,19 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-          <LocaleSwitcher className="hidden sm:flex" />
-          <LocaleSwitcher compact className="sm:hidden" />
+          <LocalePair className="hidden sm:flex" />
+          <LocaleMenu
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="sm:hidden transition-colors duration-125"
+              >
+                {tLocale(locale)}
+              </Button>
+            }
+          />
 
           <div className="hidden items-center gap-2 sm:flex">
             <Show when="signed-out">
