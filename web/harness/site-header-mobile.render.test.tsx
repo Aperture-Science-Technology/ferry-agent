@@ -84,13 +84,15 @@ describe("UI harness — public site header mobile menu", () => {
     expect(within(nav).getByRole("link", { name: /faq/i })).toBeTruthy();
     expect(within(nav).getByRole("link", { name: /guide/i })).toBeTruthy();
     expect(
-      within(dialog).getByRole("button", { name: /connexion/i })
+      within(dialog).getByRole("button", { name: /se connecter/i })
     ).toBeTruthy();
     expect(
       within(dialog).getByRole("button", {
-        name: /ouvrir la bibliothèque/i,
+        name: /ouvrir l'espace/i,
       })
     ).toBeTruthy();
+
+    expect(trigger.className).toMatch(/min-h-11|size-11/);
 
     await act(async () => {
       fireEvent.keyDown(dialog, {
@@ -120,23 +122,21 @@ describe("UI harness — public site header mobile menu", () => {
       </NextIntlClientProvider>
     );
 
-    // Responsive branches keep two UserButton mounts; CSS shows one per viewport.
-    expect(screen.getAllByTestId("clerk-user-button").length).toBeGreaterThan(
-      0
-    );
+    // Single UserButton in the header row (outside the sheet).
+    expect(screen.getAllByTestId("clerk-user-button")).toHaveLength(1);
     expect(
-      screen.queryByRole("button", { name: /connexion/i })
+      screen.queryByRole("button", { name: /se connecter/i })
     ).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /ouvrir le menu/i }));
 
     const dialog = await screen.findByRole("dialog");
     const library = within(dialog).getByRole("link", {
-      name: /^bibliothèque$/i,
+      name: /ouvrir l'espace/i,
     });
     expect(library.getAttribute("href")).toBe("/app/bibliotheque");
     expect(
-      within(dialog).queryByRole("button", { name: /connexion/i })
+      within(dialog).queryByRole("button", { name: /se connecter/i })
     ).toBeNull();
   });
 
@@ -147,10 +147,12 @@ describe("UI harness — public site header mobile menu", () => {
       </NextIntlClientProvider>
     );
 
-    const brand = screen.getByRole("link", { name: /ferry agent/i });
+    const header = screen.getByRole("banner");
+    const brand = within(header).getByRole("link", { name: /ferry agent/i });
     expect(brand.className).toMatch(/focus-visible:ring/);
 
-    const desktopNav = screen.getByRole("navigation", {
+    // Header nav is the only navigation while the sheet is closed.
+    const desktopNav = within(header).getByRole("navigation", {
       name: /navigation/i,
     });
     const how = within(desktopNav).getByRole("link", {

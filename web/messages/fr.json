@@ -45,34 +45,41 @@
   },
   "footer": {
     "builtBy": "Conçu par Aperture Science Technology",
+    "tagline": "Trouver, préparer, envoyer des livres vers votre liseuse. Conçu par Aperture Science Technology.",
+    "copyright": "© 2026 Ferry Agent. Conçu par Aperture Science Technology.",
     "nav": "Liens du pied de page",
+    "product": "Produit",
+    "resources": "Ressources",
     "howItWorks": "Comment ça marche",
+    "delivered": "Sur votre liseuse",
+    "library": "Bibliothèque",
+    "sources": "Sources",
     "faq": "FAQ",
     "docs": "Guide",
+    "deliveries": "Livraisons",
+    "gateways": "Gateways",
     "dashboard": "Bibliothèque"
   },
   "hero": {
-    "badge": "Bibliothèque en ligne",
-    "titleBefore": "Votre bibliothèque en ligne.",
-    "titleHighlight": "Vos livres sur votre liseuse.",
-    "subtitle": "Ajoutez un livre, puis choisissez comment l'envoyer à votre liseuse.",
-    "ctaDashboard": "Ouvrir ma bibliothèque",
-    "ctaHow": "Voir les étapes",
+    "badge": "EN LIGNE, POUR VOTRE LISEUSE",
+    "titleBefore": "Ferry Agent.",
+    "titleHighlight": "Trouver, préparer, envoyer.",
+    "subtitle": "Cherchez un livre, ajoutez-le à votre bibliothèque en ligne, envoyez-le à votre liseuse — simplement.",
     "sceneLibrary": "Bibliothèque en ligne",
     "sceneBook": "Livre de démonstration",
     "sceneReader": "Liseuse",
     "sceneCaption": "Exemple visuel : un livre passe de la bibliothèque Ferry en ligne vers une liseuse. Ce n’est pas une confirmation d’envoi."
   },
   "valueProps": {
-    "eyebrow": "La plateforme",
-    "title": "Pourquoi Ferry Agent.",
-    "lead": "Une bibliothèque hébergée en ligne, des sources légales en accès libre, et un module local seulement quand vos sources le demandent.",
+    "eyebrow": "POURQUOI FERRY AGENT",
+    "title": "Votre bibliothèque en ligne — et sous votre contrôle.",
+    "lead": "Livres, appareils et envois restent dans un seul espace — pas dispersés entre téléchargements et câbles.",
     "sceneCloud": "En ligne",
     "sceneGateway": "Chez vous",
     "sceneCaption": "Votre bibliothèque vit en ligne. Le Gateway relie seulement certaines sources locales.",
     "items": {
       "cloudFirst": {
-        "title": "Votre bibliothèque en ligne.",
+        "title": "Votre bibliothèque, en ligne.",
         "body": "Livres, appareils, réglages et historique d'envois sont hébergés dans Ferry Agent. Vous y accédez depuis n'importe où, avec votre compte."
       },
       "legal": {
@@ -85,63 +92,33 @@
       }
     }
   },
-  "delivered": {
-    "title": "Sur votre liseuse.",
-    "subtitle": "Quatre façons d’envoyer un livre vers un appareil pris en charge. Un envoi terminé ne confirme pas que le livre a été ouvert.",
-    "items": {
-      "kindle": {
-        "name": "Kindle",
-        "body": "Envoi par email vers votre appareil."
-      },
-      "kobo": {
-        "name": "Kobo",
-        "body": "Synchronisation avec un appareil lié au cloud."
-      },
-      "tolino": {
-        "name": "Tolino",
-        "body": "Un code temporaire dans le navigateur."
-      },
-      "usb": {
-        "name": "USB",
-        "body": "Transfert manuel sur une liseuse branchée."
-      }
-    }
-  },
-  "howItWorks": {
-    "title": "Comment ça marche.",
-    "subtitle": "Trois gestes pour envoyer un livre à votre liseuse depuis votre bibliothèque en ligne.",
-    "steps": {
-      "add": {
-        "number": "01",
-        "title": "Ajoutez",
-        "body": "Importez un fichier ou cherchez dans les sources proposées. Votre livre rejoint votre bibliothèque en ligne."
-      },
-      "choose": {
-        "number": "02",
-        "title": "Choisissez",
-        "body": "Sélectionnez une liseuse et un mode d’envoi compatible avec cet appareil."
-      },
-      "send": {
-        "number": "03",
-        "title": "Envoyez",
-        "body": "Lancez l’envoi et suivez son état dans Ferry Agent."
-      }
-    }
-  },
   "mcpSpotlight": {
-    "eyebrow": "Conversation",
-    "title": "La même bibliothèque, aussi dans un assistant.",
-    "body": "Cherchez, ajoutez et envoyez vos livres depuis un assistant (Claude, ChatGPT…), avec la même connexion que l’espace en ligne.",
-    "aside": "Même compte, mêmes livres — un autre chemin pour les faire passer.",
-    "cta": "Voir le guide"
+    "eyebrow": "AGENTS IA",
+    "title": "Des agents qui trouvent vos livres et les livrent à votre liseuse.",
+    "body": "Un assistant compatible MCP — Claude, ChatGPT, Mistral ou un autre — peut chercher dans les sources en accès libre, préparer un titre dans Ferry et lancer l'envoi, sans quitter la conversation.",
+    "agents": {
+      "claude": {
+        "name": "Claude",
+        "body": "Cherchez dans les sources en accès libre, ajoutez l'EPUB à votre bibliothèque Ferry et lancez la livraison vers Kindle ou Kobo en une réponse."
+      },
+      "chatgpt": {
+        "name": "ChatGPT",
+        "body": "Demandez la même chose depuis ChatGPT : mêmes sources, même bibliothèque, même suivi d'envoi."
+      },
+      "mistral": {
+        "name": "Mistral",
+        "body": "Mistral se connecte au même serveur MCP : la recherche et l'envoi passent par votre compte Ferry."
+      }
+    }
   },
   "faq": {
-    "eyebrow": "Aide",
-    "title": "Questions fréquentes.",
+    "eyebrow": "FAQ",
+    "title": "Questions. Réponses.",
+    "lead": "L'essentiel avant d'ouvrir l'espace — bibliothèque, Gateway, appareils et vos données.",
     "items": {
       "cloudFirst": {
         "q": "Où sont mes livres et mes réglages ?",
-        "a": "Dans Ferry Agent en ligne : bibliothèque, appareils, réglages et historique d'envois sont hébergés sur notre infrastructure. Seul le Gateway, s'il est installé, tourne sur votre machine."
+        "a": "Dans votre compte Ferry Agent : bibliothèque, appareils, réglages et historique d'envois restent en ligne avec vous."
       },
       "gatewayNeeded": {
         "q": "Ai-je besoin du Gateway pour commencer ?",
@@ -157,7 +134,7 @@
       },
       "agent": {
         "q": "Puis-je automatiser les envois ?",
-        "a": "Oui. Un assistant (Claude, ChatGPT…) peut chercher, ajouter et envoyer à votre place, avec la même connexion que la bibliothèque en ligne."
+        "a": "Un assistant compatible MCP peut chercher, ajouter et lancer un envoi à votre place, avec votre compte. Il n'y a pas de règle automatique côté serveur."
       }
     }
   },
@@ -941,5 +918,108 @@
     "createAccess": "Ajouter un Gateway",
     "backHome": "Retour à l’accueil",
     "step2Cta": "Télécharger l’image Docker"
+  },
+  "landing": {
+    "nav": {
+      "signIn": "Se connecter",
+      "dashboard": "Ouvrir l'espace"
+    },
+    "hero": {
+      "ctaPrimary": "Ouvrir l'espace",
+      "ctaSecondary": "Comment ça marche",
+      "builtBy": "Conçu par Aperture Science Technology",
+      "demoTitle": "Démo bientôt disponible",
+      "demoBody": "Un aperçu court de Ferry — trouver, préparer, envoyer."
+    },
+    "how": {
+      "title": "Tout ce qu'il faut pour trouver un livre et le faire arriver sur votre liseuse.",
+      "subtitle": "Des outils simples pour chercher dans les sources en accès libre, préparer vos titres dans la bibliothèque et les livrer vers vos appareils.",
+      "cards": {
+        "library": {
+          "title": "Votre bibliothèque en ligne",
+          "body": "Passez vos titres en revue — avec leur source et leur format, prêts à partir vers votre liseuse."
+        },
+        "send": {
+          "title": "Envoyer vers n'importe quel appareil",
+          "body": "Livrez vos livres préparés vers Kindle, Kobo, Tolino ou un appareil branché en USB — selon ce que votre liseuse sait faire."
+        },
+        "search": {
+          "title": "Recherche de livres",
+          "body": "Cherchez dans les sources en accès libre et ajoutez le titre qui correspond à votre bibliothèque."
+        },
+        "sources": {
+          "title": "Sources en accès libre",
+          "body": "Gutenberg, Standard Ebooks et vos propres fichiers réunis dans une seule bibliothèque."
+        },
+        "queue": {
+          "title": "File de livraison",
+          "body": "Suivez chaque envoi — demandé, en cours, livré — et sachez tout de suite quand ça coince."
+        }
+      },
+      "visual": {
+        "libraryHeading": "Ma bibliothèque",
+        "libraryCount": "128 titres",
+        "sourceGutenberg": "Gutenberg",
+        "sourceStdEbooks": "Std Ebooks",
+        "sourceImport": "Import",
+        "bookPride": "Pride and Prejudice",
+        "bookFrankenstein": "Frankenstein",
+        "bookMoby": "Moby-Dick",
+        "bookGatsby": "The Great Gatsby",
+        "bookGatsbyShort": "Gatsby",
+        "metaAusten": "Austen · EPUB",
+        "metaShelley": "Shelley · EPUB",
+        "metaMelville": "Melville · EPUB",
+        "gatsbyMeta": "EPUB · 312 KB",
+        "sending": "Envoi",
+        "sendTo": "Envoyer vers",
+        "sendButton": "Envoyer vers Kindle",
+        "deviceKindle": "Kindle Paperwhite",
+        "deviceKobo": "Kobo Clara 2E",
+        "deviceTolino": "Tolino Shine",
+        "searchQuery": "pride and",
+        "authorAusten": "Jane Austen",
+        "annotatedEdition": "Édition annotée",
+        "projectGutenberg": "Project Gutenberg",
+        "standardEbooks": "Standard Ebooks",
+        "yourFiles": "Vos fichiers",
+        "localGateway": "Gateway local",
+        "connected": "Connecté",
+        "optional": "Optionnel",
+        "queueHeading": "3 envois"
+      }
+    },
+    "devices": {
+      "title": "Sur votre liseuse — sans la friction.",
+      "subtitle": "E-mail, synchronisation, code navigateur ou câble — Ferry Agent s'adapte à ce que votre liseuse sait déjà faire.",
+      "cards": {
+        "kindle": {
+          "title": "Kindle",
+          "body": "Arrive par e-mail tout seul — sans câble, sans application à installer."
+        },
+        "kobo": {
+          "title": "Kobo",
+          "body": "À une synchronisation près : la prochaine connexion récupère le titre."
+        },
+        "tolino": {
+          "title": "Tolino",
+          "body": "Un code dans votre navigateur débloque le téléchargement."
+        },
+        "usb": {
+          "title": "USB",
+          "body": "Toujours disponible à la main, pour une copie directe."
+        }
+      },
+      "visual": {
+        "kindleFrom": "De : ferry@agent",
+        "kindleSubject": "Votre livre est en route",
+        "attachment": "Frankenstein.epub",
+        "syncing": "Synchronisation…",
+        "browserCodeLabel": "CODE NAVIGATEUR",
+        "browserCode": "8F2K-Q9",
+        "browserCodeHint": "À saisir sur tolino.com",
+        "usbPath": "/Volumes/EREADER"
+      }
+    }
   }
 }
