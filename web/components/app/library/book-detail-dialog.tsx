@@ -287,7 +287,11 @@ export function BookDetailDialog({
             >
               {tCommon("cancel")}
             </Button>
-            <Button disabled={deleting} onClick={handleDelete}>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={handleDelete}
+            >
               {deleting && <Loader2 className="animate-spin" />}
               {t("confirmButton")}
             </Button>

@@ -85,18 +85,17 @@ describe("UI harness — public site header bar (Pen LLhzT Nav)", () => {
     }
 
     const langGroup = within(header).getByRole("group", { name: /langue/i });
+    // The Pen's nav bar prescribes a control shorter than the design system pill
+    // (Lang 28px in a 70px bar, next to 32px buttons). The pair carries that size
+    // contract on its wrapper, so the buttons keep the shared Button base classes.
+    expect(langGroup.className).toMatch(/\[&_button\]:h-7/);
+    expect(langGroup.className).toMatch(/\[&_button\]:rounded-lg/);
+    expect(langGroup.className).toMatch(/\[&_button\]:px-2\.5/);
+    expect(langGroup.className).toMatch(/\[&_button\]:text-\[13px\]/);
+    expect(langGroup.className).not.toMatch(/\[&_button\]:h-10/);
+
     const langButtons = within(langGroup).getAllByRole("button");
     expect(langButtons).toHaveLength(2);
-
-    for (const btn of langButtons) {
-      expect(btn.className).toMatch(/\bh-7\b/);
-      expect(btn.className).toMatch(/\bpx-2\.5\b/);
-      expect(btn.className).toMatch(/\brounded-lg\b/);
-      expect(btn.className).toMatch(/text-\[13px\]/);
-      expect(btn.className).not.toMatch(/\bh-10\b/);
-      expect(btn.className).not.toMatch(/\brounded-full\b/);
-      expect(btn.className).not.toMatch(/\bpx-5\b/);
-    }
 
     const active = langButtons.find(
       (btn) => btn.getAttribute("aria-pressed") === "true"
@@ -106,7 +105,7 @@ describe("UI harness — public site header bar (Pen LLhzT Nav)", () => {
     );
     expect(active).toBeTruthy();
     expect(inactive).toBeTruthy();
-    expect(active!.className).toMatch(/font-semibold/);
+    expect(active!.className).toMatch(/text-foreground/);
     expect(inactive!.className).toMatch(/text-muted-foreground/);
 
     // Sanity: banner root has no inline style attribute either.

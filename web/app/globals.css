@@ -29,6 +29,7 @@
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -118,7 +119,8 @@
   --ferry-success: #c4c4c4;
   --ferry-error: #e5e5e5;
   /* shadcn bridges — monochrome stand-ins (not in Pen token table). */
-  --destructive: #e5e5e5;
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
   --ring: #fafafa;
   --disabled: #525252;
   --radius: 15px;
@@ -181,7 +183,8 @@
   --ferry-disabled: #525252;
   --ferry-success: #c4c4c4;
   --ferry-error: #e5e5e5;
-  --destructive: #e5e5e5;
+  --destructive: #ef4444;
+  --destructive-foreground: #fafafa;
   --ring: #fafafa;
   --disabled: #525252;
   --sidebar-primary: #fafafa;

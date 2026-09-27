@@ -16,7 +16,7 @@ import {
   Truck,
 } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
-import { LocaleSwitcher } from "@/components/locale-switcher";
+import { LocaleMenu } from "@/components/locale-switcher";
 import {
   Sheet,
   SheetContent,
@@ -234,17 +234,22 @@ export function AppMobileNav() {
               })}
 
               <li>
-                <div className="flex w-full min-w-0 items-center gap-3 rounded-sm px-3 py-3.5">
-                  <Languages
-                    className="size-[18px] shrink-0 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">
-                    {t("language")}
-                  </span>
-                  {/* Single visible locale value — no FR · EN pair. */}
-                  <LocaleSwitcher compact />
-                </div>
+                <LocaleMenu
+                  trigger={
+                    <button
+                      type="button"
+                      className="flex w-full min-w-0 items-center gap-3 rounded-sm px-3 py-3.5 text-left"
+                    >
+                      <Languages
+                        className="size-[18px] shrink-0 text-muted-foreground"
+                        aria-hidden
+                      />
+                      <span className="min-w-0 flex-1 truncate text-base font-medium text-muted-foreground">
+                        {t("language")}
+                      </span>
+                    </button>
+                  }
+                />
               </li>
             </ul>
 

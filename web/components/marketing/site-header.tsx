@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 import { MenuIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
-import { LocaleSwitcher } from "@/components/locale-switcher";
+import { LocaleMenu, LocalePair } from "@/components/locale-switcher";
 import { BrandMark } from "@/components/brand-logo";
 import {
   Sheet,
@@ -39,6 +40,8 @@ function BrandLockup() {
 export function SiteHeader() {
   const t = useTranslations("header");
   const tLanding = useTranslations("landing.nav");
+  const tLocale = useTranslations("locale");
+  const locale = useLocale() as Locale;
   const [menuOpen, setMenuOpen] = useState(false);
 
   function closeMenu() {
@@ -72,7 +75,19 @@ export function SiteHeader() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-1.5 lg:gap-3">
-            <LocaleSwitcher appearance="nav" />
+            <LocalePair className="hidden lg:inline-flex [&_button]:h-7 [&_button]:rounded-lg [&_button]:px-2.5 [&_button]:text-[13px]" />
+            <LocaleMenu
+              trigger={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="transition-colors duration-125 lg:hidden"
+                >
+                  {tLocale(locale)}
+                </Button>
+              }
+            />
 
             <div className="hidden items-center gap-3 lg:flex">
               <Show when="signed-out">

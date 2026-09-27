@@ -1,7 +1,7 @@
 "use client";
 
 import { UserButton, useUser } from "@clerk/nextjs";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   Cable,
   ChevronsUpDown,
@@ -12,15 +12,11 @@ import {
   Truck,
 } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { BrandMark } from "@/components/brand-logo";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -33,30 +29,26 @@ type NavItem = {
     | "/app/bibliotheque"
     | "/app/livraisons"
     | "/app/appareils"
-    | "/app/gateways"
     | "/app/sources"
+    | "/app/gateways"
     | "/app/reglages";
   labelKey:
     | "library"
     | "deliveries"
     | "devices"
-    | "access"
     | "sources"
+    | "access"
     | "settings";
   icon: typeof Library;
 };
 
-/** Principal — Pen Shell/Sidebar. */
-const PRIMARY: NavItem[] = [
+/** Flat nav — Pen Shell/Sidebar order (Sources before Gateway). */
+const NAV_ITEMS: NavItem[] = [
   { href: "/app/bibliotheque", labelKey: "library", icon: Library },
   { href: "/app/livraisons", labelKey: "deliveries", icon: Truck },
   { href: "/app/appareils", labelKey: "devices", icon: Tablet },
-];
-
-/** Chez vous — Gateway uses cable (Pen). */
-const LOCAL: NavItem[] = [
-  { href: "/app/gateways", labelKey: "access", icon: Cable },
   { href: "/app/sources", labelKey: "sources", icon: Database },
+  { href: "/app/gateways", labelKey: "access", icon: Cable },
   { href: "/app/reglages", labelKey: "settings", icon: Settings },
 ];
 
@@ -96,52 +88,26 @@ function NavLink({ item }: { item: NavItem }) {
   );
 }
 
-function NavCluster({
-  items,
-  label,
-}: {
-  items: NavItem[];
-  label: string;
-}) {
-  return (
-    <SidebarGroup className="gap-1 p-0">
-      <SidebarGroupLabel className="h-auto px-2 py-0 text-xs font-medium tracking-normal text-muted-foreground normal-case">
-        {label}
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu className="gap-1">
-          {items.map((item) => (
-            <NavLink key={item.href} item={item} />
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
-}
-
 /**
- * Pen Shell/Sidebar — 208 wide, pad 8, gap 8, space-between.
+ * Pen Shell/Sidebar — 208 wide content (no own pad), footer cluster pad 8 gap 8.
  * Header = Button/Ghost brand · Footer Cluster = elevated nav + account.
  */
 export function AppSidebar() {
   const t = useTranslations("nav");
   const tBrand = useTranslations("brand");
-  const locale = useLocale();
   const { user } = useUser();
   const displayName =
     user?.fullName?.trim() ||
     user?.firstName?.trim() ||
     user?.primaryEmailAddress?.emailAddress ||
     t("account");
-  const email =
-    user?.primaryEmailAddress?.emailAddress?.trim() || t("account");
 
   return (
     <Sidebar
       collapsible="none"
       enableMobileSheet={false}
       variant="sidebar"
-      className="hidden justify-between gap-2 border-0 bg-sidebar p-2 md:flex"
+      className="hidden justify-between gap-2 border-0 bg-sidebar p-0 md:flex"
     >
       <SidebarHeader className="gap-1 border-0 p-2">
         <Link
@@ -157,15 +123,17 @@ export function AppSidebar() {
       <SidebarContent className="min-h-0 flex-1 gap-1 p-0" />
 
       <SidebarFooter className="gap-0 border-0 p-0">
-        <div className="flex w-full flex-col gap-2 rounded-lg bg-card p-2">
-          <div className="flex flex-col gap-1 p-2">
-            <NavCluster items={PRIMARY} label={t("groupPrimary")} />
-            <NavCluster items={LOCAL} label={t("groupLocal")} />
-          </div>
-
-          {/* Compact locale: single visible value (no FR · EN pair). */}
-          <div className="flex justify-end px-1">
-            <LocaleSwitcher compact />
+        <div
+          data-testid="sidebar-footer-card"
+          className="flex w-full flex-col gap-2 rounded-lg bg-card p-2"
+        >
+          {/* Nav Items — pad 8, gap 4; six flat items, no group labels. */}
+          <div data-testid="sidebar-nav" className="flex flex-col gap-1 p-2">
+            <SidebarMenu className="gap-1">
+              {NAV_ITEMS.map((item) => (
+                <NavLink key={item.href} item={item} />
+              ))}
+            </SidebarMenu>
           </div>
 
           {/* Sidebar/Account — 192×48, pad 8, gap 8, avatar 32 */}
@@ -184,8 +152,8 @@ export function AppSidebar() {
               <p className="truncate text-sm font-medium text-sidebar-foreground">
                 {displayName}
               </p>
-              <p className="truncate text-xs font-medium text-muted-foreground">
-                {email} · {locale.toUpperCase()}
+              <p className="truncate text-xs font-normal text-muted-foreground">
+                {t("account")}
               </p>
             </div>
             <ChevronsUpDown
