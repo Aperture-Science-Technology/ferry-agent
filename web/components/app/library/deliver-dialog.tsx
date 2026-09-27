@@ -25,7 +25,26 @@ import {
 import { ApiError, useApiClient } from "@/lib/api-client";
 import type { Device, DeliveryJob, DeliveryMethod, LibraryItem, MethodAvailability } from "@/lib/types";
 
-const FORMATS = ["epub", "mobi", "azw3", "pdf"] as const;
+const ALL_FORMATS = ["epub", "mobi", "azw3", "pdf"] as const;
+/** Kindle Send-to-Kindle (tier A): Amazon no longer accepts mobi/azw3. */
+const KINDLE_FORMATS = ["epub", "pdf"] as const;
+
+type DeliverFormat = (typeof ALL_FORMATS)[number];
+
+function formatsForDevice(device: Device | undefined): readonly DeliverFormat[] {
+  if (device?.delivery_tier === "A") return KINDLE_FORMATS;
+  return ALL_FORMATS;
+}
+
+function pickDeliverFormat(
+  preferred: string | undefined,
+  allowed: readonly DeliverFormat[]
+): DeliverFormat {
+  if (preferred && (allowed as readonly string[]).includes(preferred)) {
+    return preferred as DeliverFormat;
+  }
+  return "epub";
+}
 
 /** Pen Form/Field control — surface-2, radius-md, ferry-border, padding 12, 14/500. */
 const deliverFieldControlClass =
@@ -134,9 +153,14 @@ export function DeliverDialog({
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
   const [deviceId, setDeviceId] = useState<string>("");
-  const [format, setFormat] = useState<string>("epub");
+  const [formatChoice, setFormatChoice] = useState<DeliverFormat | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [method, setMethod] = useState<DeliveryMethod | "">("");
+  const [defaultFormat, setDefaultFormat] = useState<string>("epub");
+
+  const selectedDevice = devices.find((entry) => entry.id === deviceId);
+  const availableFormats = formatsForDevice(selectedDevice);
+  const format = pickDeliverFormat(formatChoice ?? defaultFormat, availableFormats);
 
   useEffect(() => {
     if (!item) return;
@@ -144,11 +168,10 @@ export function DeliverDialog({
     call<{ default_format: string }>("/api/v1/users/me")
       .then((user) => {
         if (cancelled) return;
-        const next = user.default_format;
-        setFormat(FORMATS.includes(next as (typeof FORMATS)[number]) ? next : "epub");
+        setDefaultFormat(user.default_format);
       })
       .catch(() => {
-        if (!cancelled) setFormat("epub");
+        if (!cancelled) setDefaultFormat("epub");
       });
     return () => {
       cancelled = true;
@@ -237,12 +260,15 @@ export function DeliverDialog({
             <Label htmlFor="deliver-format" className={deliverFieldLabelClass}>
               {t("formatOptional")}
             </Label>
-            <Select value={format} onValueChange={(value) => value && setFormat(value)}>
+            <Select
+              value={format}
+              onValueChange={(value) => value && setFormatChoice(value as DeliverFormat)}
+            >
               <SelectTrigger id="deliver-format" className={deliverFieldControlClass}>
                 <SelectValue placeholder={t("formatPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                {FORMATS.map((value) => (
+                {availableFormats.map((value) => (
                   <SelectItem key={value} value={value}>
                     {t(`formats.${value}`)}
                   </SelectItem>

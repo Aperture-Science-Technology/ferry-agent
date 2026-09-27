@@ -12,7 +12,8 @@ Outils (identité Clerk utilisateur obligatoire, pas de compte-service) :
   9. get_gateway_job      — suivi d'un job gateway (fetch asynchrone)
  10. list_sources         — sources activées / désactivées
  11. get_profile          — profil (format défaut, kindle_email)
- 12. list_opds_tokens     — jetons OPDS (sans secret)
+ 12. get_mail_settings    — réglages d'envoi (adresse à approuver chez Amazon)
+ 13. list_opds_tokens     — jetons OPDS (sans secret)
 """
 
 from __future__ import annotations
@@ -71,9 +72,25 @@ mcp = FastMCP(
         "list_devices + list_device_methods puis deliver(confirm=True, method=…) "
         "pour envoyer ; get_delivery_status pour suivre ; "
         "list_gateways / get_gateway_job pour le catalogue local ; "
-        "list_sources / get_profile / list_opds_tokens pour les réglages."
+        "list_sources / get_profile / get_mail_settings / list_opds_tokens "
+        "pour les réglages."
     ),
 )
+
+# Codes de raison d'indisponibilité → phrase française actionnable.
+# Le code brut est conservé entre parenthèses pour le diagnostic.
+_REASON_CODE_FR: dict[str, str] = {
+    "kindle_email_missing": (
+        "aucune adresse Send-to-Kindle connue (ni sur l'appareil, ni dans le "
+        "profil) ; renseignez-la dans les réglages ou sur l'appareil"
+    ),
+    "smtp_not_configured": (
+        "l'envoi par email n'est pas activé sur la plateforme"
+    ),
+    "cloud_not_linked": (
+        "le compte cloud n'est pas lié ; liez Dropbox ou Drive dans les réglages"
+    ),
+}
 
 _USER_AGENT = "ferry-agent-mcp"
 
@@ -176,6 +193,14 @@ def _raise_for(resp: httpx.Response) -> None:
 
 def _kv(parts: list[str]) -> str:
     return " | ".join(p for p in parts if p)
+
+
+def _format_reason_code(code: str) -> str:
+    """Traduit un reason_code en phrase FR actionnable, code brut conservé."""
+    phrase = _REASON_CODE_FR.get(code)
+    if phrase:
+        return f"{phrase} ({code})"
+    return code
 
 
 def _device_label(device: dict[str, Any]) -> str:
@@ -370,7 +395,8 @@ async def list_device_methods(device_id: str) -> str:
         if m.get("available"):
             lines.append(f"✓ {m.get('method')} — disponible")
         else:
-            reason = m.get("reason_code") or "indisponible"
+            raw = m.get("reason_code")
+            reason = _format_reason_code(raw) if raw else "indisponible"
             lines.append(f"✗ {m.get('method')} — {reason}")
     return "\n".join(lines)
 
@@ -399,7 +425,10 @@ async def deliver(
         device_id: UUID de la liseuse cible.
         confirm:   Doit être True pour confirmer l'envoi. Si False, l'outil refuse.
         method:    Mode de livraison (email, dropbox, drive, browser_code…).
-        format:    Format cible optionnel (epub, mobi, azw3, pdf).
+        format:    Format cible optionnel (epub, mobi, azw3, pdf). Pour un
+                   appareil Kindle, seuls epub et pdf ont un sens ; mobi/azw3
+                   sont convertis en EPUB côté serveur car Amazon les refuse
+                   depuis fin 2023.
 
     Returns:
         Confirmation de l'envoi avec le statut du job, ou message de refus.
@@ -528,7 +557,16 @@ async def get_delivery_status(job_id: str) -> str:
         parts.append(f"erreur: {data['error']}")
     if data.get("download_url"):
         parts.append(f"URL: {data['download_url']}")
-    return _kv(parts)
+    msg = _kv(parts)
+    if data.get("method") == "email" and data.get("status") == "sent":
+        msg += (
+            "\nInterprétation: le relais a accepté le message — cela ne prouve "
+            "pas la remise sur la Kindle. Amazon ne confirme jamais la "
+            "livraison ; si l'adresse d'envoi n'est pas approuvée, le document "
+            "est abandonné sans rebond. Appelez get_mail_settings() pour "
+            "obtenir l'adresse à approuver chez Amazon."
+        )
+    return msg
 
 
 # ---------------------------------------------------------------------------
@@ -641,7 +679,53 @@ async def get_profile() -> str:
 
 
 # ---------------------------------------------------------------------------
-# 12. list_opds_tokens
+# 12. get_mail_settings
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def get_mail_settings() -> str:
+    """Retourne les réglages d'envoi email (Send-to-Kindle) visibles.
+
+    Utile pour expliquer pourquoi un livre n'est jamais arrivé : l'adresse
+    d'envoi doit être approuvée chez Amazon, sinon le document est abandonné
+    en silence (aucun rebond).
+
+    Returns:
+        État de configuration, adresse à approuver, domaines acceptés, quotas
+        (sans secrets SMTP).
+    """
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.get("/api/v1/mail/settings")
+    _raise_for(resp)
+    data = resp.json()
+    configured = "oui" if data.get("configured") else "non"
+    sender = data.get("sender_address") or "(non définie)"
+    domains = data.get("allowed_domains") or []
+    domains_txt = ", ".join(str(d) for d in domains) if domains else "(aucun)"
+    lines = [
+        f"envoi configuré: {configured}",
+        f"adresse d'envoi à approuver chez Amazon: {sender}",
+        (
+            "action: ajoutez cette adresse dans « Approved Personal Document "
+            "Email List » sur https://www.amazon.com/mycd "
+            "(Préférences → Personal Document Settings)"
+        ),
+        (
+            "avertissement: Amazon ne renvoie aucun rebond ; sans approbation "
+            "le document est abandonné en silence"
+        ),
+        f"domaines de destinataires acceptés: {domains_txt}",
+        f"quota horaire: {data.get('hourly_quota')}",
+        f"quota quotidien: {data.get('daily_quota')}",
+    ]
+    reply_to = data.get("reply_to")
+    if reply_to:
+        lines.append(f"reply-to: {reply_to}")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 13. list_opds_tokens
 # ---------------------------------------------------------------------------
 
 @mcp.tool

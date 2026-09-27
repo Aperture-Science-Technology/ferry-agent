@@ -460,6 +460,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Mail Settings */
+        get: operations["get_mail_settings_api_v1_mail_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/opds/tokens": {
         parameters: {
             query?: never;
@@ -877,6 +894,8 @@ export interface components {
             brand: components["schemas"]["DeviceBrand"];
             /** Conversion Profile */
             conversion_profile?: ("reader_6in" | "reader_7in_plus" | "tablet") | null;
+            /** Email Address */
+            email_address?: string | null;
             /** Model */
             model?: string | null;
             /** Name */
@@ -907,6 +926,8 @@ export interface components {
             /** Conversion Profile */
             conversion_profile?: ("reader_6in" | "reader_7in_plus" | "tablet") | null;
             delivery_tier: components["schemas"]["DeliveryTier"];
+            /** Email Address */
+            email_address?: string | null;
             /**
              * Id
              * Format: uuid
@@ -924,6 +945,8 @@ export interface components {
             brand?: components["schemas"]["DeviceBrand"] | null;
             /** Conversion Profile */
             conversion_profile?: ("reader_6in" | "reader_7in_plus" | "tablet") | null;
+            /** Email Address */
+            email_address?: string | null;
             /** Model */
             model?: string | null;
             /** Name */
@@ -1138,6 +1161,24 @@ export interface components {
             publisher?: string | null;
             /** Title */
             title?: string | null;
+        };
+        /**
+         * MailSettingsOut
+         * @description Reglages d'envoi visibles par l'utilisateur (pas d'hote/port/identifiants SMTP).
+         */
+        MailSettingsOut: {
+            /** Allowed Domains */
+            allowed_domains: string[];
+            /** Configured */
+            configured: boolean;
+            /** Daily Quota */
+            daily_quota: number;
+            /** Hourly Quota */
+            hourly_quota: number;
+            /** Reply To */
+            reply_to: string | null;
+            /** Sender Address */
+            sender_address: string;
         };
         /** MethodAvailability */
         MethodAvailability: {
@@ -2435,6 +2476,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GatewayCredentials"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_mail_settings_api_v1_mail_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-Dev-User"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailSettingsOut"];
                 };
             };
             /** @description Validation Error */

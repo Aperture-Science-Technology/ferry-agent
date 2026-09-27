@@ -9,6 +9,16 @@ interface UserSettings {
   default_format: string;
 }
 
+/** Mirrors API `MailSettingsOut` (read-only Send-to-Kindle mailer status). */
+interface MailSettings {
+  configured: boolean;
+  sender_address: string;
+  reply_to: string | null;
+  allowed_domains: string[];
+  hourly_quota: number;
+  daily_quota: number;
+}
+
 export default async function ReglagesPage({
   params,
 }: {
@@ -17,9 +27,10 @@ export default async function ReglagesPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("pages.settings");
-  const [settings, opdsTokens] = await Promise.all([
+  const [settings, opdsTokens, mailSettings] = await Promise.all([
     safeApiFetch<UserSettings>("/api/v1/users/me"),
     safeApiFetch<OpdsToken[]>("/api/v1/opds/tokens"),
+    safeApiFetch<MailSettings>("/api/v1/mail/settings"),
   ]);
 
   return (
@@ -33,6 +44,8 @@ export default async function ReglagesPage({
       settingsUnavailable={settings === null}
       initialOpdsTokens={opdsTokens ?? []}
       opdsTokensUnavailable={opdsTokens === null}
+      initialMailSettings={mailSettings}
+      mailSettingsUnavailable={mailSettings === null}
     />
   );
 }

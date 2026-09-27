@@ -88,6 +88,7 @@ async def test_tools_registered() -> None:
         "get_gateway_job",
         "list_sources",
         "get_profile",
+        "get_mail_settings",
         "list_opds_tokens",
     }
     assert expected <= tool_names
@@ -258,6 +259,31 @@ async def test_list_device_methods_sends_correct_path(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_list_device_methods_translates_kindle_email_missing(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "method": "email",
+                    "available": False,
+                    "reason_code": "kindle_email_missing",
+                },
+            ],
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.list_device_methods("dev-1")
+
+    assert "kindle_email_missing" in result
+    assert "aucune adresse Send-to-Kindle connue" in result
+    assert "✗ email" in result
+
+
+@pytest.mark.asyncio
 async def test_list_gateways_sends_correct_request(monkeypatch) -> None:
     from ferry_mcp import server
 
@@ -410,6 +436,40 @@ async def test_get_delivery_status_sends_correct_path(monkeypatch) -> None:
     assert "delivered" in result
     assert "Dune" in result
     assert "mobi" in result
+
+
+@pytest.mark.asyncio
+async def test_get_delivery_status_email_sent_explains_not_delivered(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    job_id = "job-email-sent"
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": job_id,
+                "status": "sent",
+                "method": "email",
+                "item_title": "Dune",
+                "device_label": "kindle Paperwhite",
+                "delivered_at": None,
+                "error": None,
+                "download_url": None,
+                "target_format": "epub",
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.get_delivery_status(job_id)
+
+    assert "status: sent" in result
+    assert "method: email" in result
+    assert "ne prouve pas la remise" in result
+    assert "get_mail_settings" in result
+    assert "status: delivered" not in result
+    assert "livré" not in result.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -660,3 +720,43 @@ async def test_list_sources_and_profile(monkeypatch) -> None:
     # Jamais de secret jeton dans la sortie (OpdsTokenOut n'expose que l'id)
     assert "raw" not in tokens.lower()
     assert "secret" not in tokens.lower()
+
+
+@pytest.mark.asyncio
+async def test_get_mail_settings_shows_sender_and_warning(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "configured": True,
+                "sender_address": "send@ferry-agent.aperture-agency.org",
+                "reply_to": None,
+                "allowed_domains": ["kindle.com", "kindle.fr"],
+                "hourly_quota": 30,
+                "daily_quota": 80,
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.get_mail_settings()
+
+    assert captured[0].url.path == "/api/v1/mail/settings"
+    assert captured[0].headers.get("authorization") == f"Bearer {_TEST_BEARER}"
+    assert "send@ferry-agent.aperture-agency.org" in result
+    assert "Approved Personal Document Email List" in result
+    assert "amazon.com/mycd" in result
+    assert "aucun rebond" in result
+    assert "abandonné en silence" in result
+    assert "kindle.com" in result
+    assert "quota horaire: 30" in result
+    assert "quota quotidien: 80" in result
+    assert "envoi configuré: oui" in result
+    # Pas de secrets SMTP
+    assert "password" not in result.lower()
+    assert "smtp_host" not in result.lower()

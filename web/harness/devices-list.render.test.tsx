@@ -243,4 +243,83 @@ describe("UI harness — devices list", () => {
     expect(within(dialog).getByText("Modifier l'appareil")).toBeTruthy();
     expect(within(dialog).getByDisplayValue("À modifier")).toBeTruthy();
   });
+
+  it("shows the Send-to-Kindle email field for Kindle only and sends null when empty", async () => {
+    callMock.mockResolvedValueOnce({
+      id: "33333333-3333-4333-8333-333333333333",
+      name: null,
+      brand: "kindle",
+      model: null,
+      cloud_linked: false,
+      cloud_provider: null,
+      conversion_profile: null,
+      delivery_tier: "A",
+      last_synced_at: null,
+      email_address: null,
+    });
+
+    const { unmount } = renderDevices({
+      initialDevices: [baseDevice()],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Nouvel appareil" }));
+    const createDialog = await screen.findByRole("dialog");
+
+    expect(
+      within(createDialog).getByLabelText(messages.newDevice.emailAddress)
+    ).toBeTruthy();
+    expect(
+      within(createDialog).getByText(messages.newDevice.emailAddressHint)
+    ).toBeTruthy();
+    expect(
+      within(createDialog).getByPlaceholderText(
+        messages.newDevice.emailAddressPlaceholder
+      )
+    ).toBeTruthy();
+    expect(
+      within(createDialog).getByTestId("device-email-address")
+    ).toBeTruthy();
+
+    fireEvent.click(
+      within(createDialog).getByRole("button", { name: messages.common.create })
+    );
+
+    await waitFor(() => {
+      expect(callMock).toHaveBeenCalledTimes(1);
+    });
+
+    const [, options] = callMock.mock.calls[0] as [
+      string,
+      { method: string; body: string },
+    ];
+    expect(options.method).toBe("POST");
+    expect(JSON.parse(options.body)).toMatchObject({
+      brand: "kindle",
+      email_address: null,
+    });
+    unmount();
+
+    renderDevices({
+      initialDevices: [
+        baseDevice({
+          id: "22222222-2222-4222-8222-222222222222",
+          name: "Kobo Salon",
+          brand: "kobo",
+          model: "Clara",
+          delivery_tier: "B",
+        }),
+      ],
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Modifier « Kobo Salon »/ })
+    );
+    const editDialog = await screen.findByRole("dialog");
+    expect(
+      within(editDialog).queryByLabelText(messages.newDevice.emailAddress)
+    ).toBeNull();
+    expect(
+      within(editDialog).queryByTestId("device-email-address")
+    ).toBeNull();
+  });
 });

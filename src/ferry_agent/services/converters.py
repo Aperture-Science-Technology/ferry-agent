@@ -30,8 +30,7 @@ EBOOK_CONVERT_VERSION_TIMEOUT_SECONDS = 10
 
 # Message actionnable exposé dans DeliveryJob.error (pas de jargon technique).
 CONVERSION_FAILED_USER_MESSAGE = (
-    "Impossible de convertir ce livre vers le format demandé. "
-    "Réessayez plus tard ou choisissez un autre format."
+    "Impossible de convertir ce livre vers le format demandé. Réessayez plus tard ou choisissez un autre format."
 )
 
 
@@ -262,6 +261,22 @@ async def materialize_target_format(
     if target not in _SUPPORTED_FORMATS:
         raise ValueError(f"format cible non supporté: {target}")
     if original == target:
+        if preset is None:
+            return src_path, False
+        if target == "epub":
+            # Preset W-27 = mise en page EPUB : forcer ebook-convert epub→epub
+            # pour appliquer marges / police / --output-profile (cache TTL).
+            return await convert_with_profile_cache(
+                library_item_id=library_item_id,
+                src_path=src_path,
+                target_format="epub",
+                preset=preset,
+                convert_kind="to_epub",
+            )
+        # Presets W-27 = réglages de mise en page EPUB uniquement. Pour un PDF,
+        # la seule route disponible est epub_to_pdf (PyMuPDF), qui attend une
+        # source EPUB et dégraderait un PDF en le ré-encodant. Passthrough
+        # assumé : le preset est ignoré quand original == target == pdf (etc.).
         return src_path, False
 
     working_path = src_path

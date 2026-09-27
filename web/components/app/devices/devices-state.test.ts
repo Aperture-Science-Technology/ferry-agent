@@ -7,8 +7,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   applyDeviceFetchResult,
+  buildDeviceEmailPayload,
   cloudLinkPresentation,
   deviceDisplayName,
+  isKindleDeliveryBrand,
 } from "./devices-state.ts";
 
 describe("deviceDisplayName", () => {
@@ -28,6 +30,24 @@ describe("deviceDisplayName", () => {
       deviceDisplayName({ name: "  ", model: null }, "Tolino"),
       "Tolino"
     );
+  });
+});
+
+describe("buildDeviceEmailPayload", () => {
+  it("trims a filled address and maps blank input to null", () => {
+    assert.equal(
+      buildDeviceEmailPayload("  reader@kindle.com  "),
+      "reader@kindle.com"
+    );
+    assert.equal(buildDeviceEmailPayload(""), null);
+    assert.equal(buildDeviceEmailPayload("   "), null);
+  });
+});
+
+describe("isKindleDeliveryBrand", () => {
+  it("is true only for the kindle brand", () => {
+    assert.equal(isKindleDeliveryBrand("kindle"), true);
+    assert.equal(isKindleDeliveryBrand("kobo"), false);
   });
 });
 
