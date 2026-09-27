@@ -173,8 +173,6 @@
     "docs": "Guide",
     "account": "Account",
     "language": "Language",
-    "groupPrimary": "Main",
-    "groupLocal": "At home",
     "moreMenu": "Menu",
     "moreDescription": "Gateway, sources, settings, guide, and account."
   },
