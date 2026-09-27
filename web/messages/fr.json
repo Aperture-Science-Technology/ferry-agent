@@ -52,12 +52,10 @@
     "dashboard": "Bibliothèque"
   },
   "hero": {
-    "badge": "Bibliothèque en ligne",
-    "titleBefore": "Votre bibliothèque en ligne.",
-    "titleHighlight": "Vos livres sur votre liseuse.",
-    "subtitle": "Ajoutez un livre, puis choisissez comment l'envoyer à votre liseuse.",
-    "ctaDashboard": "Ouvrir ma bibliothèque",
-    "ctaHow": "Voir les étapes",
+    "badge": "EN LIGNE, POUR VOTRE LISEUSE",
+    "titleBefore": "Ferry Agent.",
+    "titleHighlight": "Trouver, préparer, envoyer.",
+    "subtitle": "Cherchez un livre, ajoutez-le à votre bibliothèque en ligne, envoyez-le à votre liseuse — simplement.",
     "sceneLibrary": "Bibliothèque en ligne",
     "sceneBook": "Livre de démonstration",
     "sceneReader": "Liseuse",
@@ -928,5 +926,18 @@
     "createAccess": "Ajouter un Gateway",
     "backHome": "Retour à l’accueil",
     "step2Cta": "Télécharger l’image Docker"
+  },
+  "landing": {
+    "nav": {
+      "signIn": "Se connecter",
+      "dashboard": "Ouvrir l'espace"
+    },
+    "hero": {
+      "ctaPrimary": "Ouvrir l'espace",
+      "ctaSecondary": "Comment ça marche",
+      "builtBy": "Conçu par Aperture Science Technology",
+      "demoTitle": "Démo bientôt disponible",
+      "demoBody": "Un aperçu court de Ferry — trouver, préparer, envoyer."
+    }
   }
 }

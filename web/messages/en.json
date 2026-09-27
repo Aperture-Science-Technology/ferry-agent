@@ -52,12 +52,10 @@
     "dashboard": "Library"
   },
   "hero": {
-    "badge": "Online library",
-    "titleBefore": "Your online library.",
-    "titleHighlight": "Your books on your e-reader.",
-    "subtitle": "Add a book, then choose how to send it to your e-reader.",
-    "ctaDashboard": "Open my library",
-    "ctaHow": "See the steps",
+    "badge": "ONLINE, FOR YOUR E-READER",
+    "titleBefore": "Ferry Agent.",
+    "titleHighlight": "Find, prepare, send.",
+    "subtitle": "Search for a book, add it to your online library, send it to your device — simply.",
     "sceneLibrary": "Online library",
     "sceneBook": "Demo book",
     "sceneReader": "E-reader",
@@ -928,5 +926,18 @@
     "createAccess": "Add a Gateway",
     "backHome": "Back to home",
     "step2Cta": "Download the Docker image"
+  },
+  "landing": {
+    "nav": {
+      "signIn": "Sign in",
+      "dashboard": "Open dashboard"
+    },
+    "hero": {
+      "ctaPrimary": "Open the workspace",
+      "ctaSecondary": "How it works",
+      "builtBy": "Built by Aperture Science Technology",
+      "demoTitle": "Demo coming soon",
+      "demoBody": "A short walkthrough of Ferry — find, prepare, send."
+    }
   }
 }
