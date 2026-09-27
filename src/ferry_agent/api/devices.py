@@ -21,6 +21,7 @@ from ferry_agent.services import cloud_links
 from ferry_agent.services import conversion_profiles
 from ferry_agent.services import crypto
 from ferry_agent.services import devices as device_service
+from ferry_agent.services import mail_policy
 from ferry_agent.services import mailer
 from ferry_agent.services.delivery_methods import MethodAvailability, available_delivery_methods
 
@@ -69,6 +70,7 @@ def _device_out(device: Device) -> DeviceOut:
         model=device.model,
         delivery_tier=device.delivery_tier,
         conversion_profile=conversion_profiles.resolve_preset_id(device.conversion_profile),
+        email_address=device.email_address,
         cloud_provider=cloud_provider,
         cloud_linked=cloud_linked,
         last_synced_at=device.last_synced_at,
@@ -90,6 +92,11 @@ async def create_device(
     db: AsyncSession = Depends(get_db),
 ) -> DeviceOut:
     """Crée un Device pour l'utilisateur ; calcule delivery_tier selon la marque/modèle."""
+    if payload.email_address is not None and not mail_policy.is_allowed_recipient(payload.email_address):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(mail_policy.RecipientNotAllowed()),
+        )
     tier = _compute_tier(payload.brand, payload.model)
     device = Device(
         user_id=user.id,
@@ -98,6 +105,7 @@ async def create_device(
         model=payload.model,
         delivery_tier=tier,
         conversion_profile=conversion_profiles.to_storage(payload.conversion_profile),
+        email_address=payload.email_address,
     )
     db.add(device)
     await db.commit()
@@ -152,6 +160,12 @@ async def update_device(
     brand_or_model_changed = "brand" in updates or "model" in updates
     if "conversion_profile" in updates:
         updates["conversion_profile"] = conversion_profiles.to_storage(updates["conversion_profile"])
+    if "email_address" in updates and updates["email_address"] is not None:
+        if not mail_policy.is_allowed_recipient(updates["email_address"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(mail_policy.RecipientNotAllowed()),
+            )
     for field, value in updates.items():
         setattr(device, field, value)
 

@@ -192,6 +192,7 @@ class DeviceCreate(BaseModel):
     brand: DeviceBrand
     model: str | None = None
     conversion_profile: ConversionPreset | None = None
+    email_address: EmailStr | None = None
 
 
 class DevicePatch(BaseModel):
@@ -199,6 +200,15 @@ class DevicePatch(BaseModel):
     brand: DeviceBrand | None = None
     model: str | None = None
     conversion_profile: ConversionPreset | None = None
+    email_address: EmailStr | None = None
+
+    @field_validator("email_address", mode="before")
+    @classmethod
+    def _empty_email_address_to_none(cls, value: object) -> object:
+        # "" depuis un formulaire = effacement, pas une adresse invalide.
+        if value == "":
+            return None
+        return value
 
 
 class UserOut(BaseModel):
@@ -225,6 +235,19 @@ class UserPatch(BaseModel):
         return value
 
 
+class MailSettingsOut(BaseModel):
+    """Reglages d'envoi visibles par l'utilisateur (pas d'hote/port/identifiants SMTP)."""
+
+    configured: bool
+    # Adresse a approuver chez Amazon (« Approved Personal Document Email List »),
+    # sinon Amazon rejette l'envoi sans aucun rebond.
+    sender_address: str
+    reply_to: str | None
+    allowed_domains: list[str]
+    hourly_quota: int
+    daily_quota: int
+
+
 class SourceOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -247,6 +270,7 @@ class DeviceOut(BaseModel):
     model: str | None
     delivery_tier: DeliveryTier
     conversion_profile: ConversionPreset | None = None
+    email_address: str | None = None
     cloud_provider: Literal["dropbox", "drive"] | None = None
     cloud_linked: bool = False
     last_synced_at: datetime | None

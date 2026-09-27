@@ -8,6 +8,7 @@ from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.db import get_db
 from ferry_agent.models import User
 from ferry_agent.schemas import UserOut, UserPatch
+from ferry_agent.services import mail_policy
 from ferry_agent.services.errors import (
     INVALID_DEFAULT_FORMAT_MESSAGE,
     INVALID_KINDLE_EMAIL_MESSAGE,
@@ -61,7 +62,14 @@ async def patch_me(
     db_user = await db.get(User, user.id)
     # exclude_unset seul : un champ omit ne doit pas etre touche ; un champ
     # explicitement null (ex. effacer kindle_email) doit etre applique.
-    for key, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    if "kindle_email" in updates and updates["kindle_email"] is not None:
+        if not mail_policy.is_allowed_recipient(updates["kindle_email"]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(mail_policy.RecipientNotAllowed()),
+            )
+    for key, value in updates.items():
         setattr(db_user, key, value)
     await db.commit()
     await db.refresh(db_user)

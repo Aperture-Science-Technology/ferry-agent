@@ -260,6 +260,18 @@
             ],
             "title": "Conversion Profile"
           },
+          "email_address": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Address"
+          },
           "model": {
             "anyOf": [
               {
@@ -365,6 +377,17 @@
           "delivery_tier": {
             "$ref": "#/components/schemas/DeliveryTier"
           },
+          "email_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Address"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -443,6 +466,18 @@
               }
             ],
             "title": "Conversion Profile"
+          },
+          "email_address": {
+            "anyOf": [
+              {
+                "format": "email",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Address"
           },
           "model": {
             "anyOf": [
@@ -1033,6 +1068,55 @@
           }
         },
         "title": "LibraryItemUpdate",
+        "type": "object"
+      },
+      "MailSettingsOut": {
+        "description": "Reglages d'envoi visibles par l'utilisateur (pas d'hote/port/identifiants SMTP).",
+        "properties": {
+          "allowed_domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Domains",
+            "type": "array"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "daily_quota": {
+            "title": "Daily Quota",
+            "type": "integer"
+          },
+          "hourly_quota": {
+            "title": "Hourly Quota",
+            "type": "integer"
+          },
+          "reply_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply To"
+          },
+          "sender_address": {
+            "title": "Sender Address",
+            "type": "string"
+          }
+        },
+        "required": [
+          "configured",
+          "sender_address",
+          "reply_to",
+          "allowed_domains",
+          "hourly_quota",
+          "daily_quota"
+        ],
+        "title": "MailSettingsOut",
         "type": "object"
       },
       "MethodAvailability": {
@@ -3994,6 +4078,71 @@
         "summary": "Recreate Gateway",
         "tags": [
           "gateways"
+        ]
+      }
+    },
+    "/api/v1/mail/settings": {
+      "get": {
+        "operationId": "get_mail_settings_api_v1_mail_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Dev-User",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Mail Settings",
+        "tags": [
+          "mail"
         ]
       }
     },

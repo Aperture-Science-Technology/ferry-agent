@@ -121,6 +121,12 @@ async def _deliver_tier_a(
         await _fail(db, job, "SMTP non configure (envoi email desactive)")
         return
 
+    try:
+        await mail_policy.enforce_send_quota(db, user.id)
+    except RuntimeError as exc:
+        await _fail(db, job, str(exc))
+        return
+
     target_format = kindle_formats.resolve_kindle_target(
         requested_format,
         user.default_format,
@@ -135,12 +141,6 @@ async def _deliver_tier_a(
         filename = Path(file_path).name
         if Path(filename).suffix.lstrip(".").lower() != target_format:
             await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
-            return
-
-        try:
-            await mail_policy.enforce_send_quota(db, user.id)
-        except RuntimeError as exc:
-            await _fail(db, job, str(exc))
             return
 
         settings = get_settings()
