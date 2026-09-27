@@ -130,18 +130,38 @@ describe("UI harness — landing FAQ + footer Pen", () => {
       expect(KNOWN_HREFS.has(href!)).toBe(true);
     }
 
-    expect(hrefs).toEqual(
-      expect.arrayContaining([
-        "/",
-        "/#how-it-works",
-        "/#delivered",
-        "/app/bibliotheque",
-        "/app/sources",
-        "/docs",
-        "/#faq",
-        "/app/livraisons",
-        "/app/gateways",
-      ])
+    // Brand + 4 product + 4 resources (Guide once in Resources — not duplicated in bottom bar)
+    expect(hrefs).toEqual([
+      "/",
+      "/#how-it-works",
+      "/#delivered",
+      "/app/bibliotheque",
+      "/app/sources",
+      "/docs",
+      "/#faq",
+      "/app/livraisons",
+      "/app/gateways",
+    ]);
+    expect(hrefs.filter((h) => h === "/docs")).toHaveLength(1);
+
+    const nav = within(footer).getByRole("navigation", {
+      name: messages.footer.nav,
+    });
+    expect(nav.className).toMatch(/\bflex-1\b/);
+    expect(nav.className).toMatch(/\bgap-6\b/);
+    expect(nav.className).not.toMatch(/justify-between/);
+
+    const columns = nav.querySelectorAll(":scope > div");
+    expect(columns).toHaveLength(2);
+    for (const col of columns) {
+      expect(col.className).toMatch(/\bflex-1\b/);
+    }
+
+    const bottomBar = footer.querySelector(":scope > div > div:last-child");
+    expect(bottomBar).toBeTruthy();
+    expect(bottomBar!.textContent).toBe(messages.footer.copyright);
+    expect(within(bottomBar as HTMLElement).queryAllByRole("link")).toHaveLength(
+      0
     );
 
     const forbidden = [

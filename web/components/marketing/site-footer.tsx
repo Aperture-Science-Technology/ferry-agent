@@ -55,7 +55,7 @@ export function SiteFooter() {
           </div>
 
           <nav
-            className="flex min-w-0 flex-1 justify-between gap-6"
+            className="flex min-w-0 flex-1 gap-6"
             aria-label={t("nav")}
           >
             <FooterColumn title={t("product")} links={PRODUCT_LINKS} t={t} />
@@ -63,14 +63,8 @@ export function SiteFooter() {
           </nav>
         </div>
 
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
           <p className="text-xs text-muted-foreground">{t("copyright")}</p>
-          <Link
-            href="/docs"
-            className="w-fit text-xs text-muted-foreground transition-colors duration-125 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-          >
-            {t("docs")}
-          </Link>
         </div>
       </div>
     </footer>
@@ -87,7 +81,7 @@ function FooterColumn({
   t: (key: FooterLinkKey) => string;
 }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-w-0 flex-1 flex-col gap-3">
       <p className="text-[13px] font-semibold text-foreground">{title}</p>
       <ul className="flex flex-col gap-3">
         {links.map((link) => (
