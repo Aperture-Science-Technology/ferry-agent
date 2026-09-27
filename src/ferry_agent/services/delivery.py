@@ -28,7 +28,7 @@ from ferry_agent.models import (
     LibraryItem,
     User,
 )
-from ferry_agent.services import cloud_links, conversion_profiles, converters, mailer, tierc
+from ferry_agent.services import cloud_links, conversion_profiles, converters, kindle_formats, mailer, tierc
 
 logger = logging.getLogger(__name__)
 
@@ -79,8 +79,10 @@ async def _materialize_or_fail(
 
 
 def _cleanup_derivative(file_path: str, item: LibraryItem, cached_derivative: bool) -> None:
-    if file_path != item.storage_path and not cached_derivative and not conversion_profiles.is_cached_derivative(
-        file_path
+    if (
+        file_path != item.storage_path
+        and not cached_derivative
+        and not conversion_profiles.is_cached_derivative(file_path)
     ):
         Path(file_path).unlink(missing_ok=True)
 
@@ -101,10 +103,10 @@ async def _deliver_tier_a(
         await _fail(db, job, "SMTP non configure (envoi email desactive)")
         return
 
-    target_format = resolve_target_format(
+    target_format = kindle_formats.resolve_kindle_target(
         requested_format,
-        default_format=user.default_format,
-        original_format=item.original_format,
+        user.default_format,
+        item.original_format,
     )
     materialized = await _materialize_or_fail(db, job, item, device, target_format)
     if materialized is None:
@@ -122,6 +124,10 @@ async def _deliver_tier_a(
 
         try:
             await mailer.send_file(file_path, filename, user.kindle_email, kindle=True)
+        except mailer.MessageTooLargeForRelay as exc:
+            # Message actionnable integral (repli tier C) — jamais un generique.
+            await _fail(db, job, str(exc))
+            return
         except Exception as exc:
             await _fail(db, job, str(exc))
             return

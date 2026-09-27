@@ -21,7 +21,7 @@ from ferry_agent.models import (
     User,
 )
 from ferry_agent.schemas import DeliveryCreate
-from ferry_agent.services import delivery
+from ferry_agent.services import delivery, mailer
 
 from tests.fakes import FakeSession
 
@@ -100,17 +100,12 @@ async def test_deliver_tier_a_sends_native_format_and_marks_delivered(monkeypatc
 async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    converted = {}
+    """default_format=mobi (legacy) → EPUB pour Send-to-Kindle (Amazon 2023)."""
     sent = {}
-
-    async def fake_epub_to_mobi(epub_path, mobi_path=None, extra_args=None):
-        converted["called_with"] = epub_path
-        return str(Path(epub_path).with_suffix(".mobi"))
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename)
 
-    monkeypatch.setattr(delivery.converters, "epub_to_mobi", fake_epub_to_mobi)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
 
@@ -122,8 +117,9 @@ async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
 
     await delivery._deliver_tier_a(db, job, item, device, user)
 
-    assert converted["called_with"] == item.storage_path
-    assert sent["filename"] == "book.mobi"
+    assert sent["filename"].endswith(".epub")
+    assert sent["filename"] == "book.epub"
+    assert job.target_format == "epub"
     assert job.status == DeliveryStatus.delivered
 
 
@@ -167,33 +163,26 @@ async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
 async def test_deliver_tier_a_converts_requested_format_even_if_brand_is_not_kindle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Le format demande prime : pas de succes silencieux dans le format d'origine."""
-    converted = {}
+    """mobi demande (legacy) → EPUB, meme si la marque n'est pas Kindle."""
     sent = {}
-
-    async def fake_epub_to_mobi(epub_path, mobi_path=None, extra_args=None):
-        converted["called_with"] = epub_path
-        return str(Path(epub_path).with_suffix(".mobi"))
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename)
 
-    monkeypatch.setattr(delivery.converters, "epub_to_mobi", fake_epub_to_mobi)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
 
-    user = make_user(default_format="mobi")
+    user = make_user(default_format="epub")
     device = make_device(brand=DeviceBrand.kobo)
     item = make_item()
     job = make_job()
     db = FakeSession()
 
-    await delivery._deliver_tier_a(db, job, item, device, user)
+    await delivery._deliver_tier_a(db, job, item, device, user, requested_format="mobi")
 
-    assert converted["called_with"] == item.storage_path
-    assert sent["filename"] == "book.mobi"
+    assert sent["filename"] == "book.epub"
     assert job.status == DeliveryStatus.delivered
-    assert job.target_format == "mobi"
+    assert job.target_format == "epub"
 
 
 async def test_deliver_tier_a_converts_epub_to_pdf_when_requested(
@@ -309,31 +298,93 @@ async def test_deliver_tier_a_marks_failed_on_send_error(monkeypatch: pytest.Mon
 async def test_deliver_tier_a_fails_when_calibre_unavailable_no_pdf_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Sans Calibre : failed + message actionnable, aucun envoi (pas de PDF)."""
+    """azw3 demande → EPUB ; sans Calibre pour PDF→EPUB : failed, aucun envoi."""
     sent = {}
 
-    async def raising_azw3(*_args, **_kwargs):
-        raise RuntimeError("ebook-convert indisponible: conversion vers AZW3 impossible")
+    async def raising_to_epub(*_args, **_kwargs):
+        raise RuntimeError("ebook-convert indisponible: conversion vers EPUB impossible")
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
         sent.update(file_path=file_path, filename=filename)
 
-    monkeypatch.setattr(delivery.converters, "epub_to_azw3", raising_azw3)
+    monkeypatch.setattr(delivery.converters, "convert_to_epub", raising_to_epub)
     monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
     monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
 
-    user = make_user(default_format="azw3")
+    user = make_user(default_format="epub")
     device = make_device(brand=DeviceBrand.kindle)
-    item = make_item(original_format="epub")
+    item = make_item(original_format="pdf", storage_path="/tmp/fake-library/book.pdf")
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user, requested_format="azw3")
+
+    assert job.status == DeliveryStatus.failed
+    assert job.error == delivery.converters.CONVERSION_FAILED_USER_MESSAGE
+    assert sent == {}
+    assert job.delivered_at is None
+
+
+async def test_deliver_tier_a_surfaces_too_large_message_to_job(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """MessageTooLargeForRelay → failed avec le message integral + cleanup derive."""
+    derivative = tmp_path / "book-derived.epub"
+    derivative.write_bytes(b"PK\x03\x04fake-epub")
+    too_large_msg = (
+        "Message encode de 40000 Ko > plafond 25000 Ko : utilisez le telechargement navigateur (tier C) pour ce livre."
+    )
+
+    async def fake_materialize(**_kwargs):
+        return str(derivative), False
+
+    async def raising_send(*_args, **_kwargs):
+        raise mailer.MessageTooLargeForRelay(too_large_msg)
+
+    monkeypatch.setattr(delivery.converters, "materialize_target_format", fake_materialize)
+    monkeypatch.setattr(delivery.mailer, "send_file", raising_send)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user()
+    device = make_device()
+    item = make_item(storage_path=str(tmp_path / "book.epub"))
     job = make_job()
     db = FakeSession()
 
     await delivery._deliver_tier_a(db, job, item, device, user)
 
     assert job.status == DeliveryStatus.failed
-    assert job.error == delivery.converters.CONVERSION_FAILED_USER_MESSAGE
-    assert sent == {}
-    assert job.delivered_at is None
+    assert job.error == too_large_msg
+    assert "tier C" in job.error
+    assert not derivative.exists()
+
+
+async def test_deliver_tier_a_never_sends_legacy_format(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Aucun filename transmis au mailer ne doit finir en .mobi/.azw/.azw3/.prc."""
+    legacy_suffixes = (".mobi", ".azw", ".azw3", ".prc")
+    sent_filenames: list[str] = []
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        sent_filenames.append(filename)
+
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    for legacy in ("mobi", "azw", "azw3", "prc"):
+        user = make_user(default_format=legacy)
+        device = make_device(brand=DeviceBrand.kindle)
+        item = make_item()
+        job = make_job()
+        db = FakeSession()
+        await delivery._deliver_tier_a(db, job, item, device, user)
+        assert job.status == DeliveryStatus.delivered
+        assert job.target_format == "epub"
+
+    assert sent_filenames
+    for name in sent_filenames:
+        lower = name.lower()
+        assert not any(lower.endswith(sfx) for sfx in legacy_suffixes)
+        assert lower.endswith(".epub")
 
 
 async def test_deliver_routes_tier_a_via_full_lookup(monkeypatch: pytest.MonkeyPatch) -> None:

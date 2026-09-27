@@ -20,12 +20,7 @@ from tests.test_cloud_links import make_user as make_cloud_user
 from tests.test_delivery_tier_a import make_device, make_item, make_job, make_user
 from tests.fakes import FakeSession
 
-_MIGRATION_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "alembic"
-    / "versions"
-    / "0012_device_conversion_profile.py"
-)
+_MIGRATION_PATH = Path(__file__).resolve().parent.parent / "alembic" / "versions" / "0012_device_conversion_profile.py"
 
 
 def test_migration_0012_revision_chain() -> None:
@@ -172,9 +167,7 @@ async def test_two_profiles_produce_distinct_ebook_convert_args(
     assert out_6.read_bytes() != out_tab.read_bytes() or True  # meme stub OK si args differents
 
 
-async def test_second_delivery_reuses_conversion_cache(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+async def test_second_delivery_reuses_conversion_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     pdf = tmp_path / "book.pdf"
     pdf.write_bytes(b"%PDF-1.4 fake")
     convert_calls = {"n": 0}
@@ -260,28 +253,27 @@ async def test_update_device_sets_conversion_profile() -> None:
     user = CurrentUser(id=device.user_id, email="reader@example.test")
     db = FakeSession([device])
 
-    out = await devices.update_device(
-        device.id, DevicePatch(conversion_profile="reader_6in"), user, db
-    )
+    out = await devices.update_device(device.id, DevicePatch(conversion_profile="reader_6in"), user, db)
 
     assert out.conversion_profile == "reader_6in"
     assert device.conversion_profile == {"preset": "reader_6in"}
 
 
-async def test_tier_a_passes_profile_args_into_mobi_conversion(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    epub = tmp_path / "book.epub"
-    epub.write_bytes(b"PK" + b"x" * 100)
+async def test_tier_a_passes_profile_args_into_epub_conversion(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    mobi = tmp_path / "book.mobi"
+    mobi.write_bytes(b"m" * 100)
     seen: dict = {}
+    mailed: dict = {}
 
     async def fake_convert_with_profile_cache(**kwargs):
         seen.update(kwargs)
-        out = tmp_path / "out.mobi"
-        out.write_bytes(b"m" * 2048)
+        out = tmp_path / "out.epub"
+        out.write_bytes(b"PK" + b"x" * 2048)
         return str(out), False
 
     async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        mailed["file_path"] = file_path
+        mailed["filename"] = filename
         return None
 
     monkeypatch.setattr(delivery.converters, "convert_with_profile_cache", fake_convert_with_profile_cache)
@@ -293,13 +285,54 @@ async def test_tier_a_passes_profile_args_into_mobi_conversion(
         brand=DeviceBrand.kindle,
         conversion_profile={"preset": "tablet"},
     )
-    item = make_item(storage_path=str(epub), original_format="epub")
+    item = make_item(storage_path=str(mobi), original_format="mobi")
     job = make_job()
     db = FakeSession()
 
     await delivery._deliver_tier_a(db, job, item, device, user)
 
     assert seen["preset"] == "tablet"
-    assert seen["convert_kind"] == "epub_to_mobi"
-    assert seen["target_format"] == "mobi"
+    assert seen["convert_kind"] == "to_epub"
+    assert seen["target_format"] == "epub"
+    assert job.target_format == "epub"
+    assert mailed["filename"].endswith(".epub")
+    assert job.status == DeliveryStatus.delivered
+
+
+async def test_tier_a_epub_source_to_epub_target_is_a_passthrough_without_conversion(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Le profil de conversion n'est pas appliqué ici, car materialize_target_format court-circuite quand le format cible égale le format d'origine ; comportement connu, documenté pour décision ultérieure."""
+    epub = tmp_path / "book.epub"
+    epub.write_bytes(b"PK" + b"x" * 100)
+    convert_calls = 0
+    mailed: dict = {}
+
+    async def fake_convert_with_profile_cache(**kwargs):
+        nonlocal convert_calls
+        convert_calls += 1
+        raise AssertionError("convert_with_profile_cache must not be called for epub→epub passthrough")
+
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+        mailed["file_path"] = file_path
+        mailed["filename"] = filename
+        return None
+
+    monkeypatch.setattr(delivery.converters, "convert_with_profile_cache", fake_convert_with_profile_cache)
+    monkeypatch.setattr(delivery.mailer, "send_file", fake_send_file)
+    monkeypatch.setattr(delivery.mailer, "is_configured", lambda: True)
+
+    user = make_user(default_format="epub")
+    device = make_device(
+        brand=DeviceBrand.kindle,
+        conversion_profile={"preset": "tablet"},
+    )
+    item = make_item(storage_path=str(epub), original_format="epub")
+    job = make_job()
+    db = FakeSession()
+
+    await delivery._deliver_tier_a(db, job, item, device, user)
+
+    assert convert_calls == 0
+    assert mailed["file_path"] == item.storage_path
     assert job.status == DeliveryStatus.delivered
