@@ -375,7 +375,7 @@ describe("UI harness — settings / OPDS", () => {
     const confirm = within(dialog).getByRole("button", {
       name: messages.settings.readerCatalog.revoke,
     });
-    expect(confirm.className).not.toMatch(/bg-destructive\/10/);
+    expect(confirm.className).toMatch(/bg-destructive(?!\/)/);
 
     fireEvent.click(
       within(dialog).getByRole("button", {

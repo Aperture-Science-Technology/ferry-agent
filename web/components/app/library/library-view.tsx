@@ -985,6 +985,7 @@ export function LibraryView({
               {tCommon("cancel")}
             </Button>
             <Button
+              variant="destructive"
               onClick={() => void confirmDelete()}
               disabled={deleting}
             >
