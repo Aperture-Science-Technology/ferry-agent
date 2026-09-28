@@ -118,6 +118,13 @@ export function AppMobileNav() {
     t("account");
   const email =
     user?.primaryEmailAddress?.emailAddress?.trim() || t("account");
+  const initial = (
+    user?.firstName?.trim()?.charAt(0) ||
+    user?.fullName?.trim()?.charAt(0) ||
+    user?.primaryEmailAddress?.emailAddress?.charAt(0) ||
+    "?"
+  ).toUpperCase();
+  const hasImage = Boolean(user?.hasImage);
 
   const moreActive =
     MORE_LINKS.some((item) => pathname?.startsWith(item.href)) ||
@@ -255,18 +262,29 @@ export function AppMobileNav() {
 
             <div className="h-px w-full bg-border" aria-hidden />
 
-            <div className="flex w-full min-w-0 items-center gap-2.5 rounded-md bg-sidebar-accent p-3">
-              <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-avatar">
-                <UserButton
-                  appearance={{
-                    elements: {
-                      avatarBox: "size-8",
-                      userButtonTrigger: "size-8",
-                    },
-                  }}
-                />
+            <div
+              data-testid="mobile-more-account"
+              className="relative flex w-full min-w-0 items-center gap-2.5 rounded-md bg-sidebar-accent p-3"
+            >
+              <div
+                data-testid="mobile-more-account-avatar"
+                className="pointer-events-none flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-secondary"
+                aria-hidden
+              >
+                {hasImage && user?.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- Clerk profile URL; not a static asset
+                  <img
+                    src={user.imageUrl}
+                    alt=""
+                    className="size-8 object-cover"
+                  />
+                ) : (
+                  <span className="text-sm font-medium text-foreground">
+                    {initial}
+                  </span>
+                )}
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="pointer-events-none min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">
                   {displayName}
                 </p>
@@ -275,9 +293,22 @@ export function AppMobileNav() {
                 </p>
               </div>
               <ChevronsUpDown
-                className="size-4 shrink-0 text-muted-foreground"
+                className="pointer-events-none size-4 shrink-0 text-muted-foreground"
                 aria-hidden
               />
+              {/* Invisible Clerk trigger covers the whole row (keeps account menu). */}
+              <div className="absolute inset-0 [&_.cl-userButton-box]:size-full [&_.cl-userButtonTrigger]:size-full [&_.cl-userButtonTrigger]:rounded-sm [&_.cl-userButtonTrigger]:opacity-0 [&_.cl-avatarBox]:hidden">
+                <UserButton
+                  appearance={{
+                    elements: {
+                      rootBox: "size-full",
+                      userButtonBox: "size-full",
+                      userButtonTrigger: "size-full opacity-0",
+                      avatarBox: "hidden",
+                    },
+                  }}
+                />
+              </div>
             </div>
           </div>
         </SheetContent>

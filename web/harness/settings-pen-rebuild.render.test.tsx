@@ -170,7 +170,7 @@ describe("UI harness — Pen settings composition", () => {
     ).toBeTruthy();
   });
 
-  it("uses PageHeader with a single Settings title (Pen 06 specimen 40/900)", () => {
+  it("uses PageHeader with a single Settings title (Header/Page 28/700)", () => {
     renderSettings("fr");
     const layout = screen.getByTestId("settings-pen-layout");
     const titles = within(layout).getAllByRole("heading", {
@@ -178,9 +178,11 @@ describe("UI harness — Pen settings composition", () => {
       name: "Réglages",
     });
     expect(titles.length).toBe(1);
-    expect(titles[0]!.className).toMatch(/text-\[32px\]/);
-    expect(titles[0]!.className).toMatch(/md:text-\[40px\]/);
-    expect(titles[0]!.className).toMatch(/font-black/);
+    expect(titles[0]!.className).toMatch(/text-\[28px\]/);
+    expect(titles[0]!.className).toMatch(/font-bold/);
+    expect(titles[0]!.className).toMatch(/tracking-\[-0\.5px\]/);
+    expect(titles[0]!.className).not.toMatch(/md:text-\[40px\]/);
+    expect(titles[0]!.className).not.toMatch(/font-black/);
     expect(screen.queryByTestId("settings-header-mobile")).toBeNull();
     expect(screen.queryByTestId("settings-header-desktop")).toBeNull();
   });
@@ -198,6 +200,38 @@ describe("UI harness — Pen settings composition", () => {
     expect(screen.getByText(messagesFr.settings.email)).toBeTruthy();
     expect(screen.getByText(messagesFr.settings.languageLabel)).toBeTruthy();
     expect(screen.getByText(messagesFr.settings.documentationLabel)).toBeTruthy();
+
+    // Lot 17 / Pref card: $--card, radius-lg, border, pad [8,20]; Langue
+    // bordered; Documentation last without border; chevron-right on rows.
+    const preferences = screen.getByTestId("settings-preferences");
+    expect(preferences.className).toMatch(/gap-3/);
+    const prefTitle = within(preferences).getByRole("heading", {
+      level: 2,
+      name: messagesFr.settings.preferencesTitle,
+    });
+    expect(prefTitle.className).toMatch(/text-base/);
+    expect(prefTitle.className).toMatch(/font-medium/);
+    const prefCard = screen.getByTestId("settings-preferences-card");
+    expect(prefCard.className).toMatch(/rounded-lg/);
+    expect(prefCard.className).toMatch(/border-border/);
+    expect(prefCard.className).toMatch(/bg-card/);
+    expect(prefCard.className).toMatch(/(?:^|\s)px-5(?:\s|$)/);
+    expect(prefCard.className).toMatch(/(?:^|\s)py-2(?:\s|$)/);
+    const docsLink = within(preferences).getByRole("link", {
+      name: messagesFr.settings.documentationLabel,
+    });
+    expect(docsLink.className).not.toMatch(/border-b/);
+    expect(docsLink.className).toMatch(/hover:bg-accent/);
+    expect(docsLink.className).toMatch(/cursor-pointer/);
+    expect(docsLink.querySelector("svg.lucide-chevron-right")).toBeTruthy();
+    const languageTrigger = within(preferences).getByRole("button", {
+      name: messagesFr.locale.choose,
+    });
+    expect(languageTrigger.className).toMatch(/border-b/);
+    expect(languageTrigger.className).toMatch(/hover:bg-accent/);
+    expect(languageTrigger.className).toMatch(/cursor-pointer/);
+    expect(languageTrigger.querySelector("svg.lucide-chevron-right")).toBeTruthy();
+
     unmount();
 
     renderSettings("en");

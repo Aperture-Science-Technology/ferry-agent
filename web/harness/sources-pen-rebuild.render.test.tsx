@@ -165,16 +165,18 @@ describe("UI harness — Pen sources composition", () => {
     });
   });
 
-  it("uses PageHeader with Sources title (Pen 06 specimen 40/900)", () => {
+  it("uses PageHeader with Sources title (Header/Page 28/700)", () => {
     renderSources("fr");
     const layout = screen.getByTestId("sources-pen-layout");
     const title = within(layout).getByRole("heading", {
       level: 1,
       name: "Sources",
     });
-    expect(title.className).toMatch(/text-\[32px\]/);
-    expect(title.className).toMatch(/md:text-\[40px\]/);
-    expect(title.className).toMatch(/font-black/);
+    expect(title.className).toMatch(/text-\[28px\]/);
+    expect(title.className).toMatch(/font-bold/);
+    expect(title.className).toMatch(/tracking-\[-0\.5px\]/);
+    expect(title.className).not.toMatch(/md:text-\[40px\]/);
+    expect(title.className).not.toMatch(/font-black/);
     expect(screen.queryByTestId("sources-header-mobile")).toBeNull();
     expect(screen.queryByTestId("sources-header-desktop")).toBeNull();
   });

@@ -24,13 +24,13 @@ export default async function DashboardLayout({
         Mobile: reserve fixed MobileBottomNav (h 72) + safe-area under content
         (see mobileNavContentPadClass). Desktop: md:pb-0 — no unused pad.
       */}
-      <SidebarInset className="min-w-0 overflow-x-hidden bg-background pb-[calc(4.5rem+1px+env(safe-area-inset-bottom,0px))] md:pb-0">
+      <SidebarInset className="min-w-0 overflow-x-hidden bg-background pb-[calc(4.5rem+1px+env(safe-area-inset-bottom,0px))] md:border md:border-border md:pb-0">
         <DashboardHeader />
         {/*
-          Pen 06 Main card on every dashboard screen: $--card, radius-lg (15),
-          pad [24,32] desktop / px-5 (20) mobile, gap 24, full height, flush.
+          Ordinary dashboard Main (not vue 06 flow card): pad [32,40] desktop,
+          gap 24, no background, no radius.
         */}
-        <div className="flex w-full min-w-0 flex-1 flex-col gap-6 rounded-lg bg-card px-5 py-6 md:px-8 md:py-6">
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-6 px-5 pt-6 md:gap-6 md:px-10 md:py-8">
           {children}
         </div>
       </SidebarInset>
