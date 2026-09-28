@@ -23,6 +23,14 @@ const appLayoutSource = readFileSync(
   join(harnessDir, "../app/[locale]/app/layout.tsx"),
   "utf8"
 );
+const appSidebarSource = readFileSync(
+  join(harnessDir, "../components/app/app-sidebar.tsx"),
+  "utf8"
+);
+const dashboardHeaderSource = readFileSync(
+  join(harnessDir, "../components/app/dashboard-header.tsx"),
+  "utf8"
+);
 
 const pathnameRef = { current: "/app/bibliotheque" };
 
@@ -97,6 +105,19 @@ describe("UI harness — app shell", () => {
     expect(within(sheet).getByText("Alex Martin")).toBeTruthy();
     expect(within(sheet).getByText(/alex@example\.com/)).toBeTruthy();
     expect(within(sheet).getByTestId("user-button")).toBeTruthy();
+
+    const mobileAvatar = within(sheet).getByTestId(
+      "mobile-more-account-avatar"
+    );
+    expect(mobileAvatar.className).toMatch(/(?:^|\s)size-8(?:\s|$)/);
+    expect(mobileAvatar.className).toMatch(/(?:^|\s)rounded-md(?:\s|$)/);
+    expect(mobileAvatar.className).toMatch(/bg-secondary/);
+    expect(mobileAvatar.className).not.toMatch(/bg-avatar/);
+    const mobileInitial = within(mobileAvatar).getByText("A");
+    expect(mobileInitial).toBeTruthy();
+    expect(mobileInitial.className).toMatch(/text-foreground/);
+    expect(mobileInitial.className).not.toMatch(/text-primary-foreground/);
+    expect(mobileAvatar.querySelector("img")).toBeNull();
   });
 
   it("marks Gateway as the current page in the desktop sidebar", () => {
@@ -155,11 +176,22 @@ describe("UI harness — app shell", () => {
 
     const sidebar = footerCard.closest("[data-slot='sidebar']");
     expect(sidebar).toBeTruthy();
-    expect(sidebar!.className).toMatch(/(?:^|\s)p-0(?:\s|$)/);
-    expect(sidebar!.className).not.toMatch(/(?:^|\s)p-2(?:\s|$)/);
-    // Lot 14: full-viewport height so Footer Cluster can stick to the bottom.
-    expect(sidebar!.className).toMatch(/(?:^|\s)h-svh(?:\s|$)/);
-    expect(sidebar!.className).toMatch(/justify-between/);
+    expect(sidebar!.getAttribute("data-variant")).toBe("inset");
+
+    const sidebarContainer = footerCard.closest(
+      "[data-slot='sidebar-container']"
+    );
+    expect(sidebarContainer).toBeTruthy();
+    // inset adds p-2; p-0 must win so nav items stay 176 wide.
+    expect(sidebarContainer!.className).toMatch(/(?:^|\s)p-0(?:\s|$)/);
+    expect(sidebarContainer!.className).not.toMatch(/(?:^|\s)p-2(?:\s|$)/);
+    expect(sidebarContainer!.className).toMatch(/(?:^|\s)h-svh(?:\s|$)/);
+
+    // Lot 17: inset + offcanvas (not collapsible=none / variant=sidebar).
+    expect(appSidebarSource).toMatch(/variant=["']inset["']/);
+    expect(appSidebarSource).toMatch(/collapsible=["']offcanvas["']/);
+    expect(appSidebarSource).not.toMatch(/variant=["']sidebar["']/);
+    expect(appSidebarSource).not.toMatch(/collapsible=["']none["']/);
 
     const account = screen.getByTestId("sidebar-account");
     expect(account.className).toMatch(/(?:^|\s)h-12(?:\s|$)/);
@@ -171,21 +203,40 @@ describe("UI harness — app shell", () => {
     const avatar = screen.getByTestId("sidebar-account-avatar");
     expect(avatar.className).toMatch(/(?:^|\s)size-8(?:\s|$)/);
     expect(avatar.className).toMatch(/(?:^|\s)rounded-md(?:\s|$)/);
-    expect(avatar.className).toMatch(/bg-avatar/);
-    expect(within(avatar).getByText("A")).toBeTruthy();
+    expect(avatar.className).toMatch(/bg-secondary/);
+    expect(avatar.className).not.toMatch(/bg-avatar/);
+    const avatarInitial = within(avatar).getByText("A");
+    expect(avatarInitial).toBeTruthy();
+    expect(avatarInitial.className).toMatch(/text-foreground/);
+    expect(avatarInitial.className).not.toMatch(/text-primary-foreground/);
     expect(avatar.querySelector("img")).toBeNull();
   });
 
-  it("locks Pen 06 main card geometry and PageHeader title scale in layout/source", () => {
-    // Lot 14 / vue 06: main = $--card, radius-lg, pad 24/32 (px-5 mobile),
-    // title 40/900 desktop · 32/900 mobile; no fixed h-[88px].
-    expect(appLayoutSource).toMatch(/rounded-lg/);
-    expect(appLayoutSource).toMatch(/bg-card/);
-    expect(appLayoutSource).toMatch(/md:px-8/);
-    expect(appLayoutSource).toMatch(/md:py-6/);
+  it("locks inset panel border and desktop SidebarTrigger for offcanvas reopen", () => {
+    // Lot 17: inset panel on --background needs md:border; trigger required
+    // because offcanvas can hide the fixed sidebar.
+    expect(appLayoutSource).toMatch(
+      /SidebarInset[\s\S]*md:border[\s\S]*md:border-border/
+    );
+    expect(appLayoutSource).toMatch(/md:border md:border-border/);
+    expect(dashboardHeaderSource).toMatch(/SidebarTrigger/);
+    expect(dashboardHeaderSource).toMatch(
+      /from ["']@\/components\/ui\/sidebar["']/
+    );
+  });
+
+  it("locks ordinary Main pad and Header/Page geometry in layout/source", () => {
+    // Lot 16: ordinary screens — Main pad [32,40] desktop (md:px-10 md:py-8),
+    // no bg-card / rounded-lg; Header/Page h 88 + p-2; title 28/700 tracking
+    // -0.5; subtitle muted sm, no max-width.
+    expect(appLayoutSource).toMatch(/md:px-10/);
+    expect(appLayoutSource).toMatch(/md:py-8/);
     expect(appLayoutSource).toMatch(/(?:^|\s|["'])px-5(?:\s|["'])/);
-    expect(appLayoutSource).not.toMatch(/md:px-10/);
-    expect(appLayoutSource).not.toMatch(/md:py-8/);
+    expect(appLayoutSource).toMatch(/(?:^|\s|["'])pt-6(?:\s|["'])/);
+    expect(appLayoutSource).not.toMatch(/rounded-lg/);
+    expect(appLayoutSource).not.toMatch(/bg-card/);
+    expect(appLayoutSource).not.toMatch(/md:px-8/);
+    expect(appLayoutSource).not.toMatch(/md:py-6/);
 
     renderShell(
       <PageHeader title="Bibliothèque" description="Retrouver dans mes livres" />
@@ -194,20 +245,28 @@ describe("UI harness — app shell", () => {
       level: 1,
       name: "Bibliothèque",
     });
-    expect(title.className).toMatch(/text-\[32px\]/);
-    expect(title.className).toMatch(/md:text-\[40px\]/);
-    expect(title.className).toMatch(/font-black/);
-    expect(title.className).not.toMatch(/text-\[28px\]/);
-    expect(title.className).not.toMatch(/font-bold/);
+    expect(title.className).toMatch(/text-\[28px\]/);
+    expect(title.className).toMatch(/font-bold/);
+    expect(title.className).toMatch(/tracking-\[-0\.5px\]/);
+    expect(title.className).not.toMatch(/text-\[32px\]/);
+    expect(title.className).not.toMatch(/md:text-\[40px\]/);
+    expect(title.className).not.toMatch(/font-black/);
 
     const description = screen.getByText("Retrouver dans mes livres");
-    expect(description.className).toMatch(/max-w-\[560px\]/);
-    expect(description.className).toMatch(/text-base/);
+    expect(description.className).toMatch(/text-sm/);
     expect(description.className).toMatch(/font-medium/);
+    expect(description.className).toMatch(/text-muted-foreground/);
+    expect(description.className).not.toMatch(/max-w-\[560px\]/);
+    expect(description.className).not.toMatch(/text-base/);
 
     const header = title.closest("div")?.parentElement;
     expect(header).toBeTruthy();
-    expect(header!.className).not.toMatch(/h-\[88px\]/);
+    expect(header!.className).toMatch(/h-\[88px\]/);
+    expect(header!.className).toMatch(/min-h-\[88px\]/);
+    expect(header!.className).toMatch(/(?:^|\s)p-2(?:\s|$)/);
+    expect(header!.className).toMatch(
+      /flex h-\[88px\] min-h-\[88px\] flex-wrap items-center justify-between gap-4 p-2/
+    );
   });
 
   it("keeps PageHeader actions compressible so narrow viewports do not overflow", () => {
@@ -245,7 +304,12 @@ describe("UI harness — app shell", () => {
       /pb-\[calc\(4\.5rem\+1px\+env\(safe-area-inset-bottom/
     );
     expect(mobileNavContentPadClass).toMatch(/md:pb-0/);
-    expect(appLayoutSource).toContain(mobileNavContentPadClass);
+    // Lot 17 inserts md:border md:border-border before md:pb-0 on SidebarInset;
+    // keep the mobile pad contract without requiring the exact concatenated string.
+    expect(appLayoutSource).toMatch(
+      /pb-\[calc\(4\.5rem\+1px\+env\(safe-area-inset-bottom,0px\)\)\]/
+    );
+    expect(appLayoutSource).toMatch(/md:pb-0/);
     // Do not leave the old inner-only pad (or none) without the main contract.
     expect(appLayoutSource).toMatch(
       /SidebarInset[\s\S]*pb-\[calc\(4\.5rem\+1px\+env\(safe-area-inset-bottom/

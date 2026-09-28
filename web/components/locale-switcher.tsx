@@ -103,7 +103,7 @@ export function LocaleMenu({
           className={cn(
             "flex w-full min-w-0 items-center gap-4 py-4 text-left",
             showBorder && "border-b border-border",
-            "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+            "group cursor-pointer rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
             className
           )}
           aria-label={tLocale("choose")}
@@ -117,7 +117,7 @@ export function LocaleMenu({
             </span>
           </div>
           <ChevronRight
-            className="size-4 shrink-0 text-muted-foreground"
+            className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground"
             aria-hidden
           />
         </DropdownMenuTrigger>

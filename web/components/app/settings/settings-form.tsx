@@ -87,13 +87,13 @@ function PreferencesRow({
     <>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="text-sm font-medium text-foreground">{title}</span>
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-xs font-normal text-muted-foreground">
           {subtitle}
         </span>
       </div>
       {chevron ? (
         <ChevronRight
-          className="size-4 shrink-0 text-muted-foreground"
+          className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground"
           aria-hidden
         />
       ) : null}
@@ -104,7 +104,7 @@ function PreferencesRow({
     "flex w-full min-w-0 items-center gap-4 py-4 text-left",
     showBorder && "border-b border-border",
     (href || onClick) &&
-      "rounded-sm focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      "group cursor-pointer rounded-sm hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
   );
 
   if (href) {
@@ -518,7 +518,10 @@ export function SettingsForm({
             <h2 className="text-base font-medium text-foreground">
               {t("preferencesTitle")}
             </h2>
-            <div className="flex min-w-0 flex-col rounded-lg border border-border bg-card px-5 py-2">
+            <div
+              data-testid="settings-preferences-card"
+              className="flex min-w-0 flex-col rounded-lg border border-border bg-card px-5 py-2"
+            >
               {/* Account email — exists in app, absent from Pen Compte → Préférences row */}
               <PreferencesRow
                 title={t("email")}
