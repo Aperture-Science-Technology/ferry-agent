@@ -27,7 +27,7 @@ export function HowItWorks() {
     <section
       id="how-it-works"
       data-testid="landing-how-it-works"
-      className="mx-auto w-full max-w-[1152px] px-6 pt-16 md:pt-24"
+      className="mx-auto w-full max-w-[1152px] scroll-mt-[86px] px-6 pt-16 md:pt-24 lg:scroll-mt-[98px]"
     >
       <div className="flex flex-col gap-12">
         <div className="grid w-full max-w-[880px] gap-6 md:grid-cols-2 md:items-start md:justify-between">

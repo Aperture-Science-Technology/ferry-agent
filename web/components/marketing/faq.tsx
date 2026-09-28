@@ -32,7 +32,7 @@ export function Faq() {
       <section
         id="faq"
         data-testid="landing-faq"
-        className="px-6 pt-6 pb-16 md:pt-6 md:pb-20"
+        className="scroll-mt-[86px] px-6 pt-6 pb-16 md:pt-6 md:pb-20 lg:scroll-mt-[98px]"
         aria-labelledby={`${baseId}-title`}
       >
         <div className="mx-auto flex w-full flex-col items-center gap-8 md:gap-10">

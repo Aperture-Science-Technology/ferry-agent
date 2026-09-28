@@ -20,7 +20,7 @@ export function Delivered() {
     <section
       id="delivered"
       data-testid="landing-on-your-device"
-      className="mx-auto w-full max-w-[1152px] px-6 pt-16 pb-12 md:pt-24"
+      className="mx-auto w-full max-w-[1152px] scroll-mt-[86px] px-6 pt-16 pb-12 md:pt-24 lg:scroll-mt-[98px]"
     >
       <div className="flex flex-col gap-10">
         <div className="grid w-full gap-6 md:grid-cols-2 md:items-start md:justify-between">

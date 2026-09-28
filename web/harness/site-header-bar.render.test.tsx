@@ -1,5 +1,5 @@
 /**
- * Public marketing header bar (lg): brand + nav never wrap; Pen Lang chrome;
+ * Public marketing header bar (lg): brand + nav never wrap; Pen bare Lang pair;
  * no inline styles. Class assertions in jsdom — not layout measurements.
  * Run: npm run test:ui-harness
  */
@@ -63,35 +63,46 @@ describe("UI harness — public site header bar (Pen LLhzT Nav)", () => {
     expect(header.innerHTML).not.toMatch(/style=\{\{/);
     expect(header.querySelector("[style]")).toBeNull();
 
-    const bar = header.querySelector(".lg\\:max-w-\\[880px\\]");
+    expect(header.className).toMatch(/fixed/);
+    expect(header.className).toMatch(/z-20/);
+
+    const bar = header.querySelector(".max-w-\\[1152px\\]");
     expect(bar).toBeTruthy();
-    expect(bar!.className).toMatch(/lg:border-white\/15/);
+    // Resting shell: transparent chrome (scrolled styles only after scrollY > 0).
+    expect(bar!.className).not.toMatch(/bg-\[#0F1114D9\]/);
+    expect(bar!.className).toMatch(/border-transparent/);
+    expect(bar!.className).toMatch(/h-\[70px\]/);
 
     const brand = within(header).getByRole("link", { name: /ferry agent/i });
     expect(brand.className).toMatch(/shrink-0/);
     const brandWordmark = brand.querySelector(".whitespace-nowrap");
     expect(brandWordmark).toBeTruthy();
     expect(brandWordmark?.textContent).toMatch(/Ferry Agent/i);
+    expect(brandWordmark?.className).toMatch(/text-\[17px\]/);
 
     const desktopNav = within(header).getByRole("navigation", {
       name: /navigation/i,
     });
     expect(desktopNav.className).toMatch(/shrink-0/);
+    expect(desktopNav.className).toMatch(/gap-\[26px\]/);
 
     const navLinks = within(desktopNav).getAllByRole("link");
     expect(navLinks.length).toBeGreaterThanOrEqual(4);
     for (const link of navLinks) {
       expect(link.className).toMatch(/whitespace-nowrap/);
+      expect(link.className).toMatch(/text-\[#A4AEA8\]/);
     }
 
     const langGroup = within(header).getByRole("group", { name: /langue/i });
-    // The Pen's nav bar prescribes a control shorter than the design system pill
-    // (Lang 28px in a 70px bar, next to 32px buttons). The pair carries that size
-    // contract on its wrapper, so the buttons keep the shared Button base classes.
-    expect(langGroup.className).toMatch(/\[&_button\]:h-7/);
-    expect(langGroup.className).toMatch(/\[&_button\]:rounded-lg/);
-    expect(langGroup.className).toMatch(/\[&_button\]:px-2\.5/);
+    // Pen Nav: bare FR/EN text pair (13px, gap 8) — no framed pill chrome.
+    expect(langGroup.className).toMatch(/gap-2/);
     expect(langGroup.className).toMatch(/\[&_button\]:text-\[13px\]/);
+    expect(langGroup.className).toMatch(/\[&_button\]:bg-transparent/);
+    expect(langGroup.className).toMatch(/\[&_button\]:border-transparent/);
+    expect(langGroup.className).toMatch(/\[&_button\]:rounded-none/);
+    expect(langGroup.className).not.toMatch(/\[&_button\]:h-7/);
+    expect(langGroup.className).not.toMatch(/\[&_button\]:rounded-lg/);
+    expect(langGroup.className).not.toMatch(/\[&_button\]:px-2\.5/);
     expect(langGroup.className).not.toMatch(/\[&_button\]:h-10/);
 
     const langButtons = within(langGroup).getAllByRole("button");
