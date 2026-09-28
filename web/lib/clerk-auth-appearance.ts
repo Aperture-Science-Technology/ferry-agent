@@ -61,7 +61,12 @@ export function clerkAuthAppearance(variant: AuthVariant): ClerkAppearanceTheme 
       formFieldHintText: "text-[13px] text-muted-foreground",
       formButtonPrimary:
         "h-9 rounded-[10px] bg-primary text-sm font-medium text-primary-foreground shadow-none transition-colors hover:bg-primary/90 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50",
-      footer: "bg-transparent shadow-none",
+      // Keep "Secured by Clerk" visible (plan requirement) but flush to the 448px column:
+      // Clerk's footer injects $8 horizontal padding on children, which overflows the fields.
+      footer:
+        "w-full max-w-[448px] bg-transparent shadow-none p-0 [&>*]:!px-0 [&>*]:!py-4",
+      footerItem:
+        "w-full max-w-[448px] justify-center text-xs text-muted-foreground",
       footerAction: "text-sm text-muted-foreground",
       footerActionText: "text-sm text-muted-foreground",
       footerActionLink:
