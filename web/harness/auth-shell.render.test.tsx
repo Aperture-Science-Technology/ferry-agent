@@ -111,6 +111,8 @@ describe("UI harness — auth shell", () => {
       signUpSubtitle: messages.auth.signUp.subtitle,
       emailLabel: messages.auth.signIn.emailLabel,
       passwordLabel: messages.auth.signIn.passwordLabel,
+      emailPlaceholder: messages.auth.signIn.emailPlaceholder,
+      passwordPlaceholder: messages.auth.signIn.passwordPlaceholder,
       confirmPasswordLabel: messages.auth.signUp.confirmPasswordLabel,
       firstNameLabel: messages.auth.signUp.firstNameLabel,
       lastNameLabel: messages.auth.signUp.lastNameLabel,
@@ -127,6 +129,18 @@ describe("UI harness — auth shell", () => {
 
     expect(localization.signIn?.start?.title).toBe("Bienvenue");
     expect(localization.signUp?.start?.title).toBe("Créer votre compte");
+    expect(localization.formFieldInputPlaceholder__emailAddress).toBe(
+      "Votre adresse e-mail"
+    );
+    expect(localization.formFieldInputPlaceholder__password).toBe(
+      "Votre mot de passe"
+    );
+    expect(enMessages.auth.signIn.emailPlaceholder).toBe(
+      "Enter your email address"
+    );
+    expect(enMessages.auth.signIn.passwordPlaceholder).toBe(
+      "Enter your password"
+    );
     expect(
       localization.signUp?.legalConsent?.checkbox
         ?.label__termsOfServiceAndPrivacyPolicy
@@ -142,5 +156,9 @@ describe("UI harness — auth shell", () => {
     expect(appearance.elements?.formFieldInput).toMatch(/focus-visible:ring-3/);
     expect(appearance.elements?.socialButtonsRoot).toMatch(/hidden/);
     expect(appearance.elements?.dividerRow).toMatch(/hidden/);
+    expect(appearance.elements?.footer).toMatch(/max-w-\[448px\]/);
+    expect(appearance.elements?.footer).toMatch(/\[&>\*\]:!px-0/);
+    expect(appearance.elements?.footerItem).toMatch(/max-w-\[448px\]/);
+    expect(appearance.elements?.footerItem).toMatch(/text-muted-foreground/);
   });
 });

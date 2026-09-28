@@ -55,6 +55,8 @@ export default async function LocaleLayout({
     signUpSubtitle: tAuth("signUp.subtitle"),
     emailLabel: tAuth("signIn.emailLabel"),
     passwordLabel: tAuth("signIn.passwordLabel"),
+    emailPlaceholder: tAuth("signIn.emailPlaceholder"),
+    passwordPlaceholder: tAuth("signIn.passwordPlaceholder"),
     confirmPasswordLabel: tAuth("signUp.confirmPasswordLabel"),
     firstNameLabel: tAuth("signUp.firstNameLabel"),
     lastNameLabel: tAuth("signUp.lastNameLabel"),

@@ -7,6 +7,8 @@ export type AuthCopy = {
   signUpSubtitle: string;
   emailLabel: string;
   passwordLabel: string;
+  emailPlaceholder: string;
+  passwordPlaceholder: string;
   confirmPasswordLabel: string;
   firstNameLabel: string;
   lastNameLabel: string;
@@ -33,6 +35,8 @@ export function buildClerkAuthLocalization(
   return {
     formFieldLabel__emailAddress: copy.emailLabel,
     formFieldLabel__password: copy.passwordLabel,
+    formFieldInputPlaceholder__emailAddress: copy.emailPlaceholder,
+    formFieldInputPlaceholder__password: copy.passwordPlaceholder,
     formFieldLabel__confirmPassword: copy.confirmPasswordLabel,
     formFieldLabel__firstName: copy.firstNameLabel,
     formFieldLabel__lastName: copy.lastNameLabel,
