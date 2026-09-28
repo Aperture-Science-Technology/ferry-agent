@@ -66,10 +66,10 @@ describe("UI harness — landing How it works Pen LLhzT", () => {
     const h2 = within(section).getByRole("heading", { level: 2 });
     expect(h2.className).toMatch(/text-3xl/);
     expect(h2.className).toMatch(/leading-9/);
-    expect(h2.className).toMatch(/md:text-4xl/);
-    expect(h2.className).toMatch(/md:leading-10/);
-    expect(h2.className).toMatch(/lg:text-5xl/);
-    expect(h2.className).toMatch(/lg:leading-none/);
+    expect(h2.className).toMatch(/sm:text-4xl/);
+    expect(h2.className).toMatch(/sm:leading-10/);
+    expect(h2.className).toMatch(/md:text-5xl/);
+    expect(h2.className).toMatch(/md:leading-none/);
     expect(h2.className).toMatch(/font-semibold/);
     expect(h2.className).toMatch(/tracking-\[-1\.2px\]/);
 

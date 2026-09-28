@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+import { Show, UserButton } from "@clerk/nextjs";
 import { MenuIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -147,23 +147,19 @@ export function SiteHeader() {
 
               <div className="hidden items-center gap-3.5 lg:flex">
                 <Show when="signed-out">
-                  <SignInButton>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 rounded-[10px] border border-white/[0.125] bg-white/[0.03] px-3.5 text-sm transition-colors duration-150 hover:bg-white/[0.06]"
-                    >
-                      {tLanding("signIn")}
-                    </Button>
-                  </SignInButton>
-                  <SignInButton>
-                    <Button
-                      size="sm"
-                      className="h-9 rounded-[10px] px-4 text-sm transition-colors duration-150"
-                    >
-                      {tLanding("dashboard")}
-                    </Button>
-                  </SignInButton>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 rounded-[10px] border border-white/[0.125] bg-white/[0.03] px-3.5 text-sm transition-colors duration-150 hover:bg-white/[0.06]"
+                    render={<Link href="/sign-in">{tLanding("signIn")}</Link>}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-9 rounded-[10px] px-4 text-sm transition-colors duration-150"
+                    render={
+                      <Link href="/sign-in">{tLanding("dashboard")}</Link>
+                    }
+                  />
                 </Show>
                 <Show when="signed-in">
                   <Button
@@ -226,23 +222,23 @@ export function SiteHeader() {
                   </nav>
                   <div className="mt-auto space-y-2 border-t border-border p-4">
                     <Show when="signed-out">
-                      <SignInButton>
-                        <Button
-                          variant="outline"
-                          className="w-full transition-colors duration-150"
-                          onClick={closeMenu}
-                        >
-                          {tLanding("signIn")}
-                        </Button>
-                      </SignInButton>
-                      <SignInButton>
-                        <Button
-                          className="w-full transition-colors duration-150"
-                          onClick={closeMenu}
-                        >
-                          {tLanding("dashboard")}
-                        </Button>
-                      </SignInButton>
+                      <Button
+                        variant="outline"
+                        className="w-full transition-colors duration-150"
+                        render={
+                          <Link href="/sign-in" onClick={closeMenu}>
+                            {tLanding("signIn")}
+                          </Link>
+                        }
+                      />
+                      <Button
+                        className="w-full transition-colors duration-150"
+                        render={
+                          <Link href="/sign-in" onClick={closeMenu}>
+                            {tLanding("dashboard")}
+                          </Link>
+                        }
+                      />
                     </Show>
                     <Show when="signed-in">
                       <Button

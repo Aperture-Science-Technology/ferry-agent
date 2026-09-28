@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Inter_Tight } from "next/font/google";
 import { notFound } from "next/navigation";
-import { ClerkProvider } from "@clerk/nextjs";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
+import { ClerkLocaleProvider } from "@/components/auth/clerk-locale-provider";
 import { routing } from "@/i18n/routing";
 
 const interTight = Inter_Tight({
@@ -47,6 +47,26 @@ export default async function LocaleLayout({
 
   setRequestLocale(locale);
   const messages = await getMessages();
+  const tAuth = await getTranslations("auth");
+  const authCopy = {
+    signInTitle: tAuth("signIn.title"),
+    signInSubtitle: tAuth("signIn.subtitle"),
+    signUpTitle: tAuth("signUp.title"),
+    signUpSubtitle: tAuth("signUp.subtitle"),
+    emailLabel: tAuth("signIn.emailLabel"),
+    passwordLabel: tAuth("signIn.passwordLabel"),
+    confirmPasswordLabel: tAuth("signUp.confirmPasswordLabel"),
+    firstNameLabel: tAuth("signUp.firstNameLabel"),
+    lastNameLabel: tAuth("signUp.lastNameLabel"),
+    forgotPassword: tAuth("signIn.forgotPassword"),
+    signInSubmit: tAuth("signIn.submit"),
+    signUpSubmit: tAuth("signUp.submit"),
+    noAccountText: tAuth("signIn.noAccount"),
+    createAccountLink: tAuth("signIn.createAccount"),
+    hasAccountText: tAuth("signUp.hasAccount"),
+    signInLink: tAuth("signUp.signInLink"),
+    consentLabel: tAuth("signUp.consent"),
+  };
 
   return (
     <html
@@ -54,14 +74,14 @@ export default async function LocaleLayout({
       className={`${interTight.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
-        <ClerkProvider dynamic>
+        <ClerkLocaleProvider authCopy={authCopy}>
           <NextIntlClientProvider messages={messages}>
             <TooltipProvider>
               {children}
               <Toaster richColors position="bottom-right" />
             </TooltipProvider>
           </NextIntlClientProvider>
-        </ClerkProvider>
+        </ClerkLocaleProvider>
       </body>
     </html>
   );

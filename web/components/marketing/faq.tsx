@@ -42,7 +42,7 @@ export function Faq() {
             </p>
             <h2
               id={`${baseId}-title`}
-              className="text-[30px] leading-[1.1] font-medium tracking-[-0.75px] text-foreground text-balance md:text-5xl md:tracking-[-1.2px]"
+              className="text-[30px] leading-[1.1] font-medium tracking-[-0.75px] text-foreground text-balance sm:text-4xl sm:leading-10 md:text-5xl md:tracking-[-1.2px]"
             >
               {t("title")}
             </h2>

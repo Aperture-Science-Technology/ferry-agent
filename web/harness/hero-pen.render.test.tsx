@@ -92,8 +92,8 @@ describe("UI harness — landing hero Pen LLhzT composition", () => {
     expect(eyebrow.className).toMatch(/border-white\/15/);
 
     expect(
-      screen.getByRole("button", { name: /ouvrir l'espace/i })
-    ).toBeTruthy();
+      screen.getByRole("link", { name: /ouvrir l'espace/i }).getAttribute("href")
+    ).toBe("/sign-in");
     const how = screen.getByRole("link", { name: /comment ça marche/i });
     expect(how.getAttribute("href")).toBe("/#how-it-works");
 

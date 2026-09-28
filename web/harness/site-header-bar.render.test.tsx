@@ -119,6 +119,13 @@ describe("UI harness — public site header bar (Pen LLhzT Nav)", () => {
     expect(active!.className).toMatch(/text-foreground/);
     expect(inactive!.className).toMatch(/text-muted-foreground/);
 
+    const signIn = within(header).getByRole("link", { name: /se connecter/i });
+    expect(signIn.getAttribute("href")).toBe("/sign-in");
+    const openWorkspace = within(header).getByRole("link", {
+      name: /ouvrir l'espace/i,
+    });
+    expect(openWorkspace.getAttribute("href")).toBe("/sign-in");
+
     // Sanity: banner root has no inline style attribute either.
     expect(container.querySelector("header[style]")).toBeNull();
   });
