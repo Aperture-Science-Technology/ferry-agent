@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 /**
- * Pen 06 Main / Header — gap 8, title 40/900 (32/900 mobile), subtitle 16/500
- * max 560. Auto height so the 40px title can breathe (no fixed h-[88px]).
+ * Header/Page — h 88, pad 8, space-between; title 28/700 tracking -0.5;
+ * subtitle muted 14/500, no max-width.
  */
 export function PageHeader({
   title,
@@ -14,13 +14,13 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 p-2">
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
-        <h1 className="text-[32px] font-black text-foreground text-balance md:text-[40px]">
+    <div className="flex h-[88px] min-h-[88px] flex-wrap items-center justify-between gap-4 p-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <h1 className="text-[28px] font-bold tracking-[-0.5px] text-foreground text-balance">
           {title}
         </h1>
         {description ? (
-          <p className="max-w-[560px] text-base font-medium text-muted-foreground">
+          <p className="text-sm font-medium text-muted-foreground">
             {description}
           </p>
         ) : null}

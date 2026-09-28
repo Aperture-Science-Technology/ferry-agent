@@ -91,8 +91,8 @@ function NavLink({ item }: { item: NavItem }) {
 /**
  * Pen Shell/Sidebar — 208 wide content (no own pad), footer cluster pad 8 gap 8.
  * Header = Button/Ghost brand · Footer Cluster = elevated nav + account.
- * h-svh: collapsible=none uses h-full, which cannot resolve against min-h-svh
- * on the wrapper — without an explicit viewport height the footer never sticks.
+ * inset + offcanvas: p-0 overrides the variant’s p-2 so nav items stay 176 wide;
+ * SidebarContent flex-1 keeps the footer cluster at the bottom.
  */
 export function AppSidebar() {
   const t = useTranslations("nav");
@@ -113,9 +113,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar
-      collapsible="none"
+      collapsible="offcanvas"
       enableMobileSheet={false}
-      variant="sidebar"
+      variant="inset"
       className="hidden h-svh justify-between gap-2 border-0 bg-sidebar p-0 md:flex"
     >
       <SidebarHeader className="gap-1 border-0 p-2">
@@ -145,14 +145,14 @@ export function AppSidebar() {
             </SidebarMenu>
           </div>
 
-          {/* Sidebar/Account — 192×48, pad 8, gap 8, avatar 32/--avatar initial */}
+          {/* Sidebar/Account — 192×48, pad 8, gap 8, avatar 32/secondary initial */}
           <div
             data-testid="sidebar-account"
             className="relative flex h-12 w-full min-w-0 items-center gap-2 rounded-sm p-2"
           >
             <div
               data-testid="sidebar-account-avatar"
-              className="pointer-events-none flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-avatar"
+              className="pointer-events-none flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-secondary"
               aria-hidden
             >
               {hasImage && user?.imageUrl ? (
@@ -163,7 +163,7 @@ export function AppSidebar() {
                   className="size-8 object-cover"
                 />
               ) : (
-                <span className="text-sm font-medium text-primary-foreground">
+                <span className="text-sm font-medium text-foreground">
                   {initial}
                 </span>
               )}
