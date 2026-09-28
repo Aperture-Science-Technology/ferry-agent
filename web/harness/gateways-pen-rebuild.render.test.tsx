@@ -135,8 +135,9 @@ describe("UI harness — Pen gateways composition", () => {
       level: 1,
       name: "Gateway",
     });
-    expect(title.className).toMatch(/text-\[28px\]/);
-    expect(title.className).toMatch(/font-bold/);
+    expect(title.className).toMatch(/text-\[32px\]/);
+    expect(title.className).toMatch(/md:text-\[40px\]/);
+    expect(title.className).toMatch(/font-black/);
     expect(screen.getAllByRole("link", { name: messagesFr.access.guideLink }).length).toBe(1);
     expect(
       screen.getAllByRole("button", { name: messagesFr.access.createLink }).length

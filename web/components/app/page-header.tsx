@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 /**
- * Pen Header/Page — h 88, pad 8, gap 16, space-between.
- * Title specimen 28/700 (absent from type scale — specimen wins for screen).
+ * Pen 06 Main / Header — gap 8, title 40/900 (32/900 mobile), subtitle 16/500
+ * max 560. Auto height so the 40px title can breathe (no fixed h-[88px]).
  */
 export function PageHeader({
   title,
@@ -14,13 +14,13 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex h-[88px] min-h-[88px] flex-wrap items-center justify-between gap-4 p-2">
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <h1 className="text-[28px] font-bold text-foreground text-balance">
+    <div className="flex flex-wrap items-center justify-between gap-4 p-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <h1 className="text-[32px] font-black text-foreground text-balance md:text-[40px]">
           {title}
         </h1>
         {description ? (
-          <p className="text-sm font-medium text-muted-foreground">
+          <p className="max-w-[560px] text-base font-medium text-muted-foreground">
             {description}
           </p>
         ) : null}

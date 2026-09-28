@@ -126,8 +126,9 @@ describe("UI harness — Pen devices composition", () => {
       level: 1,
       name: "Appareils",
     });
-    expect(title.className).toMatch(/text-\[28px\]/);
-    expect(title.className).toMatch(/font-bold/);
+    expect(title.className).toMatch(/text-\[32px\]/);
+    expect(title.className).toMatch(/md:text-\[40px\]/);
+    expect(title.className).toMatch(/font-black/);
     expect(screen.getAllByRole("button", { name: "Actualiser" }).length).toBe(1);
     expect(screen.getAllByRole("button", { name: "Nouvel appareil" }).length).toBe(1);
   });
