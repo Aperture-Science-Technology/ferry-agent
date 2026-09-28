@@ -126,8 +126,9 @@ describe("UI harness — Pen deliveries composition", () => {
       level: 1,
       name: "Livraisons",
     });
-    expect(title.className).toMatch(/text-\[28px\]/);
-    expect(title.className).toMatch(/font-bold/);
+    expect(title.className).toMatch(/text-\[32px\]/);
+    expect(title.className).toMatch(/md:text-\[40px\]/);
+    expect(title.className).toMatch(/font-black/);
     expect(screen.getAllByRole("button", { name: "Actualiser" }).length).toBe(
       1
     );

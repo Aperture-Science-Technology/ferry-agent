@@ -32,6 +32,8 @@ vi.mock("@clerk/nextjs", () => ({
     user: {
       fullName: "Alex Martin",
       firstName: "Alex",
+      hasImage: false,
+      imageUrl: undefined,
       primaryEmailAddress: { emailAddress: "alex@example.com" },
     },
   }),
@@ -155,6 +157,57 @@ describe("UI harness — app shell", () => {
     expect(sidebar).toBeTruthy();
     expect(sidebar!.className).toMatch(/(?:^|\s)p-0(?:\s|$)/);
     expect(sidebar!.className).not.toMatch(/(?:^|\s)p-2(?:\s|$)/);
+    // Lot 14: full-viewport height so Footer Cluster can stick to the bottom.
+    expect(sidebar!.className).toMatch(/(?:^|\s)h-svh(?:\s|$)/);
+    expect(sidebar!.className).toMatch(/justify-between/);
+
+    const account = screen.getByTestId("sidebar-account");
+    expect(account.className).toMatch(/(?:^|\s)h-12(?:\s|$)/);
+    expect(account.className).toMatch(/(?:^|\s)rounded-sm(?:\s|$)/);
+    expect(within(account).getByText("Alex Martin")).toBeTruthy();
+    expect(within(account).getByText("Compte")).toBeTruthy();
+    expect(within(account).getByTestId("user-button")).toBeTruthy();
+
+    const avatar = screen.getByTestId("sidebar-account-avatar");
+    expect(avatar.className).toMatch(/(?:^|\s)size-8(?:\s|$)/);
+    expect(avatar.className).toMatch(/(?:^|\s)rounded-md(?:\s|$)/);
+    expect(avatar.className).toMatch(/bg-avatar/);
+    expect(within(avatar).getByText("A")).toBeTruthy();
+    expect(avatar.querySelector("img")).toBeNull();
+  });
+
+  it("locks Pen 06 main card geometry and PageHeader title scale in layout/source", () => {
+    // Lot 14 / vue 06: main = $--card, radius-lg, pad 24/32 (px-5 mobile),
+    // title 40/900 desktop · 32/900 mobile; no fixed h-[88px].
+    expect(appLayoutSource).toMatch(/rounded-lg/);
+    expect(appLayoutSource).toMatch(/bg-card/);
+    expect(appLayoutSource).toMatch(/md:px-8/);
+    expect(appLayoutSource).toMatch(/md:py-6/);
+    expect(appLayoutSource).toMatch(/(?:^|\s|["'])px-5(?:\s|["'])/);
+    expect(appLayoutSource).not.toMatch(/md:px-10/);
+    expect(appLayoutSource).not.toMatch(/md:py-8/);
+
+    renderShell(
+      <PageHeader title="Bibliothèque" description="Retrouver dans mes livres" />
+    );
+    const title = screen.getByRole("heading", {
+      level: 1,
+      name: "Bibliothèque",
+    });
+    expect(title.className).toMatch(/text-\[32px\]/);
+    expect(title.className).toMatch(/md:text-\[40px\]/);
+    expect(title.className).toMatch(/font-black/);
+    expect(title.className).not.toMatch(/text-\[28px\]/);
+    expect(title.className).not.toMatch(/font-bold/);
+
+    const description = screen.getByText("Retrouver dans mes livres");
+    expect(description.className).toMatch(/max-w-\[560px\]/);
+    expect(description.className).toMatch(/text-base/);
+    expect(description.className).toMatch(/font-medium/);
+
+    const header = title.closest("div")?.parentElement;
+    expect(header).toBeTruthy();
+    expect(header!.className).not.toMatch(/h-\[88px\]/);
   });
 
   it("keeps PageHeader actions compressible so narrow viewports do not overflow", () => {
