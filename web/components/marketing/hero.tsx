@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Show, SignInButton } from "@clerk/nextjs";
+import { Show } from "@clerk/nextjs";
 import { Play } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
@@ -56,14 +56,13 @@ export function Hero() {
         <div className="relative mt-6 flex flex-col items-center gap-3">
           <div className="flex w-full flex-col items-center gap-3 min-[321px]:w-auto min-[321px]:flex-row">
             <Show when="signed-out">
-              <SignInButton>
-                <Button
-                  size="lg"
-                  className="h-10 rounded-xl px-6 transition-colors duration-150 max-[320px]:w-full"
-                >
-                  {tLanding("ctaPrimary")}
-                </Button>
-              </SignInButton>
+              <Button
+                size="lg"
+                className="h-10 rounded-xl px-6 transition-colors duration-150 max-[320px]:w-full"
+                render={
+                  <Link href="/sign-in">{tLanding("ctaPrimary")}</Link>
+                }
+              />
             </Show>
             <Show when="signed-in">
               <Button

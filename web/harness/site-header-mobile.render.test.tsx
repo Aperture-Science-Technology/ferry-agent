@@ -1,6 +1,6 @@
 /**
  * Mobile public header: accessible menu opens, exposes named nav, closes on Escape.
- * Covers signed-out and signed-in Clerk branches without bypassing Show/SignInButton.
+ * Covers signed-out and signed-in Clerk branches without bypassing Show.
  * Run: npm run test:ui-harness
  */
 import {
@@ -84,13 +84,15 @@ describe("UI harness — public site header mobile menu", () => {
     expect(within(nav).getByRole("link", { name: /faq/i })).toBeTruthy();
     expect(within(nav).getByRole("link", { name: /guide/i })).toBeTruthy();
     expect(
-      within(dialog).getByRole("button", { name: /se connecter/i })
-    ).toBeTruthy();
+      within(dialog).getByRole("link", { name: /se connecter/i }).getAttribute("href")
+    ).toBe("/sign-in");
     expect(
-      within(dialog).getByRole("button", {
-        name: /ouvrir l'espace/i,
-      })
-    ).toBeTruthy();
+      within(dialog)
+        .getByRole("link", {
+          name: /ouvrir l'espace/i,
+        })
+        .getAttribute("href")
+    ).toBe("/sign-in");
 
     expect(trigger.className).toMatch(/min-h-11|size-11/);
 
@@ -125,7 +127,7 @@ describe("UI harness — public site header mobile menu", () => {
     // Single UserButton in the header row (outside the sheet).
     expect(screen.getAllByTestId("clerk-user-button")).toHaveLength(1);
     expect(
-      screen.queryByRole("button", { name: /se connecter/i })
+      screen.queryByRole("link", { name: /se connecter/i })
     ).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /ouvrir le menu/i }));
@@ -136,7 +138,7 @@ describe("UI harness — public site header mobile menu", () => {
     });
     expect(library.getAttribute("href")).toBe("/app/bibliotheque");
     expect(
-      within(dialog).queryByRole("button", { name: /se connecter/i })
+      within(dialog).queryByRole("link", { name: /se connecter/i })
     ).toBeNull();
   });
 
