@@ -32,7 +32,7 @@ export function Faq() {
       <section
         id="faq"
         data-testid="landing-faq"
-        className="px-6 pt-6 pb-16 md:pt-6 md:pb-20"
+        className="scroll-mt-[86px] px-6 pt-6 pb-16 md:pt-6 md:pb-20 lg:scroll-mt-[98px]"
         aria-labelledby={`${baseId}-title`}
       >
         <div className="mx-auto flex w-full flex-col items-center gap-8 md:gap-10">
@@ -42,7 +42,7 @@ export function Faq() {
             </p>
             <h2
               id={`${baseId}-title`}
-              className="text-[30px] leading-[1.1] font-medium tracking-[-0.75px] text-foreground text-balance md:text-5xl md:tracking-[-1.2px]"
+              className="text-[30px] leading-[1.1] font-medium tracking-[-0.75px] text-foreground text-balance sm:text-4xl sm:leading-10 md:text-5xl md:tracking-[-1.2px]"
             >
               {t("title")}
             </h2>

@@ -20,11 +20,11 @@ export function Delivered() {
     <section
       id="delivered"
       data-testid="landing-on-your-device"
-      className="mx-auto w-full max-w-[1152px] px-6 pt-16 pb-12 md:pt-24"
+      className="mx-auto w-full max-w-[1152px] scroll-mt-[86px] px-6 pt-16 pb-12 md:pt-24 lg:scroll-mt-[98px]"
     >
       <div className="flex flex-col gap-10">
         <div className="grid w-full gap-6 md:grid-cols-2 md:items-start md:justify-between">
-          <h2 className="font-heading text-3xl leading-9 font-semibold tracking-[-1.2px] text-balance md:text-4xl md:leading-10 lg:text-5xl lg:leading-none">
+          <h2 className="font-heading text-3xl leading-9 font-semibold tracking-[-1.2px] text-balance sm:text-4xl sm:leading-10 md:text-5xl md:leading-none">
             {t("title")}
           </h2>
           <p className="text-lg leading-[1.625] text-muted-foreground">

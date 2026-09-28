@@ -1021,5 +1021,36 @@
         "usbPath": "/Volumes/EREADER"
       }
     }
+  },
+  "auth": {
+    "brandName": "Ferry",
+    "signIn": {
+      "title": "Welcome",
+      "subtitle": "Sign in to your Ferry library.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create an account",
+      "panelQuote": "Your library, wherever you are.",
+      "panelCaption": "Your reading, your devices, one library.",
+      "panelAlt": "Ferry library illustration"
+    },
+    "signUp": {
+      "title": "Create your account",
+      "subtitle": "Start building your library.",
+      "firstNameLabel": "First name",
+      "lastNameLabel": "Last name",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "consent": "I accept the terms of use and the privacy policy.",
+      "submit": "Create account",
+      "hasAccount": "Already have an account?",
+      "signInLink": "Sign in",
+      "panelQuote": "Your library, wherever you are.",
+      "panelAlt": "Ferry library illustration"
+    }
   }
 }

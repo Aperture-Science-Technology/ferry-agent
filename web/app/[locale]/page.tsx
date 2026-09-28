@@ -7,6 +7,7 @@ import { ValueProps } from "@/components/marketing/value-props";
 import { McpSpotlight } from "@/components/marketing/mcp-spotlight";
 import { Faq } from "@/components/marketing/faq";
 import { SiteFooter } from "@/components/marketing/site-footer";
+import { PageDecor } from "@/components/marketing/page-decor";
 
 export default async function Home({
   params,
@@ -17,9 +18,10 @@ export default async function Home({
   setRequestLocale(locale);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="relative flex flex-1 flex-col overflow-x-hidden">
       <SiteHeader />
-      <main className="flex-1">
+      {/* z-[1] keeps readable/interactive content above atmosphere layers */}
+      <main className="relative z-[1] flex-1">
         <Hero />
         <HowItWorks />
         <Delivered />
@@ -28,7 +30,10 @@ export default async function Home({
         </ValueProps>
         <Faq />
       </main>
-      <SiteFooter />
+      <div className="relative z-[1]">
+        <SiteFooter />
+      </div>
+      <PageDecor />
     </div>
   );
 }
