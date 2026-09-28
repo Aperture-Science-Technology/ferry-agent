@@ -30,9 +30,11 @@ export function clerkAuthAppearance(variant: AuthVariant): ClerkAppearanceTheme 
       fontSize: "14px",
     },
     elements: {
-      rootBox: "w-full max-w-[448px]",
-      cardBox: "w-full max-w-[448px] bg-transparent shadow-none ring-0",
-      card: `w-full max-w-[448px] gap-0 border-0 bg-transparent p-0 shadow-none ${formGap}`,
+      // Clerk ships width: 25rem and padding: 2.5rem on .cl-card; plain utilities lose.
+      // Important variants win specificity so the form, CTA, and badge share the 448px column.
+      rootBox: "!w-full !max-w-[448px]",
+      cardBox: "!w-full !max-w-[448px] bg-transparent shadow-none ring-0",
+      card: `!w-full !max-w-[448px] gap-0 border-0 bg-transparent !p-0 shadow-none ${formGap}`,
       main: formGap,
       header: "gap-2 text-left",
       headerTitle:
@@ -64,9 +66,9 @@ export function clerkAuthAppearance(variant: AuthVariant): ClerkAppearanceTheme 
       // Keep "Secured by Clerk" visible (plan requirement) but flush to the 448px column:
       // Clerk's footer injects $8 horizontal padding on children, which overflows the fields.
       footer:
-        "w-full max-w-[448px] bg-transparent shadow-none p-0 [&>*]:!px-0 [&>*]:!py-4",
+        "!w-full !max-w-[448px] bg-transparent shadow-none !p-0 [&>*]:!px-0 [&>*]:!py-4",
       footerItem:
-        "w-full max-w-[448px] justify-center text-xs text-muted-foreground",
+        "!w-full !max-w-[448px] justify-center text-xs text-muted-foreground",
       footerAction: "text-sm text-muted-foreground",
       footerActionText: "text-sm text-muted-foreground",
       footerActionLink:
