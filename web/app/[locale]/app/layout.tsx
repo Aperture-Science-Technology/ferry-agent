@@ -26,7 +26,11 @@ export default async function DashboardLayout({
       */}
       <SidebarInset className="min-w-0 overflow-x-hidden bg-background pb-[calc(4.5rem+1px+env(safe-area-inset-bottom,0px))] md:pb-0">
         <DashboardHeader />
-        <div className="flex w-full min-w-0 flex-1 flex-col gap-6 px-5 pt-6 md:gap-6 md:px-10 md:py-8">
+        {/*
+          Pen 06 Main card on every dashboard screen: $--card, radius-lg (15),
+          pad [24,32] desktop / px-5 (20) mobile, gap 24, full height, flush.
+        */}
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-6 rounded-lg bg-card px-5 py-6 md:px-8 md:py-6">
           {children}
         </div>
       </SidebarInset>

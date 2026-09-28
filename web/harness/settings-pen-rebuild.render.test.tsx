@@ -181,7 +181,7 @@ describe("UI harness — Pen settings composition", () => {
     ).toBeTruthy();
   });
 
-  it("uses PageHeader with a single Settings title (Header/Page specimen 28/700)", () => {
+  it("uses PageHeader with a single Settings title (Pen 06 specimen 40/900)", () => {
     renderSettings("fr");
     const layout = screen.getByTestId("settings-pen-layout");
     const titles = within(layout).getAllByRole("heading", {
@@ -189,8 +189,9 @@ describe("UI harness — Pen settings composition", () => {
       name: "Réglages",
     });
     expect(titles.length).toBe(1);
-    expect(titles[0]!.className).toMatch(/text-\[28px\]/);
-    expect(titles[0]!.className).toMatch(/font-bold/);
+    expect(titles[0]!.className).toMatch(/text-\[32px\]/);
+    expect(titles[0]!.className).toMatch(/md:text-\[40px\]/);
+    expect(titles[0]!.className).toMatch(/font-black/);
     expect(screen.queryByTestId("settings-header-mobile")).toBeNull();
     expect(screen.queryByTestId("settings-header-desktop")).toBeNull();
   });
@@ -230,9 +231,11 @@ describe("UI harness — Pen settings composition", () => {
     });
     expect(screen.getByText(messagesFr.settings.languageLabel)).toBeTruthy();
     expect(screen.getByText(messagesFr.settings.languageValueFr)).toBeTruthy();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
 
     fireEvent.click(trigger);
 
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
     expect(routerMock.replace).not.toHaveBeenCalled();
 
     const french = screen.getByRole("menuitemradio", {
@@ -243,6 +246,13 @@ describe("UI harness — Pen settings composition", () => {
     });
     expect(french.getAttribute("aria-checked")).toBe("true");
     expect(english.getAttribute("aria-checked")).toBe("false");
+
+    // Compact popup: must not stretch to the settings-row anchor width.
+    const popup = french.closest("[data-slot='dropdown-menu-content']");
+    expect(popup).toBeTruthy();
+    expect(popup!.className).toMatch(/(?:^|\s)w-auto(?:\s|$)/);
+    expect(popup!.className).toMatch(/min-w-44/);
+    expect(popup!.className).not.toMatch(/w-\(--anchor-width\)/);
 
     fireEvent.click(english);
     expect(routerMock.replace).toHaveBeenCalledWith("/app/reglages", {

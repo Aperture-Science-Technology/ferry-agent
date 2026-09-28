@@ -122,7 +122,7 @@ export function LocaleMenu({
           />
         </DropdownMenuTrigger>
       )}
-      <DropdownMenuContent align="start" className="min-w-44">
+      <DropdownMenuContent align="start" className="w-auto min-w-44 max-w-55">
         <DropdownMenuRadioGroup value={locale} onValueChange={selectLocale}>
           {routing.locales.map((code) => (
             <DropdownMenuRadioItem key={code} value={code} closeOnClick>

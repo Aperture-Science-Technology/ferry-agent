@@ -91,6 +91,8 @@ function NavLink({ item }: { item: NavItem }) {
 /**
  * Pen Shell/Sidebar — 208 wide content (no own pad), footer cluster pad 8 gap 8.
  * Header = Button/Ghost brand · Footer Cluster = elevated nav + account.
+ * h-svh: collapsible=none uses h-full, which cannot resolve against min-h-svh
+ * on the wrapper — without an explicit viewport height the footer never sticks.
  */
 export function AppSidebar() {
   const t = useTranslations("nav");
@@ -101,13 +103,20 @@ export function AppSidebar() {
     user?.firstName?.trim() ||
     user?.primaryEmailAddress?.emailAddress ||
     t("account");
+  const initial = (
+    user?.firstName?.trim()?.charAt(0) ||
+    user?.fullName?.trim()?.charAt(0) ||
+    user?.primaryEmailAddress?.emailAddress?.charAt(0) ||
+    "?"
+  ).toUpperCase();
+  const hasImage = Boolean(user?.hasImage);
 
   return (
     <Sidebar
       collapsible="none"
       enableMobileSheet={false}
       variant="sidebar"
-      className="hidden justify-between gap-2 border-0 bg-sidebar p-0 md:flex"
+      className="hidden h-svh justify-between gap-2 border-0 bg-sidebar p-0 md:flex"
     >
       <SidebarHeader className="gap-1 border-0 p-2">
         <Link
@@ -136,20 +145,31 @@ export function AppSidebar() {
             </SidebarMenu>
           </div>
 
-          {/* Sidebar/Account — 192×48, pad 8, gap 8, avatar 32 */}
-          <div className="flex h-12 w-full min-w-0 items-center gap-2 rounded-sm p-2">
-            <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-avatar">
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: "size-8",
-                    userButtonTrigger: "size-8",
-                  },
-                }}
-              />
+          {/* Sidebar/Account — 192×48, pad 8, gap 8, avatar 32/--avatar initial */}
+          <div
+            data-testid="sidebar-account"
+            className="relative flex h-12 w-full min-w-0 items-center gap-2 rounded-sm p-2"
+          >
+            <div
+              data-testid="sidebar-account-avatar"
+              className="pointer-events-none flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-avatar"
+              aria-hidden
+            >
+              {hasImage && user?.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- Clerk profile URL; not a static asset
+                <img
+                  src={user.imageUrl}
+                  alt=""
+                  className="size-8 object-cover"
+                />
+              ) : (
+                <span className="text-sm font-medium text-primary-foreground">
+                  {initial}
+                </span>
+              )}
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-sidebar-foreground">
+            <div className="pointer-events-none min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-foreground">
                 {displayName}
               </p>
               <p className="truncate text-xs font-normal text-muted-foreground">
@@ -157,9 +177,22 @@ export function AppSidebar() {
               </p>
             </div>
             <ChevronsUpDown
-              className="size-4 shrink-0 text-muted-foreground"
+              className="pointer-events-none size-4 shrink-0 text-foreground"
               aria-hidden
             />
+            {/* Invisible Clerk trigger covers the whole row (keeps account menu). */}
+            <div className="absolute inset-0 [&_.cl-userButton-box]:size-full [&_.cl-userButtonTrigger]:size-full [&_.cl-userButtonTrigger]:rounded-sm [&_.cl-userButtonTrigger]:opacity-0 [&_.cl-avatarBox]:hidden">
+              <UserButton
+                appearance={{
+                  elements: {
+                    rootBox: "size-full",
+                    userButtonBox: "size-full",
+                    userButtonTrigger: "size-full opacity-0",
+                    avatarBox: "hidden",
+                  },
+                }}
+              />
+            </div>
           </div>
         </div>
       </SidebarFooter>
