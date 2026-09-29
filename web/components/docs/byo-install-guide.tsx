@@ -14,6 +14,7 @@ import {
 import { CloudGatewayIllustration } from "@/components/illustrations";
 import { PassageRule } from "@/components/passage-rule";
 import { GatewayDownloadButton } from "@/components/docs/gateway-download-button";
+import { GatewayStartGuide } from "@/components/docs/gateway-start-guide";
 
 function Code({ children }: { children: ReactNode }) {
   return (
@@ -71,6 +72,7 @@ export function ByoInstallGuide() {
       action: t("step4Action"),
       hint: t("step4Hint"),
       success: t("step4Success"),
+      extra: <GatewayStartGuide />,
     },
     {
       number: "05",
@@ -232,14 +234,6 @@ export function ByoInstallGuide() {
               <p className="text-muted-foreground">{t("troubleshootOffline")}</p>
               <p className="text-muted-foreground">{t("troubleshootBothCodes")}</p>
               <p className="text-muted-foreground">{t("troubleshootProwlarr")}</p>
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="advanced-terminal">
-            <AccordionTrigger>{t("terminalAltTitle")}</AccordionTrigger>
-            <AccordionContent className="space-y-3">
-              <p className="text-muted-foreground">{t("terminalAltBody")}</p>
-              <p className="text-muted-foreground">{t("terminalAltHint")}</p>
             </AccordionContent>
           </AccordionItem>
 
