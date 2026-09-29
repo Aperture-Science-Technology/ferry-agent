@@ -57,17 +57,22 @@ docker compose -f compose.yaml up -d
 Le dossier `./watch` (monté sur `/watch`) reçoit les fichiers à importer : posez un fichier dedans, il arrive tout seul dans votre bibliothèque.
 
 Les tarballs **versionnés par architecture** (`ferry-gateway-<version>-*.tar.gz`)
-se téléchargent depuis GitHub Releases. Le guide public pointe vers l’archive
-canonique `/bundle/ferry-agent-gateway.tar`. Aucun `ferry-agent-bundle.tar.gz`
-n’est publié.
+se téléchargent depuis GitHub Releases. `deploy/deploy.sh` les miroite sous
+`/bundle` en archives docker-format **non compressées** (import GUI). Aucun
+`ferry-agent-bundle.tar.gz` ni `ferry-agent-gateway.tar` unique n’est publié.
 
 ## Contrat web (`/[locale]/docs`)
 
-Un seul bouton de téléchargement, URL fixe (voir `web/lib/gateway-image.ts`) :
+Un seul bouton de téléchargement. Le navigateur détecte l’architecture et
+pointe vers l’archive correspondante (voir `web/lib/gateway-image.ts` et
+`GatewayDownloadButton`) :
 
 ```
-https://ferry-agent.aperture-agency.org/bundle/ferry-agent-gateway.tar
+https://ferry-agent.aperture-agency.org/bundle/ferry-agent-gateway-amd64.tar
+https://ferry-agent.aperture-agency.org/bundle/ferry-agent-gateway-arm64.tar
 ```
 
-Pas de choix d’architecture, pas de version affichée, pas de fallback GitHub
-dans le guide utilisateur.
+`deploy.sh` publie ces deux fichiers depuis la dernière Release GitHub `v*`
+(décompression des `.tar.gz` Release → `.tar` pour Docker Desktop / OrbStack).
+Pas de choix de version affiché dans le guide ; un lien texte discret permet
+de basculer vers l’autre architecture si besoin.
