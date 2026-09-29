@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import { CloudGatewayIllustration } from "@/components/illustrations";
 import { PassageRule } from "@/components/passage-rule";
-import { GATEWAY_IMAGE_DOWNLOAD_URL } from "@/lib/gateway-image";
+import { GatewayDownloadButton } from "@/components/docs/gateway-download-button";
 
 function Code({ children }: { children: ReactNode }) {
   return (
@@ -56,18 +56,7 @@ export function ByoInstallGuide() {
       number: "02",
       title: t("step2Title"),
       action: t("step2Action"),
-      extra: (
-        <div className="space-y-3">
-          <Button
-            render={
-              <a href={GATEWAY_IMAGE_DOWNLOAD_URL} rel="noopener noreferrer">
-                {t("step2Cta")}
-              </a>
-            }
-          />
-          <p className="text-muted-foreground">{t("step2UseFile")}</p>
-        </div>
-      ),
+      extra: <GatewayDownloadButton />,
       success: t("step2Success"),
     },
     {

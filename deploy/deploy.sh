@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Deploy ferry-agent stack and sync small /bundle text assets from the latest
-# GitHub Release (W-20). Preserve canonical ferry-agent-gateway.tar when present.
+# Deploy ferry-agent stack and publish /bundle gateway image archives
+# (one uncompressed docker-format .tar per arch) from the latest v* GitHub Release.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -81,12 +81,66 @@ else
   printf 'warn: no v* GitHub Release found — /bundle uses gateway/dist/ only\n' >&2
 fi
 
-# Purge ghost bundle + versioned release tarballs. Keep the canonical guide
-# archive ferry-agent-gateway.tar if present under /bundle.
-rm -f "${DIST_DIR}/ferry-agent-bundle.tar.gz"
+# Gateway image archives served under /bundle. The public guide has ONE button;
+# the browser picks the arch, so BOTH docker-format archives must be present as
+# uncompressed .tar (the format the Docker Desktop / OrbStack GUI imports).
+CACHE_DIR="${DEPLOY_ROOT}/cache"
+mkdir -p "${CACHE_DIR}"
+
+gateway_archive_sha() {
+  local arch="$1" version="$2" line
+  line="$(grep -E "  ferry-gateway-${version}-${arch}[.]tar[.]gz$" "${DIST_DIR}/SHA256SUMS" 2>/dev/null | head -1 || true)"
+  printf '%s' "${line%% *}"
+}
+
+install_gateway_archive() {
+  local arch="$1" version="$2"
+  local gz="${CACHE_DIR}/ferry-gateway-${version}-${arch}.tar.gz"
+  local tar="${DIST_DIR}/ferry-agent-gateway-${arch}.tar"
+  local want have installed
+  installed="$(cat "${CACHE_DIR}/${arch}.installed" 2>/dev/null || true)"
+  want="$(gateway_archive_sha "${arch}" "${version}")"
+  if [[ -z "${want}" ]]; then
+    printf 'warn: no checksum for %s %s — keeping the existing archive\n' "${arch}" "${version}" >&2
+    return 0
+  fi
+  if [[ "${want}" == "${installed}" && -s "${tar}" ]]; then
+    printf 'kept %s (sha %s already installed)\n' "${tar}" "${want:0:12}"
+    return 0
+  fi
+  if ! download_release_asset "${RELEASE_TAG}" \
+    "ferry-gateway-${version}-${arch}.tar.gz" "${gz}"; then
+    printf 'warn: %s archive unavailable — keeping the existing file\n' "${arch}" >&2
+    return 0
+  fi
+  have="$(sha256sum "${gz}" | awk '{print $1}')"
+  if [[ "${have}" != "${want}" ]]; then
+    printf 'error: %s checksum mismatch (want %s, got %s)\n' "${arch}" "${want}" "${have}" >&2
+    rm -f "${gz}"
+    return 0
+  fi
+  gzip -dc "${gz}" > "${tar}.tmp"
+  mv "${tar}.tmp" "${tar}"
+  printf '%s\n' "${want}" > "${CACHE_DIR}/${arch}.installed"
+  rm -f "${gz}"
+  printf 'installed %s (%s)\n' "${tar}" "$(du -h "${tar}" | cut -f1)"
+}
+
+if [[ -n "${RELEASE_TAG}" ]]; then
+  GATEWAY_VERSION="${RELEASE_TAG#v}"
+  install_gateway_archive amd64 "${GATEWAY_VERSION}"
+  install_gateway_archive arm64 "${GATEWAY_VERSION}"
+else
+  printf 'warn: no v* GitHub Release — /bundle gateway archives untouched\n' >&2
+fi
+
+# Purge ghost and obsolete archives that no longer match the /bundle contract.
+rm -f "${DIST_DIR}/ferry-agent-bundle.tar.gz" \
+      "${DIST_DIR}/ferry-agent-gateway.tar" \
+      "${DIST_DIR}/ferry-agent-gateway.tar.gz" \
+      "${DIST_DIR}/ferry-agent-gateway-arm64-fixed.tar"
 rm -f "${DIST_DIR}"/ferry-gateway-*.tar \
-      "${DIST_DIR}"/ferry-gateway-*.tar.gz \
-      "${DIST_DIR}"/ferry-agent-gateway.tar.gz
+      "${DIST_DIR}"/ferry-gateway-*.tar.gz
 
 COMPOSE=(docker compose -f deploy/docker-compose.yml)
 
