@@ -94,13 +94,15 @@ check_docker() {
   fi
 }
 
-# Load a local docker-format .tar / .tar.gz if present next to this script.
+# Load a local docker-format .tar / .tar.gz if present next to this script
+# (versioned ferry-gateway-*-<arch> or bundle ferry-agent-gateway-<arch>).
 maybe_load_local_image() {
   local arch f
   local -a matches=()
   arch="$(detect_arch)"
   shopt -s nullglob
-  matches=( "ferry-gateway-"*"-${arch}.tar.gz" "ferry-gateway-"*"-${arch}.tar" )
+  matches=( "ferry-gateway-"*"-${arch}.tar.gz" "ferry-gateway-"*"-${arch}.tar"
+            "ferry-agent-gateway-${arch}.tar" "ferry-agent-gateway-${arch}.tar.gz" )
   shopt -u nullglob
   for f in "${matches[@]}"; do
     if [[ -f "${f}" ]]; then
