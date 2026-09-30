@@ -1035,7 +1035,11 @@
         "browserCodeLabel": "BROWSER CODE",
         "browserCode": "8F2K-Q9",
         "browserCodeHint": "Enter on tolino.com",
-        "usbPath": "/Volumes/EREADER"
+        "usbPath": "/Volumes/EREADER",
+        "channelEmail": "Email",
+        "channelSync": "Sync",
+        "channelBrowser": "Browser",
+        "channelCable": "Cable"
       }
     }
   },
