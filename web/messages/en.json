@@ -1051,7 +1051,7 @@
     }
   },
   "auth": {
-    "brandName": "Ferry",
+    "brandName": "Ferry Agent",
     "signIn": {
       "title": "Welcome",
       "subtitle": "Sign in to your Ferry library.",
@@ -1083,6 +1083,13 @@
       "signInLink": "Sign in",
       "panelQuote": "Your library, wherever you are.",
       "panelAlt": "Ferry library illustration"
+    },
+    "signUpInvite": {
+      "title": "By invitation",
+      "body": "Sign-ups are not open to the public. Ferry Agent is open to invited people: your invitation arrives by email, along with the address to use when you sign in.",
+      "hint": "Already have an account? Sign in. Otherwise, ask the person who invited you: they can send your invitation again.",
+      "ctaSignIn": "Sign in",
+      "ctaDocs": "Read the guide"
     }
   }
 }

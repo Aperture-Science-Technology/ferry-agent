@@ -52,21 +52,30 @@ describe("UI harness — auth shell", () => {
     const shell = screen.getByTestId("auth-shell-sign-in");
     expect(shell.className).toMatch(/min-h-screen/);
 
-    const brand = screen.getByRole("link", { name: /ferry/i });
+    const brand = screen.getByRole("link", { name: /ferry agent/i });
     expect(brand.getAttribute("href")).toBe("/");
     expect(brand.className).toMatch(/gap-3/);
-    expect(brand.textContent).toMatch(/Ferry/);
+    expect(brand.textContent).toMatch(/Ferry Agent/);
 
     const formSlot = screen.getByTestId("auth-form-slot");
     const formColumn = formSlot.parentElement;
     expect(formColumn?.parentElement?.className).toMatch(/max-w-\[448px\]/);
+    expect(formColumn?.parentElement?.className).toMatch(/items-start/);
     expect(formColumn?.parentElement?.className).toMatch(/gap-5/);
 
     const panel = screen.getByTestId("auth-visual-panel");
     expect(panel.className).toMatch(/hidden/);
     expect(panel.className).toMatch(/lg:block/);
-    expect(panel.className).toMatch(/w-\[720px\]/);
+    expect(panel.className).toMatch(/w-\[46%\]/);
+    expect(panel.className).toMatch(/min-w-\[420px\]/);
+    expect(panel.className).toMatch(/max-w-\[720px\]/);
     expect(panel.className).toMatch(/bg-muted/);
+    expect(panel.querySelector("svg")).toBeTruthy();
+    expect(
+      panel.querySelector(
+        "[class*='bg-gradient-to-t'][class*='from-black/75']"
+      )
+    ).toBeTruthy();
     expect(panel.textContent).toContain(messages.auth.signIn.panelQuote);
     expect(panel.textContent).toContain(messages.auth.signIn.panelCaption);
     expect(panel.querySelector("img")?.getAttribute("src")).toBe(
@@ -102,6 +111,9 @@ describe("UI harness — auth shell", () => {
     );
     expect(Object.keys(messages.auth.signUp).sort()).toEqual(
       Object.keys(enMessages.auth.signUp).sort()
+    );
+    expect(Object.keys(messages.auth.signUpInvite).sort()).toEqual(
+      Object.keys(enMessages.auth.signUpInvite).sort()
     );
 
     const localization = buildClerkAuthLocalization({

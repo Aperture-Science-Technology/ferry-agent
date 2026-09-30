@@ -12,7 +12,7 @@ type AuthShellProps = {
 };
 
 /**
- * Auth page shell — brand + 448px form column, optional 720px visual panel.
+ * Auth page shell — brand + 448px form column, optional visual panel.
  */
 export function AuthShell({ variant, children }: AuthShellProps) {
   const t = useTranslations("auth");
@@ -27,7 +27,7 @@ export function AuthShell({ variant, children }: AuthShellProps) {
       <div className="flex min-h-screen w-full flex-1 flex-col items-center justify-center px-6 py-12">
         <div
           className={cn(
-            "flex w-full max-w-[448px] flex-col items-center",
+            "flex w-full max-w-[448px] flex-col items-start",
             formGap
           )}
         >
