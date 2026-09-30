@@ -105,5 +105,32 @@ describe("UI harness — landing On your device Pen LLhzT", () => {
     expect(source).not.toMatch(/style=\{\{/);
 
     expect(messages.landing.how.visual.queueHeading).toBe("3 envois");
+
+    const channelLabels = ["E-mail", "Synchronisation", "Navigateur", "Câble"];
+    for (const [i, article] of articles.entries()) {
+      expect(article.className).toMatch(/bg-secondary/);
+      expect(article.className).not.toMatch(/bg-muted/);
+
+      const header = article.querySelector(".flex.items-center.gap-2\\.5");
+      expect(header).toBeTruthy();
+      const brandSvg = header!.querySelector("svg.h-4, svg[class*='h-4']");
+      const hasTolino = (header!.textContent ?? "").includes("tolino");
+      expect(brandSvg !== null || hasTolino).toBe(true);
+
+      expect(article.textContent).toContain(channelLabels[i]);
+
+      const preview = article.querySelector('[aria-hidden="true"]');
+      expect(preview).toBeTruthy();
+      expect(
+        preview!.querySelectorAll(
+          '[class*="text-[10px]"], [class*="text-[11px]"]'
+        )
+      ).toHaveLength(0);
+
+      const panels = preview!.querySelectorAll(
+        '[class*="rounded-xl"][class*="bg-black/45"]'
+      );
+      expect(panels).toHaveLength(1);
+    }
   });
 });

@@ -1,6 +1,6 @@
 /**
  * Landing hero Pen LLhzT composition harness: single h1, 72/500 display,
- * eyebrow, i18n CTAs, 3:2 demo media overlay, no inline styles.
+ * i18n CTAs, 3:2 demo media overlay, no inline styles.
  * Run: npm run test:ui-harness
  */
 import { render, screen } from "@testing-library/react";
@@ -65,7 +65,7 @@ vi.mock("motion/react", async () => {
 });
 
 describe("UI harness — landing hero Pen LLhzT composition", () => {
-  it("renders a single two-tone h1, eyebrow, i18n CTAs, and coming-soon media", () => {
+  it("renders a single two-tone h1, i18n CTAs, and coming-soon media", () => {
     const { container } = render(
       <NextIntlClientProvider locale="fr" messages={messages}>
         <Hero />
@@ -86,10 +86,12 @@ describe("UI harness — landing hero Pen LLhzT composition", () => {
     expect(line1?.textContent).toMatch(/Ferry Agent\./);
     expect(line2?.textContent).toMatch(/Trouver, préparer, envoyer\./);
 
-    const eyebrow = screen.getByText(/en ligne, pour votre liseuse/i);
-    expect(eyebrow.className).toMatch(/uppercase/);
-    expect(eyebrow.className).toMatch(/bg-secondary/);
-    expect(eyebrow.className).toMatch(/border-white\/15/);
+    expect(screen.queryByText(/en ligne, pour votre liseuse/i)).toBeNull();
+    expect(
+      container.querySelector(
+        '[class*="radial-gradient"][class*="var(--foreground)"]'
+      )
+    ).toBeNull();
 
     expect(
       screen.getByRole("link", { name: /ouvrir l'espace/i }).getAttribute("href")
@@ -104,7 +106,12 @@ describe("UI harness — landing hero Pen LLhzT composition", () => {
     const mediaLayers = media.querySelectorAll(":scope > [aria-hidden]");
     expect(mediaLayers.length).toBeGreaterThanOrEqual(3);
     const layerClasses = [...mediaLayers].map((el) => el.className);
-    expect(layerClasses.some((c) => c.includes("bg-background/60"))).toBe(true);
+    expect(layerClasses.some((c) => c.includes("bg-[#1D4ED8]/35"))).toBe(true);
+    expect(
+      layerClasses.some((c) =>
+        c.includes("radial-gradient(ellipse_at_center,rgba(37,99,235")
+      )
+    ).toBe(true);
     expect(
       layerClasses.some(
         (c) =>
@@ -113,15 +120,9 @@ describe("UI harness — landing hero Pen LLhzT composition", () => {
           c.includes("to-background")
       )
     ).toBe(true);
-    expect(
-      layerClasses.some(
-        (c) =>
-          c.includes("bg-gradient-to-b") &&
-          c.includes("via-background/13") &&
-          c.includes("via-[60%]") &&
-          c.includes("to-background/40")
-      )
-    ).toBe(true);
+    expect(layerClasses.some((c) => c.includes("bg-background/60"))).toBe(
+      false
+    );
 
     const demoTitle = screen.getByText(/démo bientôt disponible/i);
     expect(demoTitle).toBeTruthy();

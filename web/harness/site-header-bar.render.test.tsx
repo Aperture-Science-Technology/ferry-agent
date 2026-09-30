@@ -3,7 +3,7 @@
  * no inline styles. Class assertions in jsdom — not layout measurements.
  * Run: npm run test:ui-harness
  */
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -69,7 +69,7 @@ describe("UI harness — public site header bar (Pen LLhzT Nav)", () => {
     const bar = header.querySelector(".max-w-\\[1152px\\]");
     expect(bar).toBeTruthy();
     // Resting shell: transparent chrome (scrolled styles only after scrollY > 0).
-    expect(bar!.className).not.toMatch(/bg-\[#0F1114D9\]/);
+    expect(bar!.className).not.toMatch(/bg-\[#0F1114F2\]/);
     expect(bar!.className).toMatch(/border-transparent/);
     expect(bar!.className).toMatch(/h-\[70px\]/);
 
@@ -128,5 +128,29 @@ describe("UI harness — public site header bar (Pen LLhzT Nav)", () => {
 
     // Sanity: banner root has no inline style attribute either.
     expect(container.querySelector("header[style]")).toBeNull();
+  });
+
+  it("applies denser glass chrome after scroll", () => {
+    render(
+      <NextIntlClientProvider locale="fr" messages={messages}>
+        <SiteHeader />
+      </NextIntlClientProvider>
+    );
+
+    const header = screen.getByRole("banner");
+    const bar = header.querySelector(".max-w-\\[1152px\\]");
+    expect(bar).toBeTruthy();
+
+    Object.defineProperty(window, "scrollY", { value: 200, configurable: true });
+    act(() => {
+      window.dispatchEvent(new Event("scroll"));
+    });
+
+    expect(bar!.className).toMatch(/backdrop-blur-xl/);
+    expect(bar!.className).toMatch(/backdrop-saturate-150/);
+    expect(bar!.className).toMatch(/bg-\[#0F1114F2\]/);
+    expect(bar!.className).not.toMatch(/bg-\[#0F1114D9\]/);
+
+    Object.defineProperty(window, "scrollY", { value: 0, configurable: true });
   });
 });
