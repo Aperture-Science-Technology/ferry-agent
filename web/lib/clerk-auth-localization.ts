@@ -26,13 +26,15 @@ export type AuthCopy = {
 };
 
 /**
- * Clerk localization overrides sourced from next-intl auth messages.
+ * Clerk localization: official locale pack + Ferry auth copy overrides.
  * Consent uses a plain string (no link slots) until legal pages exist.
  */
 export function buildClerkAuthLocalization(
-  copy: AuthCopy
+  copy: AuthCopy,
+  base: LocalizationResource
 ): LocalizationResource {
   return {
+    ...base,
     formFieldLabel__emailAddress: copy.emailLabel,
     formFieldLabel__password: copy.passwordLabel,
     formFieldInputPlaceholder__emailAddress: copy.emailPlaceholder,
@@ -43,26 +45,33 @@ export function buildClerkAuthLocalization(
     formFieldAction__forgotPassword: copy.forgotPassword,
     formButtonPrimary: copy.formButtonPrimary,
     signIn: {
+      ...base.signIn,
       start: {
+        ...base.signIn?.start,
         title: copy.signInTitle,
         subtitle: copy.signInSubtitle,
         actionText: copy.noAccountText,
         actionLink: copy.createAccountLink,
       },
       password: {
+        ...base.signIn?.password,
         title: copy.signInTitle,
         subtitle: copy.signInSubtitle,
       },
     },
     signUp: {
+      ...base.signUp,
       start: {
+        ...base.signUp?.start,
         title: copy.signUpTitle,
         subtitle: copy.signUpSubtitle,
         actionText: copy.hasAccountText,
         actionLink: copy.signInLink,
       },
       legalConsent: {
+        ...base.signUp?.legalConsent,
         checkbox: {
+          ...(base.signUp?.legalConsent?.checkbox as object),
           // Plain text on purpose: ToS / privacy routes are not shipped yet.
           label__termsOfServiceAndPrivacyPolicy: copy.consentLabel as never,
           label__onlyPrivacyPolicy: copy.consentLabel as never,
