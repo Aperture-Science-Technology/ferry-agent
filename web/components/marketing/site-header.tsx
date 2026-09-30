@@ -89,7 +89,7 @@ export function SiteHeader() {
               "transition-[height,padding,background-color,border-color,border-radius,box-shadow] duration-300 ease-out",
               "motion-reduce:transition-none",
               scrolled &&
-                "h-[58px] rounded-[18px] border-white/24 bg-[#0F1114D9] py-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)]"
+                "h-[58px] rounded-[18px] border-white/24 bg-[#0F1114F2] py-3 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl backdrop-saturate-150"
             )}
           >
             <Link
