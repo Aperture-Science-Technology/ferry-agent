@@ -11,7 +11,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { CloudGatewayIllustration } from "@/components/illustrations";
 import { PassageRule } from "@/components/passage-rule";
 import { GatewayDownloadButton } from "@/components/docs/gateway-download-button";
 import { GatewayStartGuide } from "@/components/docs/gateway-start-guide";
@@ -107,9 +106,6 @@ export function ByoInstallGuide() {
       </header>
 
       <section className="grid gap-8 border-y border-border py-8 sm:grid-cols-2">
-        <div className="space-y-3 sm:col-span-2">
-          <CloudGatewayIllustration className="mx-0 w-[180px]" />
-        </div>
         <div className="space-y-2">
           <h2 className="font-heading text-xl font-medium tracking-tight">
             {t("pathOnlineTitle")}
@@ -178,12 +174,19 @@ export function ByoInstallGuide() {
                 ) : null}
                 {"extra" in step && step.extra ? <div>{step.extra}</div> : null}
                 {"success" in step && step.success ? (
-                  <p className="text-sm text-foreground">
-                    <span className="text-muted-foreground">
-                      {t("stepSuccessLabel")}{" "}
-                    </span>
-                    {step.success}
-                  </p>
+                  <div
+                    data-testid="step-success"
+                    className="flex items-start gap-2.5 rounded-lg border border-green-500/25 bg-green-500/10 p-3"
+                  >
+                    <CheckCircle2
+                      className="mt-0.5 size-4 shrink-0 text-green-500"
+                      aria-hidden
+                    />
+                    <p className="text-sm text-foreground">
+                      <span className="font-medium">{t("stepSuccessLabel")}</span>{" "}
+                      <span className="text-foreground/90">{step.success}</span>
+                    </p>
+                  </div>
                 ) : null}
               </div>
             </li>

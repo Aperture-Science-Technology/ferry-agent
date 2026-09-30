@@ -22,6 +22,27 @@ function renderWithLocale(
   );
 }
 
+function expectTerminalCommands(text: string, firstLabel: string) {
+  const pres = document.querySelectorAll("pre");
+  expect(pres).toHaveLength(6);
+  for (const pre of pres) {
+    const lines = (pre.textContent ?? "")
+      .trim()
+      .split("\n")
+      .filter((line) => line.length > 0);
+    expect(lines).toHaveLength(1);
+  }
+
+  expect(text).toContain(firstLabel);
+  expect(text).toContain("mkdir -p ~/ferry-gateway");
+  expect(text).toContain("compose.yaml");
+  expect(text).toContain("PAIRING_TOKEN");
+  expect(text).toContain("GATEWAY_KEY");
+  expect(text).toContain("docker load -i");
+  expect(text).toContain("ferry-agent-gateway-amd64.tar");
+  expect(text).toContain("docker compose up -d");
+}
+
 describe("UI harness — Gateway start guide", () => {
   it("renders FR Docker Desktop, OrbStack, and terminal fallback with env vars", () => {
     renderWithLocale("fr", messages);
@@ -40,8 +61,13 @@ describe("UI harness — Gateway start guide", () => {
     );
     expect(text).toContain("oublie son appairage");
     expect(text).toContain("'VOTRE_CODE_DE_CONNEXION'");
-    const pre = document.querySelector("pre");
-    expect(pre?.textContent?.trim().split("\n")).toHaveLength(6);
+    expectTerminalCommands(text, "Créer un dossier pour le Gateway");
+    expect(
+      document.querySelectorAll('[data-testid="platform-logo-windows"]').length
+    ).toBe(1);
+    expect(
+      document.querySelectorAll('[data-testid="platform-logo-apple"]').length
+    ).toBe(1);
   });
 
   it("renders EN Docker Desktop, OrbStack, and terminal commands", () => {
@@ -55,7 +81,12 @@ describe("UI harness — Gateway start guide", () => {
     expect(text).toContain("/state");
     expect(text).toContain("docker compose up -d");
     expect(text).toContain("'YOUR_CONNECTION_CODE'");
-    const pre = document.querySelector("pre");
-    expect(pre?.textContent?.trim().split("\n")).toHaveLength(6);
+    expectTerminalCommands(text, "Create a folder for the Gateway");
+    expect(
+      document.querySelectorAll('[data-testid="platform-logo-windows"]').length
+    ).toBe(1);
+    expect(
+      document.querySelectorAll('[data-testid="platform-logo-apple"]').length
+    ).toBe(1);
   });
 });
