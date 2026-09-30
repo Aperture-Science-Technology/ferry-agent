@@ -6,7 +6,6 @@ import { Show } from "@clerk/nextjs";
 import { Play } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { BrandMark } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 
 /**
- * Public landing hero — Pen LLhzT Hero (eyebrow, two-tone display, CTAs, demo media).
+ * Public landing hero — Pen LLhzT Hero (two-tone display, CTAs, demo media).
  * Title, subtitle and CTAs are plain HTML from first paint (no entrance hide).
  */
 export function Hero() {
@@ -30,19 +29,8 @@ export function Hero() {
       data-testid="landing-hero"
       className="relative overflow-hidden"
     >
-      <div className="relative mx-auto flex w-full max-w-[1200px] flex-col items-center px-6 pt-20 text-center sm:pt-[146px]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-5 left-1/2 h-[220px] w-[520px] -translate-x-1/2 rounded-[100%] bg-[radial-gradient(ellipse_at_center,var(--foreground)_0%,transparent_70%)] opacity-[0.09]"
-        />
-
-        <BrandMark className="relative size-7" />
-
-        <p className="relative mt-6 rounded-full border border-white/15 bg-secondary px-2.5 py-1 text-xs text-muted-foreground uppercase">
-          {t("badge")}
-        </p>
-
-        <h1 className="relative mt-6 font-heading text-[36px] leading-[39.6px] font-medium tracking-[-0.9px] text-balance sm:text-[72px] sm:leading-[1.1] sm:tracking-[-1.8px]">
+      <div className="relative mx-auto flex w-full max-w-[1200px] flex-col items-center px-6 pt-16 text-center sm:pt-[112px]">
+        <h1 className="relative font-heading text-[36px] leading-[39.6px] font-medium tracking-[-0.9px] text-balance sm:text-[72px] sm:leading-[1.1] sm:tracking-[-1.8px]">
           <span className="block text-foreground">{t("titleBefore")}</span>
           <span className="block text-muted-foreground">
             {t("titleHighlight")}
@@ -98,14 +86,14 @@ export function Hero() {
               sizes="(max-width: 1152px) 100vw, 1152px"
               className="object-cover"
             />
-            <div aria-hidden className="absolute inset-0 bg-background/60" />
+            <div aria-hidden className="absolute inset-0 bg-[#1D4ED8]/35" />
             <div
               aria-hidden
-              className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-[65%] to-background"
+              className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.45)_0%,rgba(37,99,235,0)_72%)]"
             />
             <div
               aria-hidden
-              className="absolute inset-0 bg-gradient-to-b from-transparent via-background/13 via-[60%] to-background/40"
+              className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent via-[65%] to-background"
             />
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3.5">
               <button

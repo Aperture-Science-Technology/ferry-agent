@@ -4,6 +4,8 @@ import { motion, useReducedMotion } from "motion/react";
 import { Check, File, RefreshCw, Usb } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { KindleLogo, KoboLogo } from "@/components/app/devices/brand-logos";
+
 const DEVICE_KEYS = ["kindle", "kobo", "tolino", "usb"] as const;
 
 type DeviceKey = (typeof DEVICE_KEYS)[number];
@@ -64,7 +66,7 @@ function DeviceCard({
 }) {
   return (
     <motion.article
-      className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/15 bg-muted"
+      className="flex h-full flex-col overflow-hidden rounded-2xl border border-white/15 bg-secondary ring-1 ring-inset ring-white/[0.06]"
       initial={
         prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }
       }
@@ -77,16 +79,41 @@ function DeviceCard({
     >
       <div
         aria-hidden="true"
-        className="flex h-[180px] flex-col items-center justify-center gap-2.5 bg-black/20 p-4"
+        className="flex h-[180px] items-center justify-center bg-black/25 p-4"
       >
         <DeviceVisual deviceKey={deviceKey} />
       </div>
       <div className="flex flex-col gap-2 p-5">
-        <h3 className="text-[17px] font-semibold text-foreground">{title}</h3>
-        <p className="text-sm leading-normal text-muted-foreground">{body}</p>
+        <div className="flex items-center gap-2.5">
+          <DeviceBrand deviceKey={deviceKey} />
+          <h3 className="text-[17px] font-semibold text-foreground">{title}</h3>
+        </div>
+        <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
       </div>
     </motion.article>
   );
+}
+
+function DeviceBrand({ deviceKey }: { deviceKey: DeviceKey }) {
+  switch (deviceKey) {
+    case "kindle":
+      return (
+        <KindleLogo aria-hidden className="h-4 w-auto text-foreground" />
+      );
+    case "kobo":
+      return <KoboLogo aria-hidden className="h-4 w-auto text-foreground" />;
+    case "tolino":
+      return (
+        <span
+          aria-hidden
+          className="text-[13px] font-semibold tracking-tight lowercase text-foreground"
+        >
+          tolino
+        </span>
+      );
+    case "usb":
+      return <Usb aria-hidden className="h-4 w-4 text-foreground" />;
+  }
 }
 
 function DeviceVisual({ deviceKey }: { deviceKey: DeviceKey }) {
@@ -102,17 +129,26 @@ function DeviceVisual({ deviceKey }: { deviceKey: DeviceKey }) {
   }
 }
 
+function ChannelLabel({ label }: { label: string }) {
+  return (
+    <p className="text-xs font-medium tracking-[0.12em] text-muted-foreground uppercase">
+      {label}
+    </p>
+  );
+}
+
 function KindleVisual() {
   const t = useTranslations("landing.devices.visual");
   return (
-    <div className="flex w-full flex-col gap-2 rounded-xl border border-white/15 bg-muted p-3.5">
-      <p className="text-[11px] text-muted-foreground">{t("kindleFrom")}</p>
-      <p className="text-[13px] font-semibold text-foreground">
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-black/45 p-3.5">
+      <ChannelLabel label={t("channelEmail")} />
+      <p className="text-xs text-muted-foreground">{t("kindleFrom")}</p>
+      <p className="text-[15px] font-semibold text-foreground">
         {t("kindleSubject")}
       </p>
-      <div className="flex items-center gap-2 rounded-lg bg-secondary px-2.5 py-2">
-        <File className="size-3.5 shrink-0 text-foreground" />
-        <span className="text-xs text-foreground">{t("attachment")}</span>
+      <div className="flex items-center gap-2 rounded-lg bg-secondary px-2.5 py-2 text-xs text-foreground">
+        <File className="size-4 shrink-0" />
+        <span>{t("attachment")}</span>
       </div>
     </div>
   );
@@ -121,11 +157,14 @@ function KindleVisual() {
 function KoboVisual() {
   const t = useTranslations("landing.devices.visual");
   return (
-    <div className="flex w-full flex-col items-center gap-3 rounded-xl border border-white/15 bg-muted p-3.5">
-      <RefreshCw className="size-7 text-foreground" />
-      <p className="text-[13px] font-medium text-foreground">{t("syncing")}</p>
-      <div className="h-1.5 w-[180px] overflow-hidden rounded-full bg-secondary">
-        <div className="h-1.5 w-[120px] rounded-full bg-foreground" />
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-black/45 p-3.5">
+      <ChannelLabel label={t("channelSync")} />
+      <div className="flex items-center gap-2">
+        <RefreshCw className="size-5 shrink-0 text-foreground" />
+        <p className="text-sm font-medium text-foreground">{t("syncing")}</p>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+        <div className="h-1.5 w-[66%] rounded-full bg-foreground" />
       </div>
     </div>
   );
@@ -134,10 +173,8 @@ function KoboVisual() {
 function TolinoVisual() {
   const t = useTranslations("landing.devices.visual");
   return (
-    <div className="flex w-full flex-col items-center gap-2.5 rounded-xl border border-white/15 bg-muted p-3.5">
-      <p className="text-[10px] font-semibold tracking-[1.2px] text-muted-foreground uppercase">
-        {t("browserCodeLabel")}
-      </p>
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-black/45 p-3.5">
+      <ChannelLabel label={t("channelBrowser")} />
       <p className="text-[28px] font-bold tracking-[2px] text-foreground">
         {t("browserCode")}
       </p>
@@ -149,15 +186,18 @@ function TolinoVisual() {
 function UsbVisual() {
   const t = useTranslations("landing.devices.visual");
   return (
-    <div className="flex w-full items-center gap-3 rounded-xl border border-white/15 bg-muted p-3.5">
-      <Usb className="size-[22px] shrink-0 text-foreground" />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="truncate text-[13px] font-semibold text-foreground">
-          {t("attachment")}
-        </p>
-        <p className="text-[11px] text-muted-foreground">{t("usbPath")}</p>
+    <div className="flex w-full flex-col gap-2 rounded-xl border border-white/10 bg-black/45 p-3.5">
+      <ChannelLabel label={t("channelCable")} />
+      <div className="flex items-center gap-3 rounded-lg bg-secondary p-3">
+        <Usb className="size-5 shrink-0 text-foreground" />
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <p className="truncate text-[13px] font-semibold text-foreground">
+            {t("attachment")}
+          </p>
+          <p className="text-xs text-muted-foreground">{t("usbPath")}</p>
+        </div>
+        <Check className="size-4 shrink-0 text-green-500" />
       </div>
-      <Check className="size-4 shrink-0 text-green-500" />
     </div>
   );
 }
