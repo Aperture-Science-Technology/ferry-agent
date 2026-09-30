@@ -1,16 +1,4 @@
 import Image from "next/image";
-import { BrandMark } from "@/components/brand-logo";
-
-const RAY_ROTATIONS = [
-  "rotate-0",
-  "rotate-45",
-  "rotate-90",
-  "rotate-[135deg]",
-  "rotate-180",
-  "rotate-[225deg]",
-  "rotate-[270deg]",
-  "rotate-[315deg]",
-] as const;
 
 type AuthVisualPanelProps = {
   imageSrc: string;
@@ -20,7 +8,7 @@ type AuthVisualPanelProps = {
 };
 
 /**
- * Right-hand auth panel (responsive desktop): muted field, radial motif, cover art.
+ * Right-hand auth panel (responsive desktop): cover art with bottom quote.
  * Hidden below the `lg` breakpoint (1024px).
  */
 export function AuthVisualPanel({
@@ -42,23 +30,6 @@ export function AuthVisualPanel({
         sizes="720px"
         className="object-cover"
       />
-
-      <div
-        className="pointer-events-none absolute inset-0 flex items-center justify-center"
-        aria-hidden
-      >
-        <div className="absolute size-[400px] rounded-full border-2 border-[#FFFFFF12]" />
-        <div className="absolute size-[240px] rounded-full border-2 border-[#FFFFFF12]" />
-        {RAY_ROTATIONS.map((rotation) => (
-          <div
-            key={rotation}
-            className={`absolute h-[104px] w-0.5 origin-bottom -translate-y-[52px] bg-[#FFFFFF10] ${rotation}`}
-          />
-        ))}
-        <div className="absolute flex size-[120px] items-center justify-center rounded-full border border-white/[0.09] bg-[#171717]">
-          <BrandMark className="size-9 text-[#FFFFFF66]" />
-        </div>
-      </div>
 
       <div
         aria-hidden

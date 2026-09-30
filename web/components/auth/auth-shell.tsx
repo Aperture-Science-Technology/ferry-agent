@@ -24,10 +24,10 @@ export function AuthShell({ variant, children }: AuthShellProps) {
       data-testid={`auth-shell-${variant}`}
       className="flex min-h-screen w-full bg-background"
     >
-      <div className="flex min-h-screen w-full flex-1 flex-col items-center justify-center px-6 py-12">
+      <div className="flex min-h-screen w-full flex-1 flex-col items-center justify-start px-6 py-12">
         <div
           className={cn(
-            "flex w-full max-w-[448px] flex-col items-start",
+            "my-auto flex w-full max-w-[448px] flex-col items-start",
             formGap
           )}
         >
