@@ -53,7 +53,7 @@ export function GatewayStartGuide() {
               <p className="text-sm font-medium text-foreground">
                 {index + 1}. {step.label}
               </p>
-              <pre className="overflow-x-auto rounded-md border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words">
+              <pre className="rounded-md border border-border bg-muted/40 p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words">
                 {step.command}
               </pre>
             </li>

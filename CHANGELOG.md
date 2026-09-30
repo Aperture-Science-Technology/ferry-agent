@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **FA-W10** — Fusion `deploy.yml` dans `ci.yml` (`needs` tests / lint) ; tests MCP + intégrations + ruff + pip-audit.
 - **FA-W13** — Alignement types TS (`source_ref` / `cloud_provider` / delivery) + Select de format ; `DeliveryCreate.format` Literal (422).
 - **FA-W14** — Images core / MCP sur `python:3.13-slim`, USER non-root, HEALTHCHECK `/healthz`, deps pinnées, compose `service_healthy`.
+- **FA-UI-POLISH-05** — Finition UI : header plus opaque au scroll (verre dépoli), hero sans logo / pastille / halo gris avec aperçu démo teinté bleu, cartes liseuse contrastées (marques réelles, aperçus unifiés), guide sans illustration à glossaire développé, encarts « C'est bon quand », logos Windows / macOS, commandes terminal pas à pas, pages d'authentification réalignées et `/sign-up` en page « sur invitation » (inscriptions Clerk toujours fermées).
 
 ### Security
 
