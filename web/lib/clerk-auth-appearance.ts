@@ -34,13 +34,14 @@ export function clerkAuthAppearance(variant: AuthVariant): ClerkAppearanceTheme 
       // Important variants win specificity so the form, CTA, and badge share the 448px column.
       rootBox: "!w-full !max-w-[448px]",
       cardBox:
-        "!w-full !max-w-[448px] !overflow-visible bg-transparent shadow-none ring-0",
-      card: `!w-full !max-w-[448px] gap-0 border-0 bg-transparent !p-0 shadow-none ${formGap}`,
+        "!w-full !max-w-[448px] !overflow-visible !rounded-none bg-transparent shadow-none ring-0",
+      card: `!m-0 !w-full !max-w-[448px] gap-0 border-0 bg-transparent !p-0 shadow-none ${formGap}`,
       main: formGap,
       header: "gap-2 text-left",
       headerTitle:
-        "font-heading text-[30px] leading-9 font-bold tracking-tight text-foreground",
-      headerSubtitle: "text-[15px] leading-snug font-normal text-muted-foreground",
+        "!font-heading !text-[30px] !leading-9 !font-bold !tracking-tight !text-foreground",
+      headerSubtitle:
+        "!text-[15px] !leading-snug !font-normal !text-muted-foreground",
       logoBox: "hidden",
       logoImage: "hidden",
       socialButtonsRoot: "hidden",
@@ -67,7 +68,7 @@ export function clerkAuthAppearance(variant: AuthVariant): ClerkAppearanceTheme 
       // Keep "Secured by Clerk" visible (plan requirement) but flush to the 448px column:
       // Clerk's footer injects $8 horizontal padding on children, which overflows the fields.
       footer:
-        "!w-full !max-w-[448px] bg-transparent shadow-none !p-0 [&>*]:!px-0 [&>*]:!py-4",
+        "!w-full !max-w-[448px] !bg-transparent !border-0 !rounded-none shadow-none !p-0 [&>*]:!px-0 [&>*]:!py-4",
       footerItem:
         "!w-full !max-w-[448px] !rounded-none !bg-transparent !py-4 justify-center text-xs text-muted-foreground",
       footerAction: "text-sm text-muted-foreground",
@@ -87,8 +88,11 @@ export function clerkAuthAppearance(variant: AuthVariant): ClerkAppearanceTheme 
       lastAuthenticationStrategyBadge: "hidden",
       alternativeMethodsBlockButton:
         "h-9 rounded-[10px] border border-border bg-transparent text-sm text-foreground hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50",
+      otpCodeField: "!w-full",
+      otpCodeFieldInputContainer: "!w-full",
+      otpCodeFieldInputs: "!flex !w-full !justify-center !gap-2",
       otpCodeFieldInput:
-        "h-9 rounded-[10px] border border-border bg-input text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+        "!h-11 !w-11 !rounded-[10px] !border !border-border !bg-input !text-base !text-foreground focus-visible:!border-ring focus-visible:!ring-3 focus-visible:!ring-ring/50",
       alert: "border-border bg-muted text-sm text-foreground",
       alertText: "text-sm text-foreground",
     },

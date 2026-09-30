@@ -6,6 +6,8 @@ import { render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 
+import { enUS, frFR } from "@clerk/localizations";
+
 import { AuthShell } from "@/components/auth/auth-shell";
 import { clerkAuthAppearance } from "@/lib/clerk-auth-appearance";
 import { buildClerkAuthLocalization } from "@/lib/clerk-auth-localization";
@@ -121,7 +123,7 @@ describe("UI harness — auth shell", () => {
       Object.keys(enMessages.auth.signUpInvite).sort()
     );
 
-    const localization = buildClerkAuthLocalization({
+    const frCopy = {
       signInTitle: messages.auth.signIn.title,
       signInSubtitle: messages.auth.signIn.subtitle,
       signUpTitle: messages.auth.signUp.title,
@@ -142,10 +144,17 @@ describe("UI harness — auth shell", () => {
       signInLink: messages.auth.signUp.signInLink,
       consentLabel: messages.auth.signUp.consent,
       formButtonPrimary: messages.auth.signIn.submit,
-    });
+    };
+
+    const localization = buildClerkAuthLocalization(frCopy, frFR);
 
     expect(localization.signIn?.start?.title).toBe("Bienvenue");
     expect(localization.signUp?.start?.title).toBe("Créer votre compte");
+    expect(typeof localization.signIn?.alternativeMethods?.title).toBe(
+      "string"
+    );
+    expect(localization.signIn?.alternativeMethods?.title).toMatch(/méthode/i);
+    expect(localization.signIn?.emailCode).toBeDefined();
     expect(localization.formFieldInputPlaceholder__emailAddress).toBe(
       "Votre adresse e-mail"
     );
@@ -165,16 +174,53 @@ describe("UI harness — auth shell", () => {
     expect(messages.auth.signUp.consent).not.toMatch(/\{\{/);
     expect(enMessages.auth.signUp.consent).not.toMatch(/\{\{/);
 
+    const enLocalization = buildClerkAuthLocalization(
+      {
+        ...frCopy,
+        signInTitle: enMessages.auth.signIn.title,
+        signInSubtitle: enMessages.auth.signIn.subtitle,
+        signUpTitle: enMessages.auth.signUp.title,
+        signUpSubtitle: enMessages.auth.signUp.subtitle,
+        emailLabel: enMessages.auth.signIn.emailLabel,
+        passwordLabel: enMessages.auth.signIn.passwordLabel,
+        emailPlaceholder: enMessages.auth.signIn.emailPlaceholder,
+        passwordPlaceholder: enMessages.auth.signIn.passwordPlaceholder,
+        confirmPasswordLabel: enMessages.auth.signUp.confirmPasswordLabel,
+        firstNameLabel: enMessages.auth.signUp.firstNameLabel,
+        lastNameLabel: enMessages.auth.signUp.lastNameLabel,
+        forgotPassword: enMessages.auth.signIn.forgotPassword,
+        signInSubmit: enMessages.auth.signIn.submit,
+        signUpSubmit: enMessages.auth.signUp.submit,
+        noAccountText: enMessages.auth.signIn.noAccount,
+        createAccountLink: enMessages.auth.signIn.createAccount,
+        hasAccountText: enMessages.auth.signUp.hasAccount,
+        signInLink: enMessages.auth.signUp.signInLink,
+        consentLabel: enMessages.auth.signUp.consent,
+        formButtonPrimary: enMessages.auth.signIn.submit,
+      },
+      enUS
+    );
+    expect(enLocalization.signIn?.start?.title).toBe("Welcome");
+    expect(typeof enLocalization.signIn?.alternativeMethods?.title).toBe(
+      "string"
+    );
+    expect(enLocalization.signIn?.alternativeMethods?.title).toMatch(
+      /method/i
+    );
+
     const appearance = clerkAuthAppearance("sign-in");
     expect(appearance.elements?.card).toMatch(/bg-transparent/);
     expect(appearance.elements?.card).toMatch(/shadow-none/);
     expect(appearance.elements?.card).toMatch(/!w-full/);
     expect(appearance.elements?.card).toMatch(/!p-0/);
     expect(appearance.elements?.card).toMatch(/!max-w-\[448px\]/);
+    expect(appearance.elements?.card).toMatch(/!m-0/);
     expect(appearance.elements?.rootBox).toMatch(/!w-full/);
     expect(appearance.elements?.rootBox).toMatch(/!max-w-\[448px\]/);
     expect(appearance.elements?.cardBox).toMatch(/!w-full/);
     expect(appearance.elements?.cardBox).toMatch(/!max-w-\[448px\]/);
+    expect(appearance.elements?.cardBox).toMatch(/!overflow-visible/);
+    expect(appearance.elements?.cardBox).toMatch(/!rounded-none/);
     expect(appearance.elements?.formButtonPrimary).toMatch(/h-9/);
     expect(appearance.elements?.formButtonPrimary).toMatch(/rounded-\[10px\]/);
     expect(appearance.elements?.formFieldInput).toMatch(/focus-visible:ring-3/);
@@ -183,9 +229,14 @@ describe("UI harness — auth shell", () => {
     expect(appearance.elements?.footer).toMatch(/!max-w-\[448px\]/);
     expect(appearance.elements?.footer).toMatch(/!w-full/);
     expect(appearance.elements?.footer).toMatch(/!p-0/);
+    expect(appearance.elements?.footer).toMatch(/!bg-transparent/);
+    expect(appearance.elements?.footer).toMatch(/!border-0/);
     expect(appearance.elements?.footer).toMatch(/\[&>\*\]:!px-0/);
     expect(appearance.elements?.footerItem).toMatch(/!max-w-\[448px\]/);
     expect(appearance.elements?.footerItem).toMatch(/!w-full/);
     expect(appearance.elements?.footerItem).toMatch(/text-muted-foreground/);
+    expect(appearance.elements?.headerTitle).toMatch(/!text-\[30px\]/);
+    expect(appearance.elements?.otpCodeFieldInput).toMatch(/!w-11/);
+    expect(appearance.elements?.otpCodeFieldInput).toMatch(/!h-11/);
   });
 });

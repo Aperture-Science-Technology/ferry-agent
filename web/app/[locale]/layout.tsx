@@ -76,7 +76,10 @@ export default async function LocaleLayout({
       className={`${interTight.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
-        <ClerkLocaleProvider authCopy={authCopy}>
+        <ClerkLocaleProvider
+          locale={locale as "fr" | "en"}
+          authCopy={authCopy}
+        >
           <NextIntlClientProvider messages={messages}>
             <TooltipProvider>
               {children}
