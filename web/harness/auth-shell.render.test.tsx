@@ -59,9 +59,14 @@ describe("UI harness — auth shell", () => {
 
     const formSlot = screen.getByTestId("auth-form-slot");
     const formColumn = formSlot.parentElement;
-    expect(formColumn?.parentElement?.className).toMatch(/max-w-\[448px\]/);
-    expect(formColumn?.parentElement?.className).toMatch(/items-start/);
-    expect(formColumn?.parentElement?.className).toMatch(/gap-5/);
+    const formColumnOuter = formColumn?.parentElement;
+    const leftColumn = formColumnOuter?.parentElement;
+    expect(leftColumn?.className).toMatch(/min-h-screen/);
+    expect(leftColumn?.className).toMatch(/justify-start/);
+    expect(formColumnOuter?.className).toMatch(/my-auto/);
+    expect(formColumnOuter?.className).toMatch(/max-w-\[448px\]/);
+    expect(formColumnOuter?.className).toMatch(/items-start/);
+    expect(formColumnOuter?.className).toMatch(/gap-5/);
 
     const panel = screen.getByTestId("auth-visual-panel");
     expect(panel.className).toMatch(/hidden/);
@@ -70,7 +75,7 @@ describe("UI harness — auth shell", () => {
     expect(panel.className).toMatch(/min-w-\[420px\]/);
     expect(panel.className).toMatch(/max-w-\[720px\]/);
     expect(panel.className).toMatch(/bg-muted/);
-    expect(panel.querySelector("svg")).toBeTruthy();
+    expect(panel.querySelectorAll("svg")).toHaveLength(0);
     expect(
       panel.querySelector(
         "[class*='bg-gradient-to-t'][class*='from-black/75']"

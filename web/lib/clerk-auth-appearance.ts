@@ -33,7 +33,8 @@ export function clerkAuthAppearance(variant: AuthVariant): ClerkAppearanceTheme 
       // Clerk ships width: 25rem and padding: 2.5rem on .cl-card; plain utilities lose.
       // Important variants win specificity so the form, CTA, and badge share the 448px column.
       rootBox: "!w-full !max-w-[448px]",
-      cardBox: "!w-full !max-w-[448px] bg-transparent shadow-none ring-0",
+      cardBox:
+        "!w-full !max-w-[448px] !overflow-visible bg-transparent shadow-none ring-0",
       card: `!w-full !max-w-[448px] gap-0 border-0 bg-transparent !p-0 shadow-none ${formGap}`,
       main: formGap,
       header: "gap-2 text-left",
@@ -68,7 +69,7 @@ export function clerkAuthAppearance(variant: AuthVariant): ClerkAppearanceTheme 
       footer:
         "!w-full !max-w-[448px] bg-transparent shadow-none !p-0 [&>*]:!px-0 [&>*]:!py-4",
       footerItem:
-        "!w-full !max-w-[448px] justify-center text-xs text-muted-foreground",
+        "!w-full !max-w-[448px] !rounded-none !bg-transparent !py-4 justify-center text-xs text-muted-foreground",
       footerAction: "text-sm text-muted-foreground",
       footerActionText: "text-sm text-muted-foreground",
       footerActionLink:
