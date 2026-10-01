@@ -14,6 +14,13 @@ Outils (identité Clerk utilisateur obligatoire, pas de compte-service) :
  11. get_profile          — profil (format défaut, kindle_email)
  12. get_mail_settings    — réglages d'envoi (adresse à approuver chez Amazon)
  13. list_opds_tokens     — jetons OPDS (sans secret)
+ 14. update_profile       — mise à jour profil (kindle_email, format)
+ 15. get_device           — détail d'une liseuse
+ 16. add_device           — enregistrement d'une liseuse
+ 17. update_device        — modification d'une liseuse
+ 18. remove_device        — suppression (garde-fou confirm)
+ 19. link_device_cloud    — URL OAuth Dropbox/Drive (tier B)
+ 20. set_source_enabled   — activer / désactiver une source
 """
 
 from __future__ import annotations
@@ -69,13 +76,20 @@ mcp = FastMCP(
         "Ferry Agent MCP : bibliothèque, liseuses, gateways et livraisons "
         "pour l'utilisateur authentifié. "
         "search_library / add_to_library / list_library pour les livres ; "
-        "list_devices + list_device_methods puis deliver(confirm=True, method=…) "
-        "pour envoyer ; get_delivery_status pour suivre ; "
+        "list_devices / get_device / add_device / update_device / remove_device "
+        "+ list_device_methods puis deliver(confirm=True, method=…) pour envoyer ; "
+        "link_device_cloud pour le tier B (Kobo) ; get_delivery_status pour suivre ; "
         "list_gateways / get_gateway_job pour le catalogue local ; "
-        "list_sources / get_profile / get_mail_settings / list_opds_tokens "
-        "pour les réglages."
+        "list_sources / set_source_enabled / get_profile / update_profile / "
+        "get_mail_settings / list_opds_tokens pour les réglages."
     ),
 )
+
+# Identifiants alignés sur le cœur (schemas / DeviceBrand / ConversionPreset).
+_DEVICE_BRANDS = frozenset({"kindle", "kobo", "tolino", "pocketbook", "other"})
+_CONVERSION_PRESETS = frozenset({"reader_6in", "reader_7in_plus", "tablet"})
+_DEFAULT_FORMATS = frozenset({"epub", "mobi", "azw3", "pdf"})
+_CLOUD_PROVIDERS = frozenset({"dropbox", "drive"})
 
 # Codes de raison d'indisponibilité → phrase française actionnable.
 # Le code brut est conservé entre parenthèses pour le diagnostic.
@@ -220,6 +234,24 @@ def _cloud_label(device: dict[str, Any]) -> str:
     if provider == "drive":
         return "cloud: Google Drive"
     return "cloud: lié"
+
+
+def _format_device_line(device: dict[str, Any]) -> str:
+    """Une ligne lisible (même style que list_devices)."""
+    return (
+        f"**{_device_label(device)}** — "
+        f"tier: {device.get('delivery_tier')} | {_cloud_label(device)} | "
+        f"id: {device.get('id')}"
+    )
+
+
+def _validate_choice(value: str, allowed: frozenset[str], label: str) -> None:
+    if value not in allowed:
+        choices = ", ".join(sorted(allowed))
+        raise RuntimeError(
+            f"{_ERR_BAD_REQUEST}: {label} '{value}' invalide. "
+            f"Valeurs acceptées: {choices}."
+        )
 
 
 async def _fetch_available_methods(client: httpx.AsyncClient, device_id: str) -> list[dict[str, Any]]:
@@ -752,10 +784,295 @@ async def list_opds_tokens() -> str:
 
 
 # ---------------------------------------------------------------------------
+# 14. update_profile
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def update_profile(
+    kindle_email: str | None = None,
+    default_format: str | None = None,
+    clear_kindle_email: bool = False,
+) -> str:
+    """Met à jour le profil de livraison (PATCH partiel).
+
+    `kindle_email` est l'adresse Send-to-Kindle de repli quand la liseuse n'a
+    pas la sienne ; l'expéditeur Ferry doit être approuvé chez Amazon
+    (voir get_mail_settings), sinon le document est abandonné sans rebond.
+
+    Un champ omis reste inchangé. `clear_kindle_email=True` efface
+    l'adresse (envoie null au cœur).
+
+    Args:
+        kindle_email: Nouvelle adresse Send-to-Kindle de repli (ou None = inchangé).
+        default_format: Format défaut (`epub` | `mobi` | `azw3` | `pdf`).
+        clear_kindle_email: Si True, efface kindle_email (prioritaire sur kindle_email).
+
+    Returns:
+        Profil relu (email, kindle_email, default_format).
+    """
+    body: dict[str, Any] = {}
+    if clear_kindle_email:
+        body["kindle_email"] = None
+    elif kindle_email is not None:
+        body["kindle_email"] = kindle_email
+    if default_format is not None:
+        _validate_choice(default_format, _DEFAULT_FORMATS, "default_format")
+        body["default_format"] = default_format
+    if not body:
+        raise RuntimeError(
+            f"{_ERR_BAD_REQUEST}: aucun champ à mettre à jour "
+            "(passez kindle_email, default_format ou clear_kindle_email=True)."
+        )
+
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.patch("/api/v1/users/me", json=body)
+    _raise_for(resp)
+    data = resp.json()
+    return _kv(
+        [
+            f"email: {data.get('email')}",
+            f"kindle_email: {data.get('kindle_email') or '(non défini)'}",
+            f"default_format: {data.get('default_format')}",
+            f"user_id: {data.get('id')}",
+        ]
+    )
+
+
+# ---------------------------------------------------------------------------
+# 15. get_device
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def get_device(device_id: str) -> str:
+    """Retourne le détail d'une liseuse (mêmes champs que list_devices).
+
+    Args:
+        device_id: UUID de la liseuse.
+
+    Returns:
+        Nom, marque, modèle, tier, état cloud et id.
+    """
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.get(f"/api/v1/devices/{device_id}")
+    _raise_for(resp)
+    return _format_device_line(resp.json())
+
+
+# ---------------------------------------------------------------------------
+# 16. add_device
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def add_device(
+    brand: str,
+    name: str | None = None,
+    model: str | None = None,
+    email_address: str | None = None,
+    conversion_profile: str | None = None,
+) -> str:
+    """Enregistre une nouvelle liseuse.
+
+    Le `delivery_tier` est calculé par le cœur (kindle→A, kobo haut de gamme→B,
+    kobo/tolino→C, other→D) : ne jamais l'envoyer.
+
+    Pour une Kindle, `email_address` est l'adresse `@kindle.com` de l'appareil ;
+    l'omettre fait retomber sur le `kindle_email` du profil.
+
+    Args:
+        brand: Marque (`kindle` | `kobo` | `tolino` | `pocketbook` | `other`).
+        name: Nom libre (ex. « Salon »).
+        model: Modèle (ex. « Paperwhite », « Forma ») — influence le tier Kobo.
+        email_address: Adresse Send-to-Kindle de cet appareil (Kindle).
+        conversion_profile: Preset (`reader_6in` | `reader_7in_plus` | `tablet`).
+
+    Returns:
+        id, label, tier et état cloud de la liseuse créée.
+    """
+    _validate_choice(brand, _DEVICE_BRANDS, "brand")
+    body: dict[str, Any] = {"brand": brand}
+    if name is not None:
+        body["name"] = name
+    if model is not None:
+        body["model"] = model
+    if email_address is not None:
+        body["email_address"] = email_address
+    if conversion_profile is not None:
+        _validate_choice(conversion_profile, _CONVERSION_PRESETS, "conversion_profile")
+        body["conversion_profile"] = conversion_profile
+
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.post("/api/v1/devices", json=body)
+    _raise_for(resp)
+    return "Liseuse ajoutée.\n" + _format_device_line(resp.json())
+
+
+# ---------------------------------------------------------------------------
+# 17. update_device
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def update_device(
+    device_id: str,
+    name: str | None = None,
+    brand: str | None = None,
+    model: str | None = None,
+    email_address: str | None = None,
+    conversion_profile: str | None = None,
+) -> str:
+    """Modifie une liseuse (PATCH partiel : seuls les champs fournis sont envoyés).
+
+    Args:
+        device_id: UUID de la liseuse.
+        name: Nouveau nom (omis = inchangé).
+        brand: Nouvelle marque (`kindle` | `kobo` | `tolino` | `pocketbook` | `other`).
+        model: Nouveau modèle.
+        email_address: Nouvelle adresse Send-to-Kindle de l'appareil.
+        conversion_profile: Preset (`reader_6in` | `reader_7in_plus` | `tablet`).
+
+    Returns:
+        Liseuse mise à jour (id, label, tier, cloud).
+    """
+    body: dict[str, Any] = {}
+    if name is not None:
+        body["name"] = name
+    if brand is not None:
+        _validate_choice(brand, _DEVICE_BRANDS, "brand")
+        body["brand"] = brand
+    if model is not None:
+        body["model"] = model
+    if email_address is not None:
+        body["email_address"] = email_address
+    if conversion_profile is not None:
+        _validate_choice(conversion_profile, _CONVERSION_PRESETS, "conversion_profile")
+        body["conversion_profile"] = conversion_profile
+    if not body:
+        raise RuntimeError(
+            f"{_ERR_BAD_REQUEST}: aucun champ à mettre à jour "
+            "(passez name, brand, model, email_address ou conversion_profile)."
+        )
+
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.patch(f"/api/v1/devices/{device_id}", json=body)
+    _raise_for(resp)
+    return "Liseuse mise à jour.\n" + _format_device_line(resp.json())
+
+
+# ---------------------------------------------------------------------------
+# 18. remove_device
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def remove_device(device_id: str, confirm: bool = False) -> str:
+    """Supprime une liseuse (garde-fou confirm=True obligatoire).
+
+    Args:
+        device_id: UUID de la liseuse.
+        confirm: Doit être True pour confirmer la suppression. Si False, refuse.
+
+    Returns:
+        Confirmation de suppression, ou message de prévisualisation.
+    """
+    token = _resolve_user_token()
+    async with _client(token) as client:
+        resp = await client.get(f"/api/v1/devices/{device_id}")
+        _raise_for(resp)
+        device = resp.json()
+        label = _device_label(device)
+
+        if not confirm:
+            return (
+                f"⚠️ Suppression non confirmée.\n"
+                f"Liseuse concernée: {_format_device_line(device)}\n"
+                f"Appelle remove_device(device_id='{device_id}', confirm=True) "
+                f"pour supprimer définitivement {label}."
+            )
+
+        resp = await client.delete(f"/api/v1/devices/{device_id}")
+    _raise_for(resp)
+    return f"Liseuse supprimée: {label} (id: {device_id})."
+
+
+# ---------------------------------------------------------------------------
+# 19. link_device_cloud
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def link_device_cloud(device_id: str, provider: str) -> str:
+    """Obtient l'URL OAuth pour lier Dropbox ou Google Drive à une liseuse.
+
+    Prérequis du tier B (Kobo Forma / Sage / Elipsa) : sans liaison cloud,
+    la livraison Dropbox/Drive reste indisponible.
+
+    L'URL doit être **ouverte dans un navigateur** par l'utilisateur ; le
+    retour se fait sur le dashboard (`?cloud_link=ok`). Vérifier ensuite avec
+    list_devices ou get_device que `cloud_linked` est vrai.
+
+    Args:
+        device_id: UUID de la liseuse.
+        provider: `dropbox` ou `drive`.
+
+    Returns:
+        URL d'autorisation à ouvrir dans le navigateur.
+    """
+    _validate_choice(provider, _CLOUD_PROVIDERS, "provider")
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.get(
+            f"/api/v1/devices/{device_id}/link",
+            params={"provider": provider},
+        )
+    _raise_for(resp)
+    data = resp.json()
+    url = data.get("url") if isinstance(data, dict) else None
+    if not url:
+        raise RuntimeError(f"{_ERR_CORE}: URL de liaison cloud absente de la réponse.")
+    provider_label = "Dropbox" if provider == "dropbox" else "Google Drive"
+    return (
+        f"Ouvrez cette URL dans un navigateur pour lier {provider_label} "
+        f"(prérequis du tier B pour Kobo Forma/Sage/Elipsa).\n"
+        f"Après autorisation, le dashboard affiche ?cloud_link=ok — "
+        f"vérifiez avec get_device(device_id='{device_id}') ou list_devices "
+        f"que cloud_linked est vrai.\n"
+        f"URL: {url}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 20. set_source_enabled
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def set_source_enabled(source_id: str, enabled: bool) -> str:
+    """Active ou désactive une source de recherche.
+
+    Args:
+        source_id: UUID de la source (voir list_sources).
+        enabled: True pour activer, False pour désactiver.
+
+    Returns:
+        Type de source et nouvel état.
+    """
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.patch(
+            f"/api/v1/sources/{source_id}",
+            json={"enabled": enabled},
+        )
+    _raise_for(resp)
+    data = resp.json()
+    state = "activée" if data.get("enabled") else "désactivée"
+    return f"**{data.get('type')}** — {state} | source_id: {data.get('id')}"
+
+
+# ---------------------------------------------------------------------------
 # Point d'entrée
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    """Démarre le serveur HTTP streamable (protocole MCP 2026-07-28 / legacy).
+
+    FastMCP 4 conserve `run_http_async` : transport streamable-http, mode
+    stateless, chemin `/mcp`. La négociation d'ère (discover vs initialize)
+    est gérée par le SDK `mcp` 2.x par connexion.
+    """
     settings = get_settings()
     asyncio.run(
         mcp.run_http_async(

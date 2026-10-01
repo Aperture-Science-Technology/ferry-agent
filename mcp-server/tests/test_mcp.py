@@ -90,8 +90,38 @@ async def test_tools_registered() -> None:
         "get_profile",
         "get_mail_settings",
         "list_opds_tokens",
+        "update_profile",
+        "get_device",
+        "add_device",
+        "update_device",
+        "remove_device",
+        "link_device_cloud",
+        "set_source_enabled",
     }
     assert expected <= tool_names
+
+
+@pytest.mark.asyncio
+async def test_protocol_version_and_inmemory_client_lists_tools() -> None:
+    """Lot 0 : FastMCP Client en mémoire + protocole ≠ 2025-11-25."""
+    from mcp.types import LATEST_PROTOCOL_VERSION
+    from fastmcp import Client
+    from ferry_mcp.server import mcp
+
+    assert LATEST_PROTOCOL_VERSION != "2025-11-25"
+    assert LATEST_PROTOCOL_VERSION == "2026-07-28"
+
+    async with Client(mcp) as client:
+        tools = await client.list_tools()
+        names = {t.name for t in tools}
+        assert "search_library" in names
+        assert "update_profile" in names
+        assert "link_device_cloud" in names
+        assert len(names) >= 20
+        assert client.protocol_version == "2026-07-28"
+        discover = client.session.discover_result
+        assert discover is not None
+        assert "2026-07-28" in (discover.supported_versions or [])
 
 
 # ---------------------------------------------------------------------------
@@ -760,3 +790,330 @@ async def test_get_mail_settings_shows_sender_and_warning(monkeypatch) -> None:
     # Pas de secrets SMTP
     assert "password" not in result.lower()
     assert "smtp_host" not in result.lower()
+
+
+# ---------------------------------------------------------------------------
+# update_profile
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_update_profile_sends_partial_patch(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "id": "u1",
+                "email": "reader@example.test",
+                "kindle_email": "me@kindle.com",
+                "default_format": "pdf",
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.update_profile(
+        kindle_email="me@kindle.com", default_format="pdf"
+    )
+
+    assert captured[0].method == "PATCH"
+    assert captured[0].url.path == "/api/v1/users/me"
+    body = _json.loads(captured[0].content)
+    assert body == {"kindle_email": "me@kindle.com", "default_format": "pdf"}
+    assert "me@kindle.com" in result
+    assert "pdf" in result
+
+
+@pytest.mark.asyncio
+async def test_update_profile_clear_kindle_email_sends_null(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "id": "u1",
+                "email": "reader@example.test",
+                "kindle_email": None,
+                "default_format": "epub",
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.update_profile(clear_kindle_email=True)
+
+    body = _json.loads(captured[0].content)
+    assert body == {"kindle_email": None}
+    assert "non défini" in result
+
+
+@pytest.mark.asyncio
+async def test_update_profile_rejects_invalid_format(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        return httpx.Response(200, json={})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    with pytest.raises(RuntimeError, match="default_format"):
+        await server.update_profile(default_format="docx")
+    assert calls == []
+
+
+# ---------------------------------------------------------------------------
+# get_device / add_device / update_device / remove_device / link / source
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_device_sends_correct_path(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "id": "dev-9",
+                "name": "Salon",
+                "brand": "kindle",
+                "model": "Paperwhite",
+                "delivery_tier": "A",
+                "cloud_provider": None,
+                "cloud_linked": False,
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.get_device("dev-9")
+
+    assert captured[0].method == "GET"
+    assert captured[0].url.path == "/api/v1/devices/dev-9"
+    assert "Salon" in result
+    assert "dev-9" in result
+
+
+@pytest.mark.asyncio
+async def test_add_device_sends_payload_without_tier(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            201,
+            json={
+                "id": "new-dev",
+                "name": "Voyage",
+                "brand": "kindle",
+                "model": "Oasis",
+                "delivery_tier": "A",
+                "cloud_linked": False,
+                "cloud_provider": None,
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.add_device(
+        brand="kindle",
+        name="Voyage",
+        model="Oasis",
+        email_address="voyage@kindle.com",
+    )
+
+    req = captured[0]
+    assert req.method == "POST"
+    assert req.url.path == "/api/v1/devices"
+    body = _json.loads(req.content)
+    assert body["brand"] == "kindle"
+    assert body["email_address"] == "voyage@kindle.com"
+    assert "delivery_tier" not in body
+    assert "new-dev" in result
+    assert "Voyage" in result
+
+
+@pytest.mark.asyncio
+async def test_add_device_rejects_invalid_brand(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        return httpx.Response(200, json={})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    with pytest.raises(RuntimeError, match="brand"):
+        await server.add_device(brand="sony")
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_update_device_sends_only_provided_fields(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "id": "dev-1",
+                "name": "Bureau",
+                "brand": "kobo",
+                "model": "Clara",
+                "delivery_tier": "C",
+                "cloud_linked": False,
+                "cloud_provider": None,
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.update_device("dev-1", name="Bureau", conversion_profile="reader_6in")
+
+    assert captured[0].method == "PATCH"
+    assert captured[0].url.path == "/api/v1/devices/dev-1"
+    body = _json.loads(captured[0].content)
+    assert body == {"name": "Bureau", "conversion_profile": "reader_6in"}
+    assert "Bureau" in result
+
+
+@pytest.mark.asyncio
+async def test_remove_device_refuses_without_confirm(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "id": "dev-del",
+                "name": "Salon",
+                "brand": "kindle",
+                "model": "PW",
+                "delivery_tier": "A",
+                "cloud_linked": False,
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.remove_device("dev-del", confirm=False)
+
+    assert all(c.method == "GET" for c in calls)
+    assert "confirm=True" in result
+    assert "Salon" in result
+
+
+@pytest.mark.asyncio
+async def test_remove_device_with_confirm_deletes(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        if req.method == "GET":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "dev-del",
+                    "name": "Salon",
+                    "brand": "kindle",
+                    "model": "PW",
+                    "delivery_tier": "A",
+                    "cloud_linked": False,
+                },
+            )
+        return httpx.Response(204)
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.remove_device("dev-del", confirm=True)
+
+    assert any(c.method == "DELETE" and c.url.path == "/api/v1/devices/dev-del" for c in calls)
+    assert "supprimée" in result.lower()
+    assert "Salon" in result
+
+
+@pytest.mark.asyncio
+async def test_link_device_cloud_returns_browser_url(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={"url": "https://www.dropbox.com/oauth2/authorize?state=abc"},
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.link_device_cloud("dev-b", "dropbox")
+
+    req = captured[0]
+    assert req.method == "GET"
+    assert req.url.path == "/api/v1/devices/dev-b/link"
+    assert req.url.params.get("provider") == "dropbox"
+    assert "https://www.dropbox.com/oauth2/authorize" in result
+    assert "navigateur" in result.lower()
+    assert "cloud_link=ok" in result
+    assert "tier B" in result
+
+
+@pytest.mark.asyncio
+async def test_set_source_enabled_sends_patch(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "id": "src-1",
+                "type": "gutenberg",
+                "enabled": False,
+                "created_at": "2026-01-01T00:00:00Z",
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.set_source_enabled("src-1", enabled=False)
+
+    req = captured[0]
+    assert req.method == "PATCH"
+    assert req.url.path == "/api/v1/sources/src-1"
+    assert _json.loads(req.content) == {"enabled": False}
+    assert "gutenberg" in result
+    assert "désactivée" in result
