@@ -101,6 +101,18 @@ async def test_tools_registered() -> None:
         "plan_delivery",
         "diagnose",
         "deliver_to_kindle",
+        "search_library_items",
+        "update_library_item",
+        "delete_library_item",
+        "list_library_item_deliveries",
+        "download_library_item",
+        "create_gateway",
+        "recreate_gateway",
+        "revoke_gateway",
+        "delete_gateway",
+        "list_gateway_jobs",
+        "create_opds_token",
+        "revoke_opds_token",
     }
     assert expected <= tool_names
 
@@ -1717,3 +1729,469 @@ async def test_deliver_to_kindle_confirm_posts_email_delivery(monkeypatch) -> No
     assert "get_delivery_status" in result
     assert "get_mail_settings" in result
     assert "new@kindle.com" in result
+
+
+# ---------------------------------------------------------------------------
+# Lot 3A — bibliothèque écriture / téléchargement
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_search_library_items_sends_q_param(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "items": [{
+                    "id": "lib-q",
+                    "title": "Dune",
+                    "author": "Herbert",
+                    "original_format": "epub",
+                }],
+                "total": 1,
+                "page": 1,
+                "limit": 20,
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.search_library_items("dune", page=1, limit=20)
+
+    req = captured[0]
+    assert req.method == "GET"
+    assert req.url.path == "/api/v1/books"
+    assert req.url.params.get("q") == "dune"
+    assert "lib-q" in result
+    assert "Dune" in result
+
+
+@pytest.mark.asyncio
+async def test_update_library_item_sends_only_provided_fields(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "id": "lib-1",
+                "title": "Dune Messiah",
+                "author": "Herbert",
+                "language": "fr",
+                "isbn": None,
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.update_library_item("lib-1", title="Dune Messiah", language="fr")
+
+    assert captured[0].method == "PATCH"
+    assert captured[0].url.path == "/api/v1/books/lib-1"
+    body = _json.loads(captured[0].content)
+    assert body == {"title": "Dune Messiah", "language": "fr"}
+    assert "Dune Messiah" in result
+
+
+@pytest.mark.asyncio
+async def test_update_library_item_refuses_empty_body(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        return httpx.Response(200, json={})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    with pytest.raises(RuntimeError, match="au moins un champ"):
+        await server.update_library_item("lib-1")
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_delete_library_item_refuses_without_confirm(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        return httpx.Response(
+            200,
+            json={"id": "lib-del", "title": "Dune", "author": "Herbert"},
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.delete_library_item("lib-del", confirm=False)
+
+    assert all(c.method == "GET" for c in calls)
+    assert "confirm=True" in result
+    assert "Dune" in result
+
+
+@pytest.mark.asyncio
+async def test_delete_library_item_with_confirm_deletes(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        if req.method == "GET":
+            return httpx.Response(
+                200,
+                json={"id": "lib-del", "title": "Dune", "author": "Herbert"},
+            )
+        return httpx.Response(204)
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.delete_library_item("lib-del", confirm=True)
+
+    assert any(c.method == "DELETE" and c.url.path == "/api/v1/books/lib-del" for c in calls)
+    assert "supprimé" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_list_library_item_deliveries_path(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json=[{
+                "id": "job-1",
+                "status": "sent",
+                "method": "email",
+                "created_at": "2026-01-02T00:00:00Z",
+                "item_title": "Dune",
+                "device_label": "Salon",
+                "error": None,
+            }],
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.list_library_item_deliveries("lib-1")
+
+    assert captured[0].method == "GET"
+    assert captured[0].url.path == "/api/v1/books/lib-1/deliveries"
+    assert "Dune" in result
+    assert "job-1" in result
+
+
+@pytest.mark.asyncio
+async def test_download_library_item_posts_download_link(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "url": "https://ferry.example.test/api/v1/downloads/tok",
+                "expires_at": "2026-01-01T00:15:00Z",
+                "format": "epub",
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.download_library_item("lib-1", format="epub")
+
+    assert captured[0].method == "POST"
+    assert captured[0].url.path == "/api/v1/books/lib-1/download-link"
+    assert _json.loads(captured[0].content) == {"format": "epub"}
+    assert "15 minutes" in result
+    assert "tok" in result
+    assert "epub" in result
+
+
+# ---------------------------------------------------------------------------
+# Lot 3B — gateways / OPDS
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_gateway_posts_and_warns_secrets(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            201,
+            json={
+                "gateway_id": "gw-1",
+                "pairing_token": "pair-secret",
+                "gateway_key": "key-secret",
+                "pairing_expires_at": "2026-01-01T00:15:00Z",
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.create_gateway(name="Salon")
+
+    assert captured[0].method == "POST"
+    assert captured[0].url.path == "/api/v1/gateways"
+    assert _json.loads(captured[0].content) == {"name": "Salon"}
+    assert "pair-secret" in result
+    assert "une seule fois" in result.lower()
+    assert "Installez" in result
+
+
+@pytest.mark.asyncio
+async def test_recreate_gateway_posts(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json={
+                "gateway_id": "gw-1",
+                "pairing_token": "new-pair",
+                "gateway_key": "new-key",
+                "pairing_expires_at": "2026-01-01T00:15:00Z",
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.recreate_gateway("gw-1")
+
+    assert captured[0].method == "POST"
+    assert captured[0].url.path == "/api/v1/gateways/gw-1/recreate"
+    assert "new-pair" in result
+    assert "une seule fois" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_revoke_gateway_refuses_without_confirm(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        return httpx.Response(
+            200,
+            json=[{"gateway_id": "gw-1", "name": "Maison", "status": "paired"}],
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.revoke_gateway("gw-1", confirm=False)
+
+    assert all(c.method == "GET" for c in calls)
+    assert "confirm=True" in result
+    assert "Maison" in result
+
+
+@pytest.mark.asyncio
+async def test_revoke_gateway_with_confirm_posts(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        if req.method == "GET":
+            return httpx.Response(
+                200,
+                json=[{"gateway_id": "gw-1", "name": "Maison", "status": "paired"}],
+            )
+        return httpx.Response(200, json={"gateway_id": "gw-1"})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.revoke_gateway("gw-1", confirm=True)
+
+    post = [c for c in calls if c.method == "POST"]
+    assert len(post) == 1
+    assert post[0].url.path == "/api/v1/gateways/revoke"
+    assert _json.loads(post[0].content) == {"gateway_id": "gw-1"}
+    assert "révoquée" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_delete_gateway_refuses_without_confirm(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        return httpx.Response(
+            200,
+            json=[{"gateway_id": "gw-1", "name": "Maison", "status": "paired"}],
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.delete_gateway("gw-1", confirm=False)
+
+    assert all(c.method == "GET" for c in calls)
+    assert "confirm=True" in result
+    assert not any(c.method == "DELETE" for c in calls)
+
+
+@pytest.mark.asyncio
+async def test_delete_gateway_with_confirm_deletes(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        if req.method == "GET":
+            return httpx.Response(
+                200,
+                json=[{"gateway_id": "gw-1", "name": "Maison", "status": "paired"}],
+            )
+        return httpx.Response(204)
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.delete_gateway("gw-1", confirm=True)
+
+    assert any(c.method == "DELETE" and c.url.path == "/api/v1/gateways/gw-1" for c in calls)
+    assert "supprimée" in result.lower()
+
+
+@pytest.mark.asyncio
+async def test_list_gateway_jobs_path(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json=[{
+                "job_id": "job-g1",
+                "type": "fetch",
+                "status": "done",
+                "library_item_id": "lib-1",
+                "attempts": 1,
+            }],
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.list_gateway_jobs("gw-1", limit=10)
+
+    assert captured[0].method == "GET"
+    assert captured[0].url.path == "/api/v1/gateways/gw-1/jobs"
+    assert captured[0].url.params.get("limit") == "10"
+    assert "job-g1" in result
+    assert "lib-1" in result
+
+
+@pytest.mark.asyncio
+async def test_create_opds_token_posts(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            201,
+            json={
+                "id": "tok-1",
+                "label": "Clara",
+                "token": "secret-opds",
+                "url": "https://ferry.example.test/opds/secret-opds",
+                "created_at": "2026-01-01T00:00:00Z",
+            },
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.create_opds_token(label="Clara")
+
+    assert captured[0].method == "POST"
+    assert captured[0].url.path == "/api/v1/opds/tokens"
+    assert _json.loads(captured[0].content) == {"label": "Clara"}
+    assert "secret-opds" in result
+    assert "une seule fois" in result.lower()
+    assert "OPDS" in result
+
+
+@pytest.mark.asyncio
+async def test_revoke_opds_token_refuses_without_confirm(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        return httpx.Response(
+            200,
+            json=[{"id": "tok-1", "label": "Clara", "created_at": "2026-01-01T00:00:00Z"}],
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.revoke_opds_token("tok-1", confirm=False)
+
+    assert all(c.method == "GET" for c in calls)
+    assert "confirm=True" in result
+    assert not any(c.method == "POST" for c in calls)
+
+
+@pytest.mark.asyncio
+async def test_revoke_opds_token_with_confirm_posts(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        if req.method == "GET":
+            return httpx.Response(
+                200,
+                json=[{"id": "tok-1", "label": "Clara", "created_at": "2026-01-01T00:00:00Z"}],
+            )
+        return httpx.Response(
+            200,
+            json={"id": "tok-1", "label": "Clara", "created_at": "2026-01-01T00:00:00Z", "last_used_at": None},
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.revoke_opds_token("tok-1", confirm=True)
+
+    post = [c for c in calls if c.method == "POST"]
+    assert len(post) == 1
+    assert post[0].url.path == "/api/v1/opds/tokens/revoke"
+    assert _json.loads(post[0].content) == {"token_id": "tok-1"}
+    assert "révoqué" in result.lower()

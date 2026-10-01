@@ -14,6 +14,9 @@ export interface paths {
         /**
          * List Books
          * @description Liste paginee des LibraryItem de l'utilisateur courant (SQL limit/offset).
+         *
+         *     `q` filtre (insensible a la casse) sur `title` OU `author` (ILIKE), applique
+         *     au count et a la page.
          */
         get: operations["list_books_api_v1_books_get"];
         put?: never;
@@ -106,6 +109,28 @@ export interface paths {
         get: operations["list_book_deliveries_api_v1_books__item_id__deliveries_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/books/{item_id}/download-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Download Link
+         * @description Emmet une URL signee courte (TTL 15 min) pour telecharger un livre.
+         *
+         *     Corps ou query `format` ; a defaut, `original_format` du livre.
+         */
+        post: operations["create_download_link_api_v1_books__item_id__download_link_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -282,6 +307,26 @@ export interface paths {
          *     choisir un tier technique A/B/C/D a la main.
          */
         get: operations["get_delivery_methods_api_v1_devices__device_id__methods_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/downloads/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download By Token
+         * @description Sert le fichier ebook correspondant au jeton signe (sans auth).
+         */
+        get: operations["download_by_token_api_v1_downloads__token__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -956,6 +1001,23 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** DownloadLinkOut */
+        DownloadLinkOut: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Format */
+            format: string;
+            /** Url */
+            url: string;
+        };
+        /** DownloadLinkRequest */
+        DownloadLinkRequest: {
+            /** Format */
+            format?: ("epub" | "mobi" | "azw3" | "pdf") | null;
+        };
         /** GatewayCreate */
         GatewayCreate: {
             /**
@@ -1424,6 +1486,7 @@ export interface operations {
             query?: {
                 page?: number;
                 limit?: number;
+                q?: string | null;
             };
             header?: {
                 authorization?: string | null;
@@ -1684,6 +1747,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliveryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_download_link_api_v1_books__item_id__download_link_post: {
+        parameters: {
+            query?: {
+                format?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "X-Dev-User"?: string | null;
+            };
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DownloadLinkRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DownloadLinkOut"];
                 };
             };
             /** @description Validation Error */
@@ -2136,6 +2239,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MethodAvailability"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_by_token_api_v1_downloads__token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

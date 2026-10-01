@@ -25,6 +25,18 @@ Outils (identité Clerk utilisateur obligatoire, pas de compte-service) :
  22. plan_delivery        — dry-run : ce qui va se passer / ce qui bloque
  23. diagnose             — pourquoi un envoi Kindle ne part pas
  24. deliver_to_kindle    — parcours Kindle explicite (email + confirm)
+ 25. search_library_items — recherche dans la bibliothèque (filtre q)
+ 26. update_library_item  — métadonnées d'un livre
+ 27. delete_library_item  — suppression (garde-fou confirm)
+ 28. list_library_item_deliveries — historique d'envois d'un livre
+ 29. download_library_item — lien de téléchargement signé (15 min)
+ 30. create_gateway       — création (secrets affichés une fois)
+ 31. recreate_gateway     — rotation des clés (affichage unique)
+ 32. revoke_gateway       — révocation (garde-fou confirm)
+ 33. delete_gateway       — suppression (garde-fou confirm)
+ 34. list_gateway_jobs    — jobs récents d'une gateway
+ 35. create_opds_token    — jeton OPDS (secret une fois + url catalogue)
+ 36. revoke_opds_token    — révocation OPDS (garde-fou confirm)
 """
 
 from __future__ import annotations
@@ -79,15 +91,19 @@ mcp = FastMCP(
     instructions=(
         "Ferry Agent MCP : bibliothèque, liseuses, gateways et livraisons "
         "pour l'utilisateur authentifié. "
-        "search_library / add_to_library / list_library pour les livres ; "
+        "search_library / add_to_library / list_library / search_library_items "
+        "/ update_library_item / delete_library_item / download_library_item "
+        "/ list_library_item_deliveries pour les livres ; "
         "list_devices / get_device / add_device / update_device / remove_device "
         "+ list_device_methods puis deliver(confirm=True, method=…) pour envoyer ; "
         "deliver_to_kindle pour le parcours Kindle (email) ; "
         "plan_delivery / diagnose / list_deliveries pour anticiper et diagnostiquer ; "
         "link_device_cloud pour le tier B (Kobo) ; get_delivery_status pour suivre ; "
-        "list_gateways / get_gateway_job pour le catalogue local ; "
+        "list_gateways / create_gateway / recreate_gateway / revoke_gateway / "
+        "delete_gateway / list_gateway_jobs / get_gateway_job pour le catalogue local ; "
         "list_sources / set_source_enabled / get_profile / update_profile / "
-        "get_mail_settings / list_opds_tokens pour les réglages."
+        "get_mail_settings / list_opds_tokens / create_opds_token / revoke_opds_token "
+        "pour les réglages."
     ),
 )
 
@@ -1646,6 +1662,545 @@ async def deliver_to_kindle(
         f"Suivre avec get_delivery_status(job_id='{data.get('id')}')."
     )
     return msg
+
+
+# ---------------------------------------------------------------------------
+# 25. search_library_items
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def search_library_items(query: str, page: int = 1, limit: int = 20) -> str:
+    """Recherche **dans** la bibliothèque de l'utilisateur (titre ou auteur).
+
+    Distinct de `search_library`, qui interroge les sources externes
+    (légales + gateways). Ici on filtre uniquement les livres déjà possédés
+    (`GET /api/v1/books?q=`).
+
+    Args:
+        query: Texte à chercher (insensible à la casse, titre OU auteur).
+        page: Numéro de page (commence à 1).
+        limit: Nombre d'éléments par page (défaut 20).
+
+    Returns:
+        Titre, auteur, format et library_item_id des correspondances.
+    """
+    if page < 1:
+        page = 1
+    if limit < 1:
+        limit = 1
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.get(
+            "/api/v1/books",
+            params={"q": query, "page": page, "limit": limit},
+        )
+    _raise_for(resp)
+    data = resp.json()
+    items = data.get("items") if isinstance(data, dict) else None
+    if not items:
+        return f"Aucun livre trouvé dans la bibliothèque pour « {query} »."
+    total = data.get("total", len(items))
+    lines = [
+        f"Bibliothèque (recherche « {query} ») — "
+        f"page {data.get('page', page)} "
+        f"(total: {total})"
+    ]
+    for item in items:
+        lines.append(
+            f"**{item.get('title', '?')}** — {item.get('author') or '?'}\n"
+            f"  format: {item.get('original_format', '?')} | "
+            f"library_item_id: {item.get('id')}"
+        )
+    return "\n\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 26. update_library_item
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def update_library_item(
+    item_id: str,
+    title: str | None = None,
+    author: str | None = None,
+    description: str | None = None,
+    language: str | None = None,
+    page_count: int | None = None,
+    publisher: str | None = None,
+    published_year: int | None = None,
+    isbn: str | None = None,
+) -> str:
+    """Met à jour les métadonnées d'un livre de la bibliothèque.
+
+    N'envoie que les champs fournis. Refuse si aucun champ n'est fourni.
+
+    Args:
+        item_id: UUID du livre.
+        title, author, description, language, page_count, publisher,
+        published_year, isbn: champs optionnels à mettre à jour.
+
+    Returns:
+        Résumé du livre après mise à jour.
+    """
+    body: dict[str, Any] = {}
+    if title is not None:
+        body["title"] = title
+    if author is not None:
+        body["author"] = author
+    if description is not None:
+        body["description"] = description
+    if language is not None:
+        body["language"] = language
+    if page_count is not None:
+        body["page_count"] = page_count
+    if publisher is not None:
+        body["publisher"] = publisher
+    if published_year is not None:
+        body["published_year"] = published_year
+    if isbn is not None:
+        body["isbn"] = isbn
+    if not body:
+        raise RuntimeError(
+            f"{_ERR_BAD_REQUEST}: fournir au moins un champ à mettre à jour "
+            "(title, author, description, language, page_count, publisher, "
+            "published_year, isbn)."
+        )
+
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.patch(f"/api/v1/books/{item_id}", json=body)
+    _raise_for(resp)
+    data = resp.json()
+    return (
+        "Livre mis à jour.\n"
+        + _kv(
+            [
+                f"title: {data.get('title')}",
+                f"author: {data.get('author')}",
+                f"language: {data.get('language') or '—'}",
+                f"isbn: {data.get('isbn') or '—'}",
+                f"library_item_id: {data.get('id') or item_id}",
+            ]
+        )
+    )
+
+
+# ---------------------------------------------------------------------------
+# 27. delete_library_item
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def delete_library_item(item_id: str, confirm: bool = False) -> str:
+    """Supprime un livre de la bibliothèque (garde-fou confirm=True obligatoire).
+
+    Args:
+        item_id: UUID du livre.
+        confirm: Doit être True pour confirmer. Si False, prévisualise seulement.
+
+    Returns:
+        Confirmation de suppression, ou message de prévisualisation.
+    """
+    token = _resolve_user_token()
+    async with _client(token) as client:
+        resp = await client.get(f"/api/v1/books/{item_id}")
+        _raise_for(resp)
+        book = resp.json()
+        title = book.get("title") or "?"
+        author = book.get("author") or "?"
+
+        if not confirm:
+            return (
+                f"⚠️ Suppression non confirmée.\n"
+                f"Livre concerné: **{title}** — {author} | "
+                f"library_item_id: {item_id}\n"
+                f"Appelle delete_library_item(item_id='{item_id}', confirm=True) "
+                f"pour supprimer définitivement ce livre."
+            )
+
+        resp = await client.delete(f"/api/v1/books/{item_id}")
+    _raise_for(resp)
+    return f"Livre supprimé: **{title}** — {author} (id: {item_id})."
+
+
+# ---------------------------------------------------------------------------
+# 28. list_library_item_deliveries
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def list_library_item_deliveries(item_id: str) -> str:
+    """Liste l'historique des envois pour un livre donné.
+
+    Args:
+        item_id: UUID du livre (library_item_id).
+
+    Returns:
+        Même formatage que list_deliveries (date, statut, méthode, liseuse…).
+    """
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.get(f"/api/v1/books/{item_id}/deliveries")
+    _raise_for(resp)
+    jobs = resp.json()
+    if not isinstance(jobs, list) or not jobs:
+        return f"Aucun envoi enregistré pour ce livre (id: {item_id})."
+
+    def _sort_key(job: dict[str, Any]) -> str:
+        return str(job.get("created_at") or "")
+
+    ordered = sorted(
+        [j for j in jobs if isinstance(j, dict)],
+        key=_sort_key,
+        reverse=True,
+    )
+
+    lines: list[str] = [
+        f"Envois du livre {item_id} ({len(ordered)} enregistrement(s)) :"
+    ]
+    has_email_sent = False
+    for job in ordered:
+        if job.get("method") == "email" and job.get("status") == "sent":
+            has_email_sent = True
+        parts = [
+            f"date: {job.get('created_at') or '?'}",
+            f"status: {job.get('status')}",
+            f"method: {job.get('method')}",
+            f"livre: {job.get('item_title') or '?'}",
+            f"liseuse: {job.get('device_label') or '?'}",
+        ]
+        if job.get("error"):
+            parts.append(f"erreur: {job['error']}")
+        if job.get("id"):
+            parts.append(f"job_id: {job['id']}")
+        lines.append(_kv(parts))
+
+    if has_email_sent:
+        lines.append(_AMAZON_SENT_REMINDER)
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 29. download_library_item
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def download_library_item(item_id: str, format: str | None = None) -> str:
+    """Obtient un lien de téléchargement signé pour un livre de la bibliothèque.
+
+    Le client MCP ne peut pas streamer un binaire : on renvoie une URL courte
+    (lien personnel, valable 15 minutes).
+
+    Args:
+        item_id: UUID du livre.
+        format: Format cible (epub, mobi, azw3, pdf). Défaut = original_format.
+
+    Returns:
+        URL, format, expiration, et mention de validité 15 minutes.
+    """
+    body: dict[str, Any] = {}
+    if format:
+        _validate_choice(format.lower().lstrip("."), _DEFAULT_FORMATS, "format")
+        body["format"] = format.lower().lstrip(".")
+
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.post(
+            f"/api/v1/books/{item_id}/download-link",
+            json=body,
+        )
+    _raise_for(resp)
+    data = resp.json()
+    return (
+        "Lien de téléchargement (lien personnel, valable 15 minutes).\n"
+        + _kv(
+            [
+                f"url: {data.get('url')}",
+                f"format: {data.get('format')}",
+                f"expires_at: {data.get('expires_at')}",
+                f"library_item_id: {item_id}",
+            ]
+        )
+    )
+
+
+# ---------------------------------------------------------------------------
+# 30. create_gateway
+# ---------------------------------------------------------------------------
+
+def _format_gateway_secrets(data: dict[str, Any], *, rotated: bool = False) -> str:
+    """Formate les secrets gateway (affichage unique) + marche à suivre."""
+    action = "régénérés" if rotated else "créés"
+    lines = [
+        f"Gateway {action}. ⚠️ Ces secrets ne sont affichés qu'une seule fois — "
+        "notez-les maintenant.",
+        _kv(
+            [
+                f"gateway_id: {data.get('gateway_id')}",
+                f"pairing_token: {data.get('pairing_token')}",
+                f"gateway_key: {data.get('gateway_key')}",
+                f"pairing_expires_at: {data.get('pairing_expires_at') or '—'}",
+            ]
+        ),
+        "Marche à suivre :",
+        "1. Installez le bundle gateway sur la machine qui héberge le catalogue local.",
+        "2. Lancez le gateway avec la configuration fournie.",
+        "3. Laissez-le s'appairer avec ce pairing_token (avant expiration).",
+    ]
+    return "\n".join(lines)
+
+
+@mcp.tool
+async def create_gateway(name: str = "Gateway") -> str:
+    """Crée une gateway (catalogue local). Secrets affichés une seule fois.
+
+    Args:
+        name: Nom affiché de la gateway (défaut « Gateway »).
+
+    Returns:
+        gateway_id, pairing_token, gateway_key, expiration, et marche à suivre.
+    """
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.post("/api/v1/gateways", json={"name": name})
+    _raise_for(resp)
+    return _format_gateway_secrets(resp.json(), rotated=False)
+
+
+# ---------------------------------------------------------------------------
+# 31. recreate_gateway
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def recreate_gateway(gateway_id: str) -> str:
+    """Régénère le code d'appairage et la clé d'accès d'une gateway.
+
+    Les nouveaux secrets ne sont affichés qu'une seule fois (comme à la création).
+
+    Args:
+        gateway_id: UUID de la gateway.
+
+    Returns:
+        Nouveaux secrets + marche à suivre.
+    """
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.post(f"/api/v1/gateways/{gateway_id}/recreate")
+    _raise_for(resp)
+    return _format_gateway_secrets(resp.json(), rotated=True)
+
+
+# ---------------------------------------------------------------------------
+# 32. revoke_gateway
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def revoke_gateway(gateway_id: str, confirm: bool = False) -> str:
+    """Révoque une gateway (garde-fou confirm=True obligatoire).
+
+    Args:
+        gateway_id: UUID de la gateway.
+        confirm: Doit être True pour confirmer.
+
+    Returns:
+        Confirmation ou prévisualisation.
+    """
+    token = _resolve_user_token()
+    async with _client(token) as client:
+        resp = await client.get("/api/v1/gateways")
+        _raise_for(resp)
+        gateways = resp.json() if isinstance(resp.json(), list) else []
+        gw = next(
+            (
+                g
+                for g in gateways
+                if str(g.get("gateway_id") or g.get("id")) == str(gateway_id)
+            ),
+            None,
+        )
+        if gw is None:
+            raise RuntimeError(f"{_ERR_NOT_FOUND} (gateway {gateway_id})")
+        label = gw.get("name") or "Gateway"
+
+        if not confirm:
+            return (
+                f"⚠️ Révocation non confirmée.\n"
+                f"Gateway concernée: **{label}** | gateway_id: {gateway_id}\n"
+                f"Appelle revoke_gateway(gateway_id='{gateway_id}', confirm=True) "
+                f"pour révoquer définitivement."
+            )
+
+        resp = await client.post(
+            "/api/v1/gateways/revoke",
+            json={"gateway_id": gateway_id},
+        )
+    _raise_for(resp)
+    return f"Gateway révoquée: **{label}** (id: {gateway_id})."
+
+
+# ---------------------------------------------------------------------------
+# 33. delete_gateway
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def delete_gateway(gateway_id: str, confirm: bool = False) -> str:
+    """Supprime une gateway (garde-fou confirm=True obligatoire).
+
+    Args:
+        gateway_id: UUID de la gateway.
+        confirm: Doit être True pour confirmer.
+
+    Returns:
+        Confirmation ou prévisualisation.
+    """
+    token = _resolve_user_token()
+    async with _client(token) as client:
+        resp = await client.get("/api/v1/gateways")
+        _raise_for(resp)
+        gateways = resp.json() if isinstance(resp.json(), list) else []
+        gw = next(
+            (
+                g
+                for g in gateways
+                if str(g.get("gateway_id") or g.get("id")) == str(gateway_id)
+            ),
+            None,
+        )
+        if gw is None:
+            raise RuntimeError(f"{_ERR_NOT_FOUND} (gateway {gateway_id})")
+        label = gw.get("name") or "Gateway"
+
+        if not confirm:
+            return (
+                f"⚠️ Suppression non confirmée.\n"
+                f"Gateway concernée: **{label}** | gateway_id: {gateway_id}\n"
+                f"Appelle delete_gateway(gateway_id='{gateway_id}', confirm=True) "
+                f"pour supprimer définitivement."
+            )
+
+        resp = await client.delete(f"/api/v1/gateways/{gateway_id}")
+    _raise_for(resp)
+    return f"Gateway supprimée: **{label}** (id: {gateway_id})."
+
+
+# ---------------------------------------------------------------------------
+# 34. list_gateway_jobs
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def list_gateway_jobs(gateway_id: str, limit: int = 20) -> str:
+    """Liste les jobs récents d'une gateway (plus récents d'abord).
+
+    Args:
+        gateway_id: UUID de la gateway.
+        limit: Nombre maximum de jobs (défaut 20).
+
+    Returns:
+        Même style que get_gateway_job (type, statut, library_item_id, erreur).
+    """
+    if limit < 1:
+        limit = 1
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.get(
+            f"/api/v1/gateways/{gateway_id}/jobs",
+            params={"limit": limit},
+        )
+    _raise_for(resp)
+    jobs = resp.json()
+    if not isinstance(jobs, list) or not jobs:
+        return f"Aucun job pour la gateway {gateway_id}."
+
+    lines = [f"Jobs gateway {gateway_id} (limit={limit}, {len(jobs)} affiché(s)) :"]
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        parts = [
+            f"job_id: {job.get('job_id') or job.get('id')}",
+            f"type: {job.get('type')}",
+            f"status: {job.get('status')}",
+        ]
+        if job.get("library_item_id"):
+            parts.append(f"library_item_id: {job['library_item_id']}")
+        if job.get("error"):
+            parts.append(f"erreur: {job['error']}")
+        if job.get("attempts") is not None:
+            parts.append(f"attempts: {job['attempts']}")
+        lines.append(_kv(parts))
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 35. create_opds_token
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def create_opds_token(label: str = "Liseuse") -> str:
+    """Crée un jeton OPDS pour une liseuse qui sait lire un catalogue.
+
+    Le secret n'est affiché qu'une seule fois. L'`url` est le catalogue à
+    saisir dans la liseuse (voie OPDS).
+
+    Args:
+        label: Libellé du jeton (défaut « Liseuse »).
+
+    Returns:
+        Secret, url du catalogue, et rappel d'affichage unique.
+    """
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.post("/api/v1/opds/tokens", json={"label": label})
+    _raise_for(resp)
+    data = resp.json()
+    return (
+        "Jeton OPDS créé. ⚠️ Le secret n'est affiché qu'une seule fois — "
+        "notez-le maintenant.\n"
+        "C'est la voie OPDS pour une liseuse qui sait lire un catalogue : "
+        "saisissez l'URL ci-dessous dans les réglages de la liseuse.\n"
+        + _kv(
+            [
+                f"token_id: {data.get('id')}",
+                f"label: {data.get('label')}",
+                f"token: {data.get('token')}",
+                f"url: {data.get('url')}",
+                f"created_at: {data.get('created_at')}",
+            ]
+        )
+    )
+
+
+# ---------------------------------------------------------------------------
+# 36. revoke_opds_token
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def revoke_opds_token(token_id: str, confirm: bool = False) -> str:
+    """Révoque un jeton OPDS (garde-fou confirm=True obligatoire).
+
+    Args:
+        token_id: UUID du jeton (voir list_opds_tokens).
+        confirm: Doit être True pour confirmer.
+
+    Returns:
+        Confirmation ou prévisualisation.
+    """
+    token = _resolve_user_token()
+    async with _client(token) as client:
+        resp = await client.get("/api/v1/opds/tokens")
+        _raise_for(resp)
+        tokens = resp.json() if isinstance(resp.json(), list) else []
+        row = next(
+            (t for t in tokens if str(t.get("id")) == str(token_id)),
+            None,
+        )
+        if row is None:
+            raise RuntimeError(f"{_ERR_NOT_FOUND} (token OPDS {token_id})")
+        label = row.get("label") or "OPDS"
+
+        if not confirm:
+            return (
+                f"⚠️ Révocation non confirmée.\n"
+                f"Jeton concerné: **{label}** | token_id: {token_id}\n"
+                f"Appelle revoke_opds_token(token_id='{token_id}', confirm=True) "
+                f"pour révoquer définitivement."
+            )
+
+        resp = await client.post(
+            "/api/v1/opds/tokens/revoke",
+            json={"token_id": token_id},
+        )
+    _raise_for(resp)
+    return f"Jeton OPDS révoqué: **{label}** (id: {token_id})."
 
 
 # ---------------------------------------------------------------------------

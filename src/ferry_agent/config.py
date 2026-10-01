@@ -91,6 +91,9 @@ class Settings(BaseSettings):
     # TTL du parametre OAuth `state` (nonce signe + store serveur, usage unique).
     oauth_state_ttl_seconds: int = 600
 
+    # TTL des liens de telechargement signes (MCP / clients sans stream binaire).
+    download_link_ttl_seconds: int = 900
+
     app_env: str = "development"
 
 
