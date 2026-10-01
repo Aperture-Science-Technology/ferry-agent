@@ -21,6 +21,10 @@ Outils (identité Clerk utilisateur obligatoire, pas de compte-service) :
  18. remove_device        — suppression (garde-fou confirm)
  19. link_device_cloud    — URL OAuth Dropbox/Drive (tier B)
  20. set_source_enabled   — activer / désactiver une source
+ 21. list_deliveries      — historique des envois récents
+ 22. plan_delivery        — dry-run : ce qui va se passer / ce qui bloque
+ 23. diagnose             — pourquoi un envoi Kindle ne part pas
+ 24. deliver_to_kindle    — parcours Kindle explicite (email + confirm)
 """
 
 from __future__ import annotations
@@ -78,6 +82,8 @@ mcp = FastMCP(
         "search_library / add_to_library / list_library pour les livres ; "
         "list_devices / get_device / add_device / update_device / remove_device "
         "+ list_device_methods puis deliver(confirm=True, method=…) pour envoyer ; "
+        "deliver_to_kindle pour le parcours Kindle (email) ; "
+        "plan_delivery / diagnose / list_deliveries pour anticiper et diagnostiquer ; "
         "link_device_cloud pour le tier B (Kobo) ; get_delivery_status pour suivre ; "
         "list_gateways / get_gateway_job pour le catalogue local ; "
         "list_sources / set_source_enabled / get_profile / update_profile / "
@@ -254,6 +260,61 @@ def _validate_choice(value: str, allowed: frozenset[str], label: str) -> None:
         )
 
 
+_AMAZON_SENT_REMINDER = (
+    "`sent` = accepté par le relais, pas remis sur la Kindle ; "
+    "Amazon ne renvoie aucun rebond. "
+    "Appelez get_mail_settings() pour l'adresse à approuver chez Amazon."
+)
+
+
+def _resolve_target_format(
+    requested: str | None,
+    default_format: str | None,
+    original_format: str | None,
+) -> tuple[str, str]:
+    """Résout le format cible comme le cœur ; retourne (format, explication)."""
+    original = (original_format or "epub").lower().lstrip(".")
+    default = (default_format or "").lower().lstrip(".") or None
+    req = (requested or "").lower().lstrip(".") or None
+    if req:
+        return req, f"format demandé (`{req}`)"
+    if default:
+        return default, f"default_format du profil (`{default}`)"
+    return original, f"original_format du livre (`{original}`)"
+
+
+def _kindle_email_for_device(device: dict[str, Any], profile_kindle_email: str | None) -> str | None:
+    """Adresse Send-to-Kindle effective (appareil puis repli profil)."""
+    device_email = (device.get("email_address") or "").strip() or None
+    profile_email = (profile_kindle_email or "").strip() or None
+    return device_email or profile_email
+
+
+def _correction_for_reason(code: str | None, *, device_id: str | None = None) -> str | None:
+    """Correction actionnable pour un reason_code (sans inventer d'état)."""
+    if code == "kindle_email_missing":
+        if device_id:
+            return (
+                "renseigne l'adresse avec "
+                f"update_profile(kindle_email=…) ou "
+                f"update_device(device_id='{device_id}', email_address=…)"
+            )
+        return (
+            "renseigne l'adresse avec update_profile(kindle_email=…) "
+            "ou update_device(device_id=…, email_address=…)"
+        )
+    if code == "smtp_not_configured":
+        return "côté plateforme, rien à faire côté utilisateur"
+    if code == "cloud_not_linked":
+        if device_id:
+            return (
+                f"liez Dropbox ou Drive avec "
+                f"link_device_cloud(device_id='{device_id}', provider='dropbox' ou 'drive')"
+            )
+        return "liez Dropbox ou Drive avec link_device_cloud(...)"
+    return None
+
+
 async def _fetch_available_methods(client: httpx.AsyncClient, device_id: str) -> list[dict[str, Any]]:
     resp = await client.get(f"/api/v1/devices/{device_id}/methods")
     _raise_for(resp)
@@ -262,6 +323,14 @@ async def _fetch_available_methods(client: httpx.AsyncClient, device_id: str) ->
         return []
     return [m for m in methods if isinstance(m, dict) and m.get("available")]
 
+
+async def _fetch_all_methods(client: httpx.AsyncClient, device_id: str) -> list[dict[str, Any]]:
+    resp = await client.get(f"/api/v1/devices/{device_id}/methods")
+    _raise_for(resp)
+    methods = resp.json()
+    if not isinstance(methods, list):
+        return []
+    return [m for m in methods if isinstance(m, dict)]
 
 # ---------------------------------------------------------------------------
 # 1. search_library
@@ -1060,6 +1129,523 @@ async def set_source_enabled(source_id: str, enabled: bool) -> str:
     data = resp.json()
     state = "activée" if data.get("enabled") else "désactivée"
     return f"**{data.get('type')}** — {state} | source_id: {data.get('id')}"
+
+
+# ---------------------------------------------------------------------------
+# 21. list_deliveries
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def list_deliveries(limit: int = 20) -> str:
+    """Liste les envois récents de l'utilisateur (triés du plus récent).
+
+    Args:
+        limit: Nombre maximum de livraisons à afficher (défaut 20).
+
+    Returns:
+        Par ligne : date, statut, méthode, titre, liseuse, erreur si échec.
+        Rappel Amazon si au moins un envoi email est `sent`.
+    """
+    if limit < 1:
+        limit = 1
+    async with _client(_resolve_user_token()) as client:
+        resp = await client.get("/api/v1/deliveries")
+    _raise_for(resp)
+    jobs = resp.json()
+    if not isinstance(jobs, list) or not jobs:
+        return "Aucun envoi enregistré."
+
+    def _sort_key(job: dict[str, Any]) -> str:
+        return str(job.get("created_at") or "")
+
+    ordered = sorted(
+        [j for j in jobs if isinstance(j, dict)],
+        key=_sort_key,
+        reverse=True,
+    )[:limit]
+
+    lines: list[str] = [f"Envois récents (limit={limit}, {len(ordered)} affiché(s)) :"]
+    has_email_sent = False
+    for job in ordered:
+        if job.get("method") == "email" and job.get("status") == "sent":
+            has_email_sent = True
+        parts = [
+            f"date: {job.get('created_at') or '?'}",
+            f"status: {job.get('status')}",
+            f"method: {job.get('method')}",
+            f"livre: {job.get('item_title') or '?'}",
+            f"liseuse: {job.get('device_label') or '?'}",
+        ]
+        if job.get("error"):
+            parts.append(f"erreur: {job['error']}")
+        if job.get("id"):
+            parts.append(f"job_id: {job['id']}")
+        lines.append(_kv(parts))
+
+    if has_email_sent:
+        lines.append(_AMAZON_SENT_REMINDER)
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 22. plan_delivery
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def plan_delivery(
+    item_id: str,
+    device_id: str | None = None,
+    format: str | None = None,
+) -> str:
+    """Dry-run : explique ce qui va se passer pour une livraison, sans l'envoyer.
+
+    Args:
+        item_id: UUID du livre (library_item_id).
+        device_id: UUID d'une liseuse cible (omis = toutes les liseuses).
+        format: Format cible demandé (sinon default_format puis original_format).
+
+    Returns:
+        Titre, format résolu, modes ✓/✗ par appareil, et commande exacte à appeler
+        (deliver / deliver_to_kindle) ou blocage à lever.
+    """
+    token = _resolve_user_token()
+    async with _client(token) as client:
+        resp = await client.get(f"/api/v1/books/{item_id}")
+        _raise_for(resp)
+        book = resp.json()
+
+        resp = await client.get("/api/v1/users/me")
+        _raise_for(resp)
+        profile = resp.json()
+
+        resp = await client.get("/api/v1/devices")
+        _raise_for(resp)
+        devices = resp.json() if isinstance(resp.json(), list) else []
+        if not isinstance(devices, list):
+            devices = []
+
+        if device_id:
+            devices = [d for d in devices if str(d.get("id")) == str(device_id)]
+            if not devices:
+                # Peut être un 404 ownership : tenter GET direct pour message clair
+                resp = await client.get(f"/api/v1/devices/{device_id}")
+                _raise_for(resp)
+                devices = [resp.json()]
+
+        target_format, format_source = _resolve_target_format(
+            format,
+            profile.get("default_format"),
+            book.get("original_format"),
+        )
+        profile_kindle = profile.get("kindle_email")
+
+        lines: list[str] = [
+            f"Plan de livraison (dry-run) — livre: **{book.get('title', '?')}** "
+            f"(original_format: {book.get('original_format', '?')})",
+            (
+                f"Format cible résolu: `{target_format}` "
+                f"(priorité: demandé > default_format > original_format ; "
+                f"ici: {format_source})"
+            ),
+            f"Profil: kindle_email={profile_kindle or '(non défini)'} | "
+            f"default_format={profile.get('default_format') or '(non défini)'}",
+        ]
+
+        if not devices:
+            lines.append("Aucune liseuse à inspecter.")
+            lines.append(
+                "Blocage: enregistrez une liseuse avec add_device(...) "
+                "puis réessayez plan_delivery."
+            )
+            return "\n".join(lines)
+
+        any_email_ok = False
+        any_method_ok = False
+        kindle_targets: list[dict[str, Any]] = []
+
+        for device in devices:
+            did = str(device.get("id"))
+            label = _device_label(device)
+            brand = (device.get("brand") or "").lower()
+            lines.append(
+                f"\n**{label}** — tier: {device.get('delivery_tier')} | id: {did}"
+            )
+            methods = await _fetch_all_methods(client, did)
+            for m in methods:
+                name = m.get("method")
+                if m.get("available"):
+                    any_method_ok = True
+                    if name == "email":
+                        any_email_ok = True
+                    lines.append(f"  ✓ {name} — disponible")
+                else:
+                    raw = m.get("reason_code")
+                    reason = _format_reason_code(raw) if raw else "indisponible"
+                    lines.append(f"  ✗ {name} — {reason}")
+            if brand == "kindle":
+                kindle_targets.append(device)
+                addr = _kindle_email_for_device(device, profile_kindle)
+                source = (
+                    "device.email_address"
+                    if (device.get("email_address") or "").strip()
+                    else "kindle_email du profil"
+                )
+                lines.append(
+                    f"  adresse Kindle utilisée: {addr or '(aucune)'} ({source})"
+                )
+
+        lines.append("")
+        if device_id and len(devices) == 1:
+            device = devices[0]
+            did = str(device.get("id"))
+            brand = (device.get("brand") or "").lower()
+            if brand == "kindle" and any_email_ok:
+                fmt_arg = f", format='{target_format}'" if format else ""
+                lines.append(
+                    "Prochaine étape: "
+                    f"deliver_to_kindle(item_id='{item_id}', device_id='{did}'"
+                    f"{fmt_arg}, confirm=True)"
+                )
+            elif any_method_ok:
+                fmt_arg = f", format='{target_format}'" if format else ""
+                lines.append(
+                    "Prochaine étape: "
+                    f"deliver(item_id='{item_id}', device_id='{did}', "
+                    f"confirm=True{fmt_arg})"
+                )
+            else:
+                lines.append(
+                    "Blocage: aucun mode disponible sur cette liseuse — "
+                    "corrigez les ✗ ci-dessus puis réessayez."
+                )
+        elif len(kindle_targets) == 1 and any_email_ok and not device_id:
+            did = str(kindle_targets[0].get("id"))
+            fmt_arg = f", format='{target_format}'" if format else ""
+            lines.append(
+                "Prochaine étape: "
+                f"deliver_to_kindle(item_id='{item_id}'{fmt_arg}, confirm=True)"
+            )
+        elif any_method_ok:
+            lines.append(
+                "Prochaine étape: choisissez une liseuse puis "
+                f"deliver(item_id='{item_id}', device_id='…', confirm=True) "
+                "ou deliver_to_kindle(...) pour une Kindle."
+            )
+        else:
+            lines.append(
+                "Blocage: aucun mode disponible — levez les raisons ✗ "
+                "(ex. update_profile / update_device / link_device_cloud) "
+                "puis réessayez."
+            )
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 23. diagnose
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def diagnose() -> str:
+    """Agrège pourquoi un envoi Kindle ne part pas, et comment corriger.
+
+    Interroge le profil, les réglages mail, les liseuses/méthodes, et la
+    dernière livraison en échec. N'invente aucun état.
+
+    Returns:
+        Diagnostic lisible avec corrections actionnables.
+    """
+    token = _resolve_user_token()
+    async with _client(token) as client:
+        resp = await client.get("/api/v1/users/me")
+        _raise_for(resp)
+        profile = resp.json()
+
+        resp = await client.get("/api/v1/mail/settings")
+        _raise_for(resp)
+        mail = resp.json()
+
+        resp = await client.get("/api/v1/devices")
+        _raise_for(resp)
+        devices = resp.json() if isinstance(resp.json(), list) else []
+        if not isinstance(devices, list):
+            devices = []
+
+        resp = await client.get("/api/v1/deliveries")
+        _raise_for(resp)
+        jobs = resp.json() if isinstance(resp.json(), list) else []
+        if not isinstance(jobs, list):
+            jobs = []
+
+        lines: list[str] = ["Diagnostic Kindle / envoi :"]
+
+        kindle_email = profile.get("kindle_email")
+        if kindle_email:
+            lines.append(f"1. kindle_email profil: défini ({kindle_email})")
+        else:
+            lines.append(
+                "1. kindle_email profil: non défini — "
+                "renseigne avec update_profile(kindle_email=…)"
+            )
+
+        configured = "oui" if mail.get("configured") else "non"
+        sender = mail.get("sender_address") or "(non définie)"
+        domains = mail.get("allowed_domains") or []
+        domains_txt = ", ".join(str(d) for d in domains) if domains else "(aucun)"
+        lines.append(
+            f"2. mail: envoi configuré={configured} | "
+            f"adresse à approuver chez Amazon={sender} | "
+            f"domaines destinataires={domains_txt} | "
+            f"quotas h/j={mail.get('hourly_quota')}/{mail.get('daily_quota')}"
+        )
+        if not mail.get("configured"):
+            lines.append(
+                "   → smtp_not_configured: côté plateforme, rien à faire "
+                "côté utilisateur"
+            )
+        else:
+            lines.append(
+                "   → ajoutez l'adresse d'envoi dans la liste Amazon "
+                "(voir get_mail_settings())"
+            )
+
+        if not devices:
+            lines.append(
+                "3. liseuses: aucune — "
+                "appelez add_device(brand='kindle', name=…, email_address=…)"
+            )
+        else:
+            lines.append(f"3. liseuses ({len(devices)}) :")
+            for device in devices:
+                did = str(device.get("id"))
+                lines.append(
+                    f"   • {_format_device_line(device)}"
+                )
+                methods = await _fetch_all_methods(client, did)
+                for m in methods:
+                    name = m.get("method")
+                    if m.get("available"):
+                        lines.append(f"     ✓ {name} — disponible")
+                    else:
+                        raw = m.get("reason_code")
+                        reason = _format_reason_code(raw) if raw else "indisponible"
+                        correction = _correction_for_reason(raw, device_id=did)
+                        if correction:
+                            lines.append(
+                                f"     ✗ {name} — {reason} → correction: {correction}"
+                            )
+                        else:
+                            lines.append(f"     ✗ {name} — {reason}")
+
+        failed = [
+            j for j in jobs
+            if isinstance(j, dict) and j.get("status") == "failed"
+        ]
+        failed.sort(key=lambda j: str(j.get("created_at") or ""), reverse=True)
+        if failed:
+            last = failed[0]
+            lines.append(
+                "4. dernière livraison en échec: "
+                + _kv(
+                    [
+                        f"date: {last.get('created_at')}",
+                        f"livre: {last.get('item_title') or '?'}",
+                        f"liseuse: {last.get('device_label') or '?'}",
+                        f"erreur: {last.get('error') or '(sans détail)'}",
+                        f"job_id: {last.get('id')}",
+                    ]
+                )
+            )
+        else:
+            lines.append("4. dernière livraison en échec: aucune")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 24. deliver_to_kindle
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+async def deliver_to_kindle(
+    item_id: str,
+    device_id: str | None = None,
+    kindle_email: str | None = None,
+    format: str | None = None,
+    confirm: bool = False,
+) -> str:
+    """Envoie un livre vers une Kindle par email (parcours explicite).
+
+    Si `kindle_email` est fourni, il est d'abord enregistré comme adresse de
+    repli du profil (PATCH /users/me). Résout ensuite la Kindle cible, vérifie
+    que le mode `email` est disponible, puis dry-run ou POST /deliveries.
+
+    Args:
+        item_id: UUID du livre (library_item_id).
+        device_id: UUID d'une Kindle précise (omis = auto si une seule Kindle).
+        kindle_email: Adresse Send-to-Kindle de repli à enregistrer d'abord.
+        format: Format cible optionnel (epub, pdf… ; le cœur convertit si besoin).
+        confirm: False = dry-run ; True = déclenche l'envoi.
+
+    Returns:
+        Prévisualisation ou confirmation (job_id, statut, rappel Amazon).
+    """
+    token = _resolve_user_token()
+    kindle_email_saved = False
+
+    async with _client(token) as client:
+        if kindle_email is not None:
+            resp = await client.patch(
+                "/api/v1/users/me",
+                json={"kindle_email": kindle_email},
+            )
+            _raise_for(resp)
+            kindle_email_saved = True
+
+        resp = await client.get("/api/v1/users/me")
+        _raise_for(resp)
+        profile = resp.json()
+        profile_kindle = profile.get("kindle_email")
+
+        target: dict[str, Any] | None = None
+        if device_id:
+            resp = await client.get(f"/api/v1/devices/{device_id}")
+            _raise_for(resp)
+            device = resp.json()
+            if (device.get("brand") or "").lower() != "kindle":
+                return (
+                    f"Cet appareil n'est pas un Kindle "
+                    f"({_device_label(device)}) — utilise deliver "
+                    f"(deliver(item_id='{item_id}', device_id='{device_id}', "
+                    f"confirm=True, method=…))."
+                )
+            target = device
+        else:
+            resp = await client.get("/api/v1/devices")
+            _raise_for(resp)
+            devices = resp.json() if isinstance(resp.json(), list) else []
+            if not isinstance(devices, list):
+                devices = []
+            kindles = [
+                d for d in devices
+                if isinstance(d, dict) and (d.get("brand") or "").lower() == "kindle"
+            ]
+            if len(kindles) == 0:
+                email_hint = (
+                    f", email_address='{kindle_email}'"
+                    if kindle_email
+                    else (
+                        f", email_address='{profile_kindle}'"
+                        if profile_kindle
+                        else ""
+                    )
+                )
+                return (
+                    "Aucune Kindle enregistrée — rien n'a été créé.\n"
+                    "Appelez d'abord:\n"
+                    f"  add_device(brand='kindle', name='Kindle'{email_hint})\n"
+                    "puis deliver_to_kindle(...)."
+                )
+            if len(kindles) > 1:
+                listing = "\n".join(
+                    f"  • {_device_label(d)} | id: {d.get('id')}" for d in kindles
+                )
+                return (
+                    "Plusieurs Kindle trouvées — précisez device_id:\n"
+                    f"{listing}\n"
+                    f"Exemple: deliver_to_kindle(item_id='{item_id}', "
+                    f"device_id='<id>', confirm={confirm})."
+                )
+            target = kindles[0]
+
+        assert target is not None
+        did = str(target.get("id"))
+        label = _device_label(target)
+
+        methods = await _fetch_all_methods(client, did)
+        email_method = next(
+            (m for m in methods if m.get("method") == "email"),
+            None,
+        )
+        if email_method is None or not email_method.get("available"):
+            raw = (email_method or {}).get("reason_code")
+            reason = _format_reason_code(raw) if raw else "mode email indisponible"
+            correction = _correction_for_reason(raw, device_id=did)
+            msg = (
+                f"Mode email indisponible pour {label}: {reason}."
+            )
+            if correction:
+                msg += f"\nCorrection: {correction}"
+            msg += "\nAucun POST /deliveries n'a été envoyé."
+            return msg
+
+        addr = _kindle_email_for_device(target, profile_kindle)
+        addr_source = (
+            "device.email_address"
+            if (target.get("email_address") or "").strip()
+            else "kindle_email du profil"
+        )
+
+        resp = await client.get(f"/api/v1/books/{item_id}")
+        book_title = "?"
+        original_format = None
+        if not resp.is_error:
+            book = resp.json()
+            book_title = book.get("title") or "?"
+            original_format = book.get("original_format")
+        target_format, format_source = _resolve_target_format(
+            format,
+            profile.get("default_format"),
+            original_format,
+        )
+
+        if not confirm:
+            lines = [
+                "⚠️ Envoi Kindle non confirmé (dry-run).",
+                f"cible: {label} | id: {did}",
+                f"adresse utilisée: {addr or '(aucune)'} ({addr_source})",
+                f"format cible: {target_format} ({format_source})",
+                "méthode: email",
+            ]
+            if kindle_email_saved:
+                lines.append(
+                    f"kindle_email du profil enregistré: {kindle_email}"
+                )
+            lines.append(_AMAZON_SENT_REMINDER)
+            fmt_arg = f", format='{format}'" if format else ""
+            lines.append(
+                f"Appelle deliver_to_kindle(item_id='{item_id}', "
+                f"device_id='{did}'{fmt_arg}, confirm=True) pour envoyer."
+            )
+            return "\n".join(lines)
+
+        payload: dict[str, Any] = {
+            "library_item_id": item_id,
+            "device_id": did,
+            "method": "email",
+        }
+        if format:
+            payload["format"] = format
+
+        resp = await client.post("/api/v1/deliveries", json=payload)
+    _raise_for(resp)
+    data = resp.json()
+    parts = [
+        f"job_id: {data.get('id')}",
+        f"status: {data.get('status')}",
+        f"livre: {data.get('item_title') or book_title}",
+        f"liseuse: {data.get('device_label') or label}",
+        f"format: {data.get('target_format') or target_format}",
+        "method: email",
+    ]
+    msg = "Envoi Kindle créé.\n" + _kv(parts)
+    if kindle_email_saved:
+        msg += f"\nkindle_email du profil enregistré: {kindle_email}"
+    msg += (
+        f"\n{_AMAZON_SENT_REMINDER}\n"
+        f"Suivre avec get_delivery_status(job_id='{data.get('id')}')."
+    )
+    return msg
 
 
 # ---------------------------------------------------------------------------

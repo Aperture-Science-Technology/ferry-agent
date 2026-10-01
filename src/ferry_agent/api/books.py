@@ -425,6 +425,17 @@ async def delete_book(
     await library.delete_library_item(db, item)
 
 
+@router.get("/{item_id}", response_model=LibraryItemOut)
+async def get_book(
+    item_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> LibraryItemOut:
+    """Detail d'un livre de l'utilisateur courant (404 sinon)."""
+    item = await _get_owned_item(db, item_id, user)
+    return LibraryItemOut.model_validate(item)
+
+
 @router.get("/{item_id}/deliveries", response_model=list[DeliveryOut])
 async def list_book_deliveries(
     item_id: uuid.UUID,

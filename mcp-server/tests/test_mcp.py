@@ -97,6 +97,10 @@ async def test_tools_registered() -> None:
         "remove_device",
         "link_device_cloud",
         "set_source_enabled",
+        "list_deliveries",
+        "plan_delivery",
+        "diagnose",
+        "deliver_to_kindle",
     }
     assert expected <= tool_names
 
@@ -1117,3 +1121,599 @@ async def test_set_source_enabled_sends_patch(monkeypatch) -> None:
     assert _json.loads(req.content) == {"enabled": False}
     assert "gutenberg" in result
     assert "désactivée" in result
+
+
+# ---------------------------------------------------------------------------
+# list_deliveries
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_list_deliveries_sorts_and_limits(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "id": "old",
+                    "status": "failed",
+                    "method": "email",
+                    "created_at": "2026-01-01T10:00:00Z",
+                    "item_title": "Ancien",
+                    "device_label": "Kindle A",
+                    "error": "smtp timeout",
+                },
+                {
+                    "id": "new",
+                    "status": "sent",
+                    "method": "email",
+                    "created_at": "2026-01-02T10:00:00Z",
+                    "item_title": "Récent",
+                    "device_label": "Kindle B",
+                    "error": None,
+                },
+                {
+                    "id": "mid",
+                    "status": "delivered",
+                    "method": "dropbox",
+                    "created_at": "2026-01-01T18:00:00Z",
+                    "item_title": "Milieu",
+                    "device_label": "Kobo",
+                    "error": None,
+                },
+            ],
+        )
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.list_deliveries(limit=2)
+
+    assert captured[0].method == "GET"
+    assert captured[0].url.path == "/api/v1/deliveries"
+    assert "Récent" in result
+    assert "Milieu" in result
+    assert "Ancien" not in result  # hors limit après tri décroissant
+    assert "sent" in result
+    assert "get_mail_settings" in result
+    assert "pas remis" in result.lower() or "pas remis" in result
+
+
+# ---------------------------------------------------------------------------
+# plan_delivery
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_plan_delivery_resolves_format_and_methods(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        path = req.url.path
+        if path == "/api/v1/books/item-1":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "item-1",
+                    "title": "Dune",
+                    "original_format": "epub",
+                },
+            )
+        if path == "/api/v1/users/me":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "u1",
+                    "email": "u@example.com",
+                    "kindle_email": "me@kindle.com",
+                    "default_format": "azw3",
+                },
+            )
+        if path == "/api/v1/devices":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "dev-k",
+                        "name": "Salon",
+                        "brand": "kindle",
+                        "model": "Paperwhite",
+                        "delivery_tier": "A",
+                        "email_address": None,
+                        "cloud_linked": False,
+                    }
+                ],
+            )
+        if path == "/api/v1/devices/dev-k/methods":
+            return httpx.Response(
+                200,
+                json=[
+                    {"method": "email", "available": True},
+                    {
+                        "method": "dropbox",
+                        "available": False,
+                        "reason_code": "cloud_not_linked",
+                    },
+                ],
+            )
+        return httpx.Response(404, json={"detail": "unexpected"})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.plan_delivery("item-1")
+
+    paths = [c.url.path for c in captured]
+    assert "/api/v1/books/item-1" in paths
+    assert "/api/v1/users/me" in paths
+    assert "/api/v1/devices" in paths
+    assert "/api/v1/devices/dev-k/methods" in paths
+    assert "Dune" in result
+    assert "azw3" in result
+    assert "default_format" in result
+    assert "✓ email" in result
+    assert "✗ dropbox" in result
+    assert "me@kindle.com" in result
+    assert "deliver_to_kindle" in result
+
+
+# ---------------------------------------------------------------------------
+# diagnose
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_diagnose_aggregates_profile_mail_devices_failed(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        path = req.url.path
+        if path == "/api/v1/users/me":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "u1",
+                    "email": "u@example.com",
+                    "kindle_email": None,
+                    "default_format": "epub",
+                },
+            )
+        if path == "/api/v1/mail/settings":
+            return httpx.Response(
+                200,
+                json={
+                    "configured": True,
+                    "sender_address": "ferry@example.com",
+                    "allowed_domains": ["kindle.com"],
+                    "hourly_quota": 10,
+                    "daily_quota": 50,
+                },
+            )
+        if path == "/api/v1/devices":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "dev-k",
+                        "name": "Salon",
+                        "brand": "kindle",
+                        "model": "PW",
+                        "delivery_tier": "A",
+                        "cloud_linked": False,
+                    }
+                ],
+            )
+        if path == "/api/v1/devices/dev-k/methods":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "method": "email",
+                        "available": False,
+                        "reason_code": "kindle_email_missing",
+                    }
+                ],
+            )
+        if path == "/api/v1/deliveries":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "j-fail",
+                        "status": "failed",
+                        "method": "email",
+                        "created_at": "2026-01-02T00:00:00Z",
+                        "item_title": "Dune",
+                        "device_label": "Salon",
+                        "error": "relais refusé",
+                    },
+                    {
+                        "id": "j-ok",
+                        "status": "sent",
+                        "method": "email",
+                        "created_at": "2026-01-03T00:00:00Z",
+                        "item_title": "Autre",
+                        "device_label": "Salon",
+                        "error": None,
+                    },
+                ],
+            )
+        return httpx.Response(404, json={"detail": "unexpected"})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.diagnose()
+
+    paths = [c.url.path for c in captured]
+    assert "/api/v1/users/me" in paths
+    assert "/api/v1/mail/settings" in paths
+    assert "/api/v1/devices" in paths
+    assert "/api/v1/deliveries" in paths
+    assert "kindle_email" in result.lower() or "non défini" in result
+    assert "update_profile" in result
+    assert "ferry@example.com" in result
+    assert "kindle_email_missing" in result
+    assert "update_device" in result
+    assert "relais refusé" in result
+    assert "j-fail" in result
+
+
+# ---------------------------------------------------------------------------
+# deliver_to_kindle
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_deliver_to_kindle_refuses_without_confirm(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    post_calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.method == "POST":
+            post_calls.append(req)
+        path = req.url.path
+        if path == "/api/v1/users/me":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "u1",
+                    "email": "u@example.com",
+                    "kindle_email": "me@kindle.com",
+                    "default_format": "epub",
+                },
+            )
+        if path == "/api/v1/devices":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "dev-k",
+                        "name": "Salon",
+                        "brand": "kindle",
+                        "model": "PW",
+                        "delivery_tier": "A",
+                        "email_address": "dev@kindle.com",
+                        "cloud_linked": False,
+                    }
+                ],
+            )
+        if path == "/api/v1/devices/dev-k/methods":
+            return httpx.Response(
+                200,
+                json=[{"method": "email", "available": True}],
+            )
+        if path == "/api/v1/books/item-1":
+            return httpx.Response(
+                200,
+                json={"id": "item-1", "title": "Dune", "original_format": "epub"},
+            )
+        return httpx.Response(404, json={"detail": path})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.deliver_to_kindle("item-1", confirm=False)
+
+    assert len(post_calls) == 0
+    assert "non confirmé" in result.lower() or "dry-run" in result.lower()
+    assert "email" in result
+    assert "dev@kindle.com" in result
+    assert "confirm=True" in result
+
+
+@pytest.mark.asyncio
+async def test_deliver_to_kindle_rejects_non_kindle_device(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    post_calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.method == "POST" and req.url.path == "/api/v1/deliveries":
+            post_calls.append(req)
+        path = req.url.path
+        if path == "/api/v1/users/me":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "u1",
+                    "kindle_email": "me@kindle.com",
+                    "default_format": "epub",
+                    "email": "u@example.com",
+                },
+            )
+        if path == "/api/v1/devices/dev-kobo":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "dev-kobo",
+                    "name": "Forma",
+                    "brand": "kobo",
+                    "model": "Forma",
+                    "delivery_tier": "B",
+                    "cloud_linked": True,
+                },
+            )
+        return httpx.Response(404, json={"detail": path})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.deliver_to_kindle(
+        "item-1", device_id="dev-kobo", confirm=True
+    )
+
+    assert len(post_calls) == 0
+    assert "n'est pas un Kindle" in result
+    assert "deliver" in result
+
+
+@pytest.mark.asyncio
+async def test_deliver_to_kindle_no_kindle_does_not_post(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    post_calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.method == "POST":
+            post_calls.append(req)
+        path = req.url.path
+        if path == "/api/v1/users/me":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "u1",
+                    "kindle_email": None,
+                    "default_format": "epub",
+                    "email": "u@example.com",
+                },
+            )
+        if path == "/api/v1/devices":
+            return httpx.Response(200, json=[])
+        return httpx.Response(404, json={"detail": path})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.deliver_to_kindle("item-1", confirm=True)
+
+    assert len(post_calls) == 0
+    assert "add_device" in result
+    assert "brand='kindle'" in result
+
+
+@pytest.mark.asyncio
+async def test_deliver_to_kindle_multiple_kindles_asks_device_id(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    post_calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.method == "POST":
+            post_calls.append(req)
+        path = req.url.path
+        if path == "/api/v1/users/me":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "u1",
+                    "kindle_email": "me@kindle.com",
+                    "default_format": "epub",
+                    "email": "u@example.com",
+                },
+            )
+        if path == "/api/v1/devices":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "k1",
+                        "name": "Salon",
+                        "brand": "kindle",
+                        "model": "PW",
+                        "delivery_tier": "A",
+                        "cloud_linked": False,
+                    },
+                    {
+                        "id": "k2",
+                        "name": "Voyage",
+                        "brand": "kindle",
+                        "model": "Oasis",
+                        "delivery_tier": "A",
+                        "cloud_linked": False,
+                    },
+                ],
+            )
+        return httpx.Response(404, json={"detail": path})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.deliver_to_kindle("item-1", confirm=True)
+
+    assert len(post_calls) == 0
+    assert "Plusieurs Kindle" in result
+    assert "k1" in result and "k2" in result
+    assert "device_id" in result
+
+
+@pytest.mark.asyncio
+async def test_deliver_to_kindle_email_unavailable_explains_fix(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    post_calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.method == "POST" and req.url.path == "/api/v1/deliveries":
+            post_calls.append(req)
+        path = req.url.path
+        if path == "/api/v1/users/me":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "u1",
+                    "kindle_email": None,
+                    "default_format": "epub",
+                    "email": "u@example.com",
+                },
+            )
+        if path == "/api/v1/devices/dev-k":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "dev-k",
+                    "name": "Salon",
+                    "brand": "kindle",
+                    "model": "PW",
+                    "delivery_tier": "A",
+                    "email_address": None,
+                    "cloud_linked": False,
+                },
+            )
+        if path == "/api/v1/devices/dev-k/methods":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "method": "email",
+                        "available": False,
+                        "reason_code": "kindle_email_missing",
+                    }
+                ],
+            )
+        return httpx.Response(404, json={"detail": path})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.deliver_to_kindle(
+        "item-1", device_id="dev-k", confirm=True
+    )
+
+    assert len(post_calls) == 0
+    assert "kindle_email_missing" in result
+    assert "update_profile" in result or "update_device" in result
+    assert "POST /deliveries" in result or "n'a été envoyé" in result
+
+
+@pytest.mark.asyncio
+async def test_deliver_to_kindle_confirm_posts_email_delivery(monkeypatch) -> None:
+    import json as _json
+    from ferry_mcp import server
+
+    captured: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        captured.append(req)
+        path = req.url.path
+        if req.method == "PATCH" and path == "/api/v1/users/me":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "u1",
+                    "email": "u@example.com",
+                    "kindle_email": "new@kindle.com",
+                    "default_format": "epub",
+                },
+            )
+        if path == "/api/v1/users/me":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "u1",
+                    "email": "u@example.com",
+                    "kindle_email": "new@kindle.com",
+                    "default_format": "epub",
+                },
+            )
+        if path == "/api/v1/devices":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "dev-k",
+                        "name": "Salon",
+                        "brand": "kindle",
+                        "model": "PW",
+                        "delivery_tier": "A",
+                        "email_address": None,
+                        "cloud_linked": False,
+                    }
+                ],
+            )
+        if path == "/api/v1/devices/dev-k/methods":
+            return httpx.Response(
+                200,
+                json=[{"method": "email", "available": True}],
+            )
+        if path == "/api/v1/books/item-1":
+            return httpx.Response(
+                200,
+                json={"id": "item-1", "title": "Dune", "original_format": "epub"},
+            )
+        if req.method == "POST" and path == "/api/v1/deliveries":
+            return httpx.Response(
+                201,
+                json={
+                    "id": "job-1",
+                    "status": "sent",
+                    "method": "email",
+                    "item_title": "Dune",
+                    "device_label": "Salon (kindle PW)",
+                    "target_format": "epub",
+                    "delivered_at": None,
+                    "error": None,
+                },
+            )
+        return httpx.Response(404, json={"detail": path})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+
+    result = await server.deliver_to_kindle(
+        "item-1",
+        kindle_email="new@kindle.com",
+        format="epub",
+        confirm=True,
+    )
+
+    patch_reqs = [c for c in captured if c.method == "PATCH"]
+    assert patch_reqs
+    assert _json.loads(patch_reqs[0].content) == {"kindle_email": "new@kindle.com"}
+
+    post_reqs = [
+        c for c in captured
+        if c.method == "POST" and c.url.path == "/api/v1/deliveries"
+    ]
+    assert len(post_reqs) == 1
+    body = _json.loads(post_reqs[0].content)
+    assert body == {
+        "library_item_id": "item-1",
+        "device_id": "dev-k",
+        "method": "email",
+        "format": "epub",
+    }
+    assert "job-1" in result
+    assert "sent" in result
+    assert "get_delivery_status" in result
+    assert "get_mail_settings" in result
+    assert "new@kindle.com" in result
