@@ -61,7 +61,7 @@ jobs:
 
       # mcp-server has no requirements.txt; mirror mcp-server/Dockerfile pins
       - name: Install MCP server dependencies
-        run: pip install "fastmcp==3.4.7" httpx pydantic-settings
+        run: pip install "fastmcp==4.0.10" httpx pydantic-settings "PyJWT[crypto]==2.13.0"
 
       - name: Run MCP server tests
         run: pytest mcp-server/tests -q
@@ -247,7 +247,7 @@ jobs:
 
       - name: Audit MCP server dependencies
         run: |
-          printf '%s\n' 'fastmcp==3.4.7' 'httpx' 'pydantic-settings' > /tmp/mcp-reqs.txt
+          printf '%s\n' 'fastmcp==4.0.10' 'httpx' 'pydantic-settings' 'PyJWT[crypto]==2.13.0' > /tmp/mcp-reqs.txt
           pip-audit -r /tmp/mcp-reqs.txt
 
   build-push-core:

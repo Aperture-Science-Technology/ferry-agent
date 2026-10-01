@@ -1,9 +1,14 @@
-"""Dependance d'authentification (Clerk JWT, avec mode dev).
+"""Dependance d'authentification (Clerk JWT, assertion MCP, avec mode dev).
 
 En production, `CLERK_ISSUER` doit etre renseigne : chaque requete sur
 `/api/v1/*` doit porter un `Authorization: Bearer <jwt>` signe par Clerk
 (RS256), verifie via les cles JWKS recuperees au lifespan de l'app et mises
 en cache dans `app.state.jwks_client`.
+
+Le serveur MCP peut presenter une assertion Ed25519 courte (`iss=ferry-agent-mcp`,
+`aud=ferry-core`) au lieu du jeton Clerk amont. Cette voie n'est active que si
+`MCP_ASSERTION_PUBLIC_KEY_B64` est configuree ; elle ne remplace pas la voie
+Clerk utilisee par le web.
 
 Si `CLERK_ISSUER` est absent (developpement local uniquement), la
 dependance retombe sur le header `X-Dev-User: <email>` : aucune verification
@@ -11,6 +16,7 @@ cryptographique n'est effectuee. Ce mode ne doit JAMAIS etre active en
 production (voir README et .env.example).
 """
 
+import base64
 import hashlib
 import logging
 import uuid
@@ -27,6 +33,10 @@ from ferry_agent.models import Gateway, PairingStatus, User
 from ferry_agent.services.sources import ensure_default_sources
 
 logger = logging.getLogger(__name__)
+
+_MCP_ASSERTION_ISSUER = "ferry-agent-mcp"
+_MCP_ASSERTION_AUDIENCE = "ferry-core"
+_MCP_ASSERTION_MAX_TTL_SECONDS = 300
 
 
 class CurrentUser:
@@ -54,6 +64,64 @@ async def _get_or_create_user(db: AsyncSession, email: str) -> User:
     return user
 
 
+def _load_mcp_assertion_public_key(public_key_b64: str) -> bytes | None:
+    """Decode la cle publique PEM (base64 une ligne). None si absente/invalide."""
+    raw = (public_key_b64 or "").strip()
+    if not raw:
+        return None
+    try:
+        return base64.b64decode(raw, validate=True)
+    except Exception:
+        logger.warning("MCP_ASSERTION_PUBLIC_KEY_B64 illisible — voie assertion ignoree")
+        return None
+
+
+def _verify_mcp_assertion(token: str) -> str | None:
+    """Verifie une assertion MCP Ed25519. Retourne l'email, ou None si refusee.
+
+    Ne leve jamais d'exception vers l'appelant HTTP : une cle absente ou un
+    jeton invalide se traduit par un refus (None) → 401 plus haut, pas un 500.
+    """
+    settings = get_settings()
+    public_pem = _load_mcp_assertion_public_key(
+        getattr(settings, "mcp_assertion_public_key_b64", None) or ""
+    )
+    if public_pem is None:
+        return None
+
+    try:
+        payload = jwt.decode(
+            token,
+            public_pem,
+            algorithms=["EdDSA"],
+            audience=_MCP_ASSERTION_AUDIENCE,
+            issuer=_MCP_ASSERTION_ISSUER,
+            options={"verify_aud": True, "verify_iss": True},
+        )
+    except jwt.PyJWTError:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    sub = payload.get("sub")
+    if not isinstance(sub, str) or not sub.strip():
+        return None
+
+    email = payload.get("email")
+    if not isinstance(email, str) or not email.strip():
+        return None
+
+    iat = payload.get("iat")
+    exp = payload.get("exp")
+    if not isinstance(iat, int) or not isinstance(exp, int):
+        return None
+    if exp - iat > _MCP_ASSERTION_MAX_TTL_SECONDS:
+        return None
+
+    return email.strip()
+
+
 async def get_current_user(
     request: Request,
     authorization: str | None = Header(default=None),
@@ -77,36 +145,54 @@ async def get_current_user(
 
     token = authorization.split(" ", 1)[1].strip()
     jwks_client = getattr(request.app.state, "jwks_client", None)
-    if jwks_client is None:
+    clerk_error: HTTPException | None = None
+
+    # Voie Clerk (web) — logique inchangee ; en cas d'echec on tente l'assertion MCP.
+    if jwks_client is not None:
+        try:
+            signing_key = jwks_client.get_signing_key_from_jwt(token)
+            # CLERK_AUDIENCE="" (prod actuelle) ne doit PAS activer verify_aud :
+            # `is not None` serait True pour "" et comparerait contre audience vide.
+            verify_aud = bool(settings.clerk_audience)
+            payload = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=(settings.clerk_audience if settings.clerk_audience else None),
+                options={"verify_aud": verify_aud, "verify_iss": False},
+            )
+            # Clerk peut emettre `iss` avec ou sans slash final : comparer normalise.
+            token_iss = (payload.get("iss") or "").rstrip("/")
+            expected_iss = (settings.clerk_issuer or "").rstrip("/")
+            if not token_iss or token_iss != expected_iss:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="JWT issuer invalide")
+
+            email = payload.get("email") or payload.get("sub")
+            if not email:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="JWT sans email/sub")
+
+            user = await _get_or_create_user(db, email)
+            return CurrentUser(id=user.id, email=user.email)
+        except HTTPException as exc:
+            if exc.status_code != status.HTTP_401_UNAUTHORIZED:
+                raise
+            clerk_error = exc
+        except jwt.PyJWTError as exc:
+            clerk_error = HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"JWT invalide: {exc}",
+            )
+    elif not (getattr(settings, "mcp_assertion_public_key_b64", None) or "").strip():
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="JWKS non initialise")
 
-    try:
-        signing_key = jwks_client.get_signing_key_from_jwt(token)
-        # CLERK_AUDIENCE="" (prod actuelle) ne doit PAS activer verify_aud :
-        # `is not None` serait True pour "" et comparerait contre audience vide.
-        verify_aud = bool(settings.clerk_audience)
-        payload = jwt.decode(
-            token,
-            signing_key.key,
-            algorithms=["RS256"],
-            audience=(settings.clerk_audience if settings.clerk_audience else None),
-            options={"verify_aud": verify_aud, "verify_iss": False},
-        )
-    except jwt.PyJWTError as exc:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"JWT invalide: {exc}") from exc
+    assertion_email = _verify_mcp_assertion(token)
+    if assertion_email:
+        user = await _get_or_create_user(db, assertion_email)
+        return CurrentUser(id=user.id, email=user.email)
 
-    # Clerk peut emettre `iss` avec ou sans slash final : comparer normalise.
-    token_iss = (payload.get("iss") or "").rstrip("/")
-    expected_iss = (settings.clerk_issuer or "").rstrip("/")
-    if not token_iss or token_iss != expected_iss:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="JWT issuer invalide")
-
-    email = payload.get("email") or payload.get("sub")
-    if not email:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="JWT sans email/sub")
-
-    user = await _get_or_create_user(db, email)
-    return CurrentUser(id=user.id, email=user.email)
+    if clerk_error is not None:
+        raise clerk_error
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="JWT invalide")
 
 
 async def get_gateway(

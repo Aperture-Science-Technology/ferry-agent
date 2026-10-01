@@ -76,6 +76,7 @@ def _settings(*, issuer: str = CLERK_ISSUER, audience: str | None = None) -> Sim
     return SimpleNamespace(
         clerk_issuer=issuer,
         clerk_audience=audience,
+        mcp_assertion_public_key_b64=None,
     )
 
 

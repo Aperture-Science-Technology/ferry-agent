@@ -10,9 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Volumes library/tmp** — one-shot Compose `volume-init` (+ `deploy.sh`) passe `ferry_library` / `ferry_tmp` en UID/GID 10001 sans wipe ; évite `PermissionError` sous core non-root (ADR 0008).
+- **MCP OAuth state** — volume nommé `ferry_mcp_oauth` monté sur
+  `/home/appuser/.local/share/fastmcp` : les clients ne doivent plus se
+  réauthentifier à chaque redéploiement du conteneur.
+- **Découverte OIDC** — Traefik route `/.well-known/openid-configuration`
+  vers le MCP (plus de 307 Next.js).
+- **CORS `/mcp`** — `OPTIONS` répond via `CORSMiddleware` Starlette
+  (FastMCP 4) ; défaut `MCP_ALLOWED_ORIGINS=*` sans credentials.
 
 ### Added
 
+- **MCP lot 4 — assertion d'identité** — le MCP forge un JWT Ed25519 court
+  (`iss=ferry-agent-mcp`, `aud=ferry-core`, TTL 120 s) après OAuth Clerk ;
+  le cœur vérifie la clé publique (`MCP_ASSERTION_PUBLIC_KEY_B64`). ADR 0011.
+- **MCP lot 4 — OAuth ops** — `MCP_JWT_SIGNING_KEY` dédiée ;
+  `issuer_url` passé au `ClerkProvider` ; `required_scopes` pour
+  `WWW-Authenticate scope="…"`.
+- **MCP lots 1–3** — protocole 2026-07-28 / double ère ; outils bibliothèque,
+  gateways, OPDS, téléchargement signé (15 min) ; parcours Kindle
+  (`deliver_to_kindle`, `diagnose`, `plan_delivery`) et interprétation
+  `sent` ≠ livré.
 - **FA-W01** — Harnais de tests d'intégration Postgres réel + sync modèles / Alembic.
 - **FA-W05** — Upload utilisateur borné (413) + sniff de format (422) ; contenu prioritaire sur l'extension ; traversal neutralisé.
 - **FA-W06** — Purge périodique des `GatewayJob` terminés et `ShortCode` expirés (tâche lifespan).

@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import CurrentUser, get_current_user, get_library_user
@@ -27,6 +27,8 @@ from ferry_agent.models import (
 )
 from ferry_agent.schemas import (
     DeliveryOut,
+    DownloadLinkOut,
+    DownloadLinkRequest,
     GatewayFetchQueued,
     LibraryItemOut,
     LibraryItemUpdate,
@@ -35,7 +37,7 @@ from ferry_agent.schemas import (
     ResultOut,
     SearchRequest,
 )
-from ferry_agent.services import gateways as gateway_service
+from ferry_agent.services import download_links, gateways as gateway_service
 from ferry_agent.services import library
 from ferry_agent.services.covers import validate_cover_url
 from ferry_agent.services.errors import FileTooLargeError, QuotaExceededError, UnknownFormatError
@@ -50,6 +52,12 @@ router = APIRouter(prefix="/api/v1/books", tags=["books"])
 def _normalize_isbn(value: str) -> str:
     """Normalise un ISBN pour comparaison (lowercase, espaces/tirets retires)."""
     return value.strip().lower().replace("-", "").replace(" ", "")
+
+
+def _like_pattern(query: str) -> str:
+    """Escape %/_/\\ pour un ILIKE litteral (les jokers utilisateur restent du texte)."""
+    escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
 
 
 def _normalize_text(value: str | None) -> str:
@@ -139,18 +147,35 @@ async def upload_book(
 async def list_books(
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=200),
+    q: str | None = Query(default=None),
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedLibraryItems:
-    """Liste paginee des LibraryItem de l'utilisateur courant (SQL limit/offset)."""
+    """Liste paginee des LibraryItem de l'utilisateur courant (SQL limit/offset).
+
+    `q` filtre (insensible a la casse) sur `title` OU `author` (ILIKE), applique
+    au count et a la page.
+    """
+    filters = [LibraryItem.user_id == user.id]
+    query = (q or "").strip()
+    if query:
+        pattern = _like_pattern(query)
+        filters.append(
+            or_(
+                LibraryItem.title.ilike(pattern, escape="\\"),
+                LibraryItem.author.ilike(pattern, escape="\\"),
+            )
+        )
+    where_clause = and_(*filters)
+
     total_result = await db.execute(
-        select(func.count()).select_from(LibraryItem).where(LibraryItem.user_id == user.id)
+        select(func.count()).select_from(LibraryItem).where(where_clause)
     )
     total = int(total_result.scalar_one() or 0)
     offset = (page - 1) * limit
     result = await db.execute(
         select(LibraryItem)
-        .where(LibraryItem.user_id == user.id)
+        .where(where_clause)
         .order_by(LibraryItem.added_at.desc())
         .offset(offset)
         .limit(limit)
@@ -425,6 +450,17 @@ async def delete_book(
     await library.delete_library_item(db, item)
 
 
+@router.get("/{item_id}", response_model=LibraryItemOut)
+async def get_book(
+    item_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> LibraryItemOut:
+    """Detail d'un livre de l'utilisateur courant (404 sinon)."""
+    item = await _get_owned_item(db, item_id, user)
+    return LibraryItemOut.model_validate(item)
+
+
 @router.get("/{item_id}/deliveries", response_model=list[DeliveryOut])
 async def list_book_deliveries(
     item_id: uuid.UUID,
@@ -449,3 +485,50 @@ async def list_book_deliveries(
         )
         for job, title, author, name, brand, model in result.all()
     ]
+
+
+@router.post("/{item_id}/download-link", response_model=DownloadLinkOut)
+async def create_download_link(
+    item_id: uuid.UUID,
+    payload: DownloadLinkRequest | None = None,
+    format: str | None = Query(default=None),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DownloadLinkOut:
+    """Emmet une URL signee courte (TTL 15 min) pour telecharger un livre.
+
+    Corps ou query `format` ; a defaut, `original_format` du livre.
+    """
+    item = await _get_owned_item(db, item_id, user)
+    requested = None
+    if payload is not None and payload.format:
+        requested = payload.format
+    elif format:
+        requested = format
+    target = (requested or item.original_format or "epub").lower().lstrip(".")
+    if target not in {"epub", "mobi", "azw3", "pdf"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"format cible non supporté: {target}",
+        )
+
+    settings = get_settings()
+    try:
+        token, expires_at = download_links.issue_download_token(
+            user.id,
+            item.id,
+            target,
+            settings.download_link_ttl_seconds,
+        )
+    except download_links.DownloadLinkError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="lien de telechargement indisponible",
+        ) from exc
+
+    base = settings.public_base_url.rstrip("/")
+    return DownloadLinkOut(
+        url=f"{base}/api/v1/downloads/{token}",
+        expires_at=expires_at,
+        format=target,
+    )
