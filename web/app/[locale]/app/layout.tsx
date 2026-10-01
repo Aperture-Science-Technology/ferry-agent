@@ -18,19 +18,20 @@ export default async function DashboardLayout({
 
   return (
     <SidebarProvider defaultOpen>
-      {/* Desktop: persistent 208px sidebar. Mobile: bottom nav only. */}
+      {/* Desktop: persistent 224px sidebar (panel 208). Mobile: bottom nav only. */}
       <AppSidebar />
       {/*
         Mobile: reserve fixed MobileBottomNav (h 72) + safe-area under content
         (see mobileNavContentPadClass). Desktop: md:pb-0 — no unused pad.
+        Inset: muted/60 fill + 1px border + rounded-xl (via SidebarInset inset).
       */}
-      <SidebarInset className="min-w-0 overflow-x-hidden bg-background pb-[calc(4.5rem+1px+env(safe-area-inset-bottom,0px))] md:border md:border-border md:pb-0">
+      <SidebarInset className="min-w-0 overflow-x-hidden bg-muted/60 pb-[calc(4.5rem+1px+env(safe-area-inset-bottom,0px))] md:border md:border-border md:pb-0">
         <DashboardHeader />
         {/*
-          Ordinary dashboard Main (not vue 06 flow card): pad [32,40] desktop,
-          gap 24, no background, no radius.
+          www.nextjs.design Main: pad 32/24 (px-8 py-6), gap 24 at shell level;
+          per-screen inter-block gaps stay on the page views.
         */}
-        <div className="flex w-full min-w-0 flex-1 flex-col gap-6 px-5 pt-6 md:gap-6 md:px-10 md:py-8">
+        <div className="flex w-full min-w-0 flex-1 flex-col gap-6 px-8 py-6">
           {children}
         </div>
       </SidebarInset>
