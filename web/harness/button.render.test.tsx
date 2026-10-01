@@ -29,14 +29,26 @@ describe("UI harness — Button", () => {
       .map((node) => node.textContent ?? "")
       .join("\n");
     expect(stylesheetText).toContain("--primary");
-    expect(stylesheetText).toContain("--primary: #fafafa");
-    expect(stylesheetText).toContain("--primary-foreground: #0a0a0a");
+    expect(stylesheetText).toContain("--primary: #e5e5e5");
+    expect(stylesheetText).toContain("--primary-foreground: #171717");
   });
 
   it("locks --destructive to solid red in both theme blocks", () => {
-    const matches = globalsCss.match(/--destructive:\s*#ef4444;/g) ?? [];
+    const matches = globalsCss.match(/--destructive:\s*#ff6467;/g) ?? [];
     expect(matches).toHaveLength(2);
     expect(globalsCss).toContain("--destructive-foreground: #fafafa;");
-    expect(globalsCss).not.toMatch(/--destructive:\s*#e5e5e5;/);
+    expect(globalsCss).not.toMatch(/--destructive:\s*#ef4444;/);
+  });
+
+  it("keeps ghost transparent at rest with accent only on hover", () => {
+    render(<Button type="button" variant="ghost">Ghost</Button>);
+
+    const className = screen.getByRole("button", { name: "Ghost" }).className;
+    expect(
+      className.includes("bg-transparent") &&
+        !/(?:^|\s)bg-accent(?:\s|$)/.test(className) &&
+        !/(?:^|\s)bg-secondary(?:\s|$)/.test(className) &&
+        className.includes("hover:bg-accent")
+    ).toBe(true);
   });
 });
