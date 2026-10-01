@@ -89,9 +89,9 @@ function NavLink({ item }: { item: NavItem }) {
 }
 
 /**
- * Pen Shell/Sidebar — 208 wide content (no own pad), footer cluster pad 8 gap 8.
- * Header = Button/Ghost brand · Footer Cluster = elevated nav + account.
- * inset + offcanvas: p-0 overrides the variant’s p-2 so nav items stay 176 wide;
+ * Shell/Sidebar — container 224 with inset p-2 → panel 208; footer pad 8 gap 8.
+ * Header = brand · Footer Cluster = elevated nav + account.
+ * inset + offcanvas: keep variant p-2 (outer spacing); nav items stay 176 wide;
  * SidebarContent flex-1 keeps the footer cluster at the bottom.
  */
 export function AppSidebar() {
@@ -116,7 +116,7 @@ export function AppSidebar() {
       collapsible="offcanvas"
       enableMobileSheet={false}
       variant="inset"
-      className="hidden h-svh justify-between gap-2 border-0 bg-sidebar p-0 md:flex"
+      className="hidden h-svh justify-between gap-2 border-0 bg-sidebar md:flex"
     >
       <SidebarHeader className="gap-1 border-0 p-2">
         <Link
@@ -134,7 +134,7 @@ export function AppSidebar() {
       <SidebarFooter className="gap-0 border-0 p-0">
         <div
           data-testid="sidebar-footer-card"
-          className="flex w-full flex-col gap-2 rounded-lg bg-card p-2"
+          className="flex w-full flex-col gap-2 rounded-lg bg-muted/60 p-2"
         >
           {/* Nav Items — pad 8, gap 4; six flat items, no group labels. */}
           <div data-testid="sidebar-nav" className="flex flex-col gap-1 p-2">

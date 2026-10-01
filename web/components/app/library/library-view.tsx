@@ -638,7 +638,7 @@ export function LibraryView({
     <RevealGroup stagger={prefersReducedMotion ? 0 : 0.04}>
       <ul
         data-testid="library-book-grid"
-        className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-5 gap-y-6"
+        className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-5 gap-y-6"
       >
         {pageSlice.items.map((item) => (
           <li key={item.id}>
