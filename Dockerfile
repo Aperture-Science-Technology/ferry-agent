@@ -6,15 +6,18 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 FROM python:3.13-slim
 WORKDIR /app
 
-# W-26 — Calibre en image core (pas gateway) :
+# W-26 / FA-FIX-CALIBRE-01 — Calibre en image core (pas gateway) :
 # ebook-convert est requis pour EPUB→MOBI/AZW3 et PDF/MOBI→EPUB. Sans lui,
-# les livraisons cloud / Kindle échouent ou mentaient via un fallback PDF.
-# Coût assumé : ~150–300 Mo d'image en plus (calibre-bin + dépendances).
-# Installé ici (root) avant USER appuser pour que le binaire soit exécutable
-# par le même utilisateur non-root que le runtime uvicorn.
+# les livraisons cloud / Kindle échouent (FA-W26 a retiré le fallback silencieux).
+# Sur Debian 13 (trixie), python:3.13-slim ne fournit plus ebook-convert via
+# calibre-bin (plugins .so uniquement) : le binaire est dans le paquet calibre.
+# Coût assumé : plus lourd que calibre-bin seul ; --no-install-recommends limite
+# le surplus. Installé ici (root) avant USER appuser pour que le binaire soit
+# exécutable par le même utilisateur non-root que le runtime uvicorn.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends calibre-bin \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends calibre \
+    && rm -rf /var/lib/apt/lists/* \
+    && ebook-convert --version
 
 COPY --from=builder /install /usr/local
 COPY src ./src
