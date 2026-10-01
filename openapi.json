@@ -505,6 +505,53 @@
         "title": "DevicePatch",
         "type": "object"
       },
+      "DownloadLinkOut": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "expires_at",
+          "format"
+        ],
+        "title": "DownloadLinkOut",
+        "type": "object"
+      },
+      "DownloadLinkRequest": {
+        "properties": {
+          "format": {
+            "anyOf": [
+              {
+                "enum": [
+                  "epub",
+                  "mobi",
+                  "azw3",
+                  "pdf"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          }
+        },
+        "title": "DownloadLinkRequest",
+        "type": "object"
+      },
       "GatewayCreate": {
         "properties": {
           "name": {
@@ -1736,7 +1783,7 @@
   "paths": {
     "/api/v1/books": {
       "get": {
-        "description": "Liste paginee des LibraryItem de l'utilisateur courant (SQL limit/offset).",
+        "description": "Liste paginee des LibraryItem de l'utilisateur courant (SQL limit/offset).\n\n`q` filtre (insensible a la casse) sur `title` OU `author` (ILIKE), applique\nau count et a la page.",
         "operationId": "list_books_api_v1_books_get",
         "parameters": [
           {
@@ -1760,6 +1807,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
             }
           },
           {
@@ -2133,6 +2196,80 @@
           "books"
         ]
       },
+      "get": {
+        "description": "Detail d'un livre de l'utilisateur courant (404 sinon).",
+        "operationId": "get_book_api_v1_books__item_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Dev-User",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Book",
+        "tags": [
+          "books"
+        ]
+      },
       "patch": {
         "operationId": "update_book_api_v1_books__item_id__patch",
         "parameters": [
@@ -2291,6 +2428,115 @@
           }
         },
         "summary": "List Book Deliveries",
+        "tags": [
+          "books"
+        ]
+      }
+    },
+    "/api/v1/books/{item_id}/download-link": {
+      "post": {
+        "description": "Emmet une URL signee courte (TTL 15 min) pour telecharger un livre.\n\nCorps ou query `format` ; a defaut, `original_format` du livre.",
+        "operationId": "create_download_link_api_v1_books__item_id__download_link_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Format"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Dev-User",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DownloadLinkRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadLinkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Download Link",
         "tags": [
           "books"
         ]
@@ -3308,6 +3554,47 @@
         "summary": "Get Delivery Methods",
         "tags": [
           "devices"
+        ]
+      }
+    },
+    "/api/v1/downloads/{token}": {
+      "get": {
+        "description": "Sert le fichier ebook correspondant au jeton signe (sans auth).",
+        "operationId": "download_by_token_api_v1_downloads__token__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download By Token",
+        "tags": [
+          "downloads"
         ]
       }
     },

@@ -158,6 +158,16 @@ class PaginatedLibraryItems(BaseModel):
     limit: int
 
 
+class DownloadLinkRequest(BaseModel):
+    format: Literal["epub", "mobi", "azw3", "pdf"] | None = None
+
+
+class DownloadLinkOut(BaseModel):
+    url: str
+    expires_at: datetime
+    format: str
+
+
 class OpdsTokenCreate(BaseModel):
     label: str = Field(default="Liseuse", min_length=1, max_length=120)
 

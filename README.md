@@ -82,3 +82,29 @@ pytest -q
 ```
 
 Les tests ne nécessitent ni base de données ni Calibre installés.
+
+## Serveur MCP
+
+Le service `mcp-server` expose le protocole MCP (2026-07-28) sous `/mcp`,
+avec OAuth Clerk (PKCE S256, consentement, introspection). Voir
+[ADR 0011](docs/adr/0011-authentification-mcp.md).
+
+### Parcours côté client (outils)
+
+1. **Kindle de bout en bout** — `list_devices` / `add_device`, puis
+   `get_mail_settings` pour l'adresse d'envoi à **approuver chez Amazon**
+   (Documents personnels). `deliver_to_kindle(item_id, …, confirm=True)` ou
+   `plan_delivery` / `diagnose` en dry-run. Statut `sent` = accepté par le
+   relais email, **pas** « livré sur la liseuse » : Amazon ne renvoie aucun
+   rebond si l'expéditeur n'est pas approuvé.
+2. **Gateways** — `create_gateway` (secrets affichés une fois), pairing du
+   bundle, `list_gateways` / `list_gateway_jobs` / `get_gateway_job`.
+3. **Bibliothèque** — `search_library` → `add_to_library` → `list_library` /
+   `search_library_items` ; `download_library_item` renvoie un lien signé
+   (TTL **15 min**).
+4. **OPDS** — `create_opds_token` (secret une fois + URL catalogue) /
+   `revoke_opds_token`.
+
+Variables d'opérateur utiles : `MCP_JWT_SIGNING_KEY`,
+`MCP_CORE_ASSERTION_PRIVATE_KEY_B64` (MCP), `MCP_ASSERTION_PUBLIC_KEY_B64`
+(cœur), volume `ferry_mcp_oauth` pour l'état OAuth.

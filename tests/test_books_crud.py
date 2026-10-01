@@ -1,5 +1,6 @@
-"""Tests pour l'edition, la suppression et l'historique de livraisons d'un
-LibraryItem :
+"""Tests pour le detail, l'edition, la suppression et l'historique de
+livraisons d'un LibraryItem :
+- GET    /api/v1/books/{item_id}
 - PATCH  /api/v1/books/{item_id}
 - DELETE /api/v1/books/{item_id}
 - GET    /api/v1/books/{item_id}/deliveries
@@ -231,6 +232,61 @@ class TestDeleteBook:
             with TestClient(app) as client:
                 resp = client.delete(f"/api/v1/books/{uuid.uuid4()}")
             assert resp.status_code == 404
+        finally:
+            clear_app_deps()
+
+
+class TestGetBook:
+    def test_returns_owned_book(self):
+        item = _fake_item(title="Dune", author="Herbert", original_format="epub")
+
+        async def fake_db():
+            db = AsyncMock()
+            result = MagicMock(scalar_one_or_none=MagicMock(return_value=item))
+            db.execute = AsyncMock(return_value=result)
+            yield db
+
+        _override(fake_db)
+        try:
+            with TestClient(app) as client:
+                resp = client.get(f"/api/v1/books/{item.id}")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["id"] == str(item.id)
+            assert data["title"] == "Dune"
+            assert data["author"] == "Herbert"
+            assert data["original_format"] == "epub"
+        finally:
+            clear_app_deps()
+
+    def test_404_for_other_users_book(self):
+        async def fake_db():
+            db = AsyncMock()
+            result = MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+            db.execute = AsyncMock(return_value=result)
+            yield db
+
+        _override(fake_db)
+        try:
+            with TestClient(app) as client:
+                resp = client.get(f"/api/v1/books/{uuid.uuid4()}")
+            assert resp.status_code == 404
+        finally:
+            clear_app_deps()
+
+    def test_404_for_unknown_uuid(self):
+        async def fake_db():
+            db = AsyncMock()
+            result = MagicMock(scalar_one_or_none=MagicMock(return_value=None))
+            db.execute = AsyncMock(return_value=result)
+            yield db
+
+        _override(fake_db)
+        try:
+            with TestClient(app) as client:
+                resp = client.get(f"/api/v1/books/{uuid.uuid4()}")
+            assert resp.status_code == 404
+            assert resp.json()["detail"] == "introuvable"
         finally:
             clear_app_deps()
 

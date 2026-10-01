@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     clerk_issuer: str | None = None
     clerk_audience: str | None = None
 
+    # Cle publique Ed25519 (PEM encode base64 une ligne) pour verifier les
+    # assertions forgees par le serveur MCP. Absente = voie assertion inactive
+    # (aucune regression du web / jetons Clerk).
+    mcp_assertion_public_key_b64: str | None = None
+
     library_storage_dir: str = "./data/library"
     temp_dir: str = "./data/tmp"
 
@@ -90,6 +95,9 @@ class Settings(BaseSettings):
 
     # TTL du parametre OAuth `state` (nonce signe + store serveur, usage unique).
     oauth_state_ttl_seconds: int = 600
+
+    # TTL des liens de telechargement signes (MCP / clients sans stream binaire).
+    download_link_ttl_seconds: int = 900
 
     app_env: str = "development"
 
