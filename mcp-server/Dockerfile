@@ -3,7 +3,7 @@ FROM python:3.13-slim
 WORKDIR /app
 
 # Installe les dépendances
-RUN pip install --no-cache-dir "fastmcp==4.0.10" "httpx==0.28.1" "pydantic-settings==2.5.2"
+RUN pip install --no-cache-dir "fastmcp==4.0.10" "httpx==0.28.1" "pydantic-settings==2.5.2" "PyJWT[crypto]==2.13.0"
 
 # Copie le code
 COPY ferry_mcp/ ./ferry_mcp/

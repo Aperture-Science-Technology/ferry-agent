@@ -49,9 +49,12 @@ import httpx
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
 
+from ferry_mcp.assertion import forge_core_assertion
 from ferry_mcp.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+_OAUTH_SCOPES = ["openid", "email", "profile"]
 
 
 def build_mcp_auth_provider():
@@ -77,11 +80,19 @@ def build_mcp_auth_provider():
 
     from fastmcp.server.auth.providers.clerk import ClerkProvider
 
+    # issuer sans slash final (RFC 9207 : comparaison exacte).
+    base_url = settings.mcp_base_url.rstrip("/")
+    jwt_signing_key = (settings.mcp_jwt_signing_key or "").strip() or None
+
     return ClerkProvider(
         domain=settings.clerk_domain,
         client_id=settings.clerk_oauth_client_id,
         client_secret=settings.clerk_oauth_client_secret,
-        base_url=settings.mcp_base_url,
+        base_url=base_url,
+        issuer_url=base_url,
+        jwt_signing_key=jwt_signing_key,
+        required_scopes=_OAUTH_SCOPES,
+        valid_scopes=_OAUTH_SCOPES,
     )
 
 
@@ -142,15 +153,16 @@ _ERR_CORE = "Erreur du service Ferry"
 
 
 def _resolve_user_token() -> str:
-    """Retourne le token Clerk de l'utilisateur authentifié courant.
+    """Retourne le Bearer à présenter au cœur pour l'utilisateur courant.
 
     FastMCP expose l'identité OAuth validée via `get_access_token()`
-    (fastmcp.server.dependencies) : elle lit le ContextVar posé par le
-    middleware d'auth (ou `request.scope["user"]` en HTTP) sans qu'il soit
-    besoin d'injecter `ctx: Context` dans les tools. `AccessToken.token`
-    porte le jeton amont Clerk obtenu par `ClerkProvider` (un `OAuthProxy`)
-    lors de l'échange OAuth — c'est ce jeton qu'on relaie au core en
-    `Authorization: Bearer`.
+    (fastmcp.server.dependencies) : ContextVar du middleware d'auth, claims
+    enrichis par `ClerkTokenVerifier` (introspection RFC 7662 + userinfo).
+
+    Si `MCP_CORE_ASSERTION_PRIVATE_KEY_B64` est configurée, forge une
+    assertion Ed25519 courte (`iss=ferry-agent-mcp`, `aud=ferry-core`) au
+    lieu de relayer le jeton Clerk amont. Sinon : repli historique (passthrough
+    Clerk) avec avertissement — activation pilotée par l'env.
 
     Aucun fallback compte-service : si aucune identité Clerk n'est résolue,
     lève une RuntimeError explicite.
@@ -161,7 +173,24 @@ def _resolve_user_token() -> str:
             "Aucune identité utilisateur Clerk authentifiée n'a été trouvée pour "
             "cet appel MCP. Reconnectez-vous."
         )
-    return access_token.token
+
+    settings = get_settings()
+    private_key_b64 = (settings.mcp_core_assertion_private_key_b64 or "").strip()
+    if not private_key_b64:
+        logger.warning(
+            "MCP_CORE_ASSERTION_PRIVATE_KEY_B64 absente : relais du jeton Clerk "
+            "amont (passthrough). Configurez la clé pour activer l'assertion "
+            "aud=ferry-core."
+        )
+        return access_token.token
+
+    claims = getattr(access_token, "claims", None) or {}
+    subject = getattr(access_token, "subject", None)
+    return forge_core_assertion(
+        claims=claims if isinstance(claims, dict) else {},
+        subject=subject if isinstance(subject, str) else None,
+        private_key_b64=private_key_b64,
+    )
 
 
 def _client(token: str | None = None) -> httpx.AsyncClient:
@@ -2207,6 +2236,45 @@ async def revoke_opds_token(token_id: str, confirm: bool = False) -> str:
 # Point d'entrée
 # ---------------------------------------------------------------------------
 
+def _http_middleware_and_origins(settings) -> tuple[list, list[str] | None]:
+    """CORS + origines pour HostOriginGuard (extension FastMCP 4 / Starlette).
+
+    Liste fermée d'origines MCP clients non tenable (Cursor, Claude Desktop,
+    IDE, extensions…). Choix : `allow_origins=["*"]` avec
+    `allow_credentials=False`. Si `MCP_ALLOWED_ORIGINS` est une liste CSV
+    (pas `*`), elle sert à la fois au CORS et au refus d'Origin inconnue.
+    """
+    from starlette.middleware import Middleware
+    from starlette.middleware.cors import CORSMiddleware
+
+    raw = (settings.mcp_allowed_origins or "*").strip()
+    if raw == "*" or not raw:
+        cors_origins: list[str] = ["*"]
+        guard_origins: list[str] | None = None
+    else:
+        cors_origins = [o.strip() for o in raw.split(",") if o.strip()]
+        guard_origins = cors_origins
+
+    middleware = [
+        Middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+            allow_headers=[
+                "mcp-protocol-version",
+                "mcp-session-id",
+                "mcp-method",
+                "mcp-name",
+                "Authorization",
+                "Content-Type",
+            ],
+            expose_headers=["mcp-session-id"],
+        )
+    ]
+    return middleware, guard_origins
+
+
 def main() -> None:
     """Démarre le serveur HTTP streamable (protocole MCP 2026-07-28 / legacy).
 
@@ -2215,15 +2283,41 @@ def main() -> None:
     est gérée par le SDK `mcp` 2.x par connexion.
     """
     settings = get_settings()
-    asyncio.run(
-        mcp.run_http_async(
-            transport="streamable-http",
-            host="0.0.0.0",
-            port=settings.port,
-            path="/mcp",
-            stateless_http=True,
+    middleware, allowed_origins = _http_middleware_and_origins(settings)
+    from urllib.parse import urlparse
+
+    base = settings.mcp_base_url.rstrip("/")
+    host = urlparse(base).hostname
+
+    # Liste fermée : refuse Origin inconnue + Host guard.
+    # Mode "*" : CORS permissif (sans credentials) ; host_origin_protection=auto
+    # ne valide Origin que sur loopback (Traefik filtre déjà le Host en prod).
+    if allowed_origins is not None:
+        asyncio.run(
+            mcp.run_http_async(
+                transport="streamable-http",
+                host="0.0.0.0",
+                port=settings.port,
+                path="/mcp",
+                stateless_http=True,
+                middleware=middleware,
+                host_origin_protection=True,
+                allowed_hosts=[host] if host else None,
+                allowed_origins=allowed_origins,
+            )
         )
-    )
+    else:
+        asyncio.run(
+            mcp.run_http_async(
+                transport="streamable-http",
+                host="0.0.0.0",
+                port=settings.port,
+                path="/mcp",
+                stateless_http=True,
+                middleware=middleware,
+                host_origin_protection="auto",
+            )
+        )
 
 
 if __name__ == "__main__":

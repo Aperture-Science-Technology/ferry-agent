@@ -1,13 +1,15 @@
 """Tests de la propagation d'identité utilisateur MCP → core.
 
 Vérifie que, lorsqu'un utilisateur Clerk authentifié (OAuth) appelle un
-tool MCP, le core reçoit `Authorization: Bearer <token Clerk>` — et qu'aucun
+tool MCP, le core reçoit un Bearer — jeton Clerk amont (repli) ou assertion
+Ed25519 (`aud=ferry-core`) si la clé privée est configurée — et qu'aucun
 fallback compte-service n'existe plus si l'identité manque.
 
 Couvre aussi l'isolation entre utilisateurs : le Bearer transmis est
 strictement celui de l'appelant courant.
 """
 
+import base64
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,9 +17,17 @@ from types import SimpleNamespace
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import httpx
+import jwt
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 import ferry_mcp.config as _cfg_module
+from ferry_mcp.assertion import (
+    ASSERTION_AUDIENCE,
+    ASSERTION_ISSUER,
+    ASSERTION_MAX_TTL_SECONDS,
+)
 from ferry_mcp.config import MCPSettings
 
 
@@ -41,7 +51,7 @@ def patch_settings(monkeypatch):
     _cfg_module.get_settings.cache_clear()
 
 
-def _enable_auth(monkeypatch) -> MCPSettings:
+def _enable_auth(monkeypatch, **extra) -> MCPSettings:
     """Bascule la config en mode OAuth (mcp_auth_enabled=True).
 
     Le fixture `patch_settings` (autouse) a déjà remplacé `get_settings` par
@@ -51,12 +61,31 @@ def _enable_auth(monkeypatch) -> MCPSettings:
         ferry_core_url="http://test-core:8000",
         port=8001,
         mcp_auth_enabled=True,
+        **extra,
     )
     monkeypatch.setattr(_cfg_module, "get_settings", lambda: settings)
     from ferry_mcp import server
 
     monkeypatch.setattr(server, "get_settings", lambda: settings)
     return settings
+
+
+def _ed25519_pair_b64() -> tuple[str, str, bytes]:
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    public_pem = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    return (
+        base64.b64encode(private_pem).decode("ascii"),
+        base64.b64encode(public_pem).decode("ascii"),
+        public_pem,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -100,6 +129,73 @@ def test_resolve_user_token_raises_when_token_empty(monkeypatch) -> None:
     monkeypatch.setattr(server, "get_access_token", lambda: SimpleNamespace(token=""))
 
     with pytest.raises(RuntimeError, match="Clerk"):
+        server._resolve_user_token()
+
+
+def test_resolve_user_token_forges_assertion_when_private_key_configured(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    private_b64, _, public_pem = _ed25519_pair_b64()
+    _enable_auth(monkeypatch, mcp_core_assertion_private_key_b64=private_b64)
+    monkeypatch.setattr(
+        server,
+        "get_access_token",
+        lambda: SimpleNamespace(
+            token="clerk-upstream-unused",
+            subject="user_abc",
+            claims={"sub": "user_abc", "email": "reader@example.test", "email_verified": True},
+        ),
+    )
+
+    token = server._resolve_user_token()
+    assert token != "clerk-upstream-unused"
+
+    payload = jwt.decode(
+        token,
+        public_pem,
+        algorithms=["EdDSA"],
+        audience=ASSERTION_AUDIENCE,
+        issuer=ASSERTION_ISSUER,
+        options={"verify_aud": True, "verify_iss": True},
+    )
+    assert payload["sub"] == "user_abc"
+    assert payload["email"] == "reader@example.test"
+    assert payload["exp"] - payload["iat"] <= ASSERTION_MAX_TTL_SECONDS
+    assert payload["exp"] - payload["iat"] == 120
+    assert "jti" in payload
+
+
+def test_resolve_user_token_fallback_without_private_key(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    _enable_auth(monkeypatch, mcp_core_assertion_private_key_b64="")
+    monkeypatch.setattr(
+        server,
+        "get_access_token",
+        lambda: SimpleNamespace(
+            token="clerk-upstream-token-xyz",
+            claims={"sub": "u", "email": "a@b.c"},
+        ),
+    )
+    assert server._resolve_user_token() == "clerk-upstream-token-xyz"
+
+
+def test_resolve_user_token_incomplete_identity_no_email(monkeypatch) -> None:
+    from ferry_mcp import server
+
+    private_b64, _, _ = _ed25519_pair_b64()
+    _enable_auth(monkeypatch, mcp_core_assertion_private_key_b64=private_b64)
+    monkeypatch.setattr(
+        server,
+        "get_access_token",
+        lambda: SimpleNamespace(
+            token="clerk-upstream",
+            subject="user_abc",
+            claims={"sub": "user_abc", "email_verified": True},
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="email manquant"):
         server._resolve_user_token()
 
 

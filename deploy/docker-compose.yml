@@ -41,6 +41,8 @@ services:
 
   # Named volumes are created root:root 0755. Core runs as UID/GID 10001
   # (appuser) and would hit PermissionError on import_from_gateway / tmp.
+  # MCP OAuth state (clients, jetons chiffrés, JTI) vit sous
+  # /home/appuser/.local/share/fastmcp — même contrainte d'UID.
   # One-shot root job chowns in place — no volume wipe, core stays non-root.
   volume-init:
     image: alpine:3.20
@@ -50,13 +52,14 @@ services:
     volumes:
       - ferry_library:/data/library
       - ferry_tmp:/data/tmp
+      - ferry_mcp_oauth:/data/mcp-oauth
     command:
       - sh
       - -c
       - |
         set -eu
-        chown -R 10001:10001 /data/library /data/tmp
-        chmod 0755 /data/library /data/tmp
+        chown -R 10001:10001 /data/library /data/tmp /data/mcp-oauth
+        chmod 0755 /data/library /data/tmp /data/mcp-oauth
     networks:
       - ferry-net
     labels:
@@ -105,6 +108,7 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:?required}
       FERNET_KEY: ${FERNET_KEY:?required}
+      MCP_ASSERTION_PUBLIC_KEY_B64: ${MCP_ASSERTION_PUBLIC_KEY_B64:-}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz').status==200 else 1)"]
       interval: 30s
@@ -158,20 +162,28 @@ services:
     container_name: ferry-agent-mcp
     restart: unless-stopped
     depends_on:
-      - ferry-agent-core
+      ferry-agent-core:
+        condition: service_started
+      volume-init:
+        condition: service_completed_successfully
+    volumes:
+      - ferry_mcp_oauth:/home/appuser/.local/share/fastmcp
     environment:
       FERRY_CORE_URL: ${FERRY_CORE_URL:?required}
       CLERK_DOMAIN: ${CLERK_DOMAIN:-}
       CLERK_OAUTH_CLIENT_ID: ${CLERK_OAUTH_CLIENT_ID:-}
       CLERK_OAUTH_CLIENT_SECRET: ${CLERK_OAUTH_CLIENT_SECRET:-}
       MCP_BASE_URL: ${MCP_BASE_URL:-}
+      MCP_JWT_SIGNING_KEY: ${MCP_JWT_SIGNING_KEY:-}
+      MCP_CORE_ASSERTION_PRIVATE_KEY_B64: ${MCP_CORE_ASSERTION_PRIVATE_KEY_B64:-}
+      MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-*}
       PORT: 8000
     networks:
       - ferry-net
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=infrastructure_infra-network"
-      - "traefik.http.routers.ferry-agent-mcp.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/mcp`) || PathPrefix(`/oauth`) || PathPrefix(`/authorize`) || PathPrefix(`/token`) || PathPrefix(`/register`) || PathPrefix(`/consent`) || PathPrefix(`/auth/callback`) || PathPrefix(`/.well-known/oauth-`))"
+      - "traefik.http.routers.ferry-agent-mcp.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/mcp`) || PathPrefix(`/oauth`) || PathPrefix(`/authorize`) || PathPrefix(`/token`) || PathPrefix(`/register`) || PathPrefix(`/consent`) || PathPrefix(`/auth/callback`) || PathPrefix(`/.well-known/oauth-`) || PathPrefix(`/.well-known/openid-configuration`))"
       - "traefik.http.routers.ferry-agent-mcp.priority=500"
       - "traefik.http.routers.ferry-agent-mcp.entrypoints=websecure"
       - "traefik.http.routers.ferry-agent-mcp.tls=true"
@@ -208,3 +220,5 @@ volumes:
     name: ferry_library
   ferry_tmp:
     name: ferry_tmp
+  ferry_mcp_oauth:
+    name: ferry_mcp_oauth

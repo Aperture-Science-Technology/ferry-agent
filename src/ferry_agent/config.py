@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     clerk_issuer: str | None = None
     clerk_audience: str | None = None
 
+    # Cle publique Ed25519 (PEM encode base64 une ligne) pour verifier les
+    # assertions forgees par le serveur MCP. Absente = voie assertion inactive
+    # (aucune regression du web / jetons Clerk).
+    mcp_assertion_public_key_b64: str | None = None
+
     library_storage_dir: str = "./data/library"
     temp_dir: str = "./data/tmp"
 

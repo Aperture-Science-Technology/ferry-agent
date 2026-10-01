@@ -16,6 +16,14 @@ class MCPSettings(BaseSettings):
     clerk_oauth_client_id: str = ""
     clerk_oauth_client_secret: str = ""
     mcp_base_url: str = "https://ferry-agent.aperture-agency.org"
+    # Clé dédiée pour signer les JWT FastMCP (clients MCP). Si absente, FastMCP
+    # dérive encore de CLERK_OAUTH_CLIENT_SECRET (comportement historique).
+    mcp_jwt_signing_key: str = ""
+    # Clé privée Ed25519 (PEM base64 une ligne) pour forger l'assertion cœur.
+    # Absente → repli sur le relais du jeton Clerk amont (avertissement log).
+    mcp_core_assertion_private_key_b64: str = ""
+    # Origines CORS autorisées (CSV). "*" = toutes, sans credentials.
+    mcp_allowed_origins: str = "*"
     app_env: str = "development"
 
     @model_validator(mode="after")
