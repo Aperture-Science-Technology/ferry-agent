@@ -1,0 +1,5 @@
+PASS : 36 outils, 55 opérations, 8 défauts, contrat identique et nettoyage final contrôlés.
+HTTP requests: 171 plus 40 appels HTTP des fonctions MCP.
+Dernière preuve: 2026-10-03T11:41:25Z
+Les 36 outils MCP Counter({'OK': 28, 'DÉFAUT': 6, 'NON VÉRIFIABLE': 2})
+Les 55 opérations du cœur Counter({'OK': 34, 'DÉFAUT': 13, 'NON VÉRIFIABLE': 8})

@@ -1,0 +1,2 @@
+{"status":"ok"}
+{"status":"ok","conversion":{"ebook_convert_available":true,"ebook_convert_version":"ebook-convert (calibre 8.5.0)"}}

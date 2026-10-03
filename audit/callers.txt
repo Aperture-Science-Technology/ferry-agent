@@ -1,0 +1,56 @@
+gateway/agent/ferry_gateway_agent/worker.py:114:            f"{self.settings.platform_url}/api/v1/gateways/pair",
+gateway/agent/ferry_gateway_agent/worker.py:146:            f"{self.settings.platform_url}/api/v1/gateways/poll",
+gateway/agent/ferry_gateway_agent/worker.py:164:            await self._handle_fetch(str(job_id), payload)
+gateway/agent/ferry_gateway_agent/worker.py:174:            f"{self.settings.platform_url}/api/v1/gateways/jobs/"
+gateway/agent/ferry_gateway_agent/worker.py:204:    async def _handle_fetch(self, job_id: str, payload: dict[str, Any]) -> None:
+gateway/agent/ferry_gateway_agent/worker.py:230:                    f"{self.settings.platform_url}/api/v1/gateways/jobs/"
+web/lib/api-types.generated.ts:7:    "/api/v1/books": {
+web/lib/api-types.generated.ts:29:         *     La branche multipart est **deprecated** : preferer `POST /api/v1/books/upload`
+web/lib/api-types.generated.ts:39:    "/api/v1/books/search": {
+web/lib/api-types.generated.ts:56:    "/api/v1/books/upload": {
+web/lib/api-types.generated.ts:79:    "/api/v1/books/{item_id}": {
+web/lib/api-types.generated.ts:101:    "/api/v1/books/{item_id}/deliveries": {
+web/lib/api-types.generated.ts:118:    "/api/v1/books/{item_id}/download-link": {
+web/lib/api-types.generated.ts:140:    "/api/v1/covers/{item_id}": {
+web/lib/api-types.generated.ts:160:    "/api/v1/deliveries": {
+web/lib/api-types.generated.ts:178:    "/api/v1/deliveries/{job_id}": {
+web/lib/api-types.generated.ts:195:    "/api/v1/devices": {
+web/lib/api-types.generated.ts:216:    "/api/v1/devices/{device_id}": {
+web/lib/api-types.generated.ts:242:    "/api/v1/devices/{device_id}/link": {
+web/lib/api-types.generated.ts:263:    "/api/v1/devices/{device_id}/link/callback": {
+web/lib/api-types.generated.ts:295:    "/api/v1/devices/{device_id}/methods": {
+web/lib/api-types.generated.ts:318:    "/api/v1/downloads/{token}": {
+web/lib/api-types.generated.ts:338:    "/api/v1/gateways": {
+web/lib/api-types.generated.ts:356:    "/api/v1/gateways/jobs/{job_id}": {
+web/lib/api-types.generated.ts:373:    "/api/v1/gateways/jobs/{job_id}/fetch-result": {
+web/lib/api-types.generated.ts:390:    "/api/v1/gateways/jobs/{job_id}/search-results": {
+web/lib/api-types.generated.ts:407:    "/api/v1/gateways/pair": {
+web/lib/api-types.generated.ts:424:    "/api/v1/gateways/poll": {
+web/lib/api-types.generated.ts:441:    "/api/v1/gateways/revoke": {
+web/lib/api-types.generated.ts:458:    "/api/v1/gateways/{gateway_id}": {
+web/lib/api-types.generated.ts:475:    "/api/v1/gateways/{gateway_id}/jobs": {
+web/lib/api-types.generated.ts:492:    "/api/v1/gateways/{gateway_id}/recreate": {
+web/lib/api-types.generated.ts:512:    "/api/v1/mail/settings": {
+web/lib/api-types.generated.ts:529:    "/api/v1/opds/tokens": {
+web/lib/api-types.generated.ts:547:    "/api/v1/opds/tokens/revoke": {
+web/lib/api-types.generated.ts:564:    "/api/v1/sources": {
+web/lib/api-types.generated.ts:581:    "/api/v1/sources/{source_id}": {
+web/lib/api-types.generated.ts:598:    "/api/v1/users/me": {
+web/lib/api-types.generated.ts:770:         * @description Sert la couverture via le meme proxy allowliste que `/api/v1/covers`.
+web/lib/api.ts:20: * `/api/v1`.
+web/lib/api.ts:27:  const res = await fetch(`${BACKEND_BASE}${path}`, {
+web/lib/use-gateway-job.ts:17: * Polls GET /api/v1/gateways/jobs/{id} every 3s until done/failed or 20 min.
+web/lib/use-gateway-job.ts:65:          `/api/v1/gateways/jobs/${trackedId}`
+web/lib/api-client.ts:17: * `/api/v1` proxy (see next.config.ts rewrites), attaching the Clerk
+web/lib/api-client.ts:18: * session token as a Bearer token. `path` must start with `/api/v1`.
+web/lib/api-client.ts:27:      const res = await fetch(path, {
+web/app/[locale]/app/livraisons/page.tsx:14:  const deliveries = await safeApiFetch<DeliveryJob[]>("/api/v1/deliveries");
+web/app/[locale]/app/appareils/page.tsx:17:  const devices = await safeApiFetch<Device[]>("/api/v1/devices");
+web/app/[locale]/app/reglages/page.tsx:31:    safeApiFetch<UserSettings>("/api/v1/users/me"),
+web/app/[locale]/app/reglages/page.tsx:32:    safeApiFetch<OpdsToken[]>("/api/v1/opds/tokens"),
+web/app/[locale]/app/reglages/page.tsx:33:    safeApiFetch<MailSettings>("/api/v1/mail/settings"),
+web/app/[locale]/app/sources/page.tsx:14:  const sources = await safeApiFetch<Source[]>("/api/v1/sources");
+web/app/[locale]/app/bibliotheque/page.tsx:12:  const first = await safeApiFetch<PaginatedLibraryItems>("/api/v1/books?page=1&limit=200");
+web/app/[locale]/app/bibliotheque/page.tsx:21:      `/api/v1/books?page=${page}&limit=200`
+web/app/[locale]/app/bibliotheque/page.tsx:41:    safeApiFetch<Device[]>("/api/v1/devices"),
+web/app/[locale]/app/gateways/page.tsx:14:  const gateways = await safeApiFetch<Gateway[]>("/api/v1/gateways");

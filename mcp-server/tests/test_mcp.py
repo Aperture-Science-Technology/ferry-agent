@@ -167,7 +167,7 @@ async def test_search_library_sends_correct_request(monkeypatch) -> None:
 
     monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
-    result = await server.search_library("Dune")
+    result = (await server.search_library("Dune")).content[0].text
 
     assert len(captured) == 1
     req = captured[0]
@@ -416,7 +416,10 @@ async def test_add_to_library_sends_payload(monkeypatch) -> None:
 
     monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
-    result = await server.add_to_library("gutenberg", "r1")
+    result = await server.add_to_library(
+        "gutenberg", "r1",
+        result={"source": "gutenberg", "result_id": "r1", "title": "Dune", "author": "Herbert"},
+    )
 
     req = captured[0]
     assert req.url.path == "/api/v1/books"
@@ -438,7 +441,10 @@ async def test_add_to_library_gateway_async_hints_followup(monkeypatch) -> None:
 
     monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
-    result = await server.add_to_library("gateway:aaa", "magnet:xyz")
+    result = await server.add_to_library(
+        "gateway:aaa", "magnet:xyz",
+        result={"source": "gateway:aaa", "result_id": "magnet:xyz", "title": "Dune"},
+    )
 
     assert "gw-job-1" in result
     assert "get_gateway_job" in result
@@ -1207,6 +1213,8 @@ async def test_plan_delivery_resolves_format_and_methods(monkeypatch) -> None:
     def handler(req: httpx.Request) -> httpx.Response:
         captured.append(req)
         path = req.url.path
+        if path == "/api/v1/deliveries/preview":
+            return httpx.Response(200, json={"target_format": "epub"})
         if path == "/api/v1/books/item-1":
             return httpx.Response(
                 200,
@@ -1265,7 +1273,7 @@ async def test_plan_delivery_resolves_format_and_methods(monkeypatch) -> None:
     assert "/api/v1/devices" in paths
     assert "/api/v1/devices/dev-k/methods" in paths
     assert "Dune" in result
-    assert "azw3" in result
+    assert "Format cible résolu: `epub`" in result
     assert "default_format" in result
     assert "✓ email" in result
     assert "✗ dropbox" in result
@@ -1390,6 +1398,8 @@ async def test_deliver_to_kindle_refuses_without_confirm(monkeypatch) -> None:
         if req.method == "POST":
             post_calls.append(req)
         path = req.url.path
+        if path == "/api/v1/deliveries/preview":
+            return httpx.Response(200, json={"target_format": "epub"})
         if path == "/api/v1/users/me":
             return httpx.Response(
                 200,
@@ -1638,6 +1648,8 @@ async def test_deliver_to_kindle_confirm_posts_email_delivery(monkeypatch) -> No
     def handler(req: httpx.Request) -> httpx.Response:
         captured.append(req)
         path = req.url.path
+        if path == "/api/v1/deliveries/preview":
+            return httpx.Response(200, json={"target_format": "epub"})
         if req.method == "PATCH" and path == "/api/v1/users/me":
             return httpx.Response(
                 200,

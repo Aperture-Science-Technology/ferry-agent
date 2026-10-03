@@ -48,6 +48,7 @@ from typing import Any
 import httpx
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_access_token
+from fastmcp.tools import ToolResult
 
 from ferry_mcp.assertion import forge_core_assertion
 from ferry_mcp.config import get_settings
@@ -312,20 +313,16 @@ _AMAZON_SENT_REMINDER = (
 )
 
 
-def _resolve_target_format(
-    requested: str | None,
-    default_format: str | None,
-    original_format: str | None,
-) -> tuple[str, str]:
-    """Résout le format cible comme le cœur ; retourne (format, explication)."""
-    original = (original_format or "epub").lower().lstrip(".")
-    default = (default_format or "").lower().lstrip(".") or None
-    req = (requested or "").lower().lstrip(".") or None
-    if req:
-        return req, f"format demandé (`{req}`)"
-    if default:
-        return default, f"default_format du profil (`{default}`)"
-    return original, f"original_format du livre (`{original}`)"
+async def _preview_format(
+    client: httpx.AsyncClient, item_id: str, device_id: str, requested: str | None,
+) -> str:
+    """Lit le format calculé par le cœur, sans créer de livraison."""
+    params = {"library_item_id": item_id, "device_id": device_id}
+    if requested:
+        params["format"] = requested
+    resp = await client.get("/api/v1/deliveries/preview", params=params)
+    _raise_for(resp)
+    return resp.json()["target_format"]
 
 
 def _kindle_email_for_device(device: dict[str, Any], profile_kindle_email: str | None) -> str | None:
@@ -382,7 +379,7 @@ async def _fetch_all_methods(client: httpx.AsyncClient, device_id: str) -> list[
 # ---------------------------------------------------------------------------
 
 @mcp.tool
-async def search_library(query: str, scope: list[str] | None = None) -> str:
+async def search_library(query: str, scope: list[str] | None = None) -> ToolResult:
     """Recherche des ebooks dans les sources légales et les gateways appairées.
 
     Args:
@@ -391,7 +388,8 @@ async def search_library(query: str, scope: list[str] | None = None) -> str:
                Absent = legal + gateways (comportement API par défaut).
 
     Returns:
-        Liste lisible des résultats (titre, auteur, source, format, owned, id).
+        Liste lisible et résultats structurés complets dans `results`.
+        Transmettre le résultat choisi à add_to_library avec le paramètre `result`.
     """
     body: dict[str, Any] = {"query": query}
     if scope is not None:
@@ -402,7 +400,7 @@ async def search_library(query: str, scope: list[str] | None = None) -> str:
     _raise_for(resp)
     results = resp.json()
     if not results:
-        return "Aucun résultat trouvé."
+        return ToolResult(content="Aucun résultat trouvé.", structured_content={"results": []})
     lines = []
     for r in results:
         owned = "oui" if r.get("owned") else "non"
@@ -413,7 +411,7 @@ async def search_library(query: str, scope: list[str] | None = None) -> str:
             f"taille: {size_ko} Ko | déjà en bibliothèque: {owned} | "
             f"id: {r.get('result_id')}"
         )
-    return "\n\n".join(lines)
+    return ToolResult(content="\n\n".join(lines), structured_content={"results": results})
 
 
 # ---------------------------------------------------------------------------
@@ -421,20 +419,29 @@ async def search_library(query: str, scope: list[str] | None = None) -> str:
 # ---------------------------------------------------------------------------
 
 @mcp.tool
-async def add_to_library(source: str, result_id: str) -> str:
+async def add_to_library(source: str, result_id: str, result: dict[str, Any] | None = None) -> str:
     """Ajoute un livre à la bibliothèque depuis une source légale ou un gateway.
 
     Args:
         source: Identifiant de la source (ex: "gutenberg", "gateway:<uuid>").
         result_id: Identifiant du résultat retourné par search_library.
+        result: Résultat structuré complet choisi dans search_library (obligatoire).
 
     Returns:
         library_item_id créé, ou gateway_job_id si l'ajout est asynchrone (gateway).
     """
-    async with _client(_resolve_user_token()) as client:
+    token = _resolve_user_token()
+    if not result or not isinstance(result.get("title"), str) or not result["title"].strip():
+        raise RuntimeError(
+            "Le titre du livre manque. Relancez search_library et transmettez "
+            "le résultat complet dans result avant d'ajouter le livre."
+        )
+    if result.get("source") != source or result.get("result_id") != result_id:
+        raise RuntimeError("Le résultat choisi ne correspond pas au livre demandé.")
+    async with _client(token) as client:
         resp = await client.post(
             "/api/v1/books",
-            json={"source": source, "result_id": result_id},
+            json={"source": source, "result_id": result_id, "result": result},
         )
     _raise_for(resp)
     data = resp.json()
@@ -442,7 +449,7 @@ async def add_to_library(source: str, result_id: str) -> str:
         return (
             f"Livre ajouté.\n"
             f"library_item_id: {data['id']} | "
-            f"title: {data.get('title', '?')} | author: {data.get('author', '?')}"
+            f"title: {data.get('title', '?')} | author: {data.get('author') or 'non renseigné'}"
         )
     if isinstance(data, dict) and "gateway_job_id" in data:
         return (
@@ -1032,6 +1039,10 @@ async def update_device(
     model: str | None = None,
     email_address: str | None = None,
     conversion_profile: str | None = None,
+    clear_name: bool = False,
+    clear_model: bool = False,
+    clear_email_address: bool = False,
+    clear_conversion_profile: bool = False,
 ) -> str:
     """Modifie une liseuse (PATCH partiel : seuls les champs fournis sont envoyés).
 
@@ -1042,6 +1053,11 @@ async def update_device(
         model: Nouveau modèle.
         email_address: Nouvelle adresse Send-to-Kindle de l'appareil.
         conversion_profile: Preset (`reader_6in` | `reader_7in_plus` | `tablet`).
+
+        clear_name: Efface name si True, prioritaire sur sa valeur.
+        clear_model: Efface model si True, prioritaire sur sa valeur.
+        clear_email_address: Efface email_address si True, prioritaire sur sa valeur.
+        clear_conversion_profile: Efface conversion_profile si True, prioritaire sur sa valeur.
 
     Returns:
         Liseuse mise à jour (id, label, tier, cloud).
@@ -1056,9 +1072,17 @@ async def update_device(
         body["model"] = model
     if email_address is not None:
         body["email_address"] = email_address
-    if conversion_profile is not None:
+    if conversion_profile is not None and not clear_conversion_profile:
         _validate_choice(conversion_profile, _CONVERSION_PRESETS, "conversion_profile")
         body["conversion_profile"] = conversion_profile
+    if clear_name:
+        body["name"] = None
+    if clear_model:
+        body["model"] = None
+    if clear_email_address:
+        body["email_address"] = None
+    if clear_conversion_profile:
+        body["conversion_profile"] = None
     if not body:
         raise RuntimeError(
             f"{_ERR_BAD_REQUEST}: aucun champ à mettre à jour "
@@ -1277,21 +1301,11 @@ async def plan_delivery(
                 _raise_for(resp)
                 devices = [resp.json()]
 
-        target_format, format_source = _resolve_target_format(
-            format,
-            profile.get("default_format"),
-            book.get("original_format"),
-        )
         profile_kindle = profile.get("kindle_email")
 
         lines: list[str] = [
             f"Plan de livraison (dry-run) — livre: **{book.get('title', '?')}** "
             f"(original_format: {book.get('original_format', '?')})",
-            (
-                f"Format cible résolu: `{target_format}` "
-                f"(priorité: demandé > default_format > original_format ; "
-                f"ici: {format_source})"
-            ),
             f"Profil: kindle_email={profile_kindle or '(non défini)'} | "
             f"default_format={profile.get('default_format') or '(non défini)'}",
         ]
@@ -1315,6 +1329,8 @@ async def plan_delivery(
             lines.append(
                 f"\n**{label}** — tier: {device.get('delivery_tier')} | id: {did}"
             )
+            target_format = await _preview_format(client, item_id, did, format)
+            lines.append(f"Format cible résolu: `{target_format}`")
             methods = await _fetch_all_methods(client, did)
             for m in methods:
                 name = m.get("method")
@@ -1345,14 +1361,14 @@ async def plan_delivery(
             did = str(device.get("id"))
             brand = (device.get("brand") or "").lower()
             if brand == "kindle" and any_email_ok:
-                fmt_arg = f", format='{target_format}'" if format else ""
+                fmt_arg = f", format='{format}'" if format else ""
                 lines.append(
                     "Prochaine étape: "
                     f"deliver_to_kindle(item_id='{item_id}', device_id='{did}'"
                     f"{fmt_arg}, confirm=True)"
                 )
             elif any_method_ok:
-                fmt_arg = f", format='{target_format}'" if format else ""
+                fmt_arg = f", format='{format}'" if format else ""
                 lines.append(
                     "Prochaine étape: "
                     f"deliver(item_id='{item_id}', device_id='{did}', "
@@ -1365,7 +1381,7 @@ async def plan_delivery(
                 )
         elif len(kindle_targets) == 1 and any_email_ok and not device_id:
             did = str(kindle_targets[0].get("id"))
-            fmt_arg = f", format='{target_format}'" if format else ""
+            fmt_arg = f", format='{format}'" if format else ""
             lines.append(
                 "Prochaine étape: "
                 f"deliver_to_kindle(item_id='{item_id}'{fmt_arg}, confirm=True)"
@@ -1632,24 +1648,17 @@ async def deliver_to_kindle(
         )
 
         resp = await client.get(f"/api/v1/books/{item_id}")
-        book_title = "?"
-        original_format = None
-        if not resp.is_error:
-            book = resp.json()
-            book_title = book.get("title") or "?"
-            original_format = book.get("original_format")
-        target_format, format_source = _resolve_target_format(
-            format,
-            profile.get("default_format"),
-            original_format,
-        )
+        _raise_for(resp)
+        book = resp.json()
+        book_title = book.get("title") or "?"
+        target_format = await _preview_format(client, item_id, did, format)
 
         if not confirm:
             lines = [
                 "⚠️ Envoi Kindle non confirmé (dry-run).",
                 f"cible: {label} | id: {did}",
                 f"adresse utilisée: {addr or '(aucune)'} ({addr_source})",
-                f"format cible: {target_format} ({format_source})",
+                f"format cible: {target_format}",
                 "méthode: email",
             ]
             if kindle_email_saved:
@@ -1757,6 +1766,12 @@ async def update_library_item(
     publisher: str | None = None,
     published_year: int | None = None,
     isbn: str | None = None,
+    clear_description: bool = False,
+    clear_language: bool = False,
+    clear_page_count: bool = False,
+    clear_publisher: bool = False,
+    clear_published_year: bool = False,
+    clear_isbn: bool = False,
 ) -> str:
     """Met à jour les métadonnées d'un livre de la bibliothèque.
 
@@ -1766,6 +1781,13 @@ async def update_library_item(
         item_id: UUID du livre.
         title, author, description, language, page_count, publisher,
         published_year, isbn: champs optionnels à mettre à jour.
+
+        clear_description: Efface description si True, prioritaire sur sa valeur.
+        clear_language: Efface language si True, prioritaire sur sa valeur.
+        clear_page_count: Efface page_count si True, prioritaire sur sa valeur.
+        clear_publisher: Efface publisher si True, prioritaire sur sa valeur.
+        clear_published_year: Efface published_year si True, prioritaire sur sa valeur.
+        clear_isbn: Efface isbn si True, prioritaire sur sa valeur.
 
     Returns:
         Résumé du livre après mise à jour.
@@ -1787,6 +1809,18 @@ async def update_library_item(
         body["published_year"] = published_year
     if isbn is not None:
         body["isbn"] = isbn
+    if clear_description:
+        body["description"] = None
+    if clear_language:
+        body["language"] = None
+    if clear_page_count:
+        body["page_count"] = None
+    if clear_publisher:
+        body["publisher"] = None
+    if clear_published_year:
+        body["published_year"] = None
+    if clear_isbn:
+        body["isbn"] = None
     if not body:
         raise RuntimeError(
             f"{_ERR_BAD_REQUEST}: fournir au moins un champ à mettre à jour "

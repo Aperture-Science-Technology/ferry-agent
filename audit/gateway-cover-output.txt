@@ -1,0 +1,15 @@
+POST /api/v1/gateways 201
+POST /api/v1/gateways/pair 200
+POST /api/v1/books 202
+POST /api/v1/gateways/jobs/7bf66b50-7240-4177-8f35-6ebc6a69a06e/fetch-result 200
+GET /api/v1/books/2edbdd1f-3637-4983-92d7-e8c8faca0d32 200
+POST /api/v1/books 202
+POST /api/v1/gateways/jobs/ca497a7a-64e8-4fa0-be9d-13fae8c74f2a/fetch-result 200
+GET /api/v1/books/3629c5a5-5044-40c7-93f4-07a3cb2277b9 200
+GET /api/v1/covers/3629c5a5-5044-40c7-93f4-07a3cb2277b9 200
+POST /api/v1/opds/tokens 201
+GET /opds/[SECRET]/cover/3629c5a5-5044-40c7-93f4-07a3cb2277b9 200
+POST /api/v1/opds/tokens/revoke 200
+DELETE /api/v1/books/2edbdd1f-3637-4983-92d7-e8c8faca0d32 204
+DELETE /api/v1/books/3629c5a5-5044-40c7-93f4-07a3cb2277b9 204
+DELETE /api/v1/gateways/03e6ffe5-3df3-4a7f-9086-ca7ccc8182a2 204

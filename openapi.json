@@ -207,6 +207,20 @@
         "title": "DeliveryOut",
         "type": "object"
       },
+      "DeliveryPreview": {
+        "description": "Format effectivement pr\u00e9vu, sans cr\u00e9ation de livraison.",
+        "properties": {
+          "target_format": {
+            "title": "Target Format",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_format"
+        ],
+        "title": "DeliveryPreview",
+        "type": "object"
+      },
       "DeliveryStatus": {
         "enum": [
           "queued",
@@ -2753,6 +2767,108 @@
           }
         },
         "summary": "Create Delivery",
+        "tags": [
+          "deliveries"
+        ]
+      }
+    },
+    "/api/v1/deliveries/preview": {
+      "get": {
+        "description": "R\u00e9sout le format avec la r\u00e8gle de livraison, sans envoi ni conversion.",
+        "operationId": "preview_delivery_api_v1_deliveries_preview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "library_item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Library Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Device Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Format"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Dev-User",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Dev-User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Delivery",
         "tags": [
           "deliveries"
         ]

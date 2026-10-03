@@ -52,8 +52,11 @@ def resolve_target_format(
     *,
     default_format: str | None,
     original_format: str,
+    delivery_tier: DeliveryTier | None = None,
 ) -> str:
     """Format exact a produire pour cette livraison."""
+    if delivery_tier == DeliveryTier.A:
+        return kindle_formats.resolve_kindle_target(requested_format, default_format, original_format)
     chosen = (requested_format or default_format or original_format).lower().lstrip(".")
     return chosen
 
@@ -127,10 +130,11 @@ async def _deliver_tier_a(
         await _fail(db, job, str(exc))
         return
 
-    target_format = kindle_formats.resolve_kindle_target(
+    target_format = resolve_target_format(
         requested_format,
-        user.default_format,
-        item.original_format,
+        default_format=user.default_format,
+        original_format=item.original_format,
+        delivery_tier=device.delivery_tier,
     )
     materialized = await _materialize_or_fail(db, job, item, device, target_format)
     if materialized is None:

@@ -1,0 +1,57 @@
+web/next.config.ts:21:        source: "/api/v1/:path*",
+web/next.config.ts:22:        destination: `${backendInternalUrl}/api/v1/:path*`,
+web/lib/api.ts:20: * `/api/v1`.
+web/lib/use-gateway-job.ts:17: * Polls GET /api/v1/gateways/jobs/{id} every 3s until done/failed or 20 min.
+web/lib/use-gateway-job.ts:65:          `/api/v1/gateways/jobs/${trackedId}`
+web/lib/api-client.ts:17: * `/api/v1` proxy (see next.config.ts rewrites), attaching the Clerk
+web/lib/api-client.ts:18: * session token as a Bearer token. `path` must start with `/api/v1`.
+web/app/[locale]/app/livraisons/page.tsx:14:  const deliveries = await safeApiFetch<DeliveryJob[]>("/api/v1/deliveries");
+web/app/[locale]/app/appareils/page.tsx:17:  const devices = await safeApiFetch<Device[]>("/api/v1/devices");
+web/app/[locale]/app/sources/page.tsx:14:  const sources = await safeApiFetch<Source[]>("/api/v1/sources");
+web/app/[locale]/app/bibliotheque/page.tsx:12:  const first = await safeApiFetch<PaginatedLibraryItems>("/api/v1/books?page=1&limit=200");
+web/app/[locale]/app/bibliotheque/page.tsx:21:      `/api/v1/books?page=${page}&limit=200`
+web/app/[locale]/app/bibliotheque/page.tsx:41:    safeApiFetch<Device[]>("/api/v1/devices"),
+web/app/[locale]/app/gateways/page.tsx:14:  const gateways = await safeApiFetch<Gateway[]>("/api/v1/gateways");
+web/app/[locale]/app/reglages/page.tsx:31:    safeApiFetch<UserSettings>("/api/v1/users/me"),
+web/app/[locale]/app/reglages/page.tsx:32:    safeApiFetch<OpdsToken[]>("/api/v1/opds/tokens"),
+web/app/[locale]/app/reglages/page.tsx:33:    safeApiFetch<MailSettings>("/api/v1/mail/settings"),
+web/components/app/deliveries/delivery-detail-dialog.tsx:89:    void call<DeliveryJob>(`/api/v1/deliveries/${jobId}`)
+web/components/app/deliveries/delivery-detail-dialog.tsx:124:      void call<DeliveryJob>(`/api/v1/deliveries/${jobId}`)
+web/components/app/deliveries/deliveries-view.tsx:142:        const fresh = await call<DeliveryJob[]>("/api/v1/deliveries");
+web/components/app/settings/settings-form.tsx:42:/** Read-only mailer status from GET /api/v1/mail/settings. */
+web/components/app/settings/settings-form.tsx:222:      const savedRemote = await call<SavedSettings>("/api/v1/users/me", {
+web/components/app/settings/settings-state.ts:27: * Payload for PATCH /api/v1/users/me — empty Kindle email becomes null.
+web/components/app/settings/reader-catalog-section.tsx:84:      const result = await call<OpdsTokenCreated>("/api/v1/opds/tokens", {
+web/components/app/settings/reader-catalog-section.tsx:141:      await call("/api/v1/opds/tokens/revoke", {
+web/components/app/library/book-detail-dialog.tsx:84:    call<DeliveryJob[]>(`/api/v1/books/${itemId}/deliveries`)
+web/components/app/library/book-detail-dialog.tsx:105:      await call(`/api/v1/books/${item.id}`, { method: "DELETE" });
+web/components/app/library/upload-dropzone.tsx:60:    xhr.open("POST", "/api/v1/books/upload");
+web/components/app/library/library-view.tsx:299:        "/api/v1/books?page=1&limit=200"
+web/components/app/library/library-view.tsx:309:            `/api/v1/books?page=${page}&limit=200`
+web/components/app/library/library-view.tsx:347:      const found = await call<SearchResult[]>("/api/v1/books/search", {
+web/components/app/library/library-view.tsx:364:        "/api/v1/books",
+web/components/app/library/library-view.tsx:446:      await call(`/api/v1/books/${pendingDelete.id}`, { method: "DELETE" });
+web/components/app/library/book-edit-dialog.tsx:92:      const updated = await call<LibraryItem>(`/api/v1/books/${item.id}`, {
+web/components/app/library/cover-image.tsx:37: * GET /api/v1/covers/{item_id} (jamais d'URL tierce dans le navigateur).
+web/components/app/library/cover-image.tsx:76:        const res = await fetch(`/api/v1/covers/${coverKey}`, {
+web/components/app/library/deliver-dialog.tsx:56: * GET /api/v1/devices/{id}/methods). Le parent doit la remonter avec
+web/components/app/library/deliver-dialog.tsx:75:    call<MethodAvailability[]>(`/api/v1/devices/${deviceId}/methods`)
+web/components/app/library/deliver-dialog.tsx:168:    call<{ default_format: string }>("/api/v1/users/me")
+web/components/app/library/deliver-dialog.tsx:190:      const job = await call<DeliveryJob>("/api/v1/deliveries", {
+web/components/app/devices/new-device-dialog.tsx:93:      const device = await call<Device>("/api/v1/devices", {
+web/components/app/devices/devices-view.tsx:104:        const fresh = await call<Device[]>("/api/v1/devices");
+web/components/app/devices/devices-view.tsx:143:      void call<Device[]>("/api/v1/devices")
+web/components/app/devices/devices-view.tsx:169:      await call(`/api/v1/devices/${deleteTarget.id}`, { method: "DELETE" });
+web/components/app/devices/cloud-link-dialog.tsx:92:        void call<Device>(`/api/v1/devices/${deviceId}`)
+web/components/app/devices/cloud-link-dialog.tsx:124:        const updated = await call<Device>(`/api/v1/devices/${deviceId}`);
+web/components/app/devices/cloud-link-dialog.tsx:140:        `/api/v1/devices/${device.id}/link?provider=${provider}&locale=${encodeURIComponent(locale)}`
+web/components/app/devices/edit-device-dialog.tsx:96:      const updated = await call<Device>(`/api/v1/devices/${device.id}`, {
+web/components/app/sources/sources-view.tsx:80:        const data = await call<Gateway[]>("/api/v1/gateways");
+web/components/app/sources/sources-view.tsx:183:      const updated = await call<Source>(`/api/v1/sources/${source.id}`, {
+web/components/app/gateways/create-gateway-dialog.tsx:239:      const created = await call<GatewayCredentials>("/api/v1/gateways", {
+web/components/app/gateways/gateways-view.tsx:84:      const data = await call<Gateway[]>("/api/v1/gateways");
+web/components/app/gateways/gateways-view.tsx:108:        const data = await call<Gateway[]>("/api/v1/gateways");
+web/components/app/gateways/gateways-view.tsx:134:      await call(`/api/v1/gateways/revoke`, {
+web/components/app/gateways/gateways-view.tsx:158:        `/api/v1/gateways/${gateway.gateway_id}/recreate`,
+web/components/app/gateways/gateways-view.tsx:180:      await call(`/api/v1/gateways/${deleteTarget.gateway_id}`, {
+web/components/app/gateways/gateway-activity.tsx:112:    call<GatewayJobStatusOut[]>(`/api/v1/gateways/${gatewayId}/jobs?limit=20`)
