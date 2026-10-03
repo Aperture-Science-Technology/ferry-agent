@@ -92,9 +92,10 @@ async def test_import_from_gateway_respects_quota(
         lambda: _settings(storage_dir, quota=len(content)),
     )
 
+    existing = MagicMock(scalar_one_or_none=MagicMock(return_value=None))
     used = MagicMock(scalar_one_or_none=MagicMock(return_value=len(content)))
     db = AsyncMock()
-    db.execute = AsyncMock(return_value=used)
+    db.execute = AsyncMock(side_effect=[existing, used])
     db.add = MagicMock()
     db.flush = AsyncMock()
     db.commit = AsyncMock()
@@ -149,7 +150,7 @@ async def test_submit_fetch_result_returns_507_when_quota_exceeded(
         lambda: _settings(tmp_path / "library", quota=len(content)),
     )
 
-    db = FakeSession(execute_values=[len(content)])
+    db = FakeSession(execute_values=[None, len(content)])
     with pytest.raises(HTTPException) as exc:
         await submit_fetch_result(
             job.id,
