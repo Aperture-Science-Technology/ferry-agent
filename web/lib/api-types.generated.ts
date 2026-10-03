@@ -631,7 +631,7 @@ export interface paths {
         head?: never;
         /**
          * Patch Me
-         * @description Mise a jour partielle : champ absent = inchange ; ``null`` = efface.
+         * @description Mise a jour partielle : champ absent = inchangé ; ``null`` efface seulement kindle_email.
          *
          *     Le corps est valide manuellement pour renvoyer un ``detail`` 422 en texte
          *     simple (charte non-tech), au lieu du tableau pydantic brut.
@@ -1019,7 +1019,8 @@ export interface components {
         };
         /** DevicePatch */
         DevicePatch: {
-            brand?: components["schemas"]["DeviceBrand"] | null;
+            /** Brand */
+            brand?: components["schemas"]["DeviceBrand"];
             /** Conversion Profile */
             conversion_profile?: ("reader_6in" | "reader_7in_plus" | "tablet") | null;
             /** Email Address */
@@ -1237,10 +1238,13 @@ export interface components {
             /** Title */
             title: string;
         };
-        /** LibraryItemUpdate */
+        /**
+         * LibraryItemUpdate
+         * @description Champ omis : inchangé ; null : effacement, sauf pour le titre et l’auteur.
+         */
         LibraryItemUpdate: {
             /** Author */
-            author?: string | null;
+            author?: string;
             /** Description */
             description?: string | null;
             /** Isbn */
@@ -1254,7 +1258,7 @@ export interface components {
             /** Publisher */
             publisher?: string | null;
             /** Title */
-            title?: string | null;
+            title?: string;
         };
         /**
          * MailSettingsOut
@@ -1555,25 +1559,72 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Result
+                     * @description Métadonnées du résultat, sous forme d'objet ou de texte JSON.
+                     */
+                    result?: Record<string, never> | string | null;
+                    /** Result Id */
+                    result_id?: string | null;
+                    /** Source */
+                    source?: string | null;
+                } & {
+                    [key: string]: unknown;
+                };
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file?: string;
+                    /**
+                     * Result
+                     * @description Métadonnées du résultat, sous forme d'objet ou de texte JSON.
+                     */
+                    result?: Record<string, never> | string | null;
+                    /** Result Id */
+                    result_id?: string | null;
+                    /** Source */
+                    source?: string | null;
+                };
+            };
+        };
         responses: {
-            /** @description Successful Response */
+            /** @description Livre ajouté. */
             201: {
+                headers: {
+                    /** @description Présent pour l’import multipart déprécié. */
+                    Deprecation?: "true";
+                    /** @description Adresse de remplacement pour l’import multipart. */
+                    Link?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryItemOut"];
+                };
+            };
+            /** @description Récupération du livre en cours. */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LibraryItemOut"] | components["schemas"]["GatewayFetchQueued"];
+                    "application/json": components["schemas"]["GatewayFetchQueued"];
                 };
             };
-            /** @description Validation Error */
+            /** @description Corps invalide ou informations d’import manquantes. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Informations d’import invalides. */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };
@@ -1848,7 +1899,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "*/*": string;
+                    "image/gif": string;
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
                 };
             };
             /** @description Validation Error */
@@ -2333,7 +2388,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "*/*": string;
+                    "application/epub+zip": string;
+                    "application/octet-stream": string;
+                    "application/pdf": string;
+                    "application/vnd.amazon.ebook": string;
+                    "application/x-mobipocket-ebook": string;
                 };
             };
             /** @description Validation Error */
@@ -2573,8 +2633,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GatewayJobOut"] | null;
+                    "application/json": components["schemas"]["GatewayJobOut"];
                 };
+            };
+            /** @description Aucun travail disponible. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2975,7 +3042,15 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": Record<string, never>;
+                "application/json": {
+                    /**
+                     * Default Format
+                     * @enum {string}
+                     */
+                    default_format?: "epub" | "mobi" | "azw3" | "pdf";
+                    /** Kindle Email */
+                    kindle_email?: string | null;
+                };
             };
         };
         responses: {
@@ -3120,7 +3195,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/atom+xml;profile=opds-catalog;kind=navigation": string;
                 };
             };
             /** @description Validation Error */
@@ -3153,7 +3228,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/atom+xml;profile=opds-catalog;kind=acquisition": string;
                 };
             };
             /** @description Validation Error */
@@ -3187,7 +3262,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/atom+xml;profile=opds-catalog;kind=acquisition": string;
                 };
             };
             /** @description Validation Error */
@@ -3218,7 +3293,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/atom+xml;profile=opds-catalog;kind=navigation": string;
                 };
             };
             /** @description Validation Error */
@@ -3250,7 +3325,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "*/*": string;
+                    "image/gif": string;
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
                 };
             };
             /** @description Validation Error */
@@ -3282,7 +3361,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "*/*": string;
+                    "application/epub+zip": string;
+                    "application/octet-stream": string;
+                    "application/pdf": string;
+                    "application/vnd.amazon.ebook": string;
+                    "application/x-mobipocket-ebook": string;
                 };
             };
             /** @description Validation Error */
@@ -3313,7 +3397,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/opensearchdescription+xml": string;
                 };
             };
             /** @description Validation Error */
@@ -3346,7 +3430,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/atom+xml;profile=opds-catalog;kind=acquisition": string;
                 };
             };
             /** @description Validation Error */
@@ -3380,7 +3464,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/atom+xml;profile=opds-catalog;kind=acquisition": string;
                 };
             };
             /** @description Validation Error */

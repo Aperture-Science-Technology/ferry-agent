@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ferry_agent.api.response_contracts import FILE_RESPONSES
 from ferry_agent.db import get_db
 from ferry_agent.models import LibraryItem
 from ferry_agent.services import converters, download_links
@@ -31,7 +32,7 @@ def _download_filename(item: LibraryItem, fmt: str) -> str:
     return f"{safe[:120]}.{fmt}"
 
 
-@router.get("/{token}")
+@router.get("/{token}", response_class=FileResponse, responses=FILE_RESPONSES)
 async def download_by_token(token: str, db: AsyncSession = Depends(get_db)) -> FileResponse:
     """Sert le fichier ebook correspondant au jeton signe (sans auth)."""
     try:

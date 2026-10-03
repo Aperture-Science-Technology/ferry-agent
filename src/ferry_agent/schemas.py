@@ -1,18 +1,54 @@
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal, TypeVar
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, RootModel, field_validator
+from pydantic import AliasChoices, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field, RootModel, field_validator
+from pydantic.json_schema import SkipJsonSchema
+from pydantic_core import PydanticCustomError
 
 from ferry_agent.models import (
     DeliveryMethod,
     DeliveryStatus,
-    DeviceBrand,
     DeliveryTier,
+    DeviceBrand,
     GatewayJobStatus,
     GatewayJobType,
     PairingStatus,
 )
+
+
+def _refuse_null(value: object) -> object:
+    """Un champ obligatoire peut être omis, mais ne peut pas être effacé."""
+    if value is None:
+        raise PydanticCustomError("non_nullable", "Ce champ ne peut pas être effacé.")
+    return value
+
+
+_PatchValue = TypeVar("_PatchValue")
+# Le défaut sert uniquement à l'omission ; exclude_unset le retire des mises à jour.
+NonNullPatch = Annotated[
+    _PatchValue | SkipJsonSchema[None],
+    BeforeValidator(_refuse_null),
+    Field(json_schema_extra=lambda schema: schema.pop("default", None)),
+]
+
+
+class BookImport(BaseModel):
+    """Import depuis une source ; les métadonnées partielles restent acceptées.
+
+    Les résultats gateway peuvent aussi fournir leurs métadonnées à la racine.
+    Le fichier multipart est traité séparément pour conserver sa compatibilité.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    source: str | None = None
+    result_id: str | None = None
+    result: dict | str | None = Field(
+        default=None,
+        description="Métadonnées du résultat, sous forme d'objet ou de texte JSON.",
+    )
+
 
 # W-27 : presets de conversion (pas de reglage fin en v1).
 ConversionPreset = Literal["reader_6in", "reader_7in_plus", "tablet"]
@@ -141,8 +177,10 @@ class LibraryItemOut(BaseModel):
 
 
 class LibraryItemUpdate(BaseModel):
-    title: str | None = None
-    author: str | None = None
+    """Champ omis : inchangé ; null : effacement, sauf pour le titre et l’auteur."""
+
+    title: NonNullPatch[str] = None
+    author: NonNullPatch[str] = None
     description: str | None = None
     language: str | None = None
     page_count: int | None = None
@@ -207,7 +245,7 @@ class DeviceCreate(BaseModel):
 
 class DevicePatch(BaseModel):
     name: str | None = None
-    brand: DeviceBrand | None = None
+    brand: NonNullPatch[DeviceBrand] = None
     model: str | None = None
     conversion_profile: ConversionPreset | None = None
     email_address: EmailStr | None = None
@@ -234,7 +272,7 @@ class UserPatch(BaseModel):
     """Champs optionnels du profil. Absent = inchange ; null = efface (kindle_email)."""
 
     kindle_email: EmailStr | None = None
-    default_format: Literal["epub", "mobi", "azw3", "pdf"] | None = None
+    default_format: NonNullPatch[Literal["epub", "mobi", "azw3", "pdf"]] = None
 
     @field_validator("kindle_email", mode="before")
     @classmethod

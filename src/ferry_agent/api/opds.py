@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import CurrentUser, get_current_user
+from ferry_agent.api.response_contracts import COVER_RESPONSES, FILE_RESPONSES, content_response
 from ferry_agent.db import get_db
 from ferry_agent.models import LibraryItem, OpdsToken
 from ferry_agent.schemas import OpdsTokenCreate, OpdsTokenCreated, OpdsTokenOut, OpdsTokenRevoke
@@ -113,7 +114,11 @@ async def revoke_opds_token(
 # ---------------------------------------------------------------------------
 
 
-@catalog_router.get("/{token}")
+@catalog_router.get(
+    "/{token}",
+    response_class=Response,
+    responses=content_response(opds_service.NAV_CONTENT_TYPE),
+)
 async def opds_root(
     token: str,
     request: Request,
@@ -124,7 +129,11 @@ async def opds_root(
     return _atom_response(opds_service.build_root_navigation(token), opds_service.NAV_CONTENT_TYPE)
 
 
-@catalog_router.get("/{token}/all")
+@catalog_router.get(
+    "/{token}/all",
+    response_class=Response,
+    responses=content_response(opds_service.ACQ_CONTENT_TYPE),
+)
 async def opds_all(
     token: str,
     request: Request,
@@ -148,7 +157,11 @@ async def opds_all(
     return _atom_response(body, opds_service.ACQ_CONTENT_TYPE)
 
 
-@catalog_router.get("/{token}/recent")
+@catalog_router.get(
+    "/{token}/recent",
+    response_class=Response,
+    responses=content_response(opds_service.ACQ_CONTENT_TYPE),
+)
 async def opds_recent(
     token: str,
     request: Request,
@@ -174,7 +187,11 @@ async def opds_recent(
     return _atom_response(body, opds_service.ACQ_CONTENT_TYPE)
 
 
-@catalog_router.get("/{token}/authors")
+@catalog_router.get(
+    "/{token}/authors",
+    response_class=Response,
+    responses=content_response(opds_service.NAV_CONTENT_TYPE),
+)
 async def opds_authors(
     token: str,
     request: Request,
@@ -189,7 +206,11 @@ async def opds_authors(
     )
 
 
-@catalog_router.get("/{token}/author")
+@catalog_router.get(
+    "/{token}/author",
+    response_class=Response,
+    responses=content_response(opds_service.ACQ_CONTENT_TYPE),
+)
 async def opds_by_author(
     token: str,
     request: Request,
@@ -217,7 +238,11 @@ async def opds_by_author(
     return _atom_response(body, opds_service.ACQ_CONTENT_TYPE)
 
 
-@catalog_router.get("/{token}/search")
+@catalog_router.get(
+    "/{token}/search",
+    response_class=Response,
+    responses=content_response(opds_service.ACQ_CONTENT_TYPE),
+)
 async def opds_search(
     token: str,
     request: Request,
@@ -246,7 +271,11 @@ async def opds_search(
     return _atom_response(body, opds_service.ACQ_CONTENT_TYPE)
 
 
-@catalog_router.get("/{token}/opensearch.xml")
+@catalog_router.get(
+    "/{token}/opensearch.xml",
+    response_class=Response,
+    responses=content_response(opds_service.OPENSEARCH_CONTENT_TYPE),
+)
 async def opds_opensearch(
     token: str,
     request: Request,
@@ -260,7 +289,7 @@ async def opds_opensearch(
     )
 
 
-@catalog_router.get("/{token}/download/{item_id}")
+@catalog_router.get("/{token}/download/{item_id}", response_class=FileResponse, responses=FILE_RESPONSES)
 async def opds_download(
     token: str,
     item_id: uuid.UUID,
@@ -286,7 +315,7 @@ async def opds_download(
     )
 
 
-@catalog_router.get("/{token}/cover/{item_id}")
+@catalog_router.get("/{token}/cover/{item_id}", response_class=Response, responses=COVER_RESPONSES)
 async def opds_cover(
     token: str,
     item_id: uuid.UUID,
