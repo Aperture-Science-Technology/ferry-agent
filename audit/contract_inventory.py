@@ -7,8 +7,8 @@ def calls(n,seen=None):
  out=[]
  for x in ast.walk(n):
   if isinstance(x,ast.Call) and isinstance(x.func,ast.Attribute) and isinstance(x.func.value,ast.Name) and x.func.value.id=='client' and x.func.attr in ('get','post','patch','delete'):
-   raw=ast.unparse(x.args[0]);path=re.sub(r'\{.*?\}','{}',raw.strip('f').strip('\"\'')); match=next((p for p in s['paths'] if re.sub(r'\{.*?\}','{}',p)==path),None)
-   out.append({'line':x.lineno,'method':x.func.attr.upper(),'path':match or raw,'request':ast.unparse(x),'exists':bool(match and x.func.attr in s['paths'][match])})
+   raw=ast.unparse(x.args[0]);path=re.sub(r'\{.*?\}','{}',raw.strip('f').strip('\"\'')); matched=next((p for p in s['paths'] if re.sub(r'\{.*?\}','{}',p)==path),None)
+   out.append({'line':x.lineno,'method':x.func.attr.upper(),'path':matched or raw,'request':ast.unparse(x),'exists':bool(matched and x.func.attr in s['paths'][matched])})
   if isinstance(x,ast.Call) and isinstance(x.func,ast.Name) and x.func.id in functions and x.func.id.startswith('_') and x.func.id not in seen:
    seen.add(x.func.id);out+=calls(functions[x.func.id],seen)
  return out
