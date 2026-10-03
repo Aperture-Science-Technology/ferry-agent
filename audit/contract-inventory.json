@@ -1,0 +1,883 @@
+[
+  {
+    "name": "search_library",
+    "line": 385,
+    "signature": "query: str, scope: list[str] | None=None",
+    "calls": [
+      {
+        "line": 401,
+        "method": "POST",
+        "path": "/api/v1/books/search",
+        "request": "client.post('/api/v1/books/search', json=body)",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "author",
+      "format",
+      "owned",
+      "result_id",
+      "size_bytes",
+      "source",
+      "title"
+    ]
+  },
+  {
+    "name": "add_to_library",
+    "line": 424,
+    "signature": "source: str, result_id: str",
+    "calls": [
+      {
+        "line": 435,
+        "method": "POST",
+        "path": "/api/v1/books",
+        "request": "client.post('/api/v1/books', json={'source': source, 'result_id': result_id})",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "author",
+      "status",
+      "title"
+    ]
+  },
+  {
+    "name": "list_library",
+    "line": 461,
+    "signature": "page: int=1, limit: int=50",
+    "calls": [
+      {
+        "line": 472,
+        "method": "GET",
+        "path": "/api/v1/books",
+        "request": "client.get('/api/v1/books', params={'page': page, 'limit': limit})",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "author",
+      "id",
+      "items",
+      "original_format",
+      "page",
+      "title",
+      "total"
+    ]
+  },
+  {
+    "name": "list_devices",
+    "line": 497,
+    "signature": "",
+    "calls": [
+      {
+        "line": 504,
+        "method": "GET",
+        "path": "/api/v1/devices",
+        "request": "client.get('/api/v1/devices')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "delivery_tier",
+      "id"
+    ]
+  },
+  {
+    "name": "list_device_methods",
+    "line": 523,
+    "signature": "device_id: str",
+    "calls": [
+      {
+        "line": 534,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}/methods",
+        "request": "client.get(f'/api/v1/devices/{device_id}/methods')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "available",
+      "method",
+      "reason_code"
+    ]
+  },
+  {
+    "name": "deliver",
+    "line": 555,
+    "signature": "item_id: str, device_id: str, confirm: bool=False, method: str | None=None, format: str | None=None",
+    "calls": [
+      {
+        "line": 652,
+        "method": "POST",
+        "path": "/api/v1/deliveries",
+        "request": "client.post('/api/v1/deliveries', json=payload)",
+        "exists": true
+      },
+      {
+        "line": 588,
+        "method": "GET",
+        "path": "/api/v1/devices",
+        "request": "client.get('/api/v1/devices')",
+        "exists": true
+      },
+      {
+        "line": 364,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}/methods",
+        "request": "client.get(f'/api/v1/devices/{device_id}/methods')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "device_label",
+      "download_url",
+      "id",
+      "item_title",
+      "method",
+      "status",
+      "target_format"
+    ]
+  },
+  {
+    "name": "get_delivery_status",
+    "line": 677,
+    "signature": "job_id: str",
+    "calls": [
+      {
+        "line": 687,
+        "method": "GET",
+        "path": "/api/v1/deliveries/{job_id}",
+        "request": "client.get(f'/api/v1/deliveries/{job_id}')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "delivered_at",
+      "device_label",
+      "download_url",
+      "error",
+      "item_title",
+      "method",
+      "status",
+      "target_format"
+    ]
+  },
+  {
+    "name": "list_gateways",
+    "line": 723,
+    "signature": "",
+    "calls": [
+      {
+        "line": 730,
+        "method": "GET",
+        "path": "/api/v1/gateways",
+        "request": "client.get('/api/v1/gateways')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "gateway_id",
+      "id",
+      "last_seen_at",
+      "name",
+      "status"
+    ]
+  },
+  {
+    "name": "get_gateway_job",
+    "line": 751,
+    "signature": "job_id: str",
+    "calls": [
+      {
+        "line": 761,
+        "method": "GET",
+        "path": "/api/v1/gateways/jobs/{job_id}",
+        "request": "client.get(f'/api/v1/gateways/jobs/{job_id}')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "attempts",
+      "error",
+      "job_id",
+      "library_item_id",
+      "status",
+      "type"
+    ]
+  },
+  {
+    "name": "list_sources",
+    "line": 783,
+    "signature": "",
+    "calls": [
+      {
+        "line": 790,
+        "method": "GET",
+        "path": "/api/v1/sources",
+        "request": "client.get('/api/v1/sources')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "enabled",
+      "id",
+      "type"
+    ]
+  },
+  {
+    "name": "get_profile",
+    "line": 807,
+    "signature": "",
+    "calls": [
+      {
+        "line": 814,
+        "method": "GET",
+        "path": "/api/v1/users/me",
+        "request": "client.get('/api/v1/users/me')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "default_format",
+      "email",
+      "id",
+      "kindle_email"
+    ]
+  },
+  {
+    "name": "get_mail_settings",
+    "line": 832,
+    "signature": "",
+    "calls": [
+      {
+        "line": 844,
+        "method": "GET",
+        "path": "/api/v1/mail/settings",
+        "request": "client.get('/api/v1/mail/settings')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "allowed_domains",
+      "configured",
+      "daily_quota",
+      "hourly_quota",
+      "reply_to",
+      "sender_address"
+    ]
+  },
+  {
+    "name": "list_opds_tokens",
+    "line": 878,
+    "signature": "",
+    "calls": [
+      {
+        "line": 885,
+        "method": "GET",
+        "path": "/api/v1/opds/tokens",
+        "request": "client.get('/api/v1/opds/tokens')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "created_at",
+      "id",
+      "label",
+      "last_used_at"
+    ]
+  },
+  {
+    "name": "update_profile",
+    "line": 905,
+    "signature": "kindle_email: str | None=None, default_format: str | None=None, clear_kindle_email: bool=False",
+    "calls": [
+      {
+        "line": 942,
+        "method": "PATCH",
+        "path": "/api/v1/users/me",
+        "request": "client.patch('/api/v1/users/me', json=body)",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "default_format",
+      "email",
+      "id",
+      "kindle_email"
+    ]
+  },
+  {
+    "name": "get_device",
+    "line": 960,
+    "signature": "device_id: str",
+    "calls": [
+      {
+        "line": 970,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}",
+        "request": "client.get(f'/api/v1/devices/{device_id}')",
+        "exists": true
+      }
+    ],
+    "response_keys": []
+  },
+  {
+    "name": "add_device",
+    "line": 980,
+    "signature": "brand: str, name: str | None=None, model: str | None=None, email_address: str | None=None, conversion_profile: str | None=None",
+    "calls": [
+      {
+        "line": 1018,
+        "method": "POST",
+        "path": "/api/v1/devices",
+        "request": "client.post('/api/v1/devices', json=body)",
+        "exists": true
+      }
+    ],
+    "response_keys": []
+  },
+  {
+    "name": "update_device",
+    "line": 1028,
+    "signature": "device_id: str, name: str | None=None, brand: str | None=None, model: str | None=None, email_address: str | None=None, conversion_profile: str | None=None",
+    "calls": [
+      {
+        "line": 1069,
+        "method": "PATCH",
+        "path": "/api/v1/devices/{device_id}",
+        "request": "client.patch(f'/api/v1/devices/{device_id}', json=body)",
+        "exists": true
+      }
+    ],
+    "response_keys": []
+  },
+  {
+    "name": "remove_device",
+    "line": 1079,
+    "signature": "device_id: str, confirm: bool=False",
+    "calls": [
+      {
+        "line": 1091,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}",
+        "request": "client.get(f'/api/v1/devices/{device_id}')",
+        "exists": true
+      },
+      {
+        "line": 1104,
+        "method": "DELETE",
+        "path": "/api/v1/devices/{device_id}",
+        "request": "client.delete(f'/api/v1/devices/{device_id}')",
+        "exists": true
+      }
+    ],
+    "response_keys": []
+  },
+  {
+    "name": "link_device_cloud",
+    "line": 1114,
+    "signature": "device_id: str, provider: str",
+    "calls": [
+      {
+        "line": 1133,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}/link",
+        "request": "client.get(f'/api/v1/devices/{device_id}/link', params={'provider': provider})",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "url"
+    ]
+  },
+  {
+    "name": "set_source_enabled",
+    "line": 1158,
+    "signature": "source_id: str, enabled: bool",
+    "calls": [
+      {
+        "line": 1169,
+        "method": "PATCH",
+        "path": "/api/v1/sources/{source_id}",
+        "request": "client.patch(f'/api/v1/sources/{source_id}', json={'enabled': enabled})",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "enabled",
+      "id",
+      "type"
+    ]
+  },
+  {
+    "name": "list_deliveries",
+    "line": 1184,
+    "signature": "limit: int=20",
+    "calls": [
+      {
+        "line": 1197,
+        "method": "GET",
+        "path": "/api/v1/deliveries",
+        "request": "client.get('/api/v1/deliveries')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "created_at",
+      "device_label",
+      "error",
+      "id",
+      "item_title",
+      "method",
+      "status"
+    ]
+  },
+  {
+    "name": "plan_delivery",
+    "line": 1240,
+    "signature": "item_id: str, device_id: str | None=None, format: str | None=None",
+    "calls": [
+      {
+        "line": 1258,
+        "method": "GET",
+        "path": "/api/v1/books/{item_id}",
+        "request": "client.get(f'/api/v1/books/{item_id}')",
+        "exists": true
+      },
+      {
+        "line": 1262,
+        "method": "GET",
+        "path": "/api/v1/users/me",
+        "request": "client.get('/api/v1/users/me')",
+        "exists": true
+      },
+      {
+        "line": 1266,
+        "method": "GET",
+        "path": "/api/v1/devices",
+        "request": "client.get('/api/v1/devices')",
+        "exists": true
+      },
+      {
+        "line": 373,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}/methods",
+        "request": "client.get(f'/api/v1/devices/{device_id}/methods')",
+        "exists": true
+      },
+      {
+        "line": 1276,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}",
+        "request": "client.get(f'/api/v1/devices/{device_id}')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "available",
+      "brand",
+      "default_format",
+      "delivery_tier",
+      "email_address",
+      "id",
+      "kindle_email",
+      "method",
+      "original_format",
+      "reason_code",
+      "title"
+    ]
+  },
+  {
+    "name": "diagnose",
+    "line": 1394,
+    "signature": "",
+    "calls": [
+      {
+        "line": 1405,
+        "method": "GET",
+        "path": "/api/v1/users/me",
+        "request": "client.get('/api/v1/users/me')",
+        "exists": true
+      },
+      {
+        "line": 1409,
+        "method": "GET",
+        "path": "/api/v1/mail/settings",
+        "request": "client.get('/api/v1/mail/settings')",
+        "exists": true
+      },
+      {
+        "line": 1413,
+        "method": "GET",
+        "path": "/api/v1/devices",
+        "request": "client.get('/api/v1/devices')",
+        "exists": true
+      },
+      {
+        "line": 1419,
+        "method": "GET",
+        "path": "/api/v1/deliveries",
+        "request": "client.get('/api/v1/deliveries')",
+        "exists": true
+      },
+      {
+        "line": 373,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}/methods",
+        "request": "client.get(f'/api/v1/devices/{device_id}/methods')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "allowed_domains",
+      "available",
+      "configured",
+      "created_at",
+      "daily_quota",
+      "device_label",
+      "error",
+      "hourly_quota",
+      "id",
+      "item_title",
+      "kindle_email",
+      "method",
+      "reason_code",
+      "sender_address",
+      "status"
+    ]
+  },
+  {
+    "name": "deliver_to_kindle",
+    "line": 1515,
+    "signature": "item_id: str, device_id: str | None=None, kindle_email: str | None=None, format: str | None=None, confirm: bool=False",
+    "calls": [
+      {
+        "line": 1550,
+        "method": "GET",
+        "path": "/api/v1/users/me",
+        "request": "client.get('/api/v1/users/me')",
+        "exists": true
+      },
+      {
+        "line": 373,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}/methods",
+        "request": "client.get(f'/api/v1/devices/{device_id}/methods')",
+        "exists": true
+      },
+      {
+        "line": 1634,
+        "method": "GET",
+        "path": "/api/v1/books/{item_id}",
+        "request": "client.get(f'/api/v1/books/{item_id}')",
+        "exists": true
+      },
+      {
+        "line": 1675,
+        "method": "POST",
+        "path": "/api/v1/deliveries",
+        "request": "client.post('/api/v1/deliveries', json=payload)",
+        "exists": true
+      },
+      {
+        "line": 1543,
+        "method": "PATCH",
+        "path": "/api/v1/users/me",
+        "request": "client.patch('/api/v1/users/me', json={'kindle_email': kindle_email})",
+        "exists": true
+      },
+      {
+        "line": 1557,
+        "method": "GET",
+        "path": "/api/v1/devices/{device_id}",
+        "request": "client.get(f'/api/v1/devices/{device_id}')",
+        "exists": true
+      },
+      {
+        "line": 1569,
+        "method": "GET",
+        "path": "/api/v1/devices",
+        "request": "client.get('/api/v1/devices')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "available",
+      "brand",
+      "default_format",
+      "device_label",
+      "email_address",
+      "id",
+      "item_title",
+      "kindle_email",
+      "method",
+      "original_format",
+      "reason_code",
+      "status",
+      "target_format",
+      "title"
+    ]
+  },
+  {
+    "name": "search_library_items",
+    "line": 1701,
+    "signature": "query: str, page: int=1, limit: int=20",
+    "calls": [
+      {
+        "line": 1721,
+        "method": "GET",
+        "path": "/api/v1/books",
+        "request": "client.get('/api/v1/books', params={'q': query, 'page': page, 'limit': limit})",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "author",
+      "id",
+      "items",
+      "original_format",
+      "page",
+      "title",
+      "total"
+    ]
+  },
+  {
+    "name": "update_library_item",
+    "line": 1750,
+    "signature": "item_id: str, title: str | None=None, author: str | None=None, description: str | None=None, language: str | None=None, page_count: int | None=None, publisher: str | None=None, published_year: int | None=None, isbn: str | None=None",
+    "calls": [
+      {
+        "line": 1798,
+        "method": "PATCH",
+        "path": "/api/v1/books/{item_id}",
+        "request": "client.patch(f'/api/v1/books/{item_id}', json=body)",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "author",
+      "id",
+      "isbn",
+      "language",
+      "title"
+    ]
+  },
+  {
+    "name": "delete_library_item",
+    "line": 1820,
+    "signature": "item_id: str, confirm: bool=False",
+    "calls": [
+      {
+        "line": 1832,
+        "method": "GET",
+        "path": "/api/v1/books/{item_id}",
+        "request": "client.get(f'/api/v1/books/{item_id}')",
+        "exists": true
+      },
+      {
+        "line": 1847,
+        "method": "DELETE",
+        "path": "/api/v1/books/{item_id}",
+        "request": "client.delete(f'/api/v1/books/{item_id}')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "author",
+      "title"
+    ]
+  },
+  {
+    "name": "list_library_item_deliveries",
+    "line": 1857,
+    "signature": "item_id: str",
+    "calls": [
+      {
+        "line": 1867,
+        "method": "GET",
+        "path": "/api/v1/books/{item_id}/deliveries",
+        "request": "client.get(f'/api/v1/books/{item_id}/deliveries')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "created_at",
+      "device_label",
+      "error",
+      "id",
+      "item_title",
+      "method",
+      "status"
+    ]
+  },
+  {
+    "name": "download_library_item",
+    "line": 1912,
+    "signature": "item_id: str, format: str | None=None",
+    "calls": [
+      {
+        "line": 1931,
+        "method": "POST",
+        "path": "/api/v1/books/{item_id}/download-link",
+        "request": "client.post(f'/api/v1/books/{item_id}/download-link', json=body)",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "expires_at",
+      "format",
+      "url"
+    ]
+  },
+  {
+    "name": "create_gateway",
+    "line": 1977,
+    "signature": "name: str='Gateway'",
+    "calls": [
+      {
+        "line": 1987,
+        "method": "POST",
+        "path": "/api/v1/gateways",
+        "request": "client.post('/api/v1/gateways', json={'name': name})",
+        "exists": true
+      }
+    ],
+    "response_keys": []
+  },
+  {
+    "name": "recreate_gateway",
+    "line": 1997,
+    "signature": "gateway_id: str",
+    "calls": [
+      {
+        "line": 2009,
+        "method": "POST",
+        "path": "/api/v1/gateways/{gateway_id}/recreate",
+        "request": "client.post(f'/api/v1/gateways/{gateway_id}/recreate')",
+        "exists": true
+      }
+    ],
+    "response_keys": []
+  },
+  {
+    "name": "revoke_gateway",
+    "line": 2019,
+    "signature": "gateway_id: str, confirm: bool=False",
+    "calls": [
+      {
+        "line": 2031,
+        "method": "GET",
+        "path": "/api/v1/gateways",
+        "request": "client.get('/api/v1/gateways')",
+        "exists": true
+      },
+      {
+        "line": 2054,
+        "method": "POST",
+        "path": "/api/v1/gateways/revoke",
+        "request": "client.post('/api/v1/gateways/revoke', json={'gateway_id': gateway_id})",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "gateway_id",
+      "id",
+      "name"
+    ]
+  },
+  {
+    "name": "delete_gateway",
+    "line": 2067,
+    "signature": "gateway_id: str, confirm: bool=False",
+    "calls": [
+      {
+        "line": 2079,
+        "method": "GET",
+        "path": "/api/v1/gateways",
+        "request": "client.get('/api/v1/gateways')",
+        "exists": true
+      },
+      {
+        "line": 2102,
+        "method": "DELETE",
+        "path": "/api/v1/gateways/{gateway_id}",
+        "request": "client.delete(f'/api/v1/gateways/{gateway_id}')",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "gateway_id",
+      "id",
+      "name"
+    ]
+  },
+  {
+    "name": "list_gateway_jobs",
+    "line": 2112,
+    "signature": "gateway_id: str, limit: int=20",
+    "calls": [
+      {
+        "line": 2125,
+        "method": "GET",
+        "path": "/api/v1/gateways/{gateway_id}/jobs",
+        "request": "client.get(f'/api/v1/gateways/{gateway_id}/jobs', params={'limit': limit})",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "attempts",
+      "error",
+      "id",
+      "job_id",
+      "library_item_id",
+      "status",
+      "type"
+    ]
+  },
+  {
+    "name": "create_opds_token",
+    "line": 2158,
+    "signature": "label: str='Liseuse'",
+    "calls": [
+      {
+        "line": 2171,
+        "method": "POST",
+        "path": "/api/v1/opds/tokens",
+        "request": "client.post('/api/v1/opds/tokens', json={'label': label})",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "created_at",
+      "id",
+      "label",
+      "token",
+      "url"
+    ]
+  },
+  {
+    "name": "revoke_opds_token",
+    "line": 2196,
+    "signature": "token_id: str, confirm: bool=False",
+    "calls": [
+      {
+        "line": 2208,
+        "method": "GET",
+        "path": "/api/v1/opds/tokens",
+        "request": "client.get('/api/v1/opds/tokens')",
+        "exists": true
+      },
+      {
+        "line": 2227,
+        "method": "POST",
+        "path": "/api/v1/opds/tokens/revoke",
+        "request": "client.post('/api/v1/opds/tokens/revoke', json={'token_id': token_id})",
+        "exists": true
+      }
+    ],
+    "response_keys": [
+      "id",
+      "label"
+    ]
+  }
+]

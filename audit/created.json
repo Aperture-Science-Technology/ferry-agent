@@ -1,0 +1,27 @@
+{
+  "books": [
+    "4fc9b701-a280-4b95-9d77-2d0d58ebeba8",
+    "153b921e-f4f7-4637-b33a-0d0bbd348875",
+    "1f88ef73-7e8c-465a-9731-ab249f752ab4",
+    "f7746c9c-869a-416f-a72e-d4d2b47b8910",
+    "6bbf9ea8-14da-41ef-9e3a-235cd3924bac",
+    "2edbdd1f-3637-4983-92d7-e8c8faca0d32",
+    "3629c5a5-5044-40c7-93f4-07a3cb2277b9",
+    "4f04d5c9-f9e7-451d-82ca-ea64ca65bdf0"
+  ],
+  "devices": [
+    "d50eb7f8-7cc0-4fd5-9610-d7a3459554b6",
+    "96cdd9e1-a429-4bdb-a84b-18f67b48bca3"
+  ],
+  "gateways": [
+    "ef224f1f-1cc5-41c3-8027-9f5e5c8f8c0f",
+    "76703061-26c5-4961-90eb-605a51e1e274",
+    "03e6ffe5-3df3-4a7f-9086-ca7ccc8182a2"
+  ],
+  "opds": [
+    "2907d228-e88b-4a17-8c61-b54ae6e18b06",
+    "d710b4d0-c5f3-432b-b378-6a294d477c80",
+    "2d1e1551-5381-4fe9-888f-87facf1d921d",
+    "7eb8b47c-d0b6-415e-9be5-182f76d16fe1"
+  ]
+}

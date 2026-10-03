@@ -1,0 +1,10 @@
+POST /api/v1/books 201
+GET /api/v1/books/4f04d5c9-f9e7-451d-82ca-ea64ca65bdf0 200
+DELETE /api/v1/books/4f04d5c9-f9e7-451d-82ca-ea64ca65bdf0 204
+GET /api/v1/books 200
+GET /api/v1/devices 200
+GET /api/v1/gateways 200
+GET /api/v1/opds/tokens 200
+GET /api/v1/sources 200
+GET /api/v1/users/me 200
+GET /api/v1/deliveries 200

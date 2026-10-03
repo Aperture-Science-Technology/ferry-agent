@@ -1,0 +1,83 @@
+GET /api/v1/users/me 200
+GET /api/v1/books 200
+GET /api/v1/devices 200
+GET /api/v1/gateways 200
+GET /api/v1/opds/tokens 200
+POST /api/v1/devices 201
+GET /api/v1/devices/d50eb7f8-7cc0-4fd5-9610-d7a3459554b6 200
+GET /api/v1/devices/d50eb7f8-7cc0-4fd5-9610-d7a3459554b6/methods 200
+PATCH /api/v1/devices/d50eb7f8-7cc0-4fd5-9610-d7a3459554b6 200
+GET /api/v1/devices/d50eb7f8-7cc0-4fd5-9610-d7a3459554b6/link 503
+GET /api/v1/devices/d50eb7f8-7cc0-4fd5-9610-d7a3459554b6/link 503
+GET /api/v1/devices/d50eb7f8-7cc0-4fd5-9610-d7a3459554b6/link/callback 302
+POST /api/v1/devices/d50eb7f8-7cc0-4fd5-9610-d7a3459554b6/link/callback 400
+PATCH /api/v1/users/me 200
+PATCH /api/v1/users/me 200
+GET /api/v1/sources 200
+PATCH /api/v1/sources/700f7897-4ff7-48de-b6d7-534b33cae121 200
+PATCH /api/v1/sources/700f7897-4ff7-48de-b6d7-534b33cae121 200
+POST /api/v1/books/search 200
+POST /api/v1/books 201
+POST /api/v1/books/upload 201
+GET /api/v1/books/153b921e-f4f7-4637-b33a-0d0bbd348875 200
+GET /api/v1/books/153b921e-f4f7-4637-b33a-0d0bbd348875/deliveries 200
+GET /api/v1/covers/153b921e-f4f7-4637-b33a-0d0bbd348875 404
+PATCH /api/v1/books/153b921e-f4f7-4637-b33a-0d0bbd348875 200
+GET /api/v1/books 200
+PATCH /api/v1/books/153b921e-f4f7-4637-b33a-0d0bbd348875 200
+PATCH /api/v1/books/153b921e-f4f7-4637-b33a-0d0bbd348875 500
+GET /api/v1/books/153b921e-f4f7-4637-b33a-0d0bbd348875 200
+POST /api/v1/books/153b921e-f4f7-4637-b33a-0d0bbd348875/download-link 200
+GET /api/v1/downloads/[SECRET] 200
+POST /api/v1/deliveries 400
+GET /api/v1/deliveries/00000000-0000-0000-0000-000000000000 404
+POST /api/v1/opds/tokens 201
+GET /api/v1/opds/tokens 200
+GET /opds/[SECRET] 200
+GET opds/[SECRET]/all 200
+GET opds/[SECRET]/authors 200
+GET opds/[SECRET]/author?name=Audit%20Auteur 200
+GET opds/[SECRET]/recent 200
+GET opds/[SECRET]/search?q=Audit 200
+GET opds/[SECRET]/opensearch.xml 200
+GET opds/[SECRET]/153b921e-f4f7-4637-b33a-0d0bbd348875 404
+GET opds/[SECRET]/153b921e-f4f7-4637-b33a-0d0bbd348875 200
+POST /api/v1/books 400
+POST /api/v1/books 500
+PATCH /api/v1/users/me 500
+GET /api/v1/users/me 200
+POST /api/v1/gateways 201
+POST /api/v1/gateways/pair 200
+POST /api/v1/gateways/poll 204
+GET /api/v1/gateways/ef224f1f-1cc5-41c3-8027-9f5e5c8f8c0f/jobs 200
+POST /api/v1/books 202
+GET /api/v1/gateways/jobs/adcc93d0-f26d-44ef-afa5-6b20ffce62fd 200
+GET /api/v1/gateways/ef224f1f-1cc5-41c3-8027-9f5e5c8f8c0f/jobs 200
+POST /api/v1/gateways/poll 200
+POST /api/v1/gateways/jobs/adcc93d0-f26d-44ef-afa5-6b20ffce62fd/fetch-result 200
+GET /api/v1/gateways/jobs/adcc93d0-f26d-44ef-afa5-6b20ffce62fd 200
+POST /api/v1/gateways/jobs/adcc93d0-f26d-44ef-afa5-6b20ffce62fd/search-results 409
+POST /api/v1/gateways/ef224f1f-1cc5-41c3-8027-9f5e5c8f8c0f/recreate 409
+POST /api/v1/opds/tokens/revoke 200
+DELETE /api/v1/books/4fc9b701-a280-4b95-9d77-2d0d58ebeba8 204
+DELETE /api/v1/books/153b921e-f4f7-4637-b33a-0d0bbd348875 204
+DELETE /api/v1/books/1f88ef73-7e8c-465a-9731-ab249f752ab4 204
+DELETE /api/v1/devices/d50eb7f8-7cc0-4fd5-9610-d7a3459554b6 204
+DELETE /api/v1/gateways/ef224f1f-1cc5-41c3-8027-9f5e5c8f8c0f 204
+GET /api/v1/books 200
+GET /api/v1/devices 200
+GET /api/v1/gateways 200
+GET /api/v1/opds/tokens 200
+GET /api/v1/users/me 200
+GET /api/v1/sources 200
+GET /api/v1/deliveries 200
+Traceback (most recent call last):
+  File "/mnt/HC_Volume_106803131/projects/ferry-agent-gwfix/audit/lifecycle.py", line 67, in <module>
+    rotated=ok(req('POST',f'/api/v1/gateways/{g}/recreate'))
+  File "/mnt/HC_Volume_106803131/projects/ferry-agent-gwfix/audit/lifecycle.py", line 10, in ok
+    def ok(r):r.raise_for_status();return r.json()
+              ~~~~~~~~~~~~~~~~~~^^
+  File "/home/glados/projects/ferry-agent/.venv/lib/python3.13/site-packages/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://ferry-agent.aperture-agency.org/api/v1/gateways/ef224f1f-1cc5-41c3-8027-9f5e5c8f8c0f/recreate'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409

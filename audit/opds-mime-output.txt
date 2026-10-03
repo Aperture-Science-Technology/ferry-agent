@@ -1,0 +1,16 @@
+POST /api/v1/opds/tokens 201
+GET /opds/[SECRET] 200
+GET /opds/[SECRET]/all 200
+GET /opds/[SECRET]/recent 200
+GET /opds/[SECRET]/authors 200
+GET /opds/[SECRET]/author?name=Audit 200
+GET /opds/[SECRET]/search?q=Audit 200
+GET /opds/[SECRET]/opensearch.xml 200
+POST /api/v1/opds/tokens/revoke 200
+GET /api/v1/books 200
+GET /api/v1/devices 200
+GET /api/v1/gateways 200
+GET /api/v1/opds/tokens 200
+GET /api/v1/sources 200
+GET /api/v1/users/me 200
+GET /api/v1/deliveries 200
