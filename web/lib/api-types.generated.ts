@@ -175,6 +175,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deliveries/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Delivery
+         * @description Résout le format avec la règle de livraison, sans envoi ni conversion.
+         */
+        get: operations["preview_delivery_api_v1_deliveries_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/deliveries/{job_id}": {
         parameters: {
             query?: never;
@@ -917,6 +937,14 @@ export interface components {
             status: components["schemas"]["DeliveryStatus"];
             /** Target Format */
             target_format?: string | null;
+        };
+        /**
+         * DeliveryPreview
+         * @description Format effectivement prévu, sans création de livraison.
+         */
+        DeliveryPreview: {
+            /** Target Format */
+            target_format: string;
         };
         /**
          * DeliveryStatus
@@ -1889,6 +1917,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeliveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_delivery_api_v1_deliveries_preview_get: {
+        parameters: {
+            query: {
+                library_item_id: string;
+                device_id: string;
+                format?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "X-Dev-User"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryPreview"];
                 };
             };
             /** @description Validation Error */

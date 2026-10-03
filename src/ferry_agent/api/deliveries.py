@@ -15,6 +15,7 @@ l'utilisateur courant, sinon 404 (pas de fuite inter-user).
 """
 
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
@@ -23,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.db import get_db
 from ferry_agent.models import DeliveryJob, DeliveryMethod, DeliveryTier, Device, DeviceBrand, LibraryItem, User
-from ferry_agent.schemas import DeliveryCreate, DeliveryOut
+from ferry_agent.schemas import DeliveryCreate, DeliveryOut, DeliveryPreview
 from ferry_agent.services import delivery as delivery_service
 from ferry_agent.services import mail_policy
 from ferry_agent.services import mailer
@@ -161,6 +162,37 @@ async def list_deliveries(
         )
         for job, title, author, name, brand, model in result.all()
     ]
+
+
+@router.get("/preview", response_model=DeliveryPreview)
+async def preview_delivery(
+    library_item_id: uuid.UUID,
+    device_id: uuid.UUID,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    format: str | None = None,
+) -> DeliveryPreview:
+    """Résout le format avec la règle de livraison, sans envoi ni conversion."""
+    result = await db.execute(
+        select(LibraryItem).where(LibraryItem.id == library_item_id, LibraryItem.user_id == user.id)
+    )
+    item = result.scalar_one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Livre introuvable")
+    result = await db.execute(select(Device).where(Device.id == device_id, Device.user_id == user.id))
+    device = result.scalar_one_or_none()
+    if device is None:
+        raise HTTPException(status_code=404, detail="Liseuse introuvable")
+    result = await db.execute(select(User).where(User.id == user.id))
+    profile = result.scalar_one_or_none()
+    return DeliveryPreview(
+        target_format=delivery_service.resolve_target_format(
+            format,
+            default_format=profile.default_format if profile else None,
+            original_format=item.original_format,
+            delivery_tier=device.delivery_tier,
+        )
+    )
 
 
 @router.get("/{job_id}", response_model=DeliveryOut)

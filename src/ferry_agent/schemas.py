@@ -327,3 +327,9 @@ class DeliveryOut(BaseModel):
     item_title: str | None = None
     item_author: str | None = None
     device_label: str | None = None
+
+
+class DeliveryPreview(BaseModel):
+    """Format effectivement prévu, sans création de livraison."""
+
+    target_format: str
