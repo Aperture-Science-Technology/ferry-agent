@@ -1,0 +1,4 @@
+mobi => epub
+azw3 => epub
+epub => epub
+pdf => pdf

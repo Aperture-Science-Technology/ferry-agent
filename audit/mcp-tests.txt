@@ -1,0 +1,54 @@
+..F..................................................................... [ 90%]
+...F....                                                                 [100%]
+=================================== FAILURES ===================================
+____________ test_protocol_version_and_inmemory_client_lists_tools _____________
+
+    @pytest.mark.asyncio
+    async def test_protocol_version_and_inmemory_client_lists_tools() -> None:
+        """Lot 0 : FastMCP Client en mémoire + protocole ≠ 2025-11-25."""
+        from mcp.types import LATEST_PROTOCOL_VERSION
+        from fastmcp import Client
+        from ferry_mcp.server import mcp
+    
+>       assert LATEST_PROTOCOL_VERSION != "2025-11-25"
+E       AssertionError: assert '2025-11-25' != '2025-11-25'
+
+tests/test_mcp.py:127: AssertionError
+______________ test_auth_enabled_complete_returns_clerk_provider _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f9518d61470>
+
+    def test_auth_enabled_complete_returns_clerk_provider(monkeypatch) -> None:
+        from fastmcp.server.auth.providers.clerk import ClerkProvider
+    
+        _patch_settings(
+            monkeypatch,
+            mcp_auth_enabled=True,
+            clerk_domain="clerk.example.test",
+            clerk_oauth_client_id="oauth_client_id_test",
+            clerk_oauth_client_secret="oauth_client_secret_test",
+            mcp_base_url="https://ferry-agent.example.test/",
+            mcp_jwt_signing_key="-".join(["unit", "test", "signing", "key"]),
+        )
+        provider = build_mcp_auth_provider()
+        assert isinstance(provider, ClerkProvider)
+        # On passe issuer_url sans slash ; Pydantic AnyHttpUrl (FastMCP) peut
+        # republier avec slash — écart documenté ADR 0011.
+        assert "ferry-agent.example.test" in str(provider.issuer_url)
+        # scopes → WWW-Authenticate scope="…" via challenge_scopes / required_scopes
+        assert provider.required_scopes == ["openid", "email", "profile"]
+>       assert "openid" in (provider.challenge_scopes or provider.required_scopes)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'ClerkProvider' object has no attribute 'challenge_scopes'
+
+tests/test_mcp_oauth.py:59: AttributeError
+=============================== warnings summary ===============================
+tests/test_mcp_oauth.py::test_auth_enabled_complete_returns_clerk_provider
+  /home/glados/projects/ferry-agent/mcp-server/.venv/lib/python3.13/site-packages/authlib/integrations/httpx_client/assertion_client.py:5: AuthlibDeprecationWarning: The httpx module is deprecated; please use httpx2 instead.
+    from ._compat import httpx2
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_mcp.py::test_protocol_version_and_inmemory_client_lists_tools
+FAILED tests/test_mcp_oauth.py::test_auth_enabled_complete_returns_clerk_provider
+2 failed, 78 passed, 1 warning in 4.66s

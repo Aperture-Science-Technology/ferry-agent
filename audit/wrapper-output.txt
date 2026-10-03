@@ -1,0 +1,37 @@
+GET /api/v1/users/me 200
+POST /api/v1/books/upload 201
+POST /api/v1/devices 201
+get_profile recorded
+get_mail_settings recorded
+list_library recorded
+list_devices recorded
+list_gateways recorded
+list_sources recorded
+list_deliveries recorded
+list_opds_tokens recorded
+diagnose recorded
+get_device recorded
+list_device_methods recorded
+search_library_items recorded
+list_library_item_deliveries recorded
+plan_delivery recorded
+deliver_to_kindle recorded
+deliver_to_kindle recorded
+deliver_to_kindle recorded
+GET /api/v1/users/me 200
+update_profile recorded
+update_device recorded
+GET /api/v1/devices/96cdd9e1-a429-4bdb-a84b-18f67b48bca3 200
+PATCH /api/v1/devices/96cdd9e1-a429-4bdb-a84b-18f67b48bca3 200
+update_library_item recorded
+update_library_item recorded
+GET /api/v1/books/6bbf9ea8-14da-41ef-9e3a-235cd3924bac 200
+PATCH /api/v1/books/6bbf9ea8-14da-41ef-9e3a-235cd3924bac 200
+deliver recorded
+delete_library_item recorded
+remove_device recorded
+PATCH /api/v1/devices/96cdd9e1-a429-4bdb-a84b-18f67b48bca3 500
+GET /api/v1/devices/96cdd9e1-a429-4bdb-a84b-18f67b48bca3 200
+PATCH /api/v1/users/me 200
+DELETE /api/v1/books/6bbf9ea8-14da-41ef-9e3a-235cd3924bac 204
+DELETE /api/v1/devices/96cdd9e1-a429-4bdb-a84b-18f67b48bca3 204
