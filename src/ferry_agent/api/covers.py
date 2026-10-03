@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import CurrentUser, get_current_user
+from ferry_agent.api.response_contracts import COVER_RESPONSES
 from ferry_agent.db import get_db
 from ferry_agent.models import LibraryItem
 from ferry_agent.services.covers import fetch_cover_to_cache, validate_cover_url
@@ -16,7 +17,7 @@ from ferry_agent.services.covers import fetch_cover_to_cache, validate_cover_url
 router = APIRouter(prefix="/api/v1/covers", tags=["covers"])
 
 
-@router.get("/{item_id}")
+@router.get("/{item_id}", response_class=FileResponse, responses=COVER_RESPONSES)
 async def get_cover(
     item_id: uuid.UUID,
     user: CurrentUser = Depends(get_current_user),

@@ -7,11 +7,12 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
+from pydantic import ValidationError
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ferry_agent.api.deps import CurrentUser, get_current_user, get_library_user
 from ferry_agent.api.deliveries import _DELIVERY_LIST_COLS, build_delivery_out
+from ferry_agent.api.deps import CurrentUser, get_current_user, get_library_user
 from ferry_agent.config import get_settings
 from ferry_agent.db import get_db
 from ferry_agent.models import (
@@ -26,6 +27,7 @@ from ferry_agent.models import (
     SourceType,
 )
 from ferry_agent.schemas import (
+    BookImport,
     DeliveryOut,
     DownloadLinkOut,
     DownloadLinkRequest,
@@ -37,8 +39,8 @@ from ferry_agent.schemas import (
     ResultOut,
     SearchRequest,
 )
-from ferry_agent.services import download_links, gateways as gateway_service
-from ferry_agent.services import library
+from ferry_agent.services import download_links, library
+from ferry_agent.services import gateways as gateway_service
 from ferry_agent.services.covers import validate_cover_url
 from ferry_agent.services.errors import FileTooLargeError, QuotaExceededError, UnknownFormatError
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
@@ -289,8 +291,49 @@ async def search_books(
 
 @router.post(
     "",
-    response_model=LibraryItemOut | GatewayFetchQueued,
+    # Les branches renvoient des modèles validés ; chaque statut a son propre schéma.
+    response_model=None,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        201: {
+            "model": LibraryItemOut,
+            "description": "Livre ajouté.",
+            "headers": {
+                "Deprecation": {
+                    "description": "Présent pour l’import multipart déprécié.",
+                    "schema": {"type": "string", "const": "true"},
+                },
+                "Link": {
+                    "description": "Adresse de remplacement pour l’import multipart.",
+                    "schema": {"type": "string"},
+                },
+            },
+        },
+        202: {"model": GatewayFetchQueued, "description": "Récupération du livre en cours."},
+        400: {"description": "Corps invalide ou informations d’import manquantes."},
+        422: {"description": "Informations d’import invalides."},
+    },
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {"schema": BookImport.model_json_schema()},
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "description": (
+                            "Import de fichier déprécié : utiliser /api/v1/books/upload. "
+                            "Les champs source, result_id et result restent acceptés."
+                        ),
+                        "properties": {
+                            **BookImport.model_json_schema()["properties"],
+                            "file": {"type": "string", "format": "binary"},
+                        },
+                    },
+                },
+            },
+        },
+    },
 )
 async def add_book(
     request: Request,
@@ -309,7 +352,23 @@ async def add_book(
     data: dict = {}
     file: UploadFile | None = None
     if content_type.startswith("application/json"):
-        data = await request.json()
+        try:
+            raw_data = await request.json()
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Le contenu envoyé est illisible. Vérifiez les informations du livre.",
+            ) from exc
+        try:
+            data = BookImport.model_validate(raw_data).model_dump(exclude_unset=True)
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    "Envoyez les informations du livre sous forme d’objet, "
+                    "avec une source et une référence valides."
+                ),
+            ) from exc
     else:
         form = await request.form()
         data = {key: value for key, value in form.items() if key != "file"}
