@@ -456,14 +456,8 @@
       "DevicePatch": {
         "properties": {
           "brand": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DeviceBrand"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/DeviceBrand",
+            "title": "Brand"
           },
           "conversion_profile": {
             "anyOf": [
@@ -1038,17 +1032,11 @@
         "type": "object"
       },
       "LibraryItemUpdate": {
+        "description": "Champ omis : inchang\u00e9 ; null : effacement, sauf pour le titre et l\u2019auteur.",
         "properties": {
           "author": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Author"
+            "title": "Author",
+            "type": "string"
           },
           "description": {
             "anyOf": [
@@ -1117,15 +1105,8 @@
             "title": "Publisher"
           },
           "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
+            "title": "Title",
+            "type": "string"
           }
         },
         "title": "LibraryItemUpdate",
@@ -1936,34 +1917,148 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "description": "Import depuis une source ; les m\u00e9tadonn\u00e9es partielles restent accept\u00e9es.\n\nLes r\u00e9sultats gateway peuvent aussi fournir leurs m\u00e9tadonn\u00e9es \u00e0 la racine.\nLe fichier multipart est trait\u00e9 s\u00e9par\u00e9ment pour conserver sa compatibilit\u00e9.",
+                "properties": {
+                  "result": {
+                    "anyOf": [
+                      {
+                        "type": "object"
+                      },
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "M\u00e9tadonn\u00e9es du r\u00e9sultat, sous forme d'objet ou de texte JSON.",
+                    "title": "Result"
+                  },
+                  "result_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Result Id"
+                  },
+                  "source": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Source"
+                  }
+                },
+                "title": "BookImport",
+                "type": "object"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "description": "Import de fichier d\u00e9pr\u00e9ci\u00e9 : utiliser /api/v1/books/upload. Les champs source, result_id et result restent accept\u00e9s.",
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "result": {
+                    "anyOf": [
+                      {
+                        "type": "object"
+                      },
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "M\u00e9tadonn\u00e9es du r\u00e9sultat, sous forme d'objet ou de texte JSON.",
+                    "title": "Result"
+                  },
+                  "result_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Result Id"
+                  },
+                  "source": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Source"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "201": {
             "content": {
               "application/json": {
                 "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/LibraryItemOut"
-                    },
-                    {
-                      "$ref": "#/components/schemas/GatewayFetchQueued"
-                    }
-                  ],
-                  "title": "Response Add Book Api V1 Books Post"
+                  "$ref": "#/components/schemas/LibraryItemOut"
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "Livre ajout\u00e9.",
+            "headers": {
+              "Deprecation": {
+                "description": "Pr\u00e9sent pour l\u2019import multipart d\u00e9pr\u00e9ci\u00e9.",
+                "schema": {
+                  "const": "true",
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Adresse de remplacement pour l\u2019import multipart.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
           },
-          "422": {
+          "202": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/GatewayFetchQueued"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "R\u00e9cup\u00e9ration du livre en cours."
+          },
+          "400": {
+            "description": "Corps invalide ou informations d\u2019import manquantes."
+          },
+          "422": {
+            "description": "Informations d\u2019import invalides."
           }
         },
         "summary": "Add Book",
@@ -2607,8 +2702,35 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "*/*": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -3691,8 +3813,41 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "*/*": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/epub+zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/vnd.amazon.ebook": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/x-mobipocket-ebook": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -4143,19 +4298,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/GatewayJobOut"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ],
-                  "title": "Response Poll Gateway Api V1 Gateways Poll Post"
+                  "$ref": "#/components/schemas/GatewayJobOut"
                 }
               }
             },
             "description": "Successful Response"
+          },
+          "204": {
+            "description": "Aucun travail disponible."
           },
           "422": {
             "content": {
@@ -4992,7 +5142,7 @@
         ]
       },
       "patch": {
-        "description": "Mise a jour partielle : champ absent = inchange ; ``null`` = efface.\n\nLe corps est valide manuellement pour renvoyer un ``detail`` 422 en texte\nsimple (charte non-tech), au lieu du tableau pydantic brut.",
+        "description": "Mise a jour partielle : champ absent = inchang\u00e9 ; ``null`` efface seulement kindle_email.\n\nLe corps est valide manuellement pour renvoyer un ``detail`` 422 en texte\nsimple (charte non-tech), au lieu du tableau pydantic brut.",
         "operationId": "patch_me_api_v1_users_me_patch",
         "parameters": [
           {
@@ -5032,6 +5182,31 @@
           "content": {
             "application/json": {
               "schema": {
+                "description": "Champs optionnels du profil. Absent = inchange ; null = efface (kindle_email).",
+                "properties": {
+                  "default_format": {
+                    "enum": [
+                      "epub",
+                      "mobi",
+                      "azw3",
+                      "pdf"
+                    ],
+                    "title": "Default Format",
+                    "type": "string"
+                  },
+                  "kindle_email": {
+                    "anyOf": [
+                      {
+                        "format": "email",
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Kindle Email"
+                  }
+                },
                 "title": "Body",
                 "type": "object"
               }
@@ -5212,8 +5387,10 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/atom+xml;profile=opds-catalog;kind=navigation": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -5263,8 +5440,10 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/atom+xml;profile=opds-catalog;kind=acquisition": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -5324,8 +5503,10 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/atom+xml;profile=opds-catalog;kind=acquisition": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -5364,8 +5545,10 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/atom+xml;profile=opds-catalog;kind=navigation": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -5415,8 +5598,35 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "*/*": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -5465,8 +5675,41 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "*/*": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/epub+zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/vnd.amazon.ebook": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/x-mobipocket-ebook": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -5505,8 +5748,10 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/opensearchdescription+xml": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -5556,8 +5801,10 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/atom+xml;profile=opds-catalog;kind=acquisition": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"
@@ -5617,8 +5864,10 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/atom+xml;profile=opds-catalog;kind=acquisition": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"

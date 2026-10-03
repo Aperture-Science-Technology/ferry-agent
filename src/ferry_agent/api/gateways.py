@@ -140,7 +140,7 @@ async def delete_gateway(
     await gateway_service.delete_gateway(db, gateway)
 
 
-@router.post("/poll", response_model=GatewayJobOut | None)
+@router.post("/poll", response_model=GatewayJobOut, responses={204: {"description": "Aucun travail disponible."}})
 async def poll_gateway(
     gateway: Gateway = Depends(get_gateway),
     db: AsyncSession = Depends(get_db),

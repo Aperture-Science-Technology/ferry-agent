@@ -42,11 +42,11 @@ async def get_me(
 
 @router.patch("/me", response_model=UserOut)
 async def patch_me(
-    body: dict = Body(...),
+    body: dict = Body(..., json_schema_extra=UserPatch.model_json_schema()),
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> UserOut:
-    """Mise a jour partielle : champ absent = inchange ; ``null`` = efface.
+    """Mise a jour partielle : champ absent = inchangé ; ``null`` efface seulement kindle_email.
 
     Le corps est valide manuellement pour renvoyer un ``detail`` 422 en texte
     simple (charte non-tech), au lieu du tableau pydantic brut.
