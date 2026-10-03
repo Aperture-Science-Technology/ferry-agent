@@ -189,23 +189,24 @@ async def import_from_gateway(
     detected_format: str,
     metadata: dict,
 ) -> LibraryItem:
-    """Persiste un ebook relaye et conserve sa provenance dans Source.config."""
+    """Persiste un ebook relayé et conserve sa provenance dans LibraryItem.source_ref."""
+    source_ref = f"gateway:{gateway_id}:{job_id}"
+    existing_result = await db.execute(
+        select(LibraryItem).where(
+            LibraryItem.user_id == user_id,
+            LibraryItem.source_ref == source_ref,
+        )
+    )
+    existing = existing_result.scalar_one_or_none()
+    if existing is not None:
+        return existing
+
     await ensure_storage_quota(db, user_id, len(content))
     safe_name = Path(filename).name or f"gateway-book.{detected_format}"
     dest = _library_storage_path(safe_name)
     dest.write_bytes(content)
 
-    source = Source(
-        user_id=user_id,
-        type=SourceType.torrent_gateway,
-        config={
-            "gateway_id": str(gateway_id),
-            "gateway_job_id": str(job_id),
-            "storage_path": str(dest),
-        },
-    )
-    db.add(source)
-    await db.flush()
+    source = await _get_or_create_source(db, user_id, SourceType.torrent_gateway)
 
     item = LibraryItem(
         user_id=user_id,
@@ -217,7 +218,7 @@ async def import_from_gateway(
         page_count=metadata.get("page_count") or None,
         isbn=metadata.get("isbn") or None,
         source_id=source.id,
-        source_ref=f"gateway:{gateway_id}:{job_id}",
+        source_ref=source_ref,
         original_format=detected_format,
         storage_path=str(dest),
         size_bytes=len(content),
