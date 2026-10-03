@@ -16,3 +16,18 @@ description = "W-07 temporary: revoked Clerk keyless claimToken (historical leak
 regexes = [
   '''v3udjqh96vdq3kbqi6jhfo2ny4aekoy1pqv4geqj''',
 ]
+
+# False positive from the functional review evidence (FA-AUDIT-MCP-FULL-01).
+# audit/http.jsonl records the request bodies sent during the audit, including
+# OPDS revocations shaped {"token_id": "<uuid>"}. token_id is the token's
+# identifier -- the value passed to POST /api/v1/opds/tokens/revoke -- not the
+# OPDS token itself, and every token involved was revoked during the audit.
+# The file carries no Authorization header and no credential of any kind.
+# Scoped to this file and to this exact shape so the generic-api-key rule keeps
+# firing everywhere else.
+[[allowlists]]
+description = "FA-AUDIT-MCP-FULL-01: OPDS token identifiers (not credentials) in audit evidence"
+paths = ['''audit/http\.jsonl''']
+regexes = [
+  '''"token_id": "[0-9a-f-]{36}"''',
+]
