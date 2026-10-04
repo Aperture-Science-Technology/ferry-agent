@@ -73,16 +73,14 @@ class Settings(BaseSettings):
     # Livraison tier B (upload Dropbox / Google Drive). Credentials OAuth de
     # config runtime (env) : jamais commits. Laisser client_id/secret vides
     # desactive le provider correspondant (l'endpoint /link renvoie 503
-    # plutot que de planter). `{id}` dans les redirect_uri est remplace par
-    # l'UUID du device au moment de la requete. Les redirect_uri pointent
-    # vers la route **GET** publique `/link/callback` (echange code + state,
-    # puis redirection dashboard) — plus de POST navigateur.
+    # plutôt que de planter). Les retours GET publics sont fixes par fournisseur.
+    # Les anciens gabarits contenant `{id}` restent acceptés pendant la migration.
     dropbox_client_id: str | None = None
     dropbox_client_secret: str | None = None
-    dropbox_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/{id}/link/callback"
+    dropbox_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/link/callback/dropbox"
     google_client_id: str | None = None
     google_client_secret: str | None = None
-    google_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/{id}/link/callback"
+    google_redirect_uri: str = "https://ferry-agent.aperture-agency.org/api/v1/devices/link/callback/google"
 
     conversion_cache_ttl_seconds: int = 7 * 24 * 3600
 
