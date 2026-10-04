@@ -218,6 +218,12 @@ def _require_fernet_key() -> None:
         )
 
 
+def _oauth_redirect_uri(configured_uri: str, device_id: uuid.UUID) -> str:
+    """Conserve les anciens gabarits ; utilise une URI fixe sans modification."""
+    return configured_uri.replace("{id}", str(device_id))
+
+
+@router.get("/link/start", response_model=DeviceLinkUrlOut)
 @router.get("/{device_id}/link", response_model=DeviceLinkUrlOut)
 async def get_link_url(
     device_id: uuid.UUID,
@@ -252,7 +258,7 @@ async def get_link_url(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Dropbox non configure (DROPBOX_CLIENT_ID manquant)",
             )
-        redirect_uri = settings.dropbox_redirect_uri.format(id=device_id)
+        redirect_uri = _oauth_redirect_uri(settings.dropbox_redirect_uri, device_id)
         url = cloud_links.dropbox_authorize_url(settings.dropbox_client_id, redirect_uri, state)
     else:
         if not settings.google_client_id:
@@ -260,7 +266,7 @@ async def get_link_url(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Google Drive non configure (GOOGLE_CLIENT_ID manquant)",
             )
-        redirect_uri = settings.google_redirect_uri.format(id=device_id)
+        redirect_uri = _oauth_redirect_uri(settings.google_redirect_uri, device_id)
         url = cloud_links.drive_authorize_url(settings.google_client_id, redirect_uri, state)
 
     return DeviceLinkUrlOut(url=url)
@@ -283,7 +289,7 @@ async def _exchange_and_store_link(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="Dropbox non configure (DROPBOX_CLIENT_ID/DROPBOX_CLIENT_SECRET manquants)",
                 )
-            redirect_uri = settings.dropbox_redirect_uri.format(id=device.id)
+            redirect_uri = _oauth_redirect_uri(settings.dropbox_redirect_uri, device.id)
             tokens = await cloud_links.exchange_dropbox_code(
                 code, settings.dropbox_client_id, settings.dropbox_client_secret, redirect_uri
             )
@@ -297,7 +303,7 @@ async def _exchange_and_store_link(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="Google Drive non configure (GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET manquants)",
                 )
-            redirect_uri = settings.google_redirect_uri.format(id=device.id)
+            redirect_uri = _oauth_redirect_uri(settings.google_redirect_uri, device.id)
             tokens = await cloud_links.exchange_drive_code(
                 code, settings.google_client_id, settings.google_client_secret, redirect_uri
             )
@@ -329,6 +335,41 @@ async def link_callback_get(
     echange refuse) redirigent toujours vers le dashboard avec
     `cloud_link=error` — jamais une page d'erreur API dans le navigateur.
     """
+    return await _handle_oauth_callback(db, code, state, error, device_id=device_id)
+
+
+@router.get("/link/callback/dropbox")
+async def link_callback_dropbox(
+    code: str | None = Query(default=None),
+    state: str | None = Query(default=None),
+    error: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> RedirectResponse:
+    """Retour public Dropbox : l'appareil provient du state signé."""
+    return await _handle_oauth_callback(db, code, state, error, expected_provider="dropbox")
+
+
+@router.get("/link/callback/google")
+async def link_callback_google(
+    code: str | None = Query(default=None),
+    state: str | None = Query(default=None),
+    error: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> RedirectResponse:
+    """Retour public Google Drive : l'appareil provient du state signé."""
+    return await _handle_oauth_callback(db, code, state, error, expected_provider="drive")
+
+
+async def _handle_oauth_callback(
+    db: AsyncSession,
+    code: str | None,
+    state: str | None,
+    error: str | None,
+    *,
+    device_id: uuid.UUID | None = None,
+    expected_provider: str | None = None,
+) -> RedirectResponse:
+    """Valide le retour public commun et redirige vers la liste des appareils."""
     locale = "fr"
 
     if error:
@@ -353,9 +394,10 @@ async def link_callback_get(
 
     locale = info.locale
     provider = info.provider
-    if provider not in _PROVIDERS:
+    if provider not in _PROVIDERS or (expected_provider is not None and provider != expected_provider):
         return _dashboard_redirect("error", locale=locale)
 
+    device_id = info.device_id
     result = await db.execute(select(Device).where(Device.id == device_id))
     device = result.scalar_one_or_none()
     if device is None:
