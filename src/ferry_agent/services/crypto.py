@@ -41,10 +41,11 @@ class _PendingOAuth:
 
 @dataclass(frozen=True)
 class OAuthStateInfo:
-    """Résultat de `consume_oauth_state` : provider + locale UI pour le redirect."""
+    """Appareil, fournisseur et langue validés lors de la consommation du retour OAuth."""
 
     provider: str
     locale: str
+    device_id: uuid.UUID
 
 
 _pending_lock = threading.Lock()
@@ -137,11 +138,11 @@ def issue_oauth_state(
     return state
 
 
-def consume_oauth_state(state: str, device_id: uuid.UUID) -> OAuthStateInfo:
-    """Valide et consomme un `state` (usage unique). Retourne provider + locale.
+def consume_oauth_state(state: str, device_id: uuid.UUID | None = None) -> OAuthStateInfo:
+    """Valide et consomme un `state` (usage unique). Restitue son appareil.
 
     Leve `CryptoError` si le state est absent, expire, rejoue, ou ne
-    correspond pas au `device_id` de l'URL.
+    correspond pas au `device_id` de l'URL, lorsqu'il est fourni.
     """
     if not state:
         raise CryptoError("state OAuth manquant")
@@ -158,8 +159,12 @@ def consume_oauth_state(state: str, device_id: uuid.UUID) -> OAuthStateInfo:
     locale = normalize_oauth_locale(payload.get("locale") if isinstance(payload.get("locale"), str) else None)
     if not isinstance(nonce, str) or not isinstance(provider, str) or not isinstance(exp, (int, float)):
         raise CryptoError("state OAuth invalide")
-    if state_device_id != str(device_id):
-        raise CryptoError("state OAuth ne correspond pas au device")
+    try:
+        signed_device_id = uuid.UUID(state_device_id)
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise CryptoError("appareil du state OAuth invalide") from exc
+    if device_id is not None and signed_device_id != device_id:
+        raise CryptoError("state OAuth ne correspond pas à l’appareil")
     if time.time() > float(exp):
         raise CryptoError("state OAuth expire")
 
@@ -169,9 +174,9 @@ def consume_oauth_state(state: str, device_id: uuid.UUID) -> OAuthStateInfo:
 
     if pending is None:
         raise CryptoError("state OAuth inconnu ou deja utilise")
-    if pending.device_id != device_id or pending.provider != provider:
+    if pending.device_id != signed_device_id or pending.provider != provider:
         raise CryptoError("state OAuth incoherent")
     if pending.expires_at <= time.time():
         raise CryptoError("state OAuth expire")
 
-    return OAuthStateInfo(provider=provider, locale=pending.locale or locale)
+    return OAuthStateInfo(provider=provider, locale=pending.locale or locale, device_id=signed_device_id)
