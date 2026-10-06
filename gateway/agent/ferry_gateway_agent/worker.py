@@ -3,18 +3,36 @@ import json
 import logging
 import mimetypes
 import os
+import shutil
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
+from .archives import (
+    ARCHIVE_SUFFIXES,
+    EBOOK_SUFFIXES,
+    ArchiveError,
+    completed_local_files,
+    extract_zip_archive,
+    pick_largest_ebook,
+)
 from .config import Settings
 from .prowlarr import ProwlarrClient
 from .transmission import TransmissionClient
-from .virustotal import VirusTotalClient
+from .virustotal import VirusTotalClient, VirusTotalThreatError
 
 logger = logging.getLogger("ferry-gateway-agent")
+
+
+def _is_terminal_failure(error: BaseException) -> bool:
+    """Vrai si réessayer ne peut pas changer l'issue (données à supprimer)."""
+    if isinstance(error, httpx.HTTPStatusError):
+        return error.response.status_code < 500
+    return isinstance(error, (VirusTotalThreatError, ArchiveError, FileNotFoundError))
 
 
 class PlatformConflict(RuntimeError):
@@ -32,6 +50,7 @@ class GatewayAgent:
         virustotal: VirusTotalClient | None = None,
     ) -> None:
         self.settings = settings
+        self._extraction_dir: Path | None = None
         self._owns_platform_client = platform_client is None
         self.platform = platform_client or httpx.AsyncClient(timeout=60)
         self.prowlarr = prowlarr or ProwlarrClient(
@@ -179,42 +198,68 @@ class GatewayAgent:
         self._raise_platform_status(response, f"submit search job {job_id}")
 
     def _resolve_downloaded_file(self, torrent: dict[str, Any]) -> Path:
-        configured_root = self.settings.download_path.resolve()
-        download_dir = Path(str(torrent.get("downloadDir") or configured_root)).resolve()
-        candidates: list[tuple[int, Path]] = []
-        for file_info in torrent.get("files") or []:
-            if not isinstance(file_info, dict) or not file_info.get("name"):
-                continue
-            length = int(file_info.get("length") or 0)
-            completed = int(file_info.get("bytesCompleted") or 0)
-            if length > 0 and completed < length:
-                continue
-            candidate = (download_dir / str(file_info["name"])).resolve()
-            try:
-                candidate.relative_to(configured_root)
-            except ValueError:
-                logger.warning("Ignoring file outside DOWNLOAD_PATH: %s", candidate)
-                continue
-            if candidate.is_file():
-                candidates.append((length or candidate.stat().st_size, candidate))
-        if not candidates:
-            raise FileNotFoundError("Transmission reported no completed readable file")
-        return max(candidates, key=lambda item: item[0])[1]
+        self._extraction_dir = None
+        download_root = self.settings.download_path.resolve()
+        files = completed_local_files(torrent, download_root)
+        chosen = pick_largest_ebook(files)
+        if chosen:
+            return chosen
+        archives = sorted(path for path in files if path.suffix.lower() == ".zip")
+        if archives:
+            self._extraction_dir = Path(tempfile.mkdtemp(prefix=".ferry-extract-", dir=download_root))
+            for index, archive in enumerate(archives):
+                extract_zip_archive(
+                    archive,
+                    destination=self._extraction_dir / str(index),
+                    max_bytes=200 * 1024 * 1024,
+                    max_entries=1000,
+                )
+            chosen = pick_largest_ebook([path for path in self._extraction_dir.rglob("*") if path.is_file()])
+            if chosen:
+                return chosen
+        for path in files:
+            if path.suffix.lower() in ARCHIVE_SUFFIXES - {".zip"}:
+                raise ArchiveError(f"{path.name}: ce format d’archive n’est pas géré")
+        found = ", ".join(str(path.relative_to(download_root)) for path in files) or "(none)"
+        raise FileNotFoundError(
+            f"Transmission reported no completed readable file in an accepted ebook format; "
+            f"files found: {found}; accepted extensions: {', '.join(sorted(EBOOK_SUFFIXES))}"
+        )
 
     async def _handle_fetch(self, job_id: str, payload: dict[str, Any]) -> None:
         result = payload.get("result") or {}
         download_ref = (
             result.get("magnet_url")
             or result.get("magnetUrl")
+            or result.get("download_url")
+            or result.get("downloadUrl")
             or result.get("result_id")
             or result.get("guid")
         )
         if not download_ref:
             raise ValueError("Fetch job result has no download reference")
 
+        self._extraction_dir = None
         torrent_id: int | None = None
+        retain_for_retry = False
         try:
-            torrent_id = await self.transmission.add(str(download_ref), paused=True)
+            reference_url = urlsplit(str(download_ref))
+            prowlarr_url = urlsplit(self.settings.prowlarr_url)
+            default_ports = {"http": 80, "https": 443}
+            reference_port = reference_url.port or default_ports.get(reference_url.scheme)
+            prowlarr_port = prowlarr_url.port or default_ports.get(prowlarr_url.scheme)
+            if (
+                reference_url.scheme in {"http", "https"}
+                and reference_url.hostname is not None
+                and (reference_url.hostname, reference_port) == (prowlarr_url.hostname, prowlarr_port)
+                and self.settings.prowlarr_api_key
+            ):
+                torrent_id = await self.transmission.add(
+                    str(download_ref), paused=True,
+                    headers={"X-Api-Key": self.settings.prowlarr_api_key},
+                )
+            else:
+                torrent_id = await self.transmission.add(str(download_ref), paused=True)
             await self.transmission.start(torrent_id)
             torrent = await self.transmission.wait_until_done(
                 torrent_id,
@@ -233,8 +278,15 @@ class GatewayAgent:
                     files={"file": (path.name, file, content_type)},
                 )
             self._raise_platform_status(response, f"upload fetch job {job_id}")
+        except BaseException as error:
+            if torrent_id is not None and not _is_terminal_failure(error):
+                retain_for_retry = True
+            raise
         finally:
-            if torrent_id is not None:
+            if self._extraction_dir is not None:
+                shutil.rmtree(self._extraction_dir, ignore_errors=True)
+                self._extraction_dir = None
+            if torrent_id is not None and not retain_for_retry:
                 try:
                     await self.transmission.remove(
                         torrent_id,
@@ -242,6 +294,8 @@ class GatewayAgent:
                     )
                 except Exception:
                     logger.exception("Could not clean up torrent %s", torrent_id)
+            elif torrent_id is not None:
+                logger.warning("Torrent %s and local data retained for retry", torrent_id)
 
     async def run_once(self) -> bool:
         job: dict[str, Any] | None = None

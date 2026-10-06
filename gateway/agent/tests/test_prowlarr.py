@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import httpx
 import pytest
-
 from ferry_gateway_agent.prowlarr import BOOK_CATEGORIES, ProwlarrClient
 
 
@@ -35,3 +34,16 @@ async def test_search_sends_categories_as_repeated_params() -> None:
         str(category) for category in BOOK_CATEGORIES
     ]
     assert ",".join(map(str, BOOK_CATEGORIES)) not in str(request.url)
+
+
+@pytest.mark.asyncio
+async def test_search_keeps_result_with_only_download_url():
+    url = "http://prowlarr.test/download/book.torrent"
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, json=[{
+        "title": "Book.epub", "downloadUrl": url,
+    }]))
+    async with httpx.AsyncClient(transport=transport) as client:
+        results = await ProwlarrClient("http://prowlarr.test", "key", client=client).search("Book")
+    assert len(results) == 1
+    assert results[0]["result_id"] == url
+    assert results[0]["download_url"] == url

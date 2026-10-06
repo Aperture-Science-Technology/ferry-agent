@@ -1358,6 +1358,17 @@
             ],
             "title": "Description"
           },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          },
           "format": {
             "default": "epub",
             "title": "Format",
@@ -1497,6 +1508,17 @@
               }
             ],
             "title": "Description"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
           },
           "format": {
             "default": "epub",

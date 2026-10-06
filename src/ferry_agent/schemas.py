@@ -69,6 +69,7 @@ class Result(BaseModel):
     format: str = "epub"
     size_bytes: int = 0
     magnet_url: str | None = None
+    download_url: str | None = None
     indexer_id: int | str | None = None
     guid: str | None = None
     seeders: int | None = None

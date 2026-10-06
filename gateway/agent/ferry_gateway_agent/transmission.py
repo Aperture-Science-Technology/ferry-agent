@@ -1,9 +1,13 @@
 import asyncio
 import base64
+import logging
 import time
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import httpx
+
+logger = logging.getLogger("ferry-gateway-agent")
 
 
 class TransmissionError(RuntimeError):
@@ -64,11 +68,19 @@ class TransmissionClient:
         *,
         headers: Mapping[str, str] | None = None,
     ) -> str:
-        response = await self._client.get(
-            url,
-            headers=dict(headers) if headers else None,
-            follow_redirects=True,
-        )
+        request = self._client.build_request("GET", url, headers=dict(headers) if headers else None)
+        for _ in range(self._client.max_redirects + 1):
+            response = await self._client.send(request, follow_redirects=False)
+            redirected = response.next_request
+            if redirected is None:
+                break
+            if (request.url.scheme, request.url.host, request.url.port) != (
+                redirected.url.scheme, redirected.url.host, redirected.url.port
+            ):
+                redirected.headers.pop("X-Api-Key", None)
+            request = redirected
+        else:
+            raise TransmissionError(f"Too many redirects fetching torrent from {url}")
         if not response.is_success:
             raise TransmissionError(
                 f"Could not fetch torrent from {url}: HTTP {response.status_code}"
@@ -127,13 +139,18 @@ class TransmissionClient:
         poll_interval_seconds: float = 2,
     ) -> dict[str, Any]:
         deadline = time.monotonic() + timeout_seconds
+        warning_logged = False
         while True:
             torrent = await self.get(torrent_id)
-            if int(torrent.get("error") or 0) != 0:
+            error = int(torrent.get("error") or 0)
+            if error in (2, 3):
                 raise TransmissionError(
                     f"Torrent {torrent_id} failed: "
                     f"{torrent.get('errorString') or 'unknown error'}"
                 )
+            if error == 1 and not warning_logged:
+                logger.warning("Torrent %s tracker warning: %s", torrent_id, torrent.get("errorString"))
+                warning_logged = True
             if float(torrent.get("percentDone") or 0) >= 1:
                 return torrent
             if time.monotonic() >= deadline:

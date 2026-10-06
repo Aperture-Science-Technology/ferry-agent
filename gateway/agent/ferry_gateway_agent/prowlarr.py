@@ -63,7 +63,7 @@ class ProwlarrClient:
                 continue
             magnet = raw.get("magnetUrl")
             guid = raw.get("guid")
-            result_id = magnet or guid
+            result_id = magnet or guid or raw.get("downloadUrl")
             if not result_id:
                 continue
             mapped.append(
@@ -75,6 +75,7 @@ class ProwlarrClient:
                     "size_bytes": int(raw.get("size") or 0),
                     "result_id": str(result_id),
                     "magnet_url": magnet,
+                    "download_url": raw.get("downloadUrl"),
                     "indexer_id": raw.get("indexerId"),
                     "guid": guid,
                     "seeders": raw.get("seeders"),
