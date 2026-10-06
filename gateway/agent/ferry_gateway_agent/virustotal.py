@@ -36,14 +36,7 @@ class VirusTotalClient:
             headers=self.headers,
         )
         if response.status_code == 404:
-            with path.open("rb") as file:
-                upload = await self._client.post(
-                    f"{self.base_url}/files",
-                    headers=self.headers,
-                    files={"file": (path.name, file, "application/octet-stream")},
-                )
-            upload.raise_for_status()
-            return upload.json()
+            return None
 
         response.raise_for_status()
         report = response.json()
