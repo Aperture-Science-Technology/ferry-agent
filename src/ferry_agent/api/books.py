@@ -418,21 +418,23 @@ async def add_book(
             "title": raw_result.get("title") or result_id or "Gateway book",
         }
         # MCP add_to_library n'envoie que source + result_id : inferer la
-        # reference de telechargement sans ecraser magnet_url/guid fournis.
+        # reference de telechargement sans ecraser magnet_url/guid/download_url fournis.
         inferred_id = raw_result["result_id"]
-        if not raw_result.get("magnet_url") and not raw_result.get("guid"):
+        if not (raw_result.get("magnet_url") or raw_result.get("guid") or raw_result.get("download_url")):
             if inferred_id.startswith("magnet:"):
                 raw_result["magnet_url"] = inferred_id
+            elif inferred_id.startswith(("http://", "https://")):
+                raw_result["download_url"] = inferred_id
             elif inferred_id:
                 raw_result["guid"] = inferred_id
         try:
             selected_result = Result.model_validate(raw_result)
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-        if not (selected_result.magnet_url or selected_result.guid):
+        if not (selected_result.magnet_url or selected_result.guid or selected_result.download_url):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="le resultat gateway doit contenir magnet_url ou guid",
+                detail="Ce livre ne contient aucun lien de téléchargement. Relancez la recherche.",
             )
 
         job = await gateway_service.create_job(

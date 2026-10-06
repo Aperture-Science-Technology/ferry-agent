@@ -1426,6 +1426,8 @@ export interface components {
             cover_url?: string | null;
             /** Description */
             description?: string | null;
+            /** Download Url */
+            download_url?: string | null;
             /**
              * Format
              * @default epub
@@ -1468,6 +1470,8 @@ export interface components {
             cover_url?: string | null;
             /** Description */
             description?: string | null;
+            /** Download Url */
+            download_url?: string | null;
             /**
              * Format
              * @default epub

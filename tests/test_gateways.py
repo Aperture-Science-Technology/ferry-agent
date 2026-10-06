@@ -607,3 +607,41 @@ class TestRecreateGatewayApi:
             assert resp.status_code == 409
         finally:
             app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize("infer_from_id", [False, True])
+async def test_gateway_result_with_only_download_url_is_queued(monkeypatch, infer_from_id):
+    import json
+
+    from fastapi import Response
+    from starlette.requests import Request
+
+    gateway = make_gateway(pairing_status=PairingStatus.paired)
+    url = "http://prowlarr.test/download/book.torrent"
+    result = {"title": "Book", "result_id": url if infer_from_id else ""}
+    if not infer_from_id:
+        result["download_url"] = url
+    body = {"source": f"gateway:{gateway.id}", "result": result}
+
+    async def receive():
+        return {"type": "http.request", "body": json.dumps(body).encode()}
+
+    request = Request({"type": "http", "headers": [(b"content-type", b"application/json")]}, receive)
+    captured = {}
+
+    async def create_job(db, gateway_id, job_type, payload):
+        captured.update(payload)
+        return GatewayJob(
+            id=uuid.uuid4(), gateway_id=gateway_id, type=job_type,
+            payload=payload, status=GatewayJobStatus.pending,
+        )
+
+    monkeypatch.setattr(books.gateway_service, "create_job", create_job)
+    response = Response()
+    await books.add_book(
+        request, response, CurrentUser(id=gateway.user_id, email="user@example.test"), FakeSession([gateway])
+    )
+    assert response.status_code == 202
+    assert captured["result"]["download_url"] == url
+    assert captured["result"]["guid"] is None
+    assert captured["result"]["magnet_url"] is None

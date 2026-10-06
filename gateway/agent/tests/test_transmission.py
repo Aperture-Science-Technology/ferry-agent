@@ -7,7 +7,6 @@ import json
 
 import httpx
 import pytest
-
 from ferry_gateway_agent.transmission import TransmissionClient, TransmissionError
 
 _TORRENT_BYTES = b"d8:announce13:http://a.com4:infod4:name4:bookee"
@@ -101,3 +100,57 @@ async def test_add_http_error_raises_transmission_error() -> None:
         transmission = TransmissionClient("http://transmission.test", client=client)
         with pytest.raises(TransmissionError, match="Could not fetch torrent.*404"):
             await transmission.add(bad_url)
+
+
+@pytest.mark.asyncio
+async def test_wait_until_done_ignores_tracker_warning_error_1(caplog):
+    import logging
+
+    responses = iter([0.5, 0.75, 1])
+
+    def handler(request):
+        return httpx.Response(200, json={"result": "success", "arguments": {"torrents": [{
+            "error": 1, "errorString": "tracker warning", "percentDone": next(responses),
+        }]}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transmission = TransmissionClient("http://transmission.test", client=client)
+        with caplog.at_level(logging.WARNING):
+            torrent = await transmission.wait_until_done(42, timeout_seconds=1, poll_interval_seconds=0)
+    assert torrent["percentDone"] == 1
+    assert sum("tracker warning" in record.message for record in caplog.records) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error", [2, 3])
+async def test_wait_until_done_fails_on_local_error_3(error):
+    def handler(request):
+        return httpx.Response(200, json={"result": "success", "arguments": {"torrents": [{
+            "error": error, "errorString": "download failed", "percentDone": 1,
+        }]}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transmission = TransmissionClient("http://transmission.test", client=client)
+        with pytest.raises(TransmissionError, match="download failed"):
+            await transmission.wait_until_done(42, timeout_seconds=1)
+
+
+@pytest.mark.asyncio
+async def test_torrent_redirect_does_not_leak_prowlarr_api_key():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        if request.url.host == "prowlarr.test":
+            return httpx.Response(302, headers={"Location": "https://indexer.test/book.torrent"})
+        if request.method == "GET":
+            return httpx.Response(200, content=_TORRENT_BYTES)
+        return _rpc_success()
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        transmission = TransmissionClient("http://transmission.test", client=client)
+        await transmission.add("https://prowlarr.test/download", headers={"X-Api-Key": "secret"})
+    assert requests[0].headers.get("X-Api-Key") == "secret"
+    assert requests[1].url.host == "indexer.test"
+    assert "X-Api-Key" not in requests[1].headers
+    assert "X-Api-Key" not in requests[2].headers
