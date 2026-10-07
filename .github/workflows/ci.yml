@@ -501,6 +501,12 @@ jobs:
             -t "${IMAGE}:latest" \
             --output "type=docker,dest=${OUT}" \
             -f gateway/image/Dockerfile gateway/
+          if ! tar -xOf "${OUT}" manifest.json | jq -e \
+            --arg version "${IMAGE}:${VERSION}" --arg latest "${IMAGE}:latest" \
+            '[.[].RepoTags[]?] | (index($version) != null) and (index($latest) != null)' > /dev/null; then
+            echo "Invalid tags in ${OUT}: expected ${IMAGE}:${VERSION} and ${IMAGE}:latest. Without :latest, GUI startup fails on a docker pull of a private package." >&2
+            exit 1
+          fi
           gzip -f "${OUT}"
           ls -lh "${OUT}.gz"
 
@@ -514,6 +520,12 @@ jobs:
             -t "${IMAGE}:latest" \
             --output "type=docker,dest=${OUT}" \
             -f gateway/image/Dockerfile gateway/
+          if ! tar -xOf "${OUT}" manifest.json | jq -e \
+            --arg version "${IMAGE}:${VERSION}" --arg latest "${IMAGE}:latest" \
+            '[.[].RepoTags[]?] | (index($version) != null) and (index($latest) != null)' > /dev/null; then
+            echo "Invalid tags in ${OUT}: expected ${IMAGE}:${VERSION} and ${IMAGE}:latest. Without :latest, GUI startup fails on a docker pull of a private package." >&2
+            exit 1
+          fi
           gzip -f "${OUT}"
           ls -lh "${OUT}.gz"
 

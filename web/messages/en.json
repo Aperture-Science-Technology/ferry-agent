@@ -303,7 +303,8 @@
     "emptyMobileSubtitle": "Imported books will appear here",
     "importShort": "Import",
     "authorFormat": "{author} · {format}",
-    "deleteOf": "Delete “{title}”"
+    "deleteOf": "Delete “{title}”",
+    "emailRequested": "Your email delivery request has been recorded."
   },
   "deliverDialog": {
     "title": "Send “{title}”",
@@ -715,11 +716,13 @@
     "relativeOther": "{date} · {time}",
     "statuses": {
       "queued": "Requested",
-      "sent": "In progress",
+      "sent": "Sending",
       "delivered": "Delivered",
       "failed": "Failed",
-      "unknown": "Unknown"
-    }
+      "unknown": "Unknown",
+      "sentEmail": "Sent — accepted by the mail relay"
+    },
+    "statusHintSentEmail": "Accepted by the mail relay. Amazon does not confirm delivery: check your e-reader."
   },
   "deliveryDetail": {
     "title": "Delivery tracking",
@@ -848,7 +851,8 @@
     "mailNotConfiguredTitle": "Email sending not ready yet",
     "mailNotConfiguredDescription": "Send to Kindle will be available once email delivery is set up.",
     "mailSettingsUnavailableTitle": "Send settings unavailable",
-    "mailSettingsUnavailable": "Couldn't load send settings right now. Please try again later."
+    "mailSettingsUnavailable": "Couldn't load send settings right now. Please try again later.",
+    "sendToKindleApprovalReminder": "Before sending, approve the sender address in Amazon’s personal document settings."
   },
   "docs": {
     "metaTitle": "Guide | Ferry Agent",
@@ -900,12 +904,30 @@
     "step4TerminalTitle": "Terminal (fallback)",
     "step4TerminalIntro": "These commands do exactly the same thing. Replace the two quoted values with your codes.",
     "step4TerminalSteps": [
-      { "label": "Create a folder for the Gateway", "command": "mkdir -p ~/ferry-gateway && cd ~/ferry-gateway" },
-      { "label": "Download the startup file", "command": "curl -fsSLO https://ferry-agent.aperture-agency.org/bundle/compose.yaml" },
-      { "label": "Save your connection code", "command": "printf 'PAIRING_TOKEN=%s\\n' 'YOUR_CONNECTION_CODE' > .env" },
-      { "label": "Save your access key", "command": "printf 'GATEWAY_KEY=%s\\n' 'YOUR_ACCESS_KEY' >> .env" },
-      { "label": "Load the image you downloaded", "command": "docker load -i ~/Downloads/ferry-agent-gateway-amd64.tar" },
-      { "label": "Start the Gateway", "command": "docker compose up -d" }
+      {
+        "label": "Create a folder for the Gateway",
+        "command": "mkdir -p ~/ferry-gateway && cd ~/ferry-gateway"
+      },
+      {
+        "label": "Download the startup file",
+        "command": "curl -fsSLO https://ferry-agent.aperture-agency.org/bundle/compose.yaml"
+      },
+      {
+        "label": "Save your connection code",
+        "command": "printf 'PAIRING_TOKEN=%s\\n' 'YOUR_CONNECTION_CODE' > .env"
+      },
+      {
+        "label": "Save your access key",
+        "command": "printf 'GATEWAY_KEY=%s\\n' 'YOUR_ACCESS_KEY' >> .env"
+      },
+      {
+        "label": "Load the image you downloaded",
+        "command": "docker load -i ~/Downloads/ferry-agent-gateway-amd64.tar"
+      },
+      {
+        "label": "Start the Gateway",
+        "command": "docker compose up -d"
+      }
     ],
     "step4TerminalNote": "On Apple Silicon, use ferry-agent-gateway-arm64.tar. If you already imported the image in step 03, the docker load line is unnecessary.",
     "step4Hint": "Both codes are required. Without them, the Gateway page will stay waiting for a connection.",
@@ -934,14 +956,22 @@
     "troubleshootExpired": "The code expired: on Gateway, click Create new codes, then update both codes in Docker Desktop or OrbStack.",
     "troubleshootOffline": "Status Disconnected: restart the module at home. Your computer must stay on and connected to the internet. Your online library remains usable.",
     "troubleshootBothCodes": "One code is not enough. Always paste the “Both codes together” block (connection code + access key).",
-    "troubleshootProwlarr": "To diagnose local sources (including Prowlarr), open the module’s local screen once Gateway is connected — often http://127.0.0.1:9696. This is not a page of the online library.",
+    "troubleshootProwlarr": "If searches stay empty, follow the “Add an indexer” chapter above.",
     "byoTitle": "What runs on your computer",
     "byoDescription": "Only the Gateway runs on your machine. Your library and settings stay in the online Ferry Agent app.",
     "byoBody1": "Your computer must stay on and connected to the internet for Gateway searches and downloads to work.",
     "byoBody2": "For continuous use, install the Gateway on a machine that stays on, using the same two codes.",
     "createAccess": "Add a Gateway",
     "backHome": "Back to home",
-    "step2Cta": "Download the Docker image"
+    "step2Cta": "Download the Docker image",
+    "indexerTitle": "Add an indexer",
+    "indexerIntro": "The Gateway comes without an indexer: searches stay empty until you add a book source in Prowlarr.",
+    "indexerOpen": "On the computer running the Gateway, open Prowlarr.",
+    "indexerCredentials": "Sign in with the name ferry and the password created at first start. To read your credentials, open Terminal and paste this command:",
+    "indexerCustom": "To choose your credentials before starting, add PROWLARR_USER and PROWLARR_PASSWORD in Docker Desktop or OrbStack’s Environment variables fields. Always fill in both. These values replace saved credentials; without them, saved credentials are kept.",
+    "indexerAdd": "In Prowlarr, open Indexers, then +, choose your source and save its settings. Then search again in Ferry Agent.",
+    "kindleTitle": "Receive a document on Kindle",
+    "kindleBody": "Email deliveries arrive as personal documents (“digital content”), not as purchased books. Before your first delivery, open Settings in Ferry Agent and approve the sender address shown there in Amazon’s personal document settings. Without approval, Amazon silently discards the document."
   },
   "landing": {
     "nav": {

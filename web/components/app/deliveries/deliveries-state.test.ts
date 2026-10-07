@@ -9,6 +9,7 @@ import {
   applyDeliveryFetchResult,
   hasActiveDeliveries,
   isActiveDeliveryStatus,
+  deliveryStatusLabelKey,
   isTerminalDeliveryStatus,
   mergeDeliveryJobs,
   normalizeDeliveryStatus,
@@ -41,25 +42,30 @@ describe("normalizeDeliveryStatus", () => {
 });
 
 describe("active vs terminal", () => {
-  it("treats queued/sent as active and delivered/failed as terminal", () => {
-    assert.equal(isActiveDeliveryStatus("queued"), true);
-    assert.equal(isActiveDeliveryStatus("sent"), true);
-    assert.equal(isActiveDeliveryStatus("delivered"), false);
-    assert.equal(isTerminalDeliveryStatus("delivered"), true);
-    assert.equal(isTerminalDeliveryStatus("failed"), true);
-    assert.equal(isTerminalDeliveryStatus("queued"), false);
+  it("uses API semantics: email sent is terminal, cloud sent remains active", () => {
+    assert.equal(isActiveDeliveryStatus({ status: "queued", terminal: false }), true);
+    assert.equal(isActiveDeliveryStatus({ status: "sent", terminal: true }), false);
+    assert.equal(isActiveDeliveryStatus({ status: "sent", terminal: false }), true);
+    assert.equal(isActiveDeliveryStatus({ status: "delivered", terminal: true }), false);
+    assert.equal(isTerminalDeliveryStatus({ status: "delivered", terminal: true }), true);
+    assert.equal(isTerminalDeliveryStatus({ status: "failed", terminal: true }), true);
+    assert.equal(isTerminalDeliveryStatus({ status: "queued", terminal: false }), false);
+    assert.equal(isTerminalDeliveryStatus({ status: "unknown", terminal: true }), false);
+    assert.equal(isTerminalDeliveryStatus({ status: "sent" }), false);
+    assert.equal(deliveryStatusLabelKey({ status: "sent", method: "email" }), "sentEmail");
+    assert.equal(deliveryStatusLabelKey({ status: "sent", method: "drive" }), "sent");
   });
 
   it("detects active rows for bounded polling", () => {
     assert.equal(
       hasActiveDeliveries([
-        { id: "1", status: "delivered" },
-        { id: "2", status: "queued" },
+        { id: "1", status: "delivered", terminal: true },
+        { id: "2", status: "queued", terminal: false },
       ]),
       true
     );
     assert.equal(
-      hasActiveDeliveries([{ id: "1", status: "failed" }]),
+      hasActiveDeliveries([{ id: "1", status: "failed", terminal: true }]),
       false
     );
   });
@@ -105,4 +111,19 @@ describe("applyDeliveryFetchResult", () => {
     assert.equal(outcome.ok, true);
     assert.equal(outcome.items[0]?.status, "sent");
   });
+});
+
+
+describe("terminal semantics after refresh", () => {
+  it("does not retain stale terminal semantics when a response omits them", () => {
+    const merged = mergeDeliveryJobs([{ id: "a", status: "sent", terminal: true }], [{ id: "a", status: "unknown" }]);
+    assert.equal(isTerminalDeliveryStatus(merged[0]!), false);
+  });
+});
+
+
+it("keeps an empty unknown status visible after a formerly terminal job", () => {
+  const merged = mergeDeliveryJobs([{ id: "a", status: "delivered", terminal: true }], [{ id: "a", status: "", terminal: true }]);
+  assert.equal(normalizeDeliveryStatus(merged[0]!.status), "unknown");
+  assert.equal(isTerminalDeliveryStatus(merged[0]!), false);
 });

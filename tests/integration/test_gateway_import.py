@@ -84,3 +84,26 @@ async def test_gateway_import_preserves_existing_source_config(db_session, gatew
     await db_session.refresh(source)
     assert item.source_id == source.id
     assert source.config == config
+
+
+async def test_gateway_epub_metadata_survives_reload(db_session, gateway_import):
+    from ferry_agent.services.covers import embedded_cover
+    from tests.test_delivery_truth import epub_bytes
+
+    user_id, gateway_id, _, _ = gateway_import
+    item = await library.import_from_gateway(
+        db_session, user_id, gateway_id, uuid.uuid4(),
+        'Release.FRENCH.[EPUB]-NOTAG.epub', epub_bytes(), 'epub', {},
+    )
+    item_id = item.id
+    db_session.expire_all()
+    saved = await db_session.get(LibraryItem, item_id)
+    assert saved.title == 'Les Deux Tours'
+    assert saved.author == 'J. R. R. Tolkien'
+    assert saved.language == 'fr'
+    assert saved.publisher == 'Bourgois'
+    assert saved.published_year == 1972
+    assert saved.isbn == '9782266282362'
+    assert saved.page_count is None
+    assert saved.cover_url == f'/api/v1/covers/{item_id}'
+    assert embedded_cover(saved)[0].read_bytes().startswith(b'\x89PNG')

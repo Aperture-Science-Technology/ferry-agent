@@ -303,7 +303,8 @@
     "emptyMobileSubtitle": "Les livres importés apparaîtront ici",
     "importShort": "Importer",
     "authorFormat": "{author} · {format}",
-    "deleteOf": "Supprimer « {title} »"
+    "deleteOf": "Supprimer « {title} »",
+    "emailRequested": "Votre demande d’envoi par email est enregistrée."
   },
   "deliverDialog": {
     "title": "Envoyer « {title} »",
@@ -715,11 +716,13 @@
     "relativeOther": "{date} · {time}",
     "statuses": {
       "queued": "Demandé",
-      "sent": "En cours",
+      "sent": "En cours d’envoi",
       "delivered": "Livré",
       "failed": "Échec",
-      "unknown": "Inconnu"
-    }
+      "unknown": "Inconnu",
+      "sentEmail": "Envoyé — accepté par le relais"
+    },
+    "statusHintSentEmail": "Accepté par le relais d’envoi. Amazon ne confirme pas la remise : vérifiez sur votre liseuse."
   },
   "deliveryDetail": {
     "title": "Suivi de l’envoi",
@@ -848,7 +851,8 @@
     "mailNotConfiguredTitle": "Envoi par email pas encore prêt",
     "mailNotConfiguredDescription": "L’envoi vers Kindle sera disponible dès que le service d’email sera configuré.",
     "mailSettingsUnavailableTitle": "Réglages d’envoi indisponibles",
-    "mailSettingsUnavailable": "Impossible de charger les réglages d’envoi pour le moment. Réessayez plus tard."
+    "mailSettingsUnavailable": "Impossible de charger les réglages d’envoi pour le moment. Réessayez plus tard.",
+    "sendToKindleApprovalReminder": "Avant l’envoi, approuvez l’adresse d’envoi dans les réglages des documents personnels sur Amazon."
   },
   "docs": {
     "metaTitle": "Guide | Ferry Agent",
@@ -900,12 +904,30 @@
     "step4TerminalTitle": "Terminal (solution de repli)",
     "step4TerminalIntro": "Ces commandes font exactement la même chose. Remplacez les deux valeurs entre guillemets par vos codes.",
     "step4TerminalSteps": [
-      { "label": "Créer un dossier pour le Gateway", "command": "mkdir -p ~/ferry-gateway && cd ~/ferry-gateway" },
-      { "label": "Télécharger le fichier de démarrage", "command": "curl -fsSLO https://ferry-agent.aperture-agency.org/bundle/compose.yaml" },
-      { "label": "Enregistrer votre code de connexion", "command": "printf 'PAIRING_TOKEN=%s\\n' 'VOTRE_CODE_DE_CONNEXION' > .env" },
-      { "label": "Enregistrer votre clé d’accès", "command": "printf 'GATEWAY_KEY=%s\\n' 'VOTRE_CLE_D_ACCES' >> .env" },
-      { "label": "Charger l’image que vous avez téléchargée", "command": "docker load -i ~/Downloads/ferry-agent-gateway-amd64.tar" },
-      { "label": "Démarrer le Gateway", "command": "docker compose up -d" }
+      {
+        "label": "Créer un dossier pour le Gateway",
+        "command": "mkdir -p ~/ferry-gateway && cd ~/ferry-gateway"
+      },
+      {
+        "label": "Télécharger le fichier de démarrage",
+        "command": "curl -fsSLO https://ferry-agent.aperture-agency.org/bundle/compose.yaml"
+      },
+      {
+        "label": "Enregistrer votre code de connexion",
+        "command": "printf 'PAIRING_TOKEN=%s\\n' 'VOTRE_CODE_DE_CONNEXION' > .env"
+      },
+      {
+        "label": "Enregistrer votre clé d’accès",
+        "command": "printf 'GATEWAY_KEY=%s\\n' 'VOTRE_CLE_D_ACCES' >> .env"
+      },
+      {
+        "label": "Charger l’image que vous avez téléchargée",
+        "command": "docker load -i ~/Downloads/ferry-agent-gateway-amd64.tar"
+      },
+      {
+        "label": "Démarrer le Gateway",
+        "command": "docker compose up -d"
+      }
     ],
     "step4TerminalNote": "Sur Apple Silicon, utilisez ferry-agent-gateway-arm64.tar. Si vous avez déjà importé l’image à l’étape 03, la ligne docker load est inutile.",
     "step4Hint": "Les deux codes sont indispensables. Sans eux, la page Gateway restera en attente de connexion.",
@@ -934,14 +956,22 @@
     "troubleshootExpired": "Le code a expiré : sur Gateway, cliquez sur Créer de nouveaux codes, puis mettez à jour les deux codes dans Docker Desktop ou OrbStack.",
     "troubleshootOffline": "Statut Déconnecté : rallumez le module chez vous. Votre ordinateur doit rester allumé et connecté à Internet. Votre bibliothèque en ligne reste utilisable.",
     "troubleshootBothCodes": "Un seul code ne suffit pas. Collez toujours le bloc « Les deux codes ensemble » (code de connexion + clé d’accès).",
-    "troubleshootProwlarr": "Pour diagnostiquer des sources locales (dont Prowlarr), ouvrez l’écran local du module une fois le Gateway connecté — souvent http://127.0.0.1:9696. Ce n’est pas une page de la bibliothèque en ligne.",
+    "troubleshootProwlarr": "Si les recherches restent vides, suivez le chapitre « Ajouter un indexeur » ci-dessus.",
     "byoTitle": "Ce qui tourne chez vous",
     "byoDescription": "Seul le Gateway tourne sur votre machine. Votre bibliothèque et vos réglages restent dans l’application Ferry Agent en ligne.",
     "byoBody1": "Votre ordinateur doit rester allumé et connecté à Internet pour que les recherches et téléchargements du Gateway fonctionnent.",
     "byoBody2": "Pour un fonctionnement continu, installez le Gateway sur une machine toujours allumée, avec les deux mêmes codes.",
     "createAccess": "Ajouter un Gateway",
     "backHome": "Retour à l’accueil",
-    "step2Cta": "Télécharger l’image Docker"
+    "step2Cta": "Télécharger l’image Docker",
+    "indexerTitle": "Ajouter un indexeur",
+    "indexerIntro": "Le Gateway arrive sans indexeur : la recherche reste vide tant que vous n’avez pas ajouté une source de livres dans Prowlarr.",
+    "indexerOpen": "Sur l’ordinateur où le Gateway fonctionne, ouvrez Prowlarr.",
+    "indexerCredentials": "Connectez-vous avec le nom ferry et le mot de passe créé au premier démarrage. Pour lire vos identifiants, ouvrez Terminal et collez cette commande :",
+    "indexerCustom": "Pour choisir vos identifiants avant le démarrage, ajoutez PROWLARR_USER et PROWLARR_PASSWORD dans les champs Environment variables de Docker Desktop ou OrbStack. Remplissez toujours les deux. Ces valeurs remplacent les identifiants enregistrés ; sans elles, les identifiants enregistrés sont conservés.",
+    "indexerAdd": "Dans Prowlarr, ouvrez Indexers, puis +, choisissez votre source et enregistrez ses réglages. Relancez ensuite votre recherche dans Ferry Agent.",
+    "kindleTitle": "Recevoir un document sur Kindle",
+    "kindleBody": "Un envoi par email arrive comme document personnel (« contenu numérique »), pas comme un livre acheté. Avant le premier envoi, ouvrez Réglages dans Ferry Agent et approuvez l’adresse d’envoi indiquée dans les réglages des documents personnels sur Amazon. Sans cette approbation, Amazon abandonne le document sans vous prévenir."
   },
   "landing": {
     "nav": {

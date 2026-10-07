@@ -271,7 +271,7 @@ async def test_tier_a_passes_profile_args_into_epub_conversion(monkeypatch: pyte
         out.write_bytes(b"PK" + b"x" * 2048)
         return str(out), False
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         mailed["file_path"] = file_path
         mailed["filename"] = filename
         return "smtp.test:587 accepted <msg@test>"
@@ -453,7 +453,7 @@ async def test_tier_a_epub_source_to_epub_target_applies_device_preset(
         seen.update(kwargs)
         return str(derived), False
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         mailed["file_path"] = file_path
         mailed["filename"] = filename
         return "smtp.test:587 accepted <msg@test>"

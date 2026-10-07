@@ -238,7 +238,7 @@ async def test_deliver_tier_b_uploads_and_marks_delivered(
     book.write_bytes(b"epub-bytes")
 
     async def fake_upload_job_file(link_ref_json, filename, file_bytes):
-        assert filename == "book.epub"
+        assert filename == "Herbert - Dune.epub"
         assert file_bytes == b"epub-bytes"
         return "/book.epub"
 
@@ -337,7 +337,7 @@ async def test_deliver_tier_b_converts_non_epub_before_upload(
     await delivery._deliver_tier_b(db, job, item, device, user)
 
     assert converted["called_with"] == str(pdf)
-    assert uploaded["filename"] == "book.epub"
+    assert uploaded["filename"] == "Herbert - Dune.epub"
     assert uploaded["file_bytes"] == b"converted-epub-bytes"
     assert job.status == DeliveryStatus.delivered
 
@@ -405,7 +405,7 @@ async def test_deliver_tier_b_uploads_requested_pdf_not_silent_epub(
     await delivery._deliver_tier_b(db, job, item, device, user, requested_format="pdf")
 
     assert converted["called_with"] == str(book)
-    assert uploaded["filename"] == "book.pdf"
+    assert uploaded["filename"] == "Herbert - Dune.pdf"
     assert uploaded["file_bytes"].startswith(b"pdf-bytes-padded")
     assert job.status == DeliveryStatus.delivered
     assert job.target_format == "pdf"

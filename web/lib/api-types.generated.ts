@@ -998,6 +998,11 @@ export interface components {
             status: components["schemas"]["DeliveryStatus"];
             /** Target Format */
             target_format?: string | null;
+            /**
+             * Terminal
+             * @description Email acceptance is final; cloud acceptance still needs an upload.
+             */
+            readonly terminal: boolean;
         };
         /**
          * DeliveryPreview

@@ -79,11 +79,17 @@ describe("UI harness — docs guide polish", () => {
 
     const text = document.body.textContent ?? "";
     const pres = container.querySelectorAll("pre");
-    expect(pres).toHaveLength(6);
+    expect(pres).toHaveLength(7);
+    expect(text).toContain("docker exec ferry-gateway cat /config/prowlarr-credentials");
     expect(text).toContain("Créer un dossier pour le Gateway");
     expect(text).toContain("Télécharger le fichier de démarrage");
     expect(text).toContain("Enregistrer votre code de connexion");
     expect(text).toContain("Démarrer le Gateway");
+    expect(text).toContain("Ajouter un indexeur");
+    expect(text).toContain("sans indexeur");
+    expect(text).toContain("document personnel");
+    expect(text).toContain("PROWLARR_USER");
+    expect(text).toContain("PROWLARR_PASSWORD");
   });
 
   it("renders EN guide without illustration, with success callouts and expanded glossary", () => {
@@ -120,11 +126,15 @@ describe("UI harness — docs guide polish", () => {
 
     const text = document.body.textContent ?? "";
     const pres = container.querySelectorAll("pre");
-    expect(pres).toHaveLength(6);
+    expect(pres).toHaveLength(7);
+    expect(text).toContain("docker exec ferry-gateway cat /config/prowlarr-credentials");
     expect(text).toContain("Create a folder for the Gateway");
     expect(text).toContain("Download the startup file");
     expect(text).toContain("Save your connection code");
     expect(text).toContain("Start the Gateway");
+    expect(text).toContain("Add an indexer");
+    expect(text).toContain("without an indexer");
+    expect(text).toContain("personal documents");
   });
 
   it("keeps docs i18n keys symmetric and terminal steps aligned", () => {
