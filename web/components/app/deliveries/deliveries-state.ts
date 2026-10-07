@@ -8,16 +8,21 @@ export type DeliveryStatusCode = "queued" | "sent" | "delivered" | "failed";
 export type DeliveryListItem = {
   id: string;
   status: string;
+  terminal?: boolean;
 };
 
-/** Statuses that still need follow-up (requested / in progress). */
-export function isActiveDeliveryStatus(status: string): boolean {
-  return status === "queued" || status === "sent";
+/** Use server semantics. Missing/unknown semantics never imply completion. */
+export function isActiveDeliveryStatus(job: Pick<DeliveryListItem, "status" | "terminal">): boolean {
+  return !isTerminalDeliveryStatus(job);
 }
 
-/** Statuses that should stop bounded polling. */
-export function isTerminalDeliveryStatus(status: string): boolean {
-  return status === "delivered" || status === "failed";
+export function isTerminalDeliveryStatus(job: Pick<DeliveryListItem, "status" | "terminal">): boolean {
+  return normalizeDeliveryStatus(job.status) !== "unknown" && job.terminal === true;
+}
+
+export function deliveryStatusLabelKey(job: { status: string; method: string }) {
+  const status = normalizeDeliveryStatus(job.status);
+  return status === "sent" && job.method === "email" ? "sentEmail" : status;
 }
 
 /**
@@ -39,7 +44,7 @@ export function normalizeDeliveryStatus(
 }
 
 export function hasActiveDeliveries(items: DeliveryListItem[]): boolean {
-  return items.some((item) => isActiveDeliveryStatus(item.status));
+  return items.some((item) => isActiveDeliveryStatus(item));
 }
 
 /**
@@ -56,8 +61,10 @@ export function mergeDeliveryJobs<T extends DeliveryListItem & Record<string, un
   return fresh.map((job) => {
     const prior = prevById.get(job.id);
     if (!prior) return job;
-    const merged = { ...prior, ...job };
+    const merged: T = { ...prior, ...job };
+    merged.terminal = job.terminal;
     for (const key of Object.keys(prior) as Array<keyof T>) {
+      if (key === "terminal" || key === "status") continue;
       const nextVal = job[key];
       if (nextVal === null || nextVal === undefined || nextVal === "") {
         const prevVal = prior[key];

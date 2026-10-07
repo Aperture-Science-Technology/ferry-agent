@@ -8,6 +8,7 @@ import {
   applyDeliveryFetchResult,
   hasActiveDeliveries,
   isActiveDeliveryStatus,
+  deliveryStatusLabelKey,
   mergeDeliveryJobs,
   normalizeDeliveryStatus,
 } from "@/components/app/deliveries/deliveries-state";
@@ -73,7 +74,7 @@ function matchesFilter(job: DeliveryJob, filter: DeliveryFilter): boolean {
     case "failed":
       return normalized === "failed";
     case "in_progress":
-      return isActiveDeliveryStatus(job.status);
+      return isActiveDeliveryStatus(job);
     default:
       return true;
   }
@@ -112,10 +113,8 @@ export function DeliveriesView({
     return tMethods(`methods.${method}`);
   }
 
-  function statusLabel(status: string) {
-    const normalized = normalizeDeliveryStatus(status);
-    if (normalized === "unknown") return t("statuses.unknown");
-    return t(`statuses.${normalized}`);
+  function statusLabel(job: DeliveryJob) {
+    return t(`statuses.${deliveryStatusLabelKey(job)}`);
   }
 
   function routeTitle(job: DeliveryJob) {
@@ -202,7 +201,7 @@ export function DeliveriesView({
   );
 
   const activeCount = useMemo(
-    () => deliveries.filter((job) => isActiveDeliveryStatus(job.status)).length,
+    () => deliveries.filter((job) => isActiveDeliveryStatus(job)).length,
     [deliveries]
   );
   const failedCount = useMemo(
@@ -327,10 +326,13 @@ export function DeliveriesView({
                 job={job}
                 routeTitle={titleText}
                 methodLabel={methodLabel(job.method)}
-                statusLabel={statusLabel(job.status)}
+                statusLabel={statusLabel(job)}
                 dateLabel={dateLabel(job.created_at)}
                 hints={
                   <>
+                    {normalized === "sent" && job.method === "email" ? (
+                      <p className="text-xs text-muted-foreground">{t("statusHintSentEmail")}</p>
+                    ) : null}
                     {normalized === "delivered" ? (
                       <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
                         {t("statusHintDelivered")}

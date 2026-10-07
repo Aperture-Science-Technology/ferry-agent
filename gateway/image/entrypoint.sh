@@ -37,6 +37,10 @@ Required at first start:
 
 Optional:
   PLATFORM_URL      default https://ferry-agent.aperture-agency.org
+  PROWLARR_USER / PROWLARR_PASSWORD
+                    set both to override saved UI credentials; otherwise
+                    reuse /config/prowlarr-credentials or generate user=ferry
+                    Example: -e PROWLARR_USER=ferry -e PROWLARR_PASSWORD=YOUR_PASSWORD
   PROWLARR_API_KEY  generated and persisted in /config if omitted
   TRANSMISSION_USER / TRANSMISSION_PASSWORD
                     optional; if omitted, user=ferry + random password
@@ -50,7 +54,7 @@ Ports:
                     localhost only: -p 127.0.0.1:9696:9696
                     Publishing 9696 on 0.0.0.0 exposes that admin UI on
                     your LAN — Forms auth is enabled; credentials are in
-                    /config/prowlarr-credentials (user=ferry).
+                    /config/prowlarr-credentials (generated user=ferry).
   51413/tcp+udp     Transmission peer
   9091              Transmission RPC is local to the process only
                     (bound to 127.0.0.1). Do not publish unless you
@@ -264,21 +268,36 @@ ensure_transmission_credentials() {
 
 ensure_prowlarr_credentials() {
   creds_file="${CONFIG_ROOT}/prowlarr-credentials"
-  if [ -f "${creds_file}" ]; then
-    chmod 600 "${creds_file}" || true
+  user="${PROWLARR_USER:-}"
+  password="${PROWLARR_PASSWORD:-}"
+  if { [ -n "${user}" ] && [ -z "${password}" ]; } ||
+     { [ -z "${user}" ] && [ -n "${password}" ]; }; then
+    printf '%s\n' "PROWLARR_USER and PROWLARR_PASSWORD must be set together" >&2
+    exit 1
+  fi
+  # Explicit env wins, including on restart; otherwise keep saved credentials.
+  if [ -z "${user}" ] && [ -f "${creds_file}" ]; then
+    chmod 600 "${creds_file}"
     return
   fi
-  password="$(
-    python - <<'PY'
-import secrets
-print(secrets.token_urlsafe(24), end="")
-PY
-  )"
-  umask 077
-  printf 'username=ferry\npassword=%s\n' "${password}" > "${creds_file}"
+  if [ -z "${user}" ]; then
+    user="ferry"
+    password="$(generate_transmission_password)"
+    printf 'Generated Prowlarr UI credentials and stored them under /config.\n'
+  fi
+  # The line-based credentials format cannot represent CR/LF in either value.
+  if ! PROWLARR_USER="${user}" PROWLARR_PASSWORD="${password}" python - <<'PYCHECK'
+import os
+import sys
+sys.exit(any(c in os.environ[k] for k in ("PROWLARR_USER", "PROWLARR_PASSWORD") for c in "\r\n"))
+PYCHECK
+  then
+    printf '%s\n' "PROWLARR_USER and PROWLARR_PASSWORD must not contain line breaks" >&2
+    exit 1
+  fi
+  (umask 077; printf 'username=%s\npassword=%s\n' "${user}" "${password}" > "${creds_file}")
   chmod 600 "${creds_file}"
-  printf 'Generated Prowlarr UI credentials and stored them under /config.\n'
-  printf 'Prowlarr UI: http://127.0.0.1:9696 — user=ferry, password stored in /config/prowlarr-credentials\n'
+  printf 'Prowlarr UI: http://127.0.0.1:9696 — credentials stored in /config/prowlarr-credentials\n'
 }
 
 write_transmission_settings() {

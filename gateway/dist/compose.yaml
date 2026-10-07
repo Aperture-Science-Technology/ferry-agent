@@ -16,6 +16,9 @@ services:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
       TZ: ${TZ:-UTC}
+      # Both or neither; explicit values override persisted UI credentials.
+      PROWLARR_USER: ${PROWLARR_USER:-}
+      PROWLARR_PASSWORD: ${PROWLARR_PASSWORD:-}
       VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
     ports:
       - "${PROWLARR_HOST_PORT:-9696}:9696"

@@ -39,6 +39,7 @@ from ferry_agent.services import (
     mailer,
     tierc,
 )
+from ferry_agent.services.library import user_facing_filename
 
 logger = logging.getLogger(__name__)
 
@@ -142,8 +143,8 @@ async def _deliver_tier_a(
     file_path, cached_derivative = materialized
 
     try:
-        filename = Path(file_path).name
-        if Path(filename).suffix.lstrip(".").lower() != target_format:
+        filename = user_facing_filename(item, target_format)
+        if Path(file_path).suffix.lstrip(".").lower() != target_format:
             await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
             return
 
@@ -153,7 +154,7 @@ async def _deliver_tier_a(
             job.attempts = n
             await db.commit()
             try:
-                relay_response = await mailer.send_file(file_path, filename, recipient, kindle=True)
+                relay_response = await mailer.send_file(file_path, filename, recipient, kindle=True, title=item.title)
             except mailer.MessageTooLargeForRelay as exc:
                 # Message actionnable integral (repli tier C) — jamais un generique.
                 await _fail(db, job, str(exc))
@@ -216,8 +217,8 @@ async def _deliver_tier_b(
     file_path, cached_derivative = materialized
 
     try:
-        filename = Path(file_path).name
-        if Path(filename).suffix.lstrip(".").lower() != target_format:
+        filename = user_facing_filename(item, target_format)
+        if Path(file_path).suffix.lstrip(".").lower() != target_format:
             await _fail(db, job, converters.CONVERSION_FAILED_USER_MESSAGE)
             return
         file_bytes = Path(file_path).read_bytes()

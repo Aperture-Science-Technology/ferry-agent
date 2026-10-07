@@ -248,7 +248,10 @@ print_summary() {
   info "========================================"
   info " Gateway prêt (appairé)"
   info "========================================"
-  info "Prowlarr UI : http://127.0.0.1:9696"
+  info "Prowlarr UI : http://127.0.0.1:9696 (connexion requise)"
+  info "Identifiants générés : user=ferry (sauf identifiants personnalisés ou déjà enregistrés)."
+  info "Lire les identifiants : docker exec ferry-gateway cat /config/prowlarr-credentials"
+  info "Ajoutez un indexeur dans Prowlarr : aucun n’est fourni au départ."
   info "Statut « paired » visible sur le dashboard Ferry Agent."
   info ""
 }

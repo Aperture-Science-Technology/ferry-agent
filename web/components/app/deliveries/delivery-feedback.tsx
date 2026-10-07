@@ -6,7 +6,10 @@ import {
   TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
-import type { HTMLAttributes, ReactNode } from "react";
+import { useEffect, useState, type HTMLAttributes, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { useApiClient } from "@/lib/api-client";
+import type { DeliveryMethod } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -206,6 +209,7 @@ export function DeliveryFeedback({
   icon: Icon,
   iconClassName,
   title,
+  method,
   description,
   action,
   role = "status",
@@ -216,6 +220,7 @@ export function DeliveryFeedback({
   icon?: LucideIcon;
   iconClassName?: string;
   title: string;
+  method?: DeliveryMethod;
   description?: string;
   action?: ReactNode;
   role?: "status" | "alert";
@@ -236,6 +241,7 @@ export function DeliveryFeedback({
       ) : null}
       <FeedbackText title={title} description={description}>
         {children}
+        {method === "email" ? <EmailDeliveryNotice /> : null}
       </FeedbackText>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -275,6 +281,31 @@ export function DeliveryEmpty({
           {action}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+
+/** Small, shared reminder. A failed settings request only hides the address. */
+export function EmailDeliveryNotice() {
+  const t = useTranslations("settings");
+  const { call } = useApiClient();
+  const [sender, setSender] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void call<{ sender_address: string | null }>("/api/v1/mail/settings")
+      .then((settings) => {
+        if (!cancelled) setSender(settings?.sender_address?.trim() || null);
+      })
+      .catch(() => { if (!cancelled) setSender(null); });
+    return () => { cancelled = true; };
+  }, [call]);
+  return (
+    <div className="space-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
+      <p>{t("sendToKindleApprovalReminder")}</p>
+      {sender ? <p>{t("senderAddressLabel")} : <span className="break-all font-medium text-foreground">{sender}</span></p> : null}
+      <a className="underline underline-offset-4" href="https://www.amazon.com/mycd" target="_blank" rel="noreferrer">{t("sendToKindleAmazonLink")}</a>
+      <p>{t("sendToKindleNoBounce")}</p>
     </div>
   );
 }

@@ -88,13 +88,16 @@ def _idempotency_key(recipient_email: str, filename: str, size_bytes: int) -> st
     return hashlib.sha256(payload.encode()).hexdigest()[:32]
 
 
-def build_message(file_path: str, filename: str, recipient_email: str, *, kindle: bool) -> EmailMessage:
+def build_message(
+    file_path: str, filename: str, recipient_email: str, *, kindle: bool, title: str | None = None
+) -> EmailMessage:
     settings = get_settings()
     sender = settings.smtp_from or settings.smtp_user
     message = EmailMessage()
     message["From"] = sender
     message["To"] = recipient_email
-    message["Subject"] = "Votre document" if kindle else f"Ferry Agent : {filename}"
+    clean_title = " ".join((title or "").split())
+    message["Subject"] = (clean_title or "Votre document") if kindle else f"Ferry Agent : {filename}"
     message["Date"] = formatdate(localtime=False)
     domain = (sender or "").rpartition("@")[2] or "ferry-agent.invalid"
     message["Message-ID"] = make_msgid(domain=domain)
@@ -133,9 +136,9 @@ def _connect() -> smtplib.SMTP:
     return smtp
 
 
-def _send_sync(file_path: str, filename: str, recipient_email: str, kindle: bool) -> str:
+def _send_sync(file_path: str, filename: str, recipient_email: str, kindle: bool, title: str | None = None) -> str:
     settings = get_settings()
-    message = build_message(file_path, filename, recipient_email, kindle=kindle)
+    message = build_message(file_path, filename, recipient_email, kindle=kindle, title=title)
     raw_size = len(message.as_bytes())
     limit = min(settings.smtp_max_message_bytes, settings.amazon_send_to_kindle_max_bytes)
     if raw_size > limit:
@@ -152,13 +155,15 @@ def _send_sync(file_path: str, filename: str, recipient_email: str, kindle: bool
     return f"{settings.smtp_host}:{settings.smtp_port} accepted {message_id}"
 
 
-async def send_file(file_path: str, filename: str, recipient_email: str, kindle: bool = False) -> str | None:
+async def send_file(
+    file_path: str, filename: str, recipient_email: str, kindle: bool = False, *, title: str | None = None
+) -> str | None:
     if not is_configured():
         raise MailerNotConfigured("SMTP non configure (SMTP_HOST/SMTP_USER/SMTP_PASSWORD)")
 
     loop = asyncio.get_running_loop()
     try:
-        result = await loop.run_in_executor(None, _send_sync, file_path, filename, recipient_email, kindle)
+        result = await loop.run_in_executor(None, _send_sync, file_path, filename, recipient_email, kindle, title)
     except Exception:
         logger.exception("envoi email echoue vers %s (kindle=%s, fichier=%s)", recipient_email, kindle, filename)
         raise

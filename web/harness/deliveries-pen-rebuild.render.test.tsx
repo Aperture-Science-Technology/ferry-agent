@@ -62,6 +62,7 @@ function baseJob(overrides: Partial<DeliveryJob> = {}): DeliveryJob {
     method: "email",
     status: "delivered",
     target_format: "epub",
+    terminal: overrides.status === "queued" ? false : (overrides.status ?? "delivered") !== "queued",
     ...overrides,
   };
 }
@@ -116,7 +117,7 @@ describe("UI harness — Pen deliveries composition", () => {
         name: "Ink & Transfer → Kobo Clara",
       })
     ).toBeTruthy();
-    expect(within(rows[1]!).getByText("En cours")).toBeTruthy();
+    expect(within(rows[1]!).getByText("Envoyé — accepté par le relais")).toBeTruthy();
   });
 
   it("uses PageHeader with a single refresh control", () => {
@@ -155,7 +156,7 @@ describe("UI harness — Pen deliveries composition", () => {
     ).toBeTruthy();
     expect(screen.getAllByText("Transfer history").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Delivered").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("In progress").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Sent — accepted by the mail relay").length).toBeGreaterThan(0);
     expect(screen.getByText("History")).toBeTruthy();
     expect(screen.queryByText("Your deliveries")).toBeNull();
   });
@@ -208,7 +209,7 @@ describe("UI harness — Pen deliveries composition", () => {
     });
 
     const hint = screen.getByTestId("deliveries-queue-hint");
-    expect(within(hint).getByText(/2 en cours · 1 échec/)).toBeTruthy();
+    expect(within(hint).getByText(/1 en cours · 1 échec/)).toBeTruthy();
 
     const filters = screen.getByTestId("deliveries-filters");
     fireEvent.click(within(filters).getByRole("button", { name: "Livré" }));
@@ -222,15 +223,15 @@ describe("UI harness — Pen deliveries composition", () => {
 
     fireEvent.click(within(filters).getByRole("button", { name: "En cours" }));
     const activeRows = screen.getAllByTestId("delivery-status-row");
-    expect(activeRows.length).toBe(2);
-    expect(screen.getByText(/Ink & Transfer/)).toBeTruthy();
+    expect(activeRows.length).toBe(1);
+    expect(screen.queryByText(/Ink & Transfer/)).toBeNull();
     expect(screen.getByText(/Catalogues silencieux/)).toBeTruthy();
     expect(
       activeRows.some((row) => within(row).queryByText("Demandé"))
     ).toBe(true);
     expect(
-      activeRows.some((row) => within(row).queryByText("En cours"))
-    ).toBe(true);
+      activeRows.some((row) => within(row).queryByText("Envoyé — accepté par le relais"))
+    ).toBe(false);
     expect(screen.queryByText(/Le Passage du Nord/)).toBeNull();
     expect(screen.queryByText(/Ferry Notes/)).toBeNull();
 

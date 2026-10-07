@@ -2,7 +2,17 @@ import uuid
 from datetime import datetime
 from typing import Annotated, Literal, TypeVar
 
-from pydantic import AliasChoices, BaseModel, BeforeValidator, ConfigDict, EmailStr, Field, RootModel, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    EmailStr,
+    Field,
+    RootModel,
+    computed_field,
+    field_validator,
+)
 from pydantic.json_schema import SkipJsonSchema
 from pydantic_core import PydanticCustomError
 
@@ -366,6 +376,14 @@ class DeliveryOut(BaseModel):
     item_title: str | None = None
     item_author: str | None = None
     device_label: str | None = None
+
+    @computed_field
+    @property
+    def terminal(self) -> bool:
+        """Email acceptance is final; cloud acceptance still needs an upload."""
+        return self.status in (DeliveryStatus.delivered, DeliveryStatus.failed) or (
+            self.status == DeliveryStatus.sent and self.method == DeliveryMethod.email
+        )
 
 
 class DeliveryPreview(BaseModel):

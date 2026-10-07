@@ -41,6 +41,7 @@ def read_api_key() -> str:
 
 
 def read_credentials() -> tuple[str, str]:
+    # entrypoint persists the effective env override before this process starts.
     if not CREDS_FILE.is_file():
         raise SystemExit(f"missing credentials file {CREDS_FILE}")
     username = "ferry"
@@ -50,9 +51,9 @@ def read_credentials() -> tuple[str, str]:
         if not line or line.startswith("#"):
             continue
         if "=" in line:
-            key, value = line.split("=", 1)
+            key, value = raw.split("=", 1)
             key = key.strip().lower()
-            value = value.strip()
+            # Preserve the exact effective secret, including surrounding spaces.
             if key == "username":
                 username = value
             elif key == "password":

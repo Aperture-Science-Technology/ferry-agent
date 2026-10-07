@@ -193,6 +193,12 @@
               }
             ],
             "title": "Target Format"
+          },
+          "terminal": {
+            "description": "Email acceptance is final; cloud acceptance still needs an upload.",
+            "readOnly": true,
+            "title": "Terminal",
+            "type": "boolean"
           }
         },
         "required": [
@@ -202,7 +208,8 @@
           "method",
           "created_at",
           "delivered_at",
-          "error"
+          "error",
+          "terminal"
         ],
         "title": "DeliveryOut",
         "type": "object"

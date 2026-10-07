@@ -25,7 +25,7 @@ Pinned Prowlarr version: `2.5.2.5491` (`ARG PROWLARR_VERSION`).
   `/config/prowlarr-credentials` (`user=ferry`). On first start the
   container logs:
 
-  `Prowlarr UI: http://127.0.0.1:9696 — user=ferry, password stored in /config/prowlarr-credentials`
+  `Prowlarr UI: http://127.0.0.1:9696 — credentials stored in /config/prowlarr-credentials`
 
 - **51413/tcp+udp** — Transmission peer port
 - **9091** — Transmission RPC (bound inside the container; publish only if needed)
@@ -43,3 +43,21 @@ docker run -d --name ferry-gateway --restart unless-stopped \
   -v ferry-gw-state:/state \
   ferry-gw:test
 ```
+
+## Prowlarr credentials and indexers
+
+Set both `PROWLARR_USER` and `PROWLARR_PASSWORD`, or leave both empty.
+For `docker run`, add `-e PROWLARR_USER=ferry -e PROWLARR_PASSWORD=YOUR_PASSWORD`.
+Compose exposes both variables with empty defaults. Explicit values override
+saved credentials on every start and are persisted in `/config/prowlarr-credentials`
+(mode 0600). Without them, saved credentials win; otherwise `ferry` and a random
+password are generated. Line breaks are rejected; spaces and `=` are preserved.
+
+Read the effective credentials without putting secrets in installation logs:
+
+```sh
+docker exec ferry-gateway cat /config/prowlarr-credentials
+```
+
+Open http://127.0.0.1:9696, sign in, and add an indexer in **Indexers**.
+No indexer is shipped; gateway searches stay empty until one is configured.

@@ -12,7 +12,7 @@ from ferry_agent.api.deps import CurrentUser, get_current_user
 from ferry_agent.api.response_contracts import COVER_RESPONSES
 from ferry_agent.db import get_db
 from ferry_agent.models import LibraryItem
-from ferry_agent.services.covers import fetch_cover_to_cache, validate_cover_url
+from ferry_agent.services.covers import embedded_cover, fetch_cover_to_cache, validate_cover_url
 
 router = APIRouter(prefix="/api/v1/covers", tags=["covers"])
 
@@ -30,6 +30,11 @@ async def get_cover(
     item = result.scalar_one_or_none()
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="introuvable")
+
+    local = embedded_cover(item)
+    if local is not None:
+        path, media_type = local
+        return FileResponse(path, media_type=media_type)
 
     cover_url = validate_cover_url(item.cover_url)
     if cover_url is None:

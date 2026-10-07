@@ -194,6 +194,23 @@ export function ByoInstallGuide() {
         </ol>
       </section>
 
+      <section id="ajouter-un-indexeur" className="space-y-4 border-t border-border pt-8">
+        <h2 className="font-heading text-2xl font-medium tracking-tight">{t("indexerTitle")}</h2>
+        <p className="text-muted-foreground">{t("indexerIntro")}</p>
+        <ol className="list-decimal space-y-4 pl-5 text-sm text-muted-foreground">
+          <li>{t("indexerOpen")} <a href="http://127.0.0.1:9696" className="underline underline-offset-4">http://127.0.0.1:9696</a></li>
+          <li>{t("indexerCredentials")}<pre className="mt-2 overflow-x-auto rounded-md bg-muted p-3"><code>docker exec ferry-gateway cat /config/prowlarr-credentials</code></pre></li>
+          <li>{t("indexerAdd")}</li>
+        </ol>
+        <p className="text-sm text-muted-foreground">{t("indexerCustom")}</p>
+      </section>
+
+      <section className="space-y-3 border-t border-border pt-8">
+        <h2 className="font-heading text-2xl font-medium tracking-tight">{t("kindleTitle")}</h2>
+        <p className="text-muted-foreground">{t("kindleBody")}</p>
+        <a href="https://www.amazon.com/mycd" target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4">amazon.com/mycd</a>
+      </section>
+
       <section className="space-y-3 border-t border-border pt-8">
         <h2 className="font-heading text-2xl font-medium tracking-tight">
           {t("afterTitle")}
