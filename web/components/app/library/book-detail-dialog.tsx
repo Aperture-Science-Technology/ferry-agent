@@ -1,5 +1,6 @@
 "use client";
 
+import { deliveryStatusLabelKey } from "@/components/app/deliveries/deliveries-state";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Pencil, Send, Trash2 } from "lucide-react";
@@ -228,7 +229,7 @@ export function BookDetailDialog({
                         </span>
                       </span>
                       <Badge variant={STATUS_VARIANT[job.status]}>
-                        {tDeliveries(`statuses.${job.status}`)}
+                        {tDeliveries(`statuses.${deliveryStatusLabelKey(job)}`)}
                       </Badge>
                       <span className="shrink-0 text-muted-foreground">
                         {formatAppDate(job.delivered_at ?? job.created_at, locale)}

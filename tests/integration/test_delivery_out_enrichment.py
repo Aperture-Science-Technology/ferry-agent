@@ -86,3 +86,17 @@ async def test_list_deliveries_keeps_historical_title_after_book_delete(
     assert body["device_label"] == "Kindle salon"
     assert body["status"] == "delivered"
     assert body["library_item_id"] is None
+
+
+    # Additive API semantics: accepted email is terminal, pending cloud upload is not.
+    await db_session.refresh(job)
+    job.status = DeliveryStatus.sent
+    await db_session.commit()
+    email = await client.get(f"/api/v1/deliveries/{job.id}")
+    assert email.json()["terminal"] is True
+    assert email.json()["status"] == "sent"
+    job.method = DeliveryMethod.drive
+    await db_session.commit()
+    cloud = await client.get(f"/api/v1/deliveries/{job.id}")
+    assert cloud.json()["terminal"] is False
+    assert cloud.json()["status"] == "sent"

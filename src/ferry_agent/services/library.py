@@ -8,7 +8,9 @@ lors d'une livraison, cf. `api/deliveries.py`).
 """
 
 import logging
+import re
 import shutil
+import unicodedata
 import uuid
 from pathlib import Path
 
@@ -19,10 +21,44 @@ from ferry_agent.config import get_settings
 from ferry_agent.connectors import Result
 from ferry_agent.connectors.registry import get_connector
 from ferry_agent.models import LibraryItem, Source, SourceType
+from ferry_agent.services.book_metadata import clean_release_title, extract_epub, extract_pdf, is_release_title
 from ferry_agent.services.covers import validate_cover_url
 from ferry_agent.services.errors import QUOTA_EXCEEDED_MESSAGE, QuotaExceededError
 
 logger = logging.getLogger(__name__)
+
+
+def user_facing_filename(item: LibraryItem, target_format: str) -> str:
+    """Deterministic public name; storage and conversion paths remain private."""
+    def clean(value: str | None) -> str:
+        value = ''.join(' ' if c.isspace() else c for c in (value or ''))
+        value = ''.join(c for c in value if c not in '/\\' and not unicodedata.category(c).startswith('C'))
+        return ' '.join(value.split()).strip(' .')
+
+    title, author = clean(item.title), clean(item.author)
+    stem = f'{author} - {title}' if title and author else title or 'Document'
+    extension = re.sub(r'[^a-z0-9]', '', target_format.lower())[:10] or 'epub'
+    return f'{stem[:119 - len(extension)].rstrip(" .")}.{extension}'
+
+
+def enrich_from_file(item: LibraryItem, *, fallback_title: bool = False) -> None:
+    """Fill empty metadata; a release-name placeholder is not a curated title."""
+    fields, cover = {}, None
+    if item.original_format.lower() == "epub":
+        fields, cover = extract_epub(Path(item.storage_path))
+    elif item.original_format.lower() == "pdf":
+        fields = extract_pdf(Path(item.storage_path))
+    if fallback_title or not (item.title or '').strip():
+        item.title = fields.get('title') or clean_release_title(item.title or '') or item.title
+    for name, value in fields.items():
+        current = getattr(item, name)
+        if name != 'title' and (not current or isinstance(current, str) and not current.strip()):
+            setattr(item, name, value)
+    if cover and not item.cover_url:
+        content, extension = cover
+        Path(item.storage_path + '.cover' + extension).write_bytes(content)
+        item.id = item.id or uuid.uuid4()
+        item.cover_url = f'/api/v1/covers/{item.id}'
 
 
 async def used_storage_bytes(db: AsyncSession, user_id: uuid.UUID) -> int:
@@ -132,11 +168,16 @@ async def import_from_connector(
         language=metadata.get("language") or None,
         page_count=metadata.get("page_count") or None,
         isbn=metadata.get("isbn") or None,
+        publisher=metadata.get("publisher") or None,
+        published_year=metadata.get("published_year") or None,
         source_id=source.id,
         source_ref=source_ref,
         original_format=dest.suffix.lstrip(".") or "epub",
         storage_path=str(dest),
         size_bytes=dest.stat().st_size,
+    )
+    enrich_from_file(
+        item, fallback_title=not bool(metadata.get("title")) or is_release_title(item.title)
     )
     db.add(item)
     await db.commit()
@@ -173,6 +214,7 @@ async def import_from_upload(
         storage_path=str(dest),
         size_bytes=len(content),
     )
+    enrich_from_file(item, fallback_title=not bool(title))
     db.add(item)
     await db.commit()
     await db.refresh(item)
@@ -217,11 +259,16 @@ async def import_from_gateway(
         language=metadata.get("language") or None,
         page_count=metadata.get("page_count") or None,
         isbn=metadata.get("isbn") or None,
+        publisher=metadata.get("publisher") or None,
+        published_year=metadata.get("published_year") or None,
         source_id=source.id,
         source_ref=source_ref,
         original_format=detected_format,
         storage_path=str(dest),
         size_bytes=len(content),
+    )
+    enrich_from_file(
+        item, fallback_title=not bool(metadata.get("title")) or is_release_title(item.title)
     )
     db.add(item)
     await db.commit()
@@ -240,6 +287,8 @@ async def delete_library_item(db: AsyncSession, item: LibraryItem) -> None:
         path.unlink(missing_ok=True)
     else:
         logger.warning("fichier introuvable lors de la suppression: %s", path)
+    for extension in (".png", ".jpg"):
+        Path(item.storage_path + ".cover" + extension).unlink(missing_ok=True)
     await db.delete(item)
     await db.commit()
 

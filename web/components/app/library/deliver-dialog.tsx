@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EmailDeliveryNotice } from "@/components/app/deliveries/delivery-feedback";
+import { deliveryStatusLabelKey } from "@/components/app/deliveries/deliveries-state";
 import { ApiError, useApiClient } from "@/lib/api-client";
 import type { Device, DeliveryJob, DeliveryMethod, LibraryItem, MethodAvailability } from "@/lib/types";
 
@@ -149,6 +151,7 @@ export function DeliverDialog({
   onOpenChange: (open: boolean) => void;
   onDelivered?: (job: DeliveryJob) => void;
 }) {
+  const tDeliveries = useTranslations("deliveries");
   const t = useTranslations("deliverDialog");
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
@@ -201,7 +204,7 @@ export function DeliverDialog({
           description: job.download_url,
         });
       } else {
-        toast.success(t("toastStarted", { status: job.status }));
+        toast.success(t("toastStarted", { status: tDeliveries(`statuses.${deliveryStatusLabelKey(job)}`) }));
       }
       onDelivered?.(job);
       onOpenChange(false);
@@ -277,6 +280,7 @@ export function DeliverDialog({
             </Select>
           </div>
         </div>
+        {method === "email" ? <EmailDeliveryNotice /> : null}
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             {tCommon("cancel")}

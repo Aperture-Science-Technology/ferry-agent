@@ -1,5 +1,7 @@
 "use client";
 
+import { DeliveryFeedback } from "@/components/app/deliveries/delivery-feedback";
+import type { DeliveryJob } from "@/lib/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -192,6 +194,7 @@ export function LibraryView({
   const [pendingJobs, setPendingJobs] = useState<Record<string, string>>({});
   const [items, setItems] = useState(initialItems);
   const [detailItem, setDetailItem] = useState<LibraryItem | null>(null);
+  const [lastDelivery, setLastDelivery] = useState<DeliveryJob | null>(null);
   const [deliverItem, setDeliverItem] = useState<LibraryItem | null>(null);
   const [pendingDelete, setPendingDelete] = useState<LibraryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -736,6 +739,10 @@ export function LibraryView({
         </div>
       )}
 
+      {lastDelivery?.method === "email" ? (
+        <DeliveryFeedback method="email" title={t("emailRequested")} />
+      ) : null}
+
       {showUnavailable ? (
         <LibraryFeedbackError
           title={t("emptyUnavailableTitle")}
@@ -962,7 +969,8 @@ export function LibraryView({
         item={deliverItem}
         devices={devices}
         onOpenChange={(open) => !open && setDeliverItem(null)}
-        onDelivered={() => {
+        onDelivered={(job) => {
+          setLastDelivery(job);
           setDeliverItem(null);
         }}
       />

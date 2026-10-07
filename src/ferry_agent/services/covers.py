@@ -160,3 +160,14 @@ def _guess_media_type(suffix: str) -> str:
         ".webp": "image/webp",
         ".svg": "image/svg+xml",
     }.get(suffix.lower(), "application/octet-stream")
+
+
+def embedded_cover(item) -> tuple[Path, str] | None:
+    """Only our item-specific marker resolves to a local sidecar, never an arbitrary URL/path."""
+    if item.cover_url != f"/api/v1/covers/{item.id}":
+        return None
+    for extension in (".png", ".jpg"):
+        path = Path(item.storage_path + ".cover" + extension)
+        if path.is_file():
+            return path, _guess_media_type(extension)
+    return None

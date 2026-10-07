@@ -21,7 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ferry_agent.api.deps import hash_secret
 from ferry_agent.config import get_settings
 from ferry_agent.models import LibraryItem, OpdsToken
+from ferry_agent.services.covers import embedded_cover
 from ferry_agent.services.file_validation import content_type_for_filename
+from ferry_agent.services.library import user_facing_filename
 
 ATOM_NS = "http://www.w3.org/2005/Atom"
 OPDS_NS = "http://opds-spec.org/2010/catalog"
@@ -244,7 +246,7 @@ def _acquisition_entry(feed: ET.Element, item: LibraryItem, token: str) -> None:
         pub = ET.SubElement(entry, f"{{{DCTERMS_NS}}}publisher")
         pub.text = item.publisher
 
-    filename = item.storage_path.rsplit("/", 1)[-1] if item.storage_path else f"book.{item.original_format}"
+    filename = user_facing_filename(item, item.original_format)
     media_type = content_type_for_filename(filename)
     _link(
         entry,
@@ -254,7 +256,8 @@ def _acquisition_entry(feed: ET.Element, item: LibraryItem, token: str) -> None:
         title="Télécharger",
     )
     if item.cover_url:
-        image_type = _cover_media_type(item.cover_url)
+        local_cover = embedded_cover(item)
+        image_type = local_cover[1] if local_cover else _cover_media_type(item.cover_url)
         _link(
             entry,
             rel="http://opds-spec.org/image",
@@ -279,7 +282,7 @@ def _pagination_links(
     query_extra: dict[str, str] | None = None,
 ) -> None:
     """Ajoute rel=next/previous selon page courante."""
-    from urllib.parse import urlsplit, urlunsplit, parse_qsl
+    from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
     parts = urlsplit(self_href)
     base_qs = dict(parse_qsl(parts.query, keep_blank_values=True))

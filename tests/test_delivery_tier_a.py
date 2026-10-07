@@ -85,7 +85,7 @@ def make_job(**overrides) -> DeliveryJob:
 async def test_deliver_tier_a_sends_native_format_and_marks_delivered(monkeypatch: pytest.MonkeyPatch) -> None:
     sent = {}
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent.update(file_path=file_path, filename=filename, recipient_email=recipient_email, kindle=kindle)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -114,7 +114,7 @@ async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
     """default_format=mobi (legacy) → EPUB pour Send-to-Kindle (Amazon 2023)."""
     sent = {}
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent.update(file_path=file_path, filename=filename)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -130,7 +130,7 @@ async def test_deliver_tier_a_converts_epub_to_mobi_for_kindle_default_format(
     await delivery._deliver_tier_a(db, job, item, device, user)
 
     assert sent["filename"].endswith(".epub")
-    assert sent["filename"] == "book.epub"
+    assert sent["filename"] == "Herbert - Dune.epub"
     assert job.target_format == "epub"
     assert job.status == DeliveryStatus.sent
     assert job.delivered_at is None
@@ -154,7 +154,7 @@ async def test_deliver_tier_a_cleans_mobi_derivative_from_library_storage(
         out.write_bytes(b"fake-mobi-content")
         return str(out)
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         assert Path(file_path).exists()
         return "smtp.test:587 accepted <msg@test>"
 
@@ -183,7 +183,7 @@ async def test_deliver_tier_a_converts_requested_format_even_if_brand_is_not_kin
     """mobi demande (legacy) → EPUB, meme si la marque n'est pas Kindle."""
     sent = {}
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent.update(file_path=file_path, filename=filename)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -198,7 +198,7 @@ async def test_deliver_tier_a_converts_requested_format_even_if_brand_is_not_kin
 
     await delivery._deliver_tier_a(db, job, item, device, user, requested_format="mobi")
 
-    assert sent["filename"] == "book.epub"
+    assert sent["filename"] == "Herbert - Dune.epub"
     assert job.status == DeliveryStatus.sent
     assert job.delivered_at is None
     assert job.relay_response
@@ -215,7 +215,7 @@ async def test_deliver_tier_a_converts_epub_to_pdf_when_requested(
         converted["called_with"] = epub_path
         return str(Path(epub_path).with_suffix(".pdf"))
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent.update(file_path=file_path, filename=filename)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -232,7 +232,7 @@ async def test_deliver_tier_a_converts_epub_to_pdf_when_requested(
     await delivery._deliver_tier_a(db, job, item, device, user, requested_format="pdf")
 
     assert converted["called_with"] == item.storage_path
-    assert sent["filename"] == "book.pdf"
+    assert sent["filename"] == "Herbert - Dune.pdf"
     assert job.status == DeliveryStatus.sent
     assert job.delivered_at is None
     assert job.relay_response
@@ -248,7 +248,7 @@ async def test_deliver_tier_a_fails_when_requested_format_cannot_be_produced(
     async def raising_to_epub(*_args, **_kwargs):
         raise RuntimeError("ebook-convert indisponible: conversion vers EPUB impossible")
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent.update(file_path=file_path, filename=filename)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -291,7 +291,7 @@ async def test_deliver_tier_a_prefers_device_email_over_profile(
 ) -> None:
     sent = {}
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent.update(recipient_email=recipient_email)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -315,7 +315,7 @@ async def test_deliver_tier_a_falls_back_to_profile_kindle_email(
 ) -> None:
     sent = {}
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent.update(recipient_email=recipient_email)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -339,7 +339,7 @@ async def test_deliver_tier_a_rejects_non_kindle_recipient_without_send(
 ) -> None:
     sent = {}
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent.update(recipient_email=recipient_email)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -403,7 +403,7 @@ async def test_deliver_tier_a_fails_when_calibre_unavailable_no_pdf_fallback(
     async def raising_to_epub(*_args, **_kwargs):
         raise RuntimeError("ebook-convert indisponible: conversion vers EPUB impossible")
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent.update(file_path=file_path, filename=filename)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -464,7 +464,7 @@ async def test_deliver_tier_a_never_sends_legacy_format(monkeypatch: pytest.Monk
     legacy_suffixes = (".mobi", ".azw", ".azw3", ".prc")
     sent_filenames: list[str] = []
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent_filenames.append(filename)
         return "smtp.test:587 accepted <msg@test>"
 
@@ -493,7 +493,7 @@ async def test_deliver_tier_a_never_sends_legacy_format(monkeypatch: pytest.Monk
 async def test_deliver_routes_tier_a_via_full_lookup(monkeypatch: pytest.MonkeyPatch) -> None:
     sent = {}
 
-    async def fake_send_file(file_path, filename, recipient_email, kindle=False):
+    async def fake_send_file(file_path, filename, recipient_email, kindle=False, *, title=None):
         sent["kindle"] = kindle
         return "smtp.test:587 accepted <msg@test>"
 

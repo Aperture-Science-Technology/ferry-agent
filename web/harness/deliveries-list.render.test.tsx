@@ -63,6 +63,7 @@ function baseJob(overrides: Partial<DeliveryJob> = {}): DeliveryJob {
     method: "email",
     status: "queued",
     target_format: "epub",
+    terminal: overrides.status === "queued" ? false : (overrides.status ?? "queued") !== "queued",
     ...overrides,
   };
 }

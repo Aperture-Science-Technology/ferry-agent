@@ -15,12 +15,14 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   isActiveDeliveryStatus,
+  deliveryStatusLabelKey,
   mergeDeliveryJobs,
   normalizeDeliveryStatus,
 } from "@/components/app/deliveries/deliveries-state";
 import {
   DeliveryEmpty,
   DeliveryFeedback,
+  EmailDeliveryNotice,
 } from "@/components/app/deliveries/delivery-feedback";
 import { DeliveryStatusBadge } from "@/components/app/deliveries/delivery-status-badge";
 import { useApiClient } from "@/lib/api-client";
@@ -107,7 +109,7 @@ export function DeliveryDetailDialog({
 
   useEffect(() => {
     if (!jobId || !displayJob) return;
-    if (!isActiveDeliveryStatus(displayJob.status)) {
+    if (!isActiveDeliveryStatus(displayJob)) {
       pollStartedAt.current = null;
       return;
     }
@@ -142,10 +144,8 @@ export function DeliveryDetailDialog({
     setRetrying(false);
   }
 
-  function statusLabel(status: string) {
-    const normalized = normalizeDeliveryStatus(status);
-    if (normalized === "unknown") return tDeliveries("statuses.unknown");
-    return tDeliveries(`statuses.${normalized}`);
+  function statusLabel(job: DeliveryJob) {
+    return tDeliveries(`statuses.${deliveryStatusLabelKey(job)}`);
   }
 
   const normalizedStatus = displayJob
@@ -212,7 +212,7 @@ export function DeliveryDetailDialog({
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <DeliveryStatusBadge
                   status={displayJob.status}
-                  label={statusLabel(displayJob.status)}
+                  label={statusLabel(displayJob)}
                 />
                 {displayJob.target_format ? (
                   <span className="text-xs tracking-wide text-muted-foreground uppercase">
@@ -230,7 +230,7 @@ export function DeliveryDetailDialog({
                 </p>
               ) : normalizedStatus === "sent" ? (
                 <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
-                  {t("statusHintSent")}
+                  {displayJob.method === "email" ? tDeliveries("statusHintSentEmail") : t("statusHintSent")}
                 </p>
               ) : normalizedStatus === "unknown" ? (
                 <p className="text-xs leading-relaxed break-words whitespace-normal text-muted-foreground">
@@ -238,6 +238,8 @@ export function DeliveryDetailDialog({
                 </p>
               ) : null}
             </div>
+
+            {displayJob.method === "email" ? <EmailDeliveryNotice /> : null}
 
             <dl className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,8rem)_1fr] sm:gap-x-4 sm:gap-y-2">
               <div className="min-w-0 sm:contents">

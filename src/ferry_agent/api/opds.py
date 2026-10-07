@@ -22,8 +22,9 @@ from ferry_agent.db import get_db
 from ferry_agent.models import LibraryItem, OpdsToken
 from ferry_agent.schemas import OpdsTokenCreate, OpdsTokenCreated, OpdsTokenOut, OpdsTokenRevoke
 from ferry_agent.services import opds as opds_service
-from ferry_agent.services.covers import fetch_cover_to_cache, validate_cover_url
+from ferry_agent.services.covers import embedded_cover, fetch_cover_to_cache, validate_cover_url
 from ferry_agent.services.file_validation import content_type_for_filename
+from ferry_agent.services.library import user_facing_filename
 from ferry_agent.services.rate_limit import opds_rate_limiter
 
 catalog_router = APIRouter(prefix="/opds", tags=["opds"])
@@ -307,7 +308,7 @@ async def opds_download(
     item = result.scalar_one_or_none()
     if item is None or not item.storage_path or not Path(item.storage_path).is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="introuvable")
-    filename = Path(item.storage_path).name
+    filename = user_facing_filename(item, item.original_format)
     return FileResponse(
         item.storage_path,
         media_type=content_type_for_filename(filename),
@@ -334,6 +335,10 @@ async def opds_cover(
     item = result.scalar_one_or_none()
     if item is None or not item.cover_url:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="introuvable")
+    local = embedded_cover(item)
+    if local is not None:
+        path, media_type = local
+        return FileResponse(path, media_type=media_type)
     cover = item.cover_url
     if cover.startswith("http://") or cover.startswith("https://"):
         cover_url = validate_cover_url(cover)
