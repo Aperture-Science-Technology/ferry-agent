@@ -1285,6 +1285,31 @@ async def test_plan_delivery_resolves_format_and_methods(monkeypatch) -> None:
 # diagnose
 # ---------------------------------------------------------------------------
 
+@pytest.mark.parametrize("identity,gateways", [
+    ("user_abc", []),
+    ("reader@example.test", [{"id": "g1", "online": False}]),
+])
+async def test_diagnose_identity_and_gateway_presence(monkeypatch, identity, gateways):
+    from ferry_mcp import server
+
+    def handler(req):
+        if req.url.path == "/api/v1/users/me":
+            return httpx.Response(200, json={"email": identity})
+        if req.url.path == "/api/v1/mail/settings":
+            return httpx.Response(200, json={"configured": False})
+        if req.url.path == "/api/v1/gateways":
+            return httpx.Response(200, json=gateways)
+        return httpx.Response(200, json=[])
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+    result = await server.diagnose()
+    assert result.splitlines()[0] == f"Compte connecté : {identity}"
+    assert ("aucune gateway sur ce compte" in result) == (not gateways)
+    if gateways:
+        assert "Gateways sur ce compte : 1" in result
+    print("\n".join(result.splitlines()[:2]))
+
+
 @pytest.mark.asyncio
 async def test_diagnose_aggregates_profile_mail_devices_failed(monkeypatch) -> None:
     from ferry_mcp import server
@@ -1294,6 +1319,8 @@ async def test_diagnose_aggregates_profile_mail_devices_failed(monkeypatch) -> N
     def handler(req: httpx.Request) -> httpx.Response:
         captured.append(req)
         path = req.url.path
+        if path == "/api/v1/gateways":
+            return httpx.Response(200, json=[])
         if path == "/api/v1/users/me":
             return httpx.Response(
                 200,
@@ -1369,6 +1396,8 @@ async def test_diagnose_aggregates_profile_mail_devices_failed(monkeypatch) -> N
     monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
 
     result = await server.diagnose()
+    assert result.splitlines()[0] == "Compte connecté : u@example.com"
+    assert "aucune gateway sur ce compte" in result
 
     paths = [c.url.path for c in captured]
     assert "/api/v1/users/me" in paths

@@ -37,21 +37,14 @@ def forge_core_assertion(*, claims: dict[str, Any], subject: str | None, private
     """Signe une assertion courte pour le cœur à partir des claims OAuth vérifiés.
 
     Raises:
-        RuntimeError: identité incomplète (email ou sub manquant) — ne signe jamais.
+        RuntimeError: identité incomplète (sub manquant) — ne signe jamais.
         ValueError: clé privée absente ou illisible.
     """
     email = (claims or {}).get("email")
-    if not isinstance(email, str) or not email.strip():
-        raise RuntimeError(
-            "Identité OAuth incomplète : email manquant après introspection/userinfo. "
-            "Reconnectez-vous avec le scope `email`, puis réessayez. "
-            "Aucune assertion n'a été émise."
-        )
     sub = (claims or {}).get("sub") or subject
     if not isinstance(sub, str) or not sub.strip():
         raise RuntimeError(
-            "Identité OAuth incomplète : sub manquant. "
-            "Reconnectez-vous, puis réessayez. Aucune assertion n'a été émise."
+            "Votre compte n'a pas pu être identifié. Reconnectez-vous, puis réessayez."
         )
 
     private_pem = load_private_key_pem(private_key_b64)
@@ -60,11 +53,12 @@ def forge_core_assertion(*, claims: dict[str, Any], subject: str | None, private
         "iss": ASSERTION_ISSUER,
         "aud": ASSERTION_AUDIENCE,
         "sub": sub.strip(),
-        "email": email.strip(),
         "iat": now,
         "exp": now + ASSERTION_TTL_SECONDS,
         "jti": secrets.token_urlsafe(16),
     }
+    if isinstance(email, str) and email.strip():
+        payload["email"] = email.strip()
     if ASSERTION_TTL_SECONDS > ASSERTION_MAX_TTL_SECONDS:
         raise RuntimeError("TTL d'assertion interne invalide (> 300 s)")
 

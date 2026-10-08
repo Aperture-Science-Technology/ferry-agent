@@ -7,6 +7,7 @@ n'exige pas de convertir a l'import : la conversion a lieu a la demande,
 lors d'une livraison, cf. `api/deliveries.py`).
 """
 
+import asyncio
 import logging
 import re
 import shutil
@@ -302,13 +303,16 @@ async def search_all(query: str, *, exclude: set[str] | None = None) -> list[Res
     from ferry_agent.connectors.registry import get_search_connectors
 
     exclude = exclude or set()
-    results: list[Result] = []
-    for connector in get_search_connectors():
+    async def search_connector(connector) -> list[Result]:
         name = getattr(connector, "name", connector)
-        if name in exclude:
-            continue
         try:
-            results.extend(await connector.search(query))
+            return await connector.search(query)
         except Exception as exc:
             logger.warning("recherche echouee pour le connecteur %s: %s", name, exc)
-    return results
+            return []
+
+    batches = await asyncio.gather(
+        *(search_connector(connector) for connector in get_search_connectors()
+          if getattr(connector, "name", connector) not in exclude)
+    )
+    return [result for batch in batches for result in batch]

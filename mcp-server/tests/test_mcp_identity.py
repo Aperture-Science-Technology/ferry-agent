@@ -180,10 +180,10 @@ def test_resolve_user_token_fallback_without_private_key(monkeypatch) -> None:
     assert server._resolve_user_token() == "clerk-upstream-token-xyz"
 
 
-def test_resolve_user_token_incomplete_identity_no_email(monkeypatch) -> None:
+def test_resolve_user_token_signs_identity_without_email(monkeypatch) -> None:
     from ferry_mcp import server
 
-    private_b64, _, _ = _ed25519_pair_b64()
+    private_b64, _, public_pem = _ed25519_pair_b64()
     _enable_auth(monkeypatch, mcp_core_assertion_private_key_b64=private_b64)
     monkeypatch.setattr(
         server,
@@ -195,8 +195,21 @@ def test_resolve_user_token_incomplete_identity_no_email(monkeypatch) -> None:
         ),
     )
 
-    with pytest.raises(RuntimeError, match="email manquant"):
-        server._resolve_user_token()
+    token = server._resolve_user_token()
+    payload = jwt.decode(token, public_pem, algorithms=["EdDSA"], audience=ASSERTION_AUDIENCE,
+                         issuer=ASSERTION_ISSUER)
+    assert payload["sub"] == "user_abc"
+    assert "email" not in payload
+    assert payload["exp"] - payload["iat"] == 120
+
+
+def test_missing_subject_never_signs_even_with_email():
+    from ferry_mcp.assertion import forge_core_assertion
+
+    private_b64, _, _ = _ed25519_pair_b64()
+    with pytest.raises(RuntimeError, match="compte n'a pas pu être identifié"):
+        forge_core_assertion(claims={"email": "reader@example.test"}, subject=None,
+                             private_key_b64=private_b64)
 
 
 # ---------------------------------------------------------------------------

@@ -198,21 +198,10 @@ async def search_books(
     db: AsyncSession = Depends(get_db),
 ) -> list[ResultOut]:
     scope = payload.scope or ["legal", "gateways"]
-    results = []
-    if "legal" in scope:
-        disabled_result = await db.execute(
-            select(Source.type).where(
-                Source.user_id == user.id,
-                Source.type.in_((SourceType.gutenberg, SourceType.standard_ebooks)),
-                Source.enabled.is_(False),
-            )
-        )
-        exclude = {source_type.value for source_type in disabled_result.scalars().all()}
-        results.extend(await library.search_all(payload.query, exclude=exclude))
-
     gateways = []
+    jobs = []
+    settings = get_settings()
     if "gateways" in scope or any(value.startswith("gateway:") for value in scope):
-        settings = get_settings()
         gateways = await gateway_service.online_gateways(
             db, user.id, settings.gateway_online_seconds
         )
@@ -233,7 +222,26 @@ async def search_books(
             )
             for gateway in gateways
         ]
-        deadline = asyncio.get_running_loop().time() + settings.gateway_search_wait_seconds
+
+    deadline = asyncio.get_running_loop().time() + settings.gateway_search_wait_seconds
+    exclude = set()
+    if "legal" in scope:
+        disabled_result = await db.execute(
+            select(Source.type).where(
+                Source.user_id == user.id,
+                Source.type.in_((SourceType.gutenberg, SourceType.standard_ebooks)),
+                Source.enabled.is_(False),
+            )
+        )
+        exclude = {source_type.value for source_type in disabled_result.scalars().all()}
+
+    async def search_legal() -> list[Result]:
+        if "legal" not in scope:
+            return []
+        return await library.search_all(payload.query, exclude=exclude)
+
+    async def wait_gateway_results() -> list[Result]:
+        results = []
         while jobs and asyncio.get_running_loop().time() < deadline:
             for job in jobs:
                 await db.refresh(job)
@@ -243,6 +251,10 @@ async def search_books(
         for job in jobs:
             if job.status == GatewayJobStatus.done:
                 results.extend(Result.model_validate(item) for item in job.payload.get("results", []))
+        return results
+
+    legal_results, gateway_results = await asyncio.gather(search_legal(), wait_gateway_results())
+    results = legal_results + gateway_results
 
     owned_result = await db.execute(
         select(LibraryItem, Source.type)
