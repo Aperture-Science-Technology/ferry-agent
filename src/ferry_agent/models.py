@@ -88,13 +88,12 @@ class GatewayJobStatus(str, enum.Enum):
 
 class User(Base):
     __tablename__ = "users"
-    # unique=True + index=True fusionnerait en un UNIQUE INDEX `ix_users_email`,
-    # alors que 0001 cree une UniqueConstraint (`users_email_key`) ET un index
-    # non unique `ix_users_email`. On declare les deux pour coller aux migrations.
+    # 0018 retire l'unicite de l'email ; l'index de recherche de 0001 est conserve.
     __table_args__ = (Index("ix_users_email", "email"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    email: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String, nullable=False)
+    clerk_sub: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
     kindle_email: Mapped[str | None] = mapped_column(String, nullable=True)
     default_format: Mapped[str] = mapped_column(String, default="epub", nullable=False)
@@ -193,7 +192,7 @@ class ShortCode(Base):
     """Code court de telechargement pour le mini-catalogue HTTP tier C."""
 
     __tablename__ = "short_codes"
-    # Meme ecart unique+index que User.email : 0003 cree UniqueConstraint("code")
+    # 0003 cree UniqueConstraint("code")
     # et l'index non unique `ix_short_codes_code`.
     __table_args__ = (Index("ix_short_codes_code", "code"),)
 

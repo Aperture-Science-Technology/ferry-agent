@@ -167,3 +167,12 @@ async def test_different_issuer_rejected(monkeypatch: pytest.MonkeyPatch, rsa_ke
         )
     assert exc.value.status_code == 401
     assert "issuer" in exc.value.detail.lower()
+
+
+async def test_missing_sub_keeps_legacy_email_resolution(monkeypatch, rsa_keys):
+    private, public = rsa_keys
+    now = int(time.time())
+    token = jwt.encode({"email": "u@example.test", "iss": CLERK_ISSUER,
+                        "iat": now, "exp": now + 120}, private, algorithm="RS256")
+    current = await _call_get_current_user(monkeypatch, token=token, public_pem=public)
+    assert current.email == "u@example.test"
