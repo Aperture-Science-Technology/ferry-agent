@@ -450,6 +450,43 @@ async def test_add_to_library_gateway_async_hints_followup(monkeypatch) -> None:
     assert "get_gateway_job" in result
 
 
+@pytest.mark.asyncio
+async def test_gateway_display_handle_search_to_add_roundtrip(monkeypatch) -> None:
+    import json
+
+    from ferry_mcp import server
+
+    source = "gateway:11111111-1111-1111-1111-111111111111"
+    handle = "69ecfc423097b6424eb95a1cd1e2af07"
+    display = {
+        "source": source, "result_id": handle, "title": "Auteur.-.Titre.FRENCH.[EPUB]-NOTAG",
+        "author": "Auteur", "format": "epub", "size_bytes": 123456, "seeders": 83, "owned": False,
+    }
+    captured = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/api/v1/books/search":
+            return httpx.Response(200, json=[display])
+        assert req.url.path == "/api/v1/books"
+        captured.append(json.loads(req.content))
+        return httpx.Response(202, json={"gateway_job_id": "handle-job", "status": "pending"})
+
+    monkeypatch.setattr(server, "_client", lambda token=None: _mock_client(handler))
+    search = await server.search_library("Titre")
+    selected = search.structured_content["results"][0]
+    assert selected == display
+    text = "\n".join(block.text for block in search.content)
+    assert source in text
+    assert display["title"] in text
+    assert handle in text
+    added = await server.add_to_library(source, handle, result=selected)
+    assert captured == [{"source": source, "result_id": handle, "result": display}]
+    serialized = json.dumps(captured)
+    assert all(value not in serialized for value in ("apikey=", "c411.org", "magnet:", "http://", "https://"))
+    assert "handle-job" in added
+    assert "get_gateway_job" in added
+
+
 # ---------------------------------------------------------------------------
 # get_delivery_status
 # ---------------------------------------------------------------------------

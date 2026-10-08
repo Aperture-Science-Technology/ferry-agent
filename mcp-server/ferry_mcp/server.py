@@ -424,8 +424,10 @@ async def add_to_library(source: str, result_id: str, result: dict[str, Any] | N
 
     Args:
         source: Identifiant de la source (ex: "gutenberg", "gateway:<uuid>").
-        result_id: Identifiant du résultat retourné par search_library.
-        result: Résultat structuré complet choisi dans search_library (obligatoire).
+        result_id: Référence retournée par search_library, à transmettre telle quelle.
+        result: Vue d'affichage choisie dans search_library (obligatoire, avec son titre).
+                Pour une gateway, elle contient une référence opaque, sans lien de
+                téléchargement ; le serveur retrouve lui-même le résultat d'origine.
 
     Returns:
         library_item_id créé, ou gateway_job_id si l'ajout est asynchrone (gateway).
