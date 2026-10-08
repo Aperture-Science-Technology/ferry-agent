@@ -3,6 +3,7 @@ import json
 import logging
 import mimetypes
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -21,11 +22,34 @@ from .archives import (
     pick_largest_ebook,
 )
 from .config import Settings
-from .prowlarr import ProwlarrClient
+from .prowlarr import DownloadReferenceError, ProwlarrClient
 from .transmission import TransmissionClient
 from .virustotal import VirusTotalClient, VirusTotalThreatError
 
 logger = logging.getLogger("ferry-gateway-agent")
+
+
+class _PrivateURLFilter(logging.Filter):
+    """Also protect Transmission tracker warnings and httpx request logging."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        message = re.sub(r"https?://[^\s<>\"']+", "[adresse masquée]", message, flags=re.IGNORECASE)
+        if re.search(r"api[-_]?key", message, flags=re.IGNORECASE):
+            message = "Message contenant une clé privée masqué."
+        record.msg = message
+        record.args = ()
+        # Exception strings may contain URLs or entire private response bodies.
+        # Keep their type for diagnostics, never their arbitrary text/traceback.
+        if record.exc_info:
+            record.msg += f" ({record.exc_info[0].__name__})"
+            record.exc_info = None
+            record.exc_text = None
+        return True
+
+
+logger.addFilter(_PrivateURLFilter())
+logging.getLogger("httpx").addFilter(_PrivateURLFilter())
 
 
 def _is_terminal_failure(error: BaseException) -> bool:
@@ -79,9 +103,7 @@ class GatewayAgent:
             body = json.loads(self.settings.state_path.read_text(encoding="utf-8"))
             if isinstance(body, dict):
                 return {
-                    key: str(value)
-                    for key, value in body.items()
-                    if key in {"gateway_id", "gateway_key"} and value
+                    key: str(value) for key, value in body.items() if key in {"gateway_id", "gateway_key"} and value
                 }
         except FileNotFoundError:
             pass
@@ -121,13 +143,9 @@ class GatewayAgent:
             self._write_heartbeat()
             return
         if not self.settings.pairing_token:
-            raise RuntimeError(
-                "Set PAIRING_TOKEN for first use, or GATEWAY_ID and GATEWAY_KEY"
-            )
+            raise RuntimeError("Set PAIRING_TOKEN for first use, or GATEWAY_ID and GATEWAY_KEY")
         if not self.gateway_key:
-            raise RuntimeError(
-                "GATEWAY_KEY must accompany PAIRING_TOKEN on first use"
-            )
+            raise RuntimeError("GATEWAY_KEY must accompany PAIRING_TOKEN on first use")
 
         response = await self.platform.post(
             f"{self.settings.platform_url}/api/v1/gateways/pair",
@@ -149,8 +167,7 @@ class GatewayAgent:
         if response.status_code in {404, 409}:
             detail = response.text.strip() or "no detail"
             raise PlatformConflict(
-                f"Platform returned HTTP {response.status_code} while trying to "
-                f"{operation}: {detail}"
+                f"Platform returned HTTP {response.status_code} while trying to {operation}: {detail}"
             )
         response.raise_for_status()
 
@@ -190,8 +207,7 @@ class GatewayAgent:
             raise ValueError("Search job payload has no query")
         results = await self.prowlarr.search(query)
         response = await self.platform.post(
-            f"{self.settings.platform_url}/api/v1/gateways/jobs/"
-            f"{job_id}/search-results",
+            f"{self.settings.platform_url}/api/v1/gateways/jobs/{job_id}/search-results",
             headers=self._gateway_headers(),
             json=results,
         )
@@ -238,6 +254,11 @@ class GatewayAgent:
         )
         if not download_ref:
             raise ValueError("Fetch job result has no download reference")
+        if str(download_ref).startswith("ferry-gw:"):
+            download_ref = await self.prowlarr.resolve(
+                str(download_ref),
+                title=str(result.get("title") or ""),
+            )
 
         self._extraction_dir = None
         torrent_id: int | None = None
@@ -255,7 +276,8 @@ class GatewayAgent:
                 and self.settings.prowlarr_api_key
             ):
                 torrent_id = await self.transmission.add(
-                    str(download_ref), paused=True,
+                    str(download_ref),
+                    paused=True,
                     headers={"X-Api-Key": self.settings.prowlarr_api_key},
                 )
             else:
@@ -272,8 +294,7 @@ class GatewayAgent:
             content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
             with path.open("rb") as file:
                 response = await self.platform.post(
-                    f"{self.settings.platform_url}/api/v1/gateways/jobs/"
-                    f"{job_id}/fetch-result",
+                    f"{self.settings.platform_url}/api/v1/gateways/jobs/{job_id}/fetch-result",
                     headers=self._gateway_headers(),
                     files={"file": (path.name, file, content_type)},
                 )
@@ -307,6 +328,8 @@ class GatewayAgent:
                 handled = True
         except PlatformConflict as error:
             logger.warning("%s; polling will continue", error)
+        except DownloadReferenceError as error:
+            logger.warning("%s", error)
         except (httpx.HTTPError, OSError, TimeoutError, ValueError, RuntimeError):
             job_id = (job or {}).get("id") or (job or {}).get("job_id")
             job_type = (job or {}).get("type")

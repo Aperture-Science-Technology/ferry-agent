@@ -1,9 +1,12 @@
 """Recherche et ajout de livres a la bibliotheque de l'utilisateur courant."""
 
 import asyncio
+import hashlib
 import json
 import logging
+import re
 import uuid
+from datetime import timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
@@ -19,6 +22,7 @@ from ferry_agent.models import (
     DeliveryJob,
     Device,
     Gateway,
+    GatewayJob,
     GatewayJobStatus,
     GatewayJobType,
     LibraryItem,
@@ -191,7 +195,50 @@ async def list_books(
     )
 
 
-@router.post("/search", response_model=list[ResultOut])
+def _gateway_result_handle(source: str, result_id: str) -> str:
+    return hashlib.sha256(f"{source}|{result_id}".encode()).hexdigest()[:32]
+
+
+async def _resolve_gateway_result(
+    db: AsyncSession, user_id: uuid.UUID, gateway_id: uuid.UUID, source: str, handle: str,
+) -> Result:
+    """Résout uniquement les recherches du propriétaire encore dans la rétention."""
+    cutoff = gateway_service.utcnow() - timedelta(days=get_settings().gateway_job_retention_days)
+    jobs = await db.execute(
+        select(GatewayJob)
+        .join(Gateway, GatewayJob.gateway_id == Gateway.id)
+        .where(
+            Gateway.user_id == user_id,
+            GatewayJob.gateway_id == gateway_id,
+            GatewayJob.type == GatewayJobType.search,
+            GatewayJob.status == GatewayJobStatus.done,
+            GatewayJob.updated_at >= cutoff,
+        )
+        .order_by(GatewayJob.updated_at.desc(), GatewayJob.id.desc())
+    )
+    for job in jobs.scalars().all():
+        stored_results = job.payload.get("results", []) if isinstance(job.payload, dict) else []
+        if not isinstance(stored_results, list):
+            continue
+        for stored in stored_results:
+            if not isinstance(stored, dict) or stored.get("source") != source:
+                continue
+            stored_id = stored.get("result_id")
+            if not isinstance(stored_id, str) or _gateway_result_handle(source, stored_id) != handle:
+                continue
+            try:
+                result = Result.model_validate(stored)
+            except ValidationError:
+                continue
+            if result.magnet_url or result.guid or result.download_url:
+                return result
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Résultat introuvable ou expiré, relancez la recherche.",
+    )
+
+
+@router.post("/search", response_model=list[ResultOut], response_model_exclude_unset=True)
 async def search_books(
     payload: SearchRequest,
     user: CurrentUser = Depends(get_current_user),
@@ -294,7 +341,14 @@ async def search_books(
 
     outs = []
     for result in results:
-        out = ResultOut.model_validate(result)
+        # Expliciter aussi les valeurs par défaut pour garder la réponse légale inchangée.
+        display = ResultOut.model_validate(result).model_dump()
+        if result.source.startswith("gateway:"):
+            display["result_id"] = _gateway_result_handle(result.source, result.result_id)
+            for field in ("guid", "magnet_url", "download_url", "indexer_id"):
+                display.pop(field, None)
+        # exclude_unset retire ces champs de la réponse HTTP, même leurs valeurs nulles.
+        out = ResultOut.model_validate(display)
         out.owned = _is_owned(result)
         out.cover_url = validate_cover_url(out.cover_url)
         outs.append(out)
@@ -429,15 +483,18 @@ async def add_book(
             "result_id": raw_result.get("result_id") or result_id or "",
             "title": raw_result.get("title") or result_id or "Gateway book",
         }
-        # MCP add_to_library n'envoie que source + result_id : inferer la
-        # reference de telechargement sans ecraser magnet_url/guid/download_url fournis.
+        # Les références opaques sont résolues côté serveur. Les anciens identifiants
+        # bruts gardent leur inférence ; les résultats complets restent prioritaires.
         inferred_id = raw_result["result_id"]
         if not (raw_result.get("magnet_url") or raw_result.get("guid") or raw_result.get("download_url")):
-            if inferred_id.startswith("magnet:"):
+            if isinstance(inferred_id, str) and (not inferred_id or re.fullmatch(r"[0-9a-f]{32}", inferred_id)):
+                authentic = await _resolve_gateway_result(db, user.id, gateway.id, source, inferred_id)
+                raw_result = authentic.model_dump()
+            elif isinstance(inferred_id, str) and inferred_id.startswith("magnet:"):
                 raw_result["magnet_url"] = inferred_id
-            elif inferred_id.startswith(("http://", "https://")):
+            elif isinstance(inferred_id, str) and inferred_id.startswith(("http://", "https://")):
                 raw_result["download_url"] = inferred_id
-            elif inferred_id:
+            elif isinstance(inferred_id, str) and inferred_id:
                 raw_result["guid"] = inferred_id
         try:
             selected_result = Result.model_validate(raw_result)
