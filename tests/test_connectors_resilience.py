@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -55,6 +56,50 @@ async def test_search_all_skips_excluded_connectors(monkeypatch: pytest.MonkeyPa
     )
     results = await library.search_all("pride", exclude={"ok"})
     assert results == []
+
+
+async def test_search_all_overlaps_and_preserves_declared_order(monkeypatch):
+    both_started = asyncio.Event()
+    started = set()
+
+    class Connector:
+        def __init__(self, name):
+            self.name = name
+
+        async def search(self, query):
+            started.add(self.name)
+            if len(started) == 2:
+                both_started.set()
+            await asyncio.wait_for(both_started.wait(), timeout=1)
+            if self.name == "first":
+                await asyncio.sleep(0.01)
+            return [Result(source=self.name, title=query, result_id=self.name)]
+
+    monkeypatch.setattr("ferry_agent.connectors.registry.get_search_connectors",
+                        lambda: [Connector("first"), Connector("second")])
+    results = await library.search_all("tolkien")
+    assert [result.source for result in results] == ["first", "second"]
+
+
+async def test_gutendex_success_is_preferred_and_timeout_is_two_seconds(monkeypatch):
+    from ferry_agent.connectors import gutenberg
+
+    seen = []
+    real_client = httpx.AsyncClient
+
+    def handler(request):
+        seen.append(request.url.host)
+        assert request.extensions["timeout"]["read"] == 2.0
+        return httpx.Response(200, json={"results": [{"id": 1, "title": "Gutendex title",
+                              "languages": ["en"], "formats": {"image/jpeg": "https://example.test/cover.jpg"}}]})
+
+    monkeypatch.setattr(gutenberg.httpx, "AsyncClient",
+                        lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs))
+    results = await GutenbergConnector().search("tolkien")
+    assert [(r.title, r.language, r.cover_url) for r in results] == [
+        ("Gutendex title", "en", "https://example.test/cover.jpg")
+    ]
+    assert seen == ["gutendex.com"]
 
 
 @pytest.mark.asyncio
@@ -111,8 +156,8 @@ async def test_gutenberg_timeout_then_html_fallback() -> None:
     assert results[0].result_id == "1342"
     assert results[0].title == "Pride and Prejudice"
     assert results[0].author == "Jane Austen"
-    # gutendex: 1 attempt + 1 retry, then HTML once
-    assert call_count["n"] == 3
+    # Une seule tentative Gutendex, puis le HTML fournit le resultat.
+    assert call_count["n"] == 2
 
 
 @pytest.mark.asyncio

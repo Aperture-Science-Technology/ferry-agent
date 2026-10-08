@@ -1438,7 +1438,16 @@ async def diagnose() -> str:
         if not isinstance(jobs, list):
             jobs = []
 
-        lines: list[str] = ["Diagnostic Kindle / envoi :"]
+        resp = await client.get("/api/v1/gateways")
+        _raise_for(resp)
+        gateways = resp.json()
+        identity = profile.get("email") or profile.get("clerk_sub") or "identité inconnue"
+        lines: list[str] = [f"Compte connecté : {identity}"]
+        if not gateways:
+            lines.append("aucune gateway sur ce compte")
+        else:
+            lines.append(f"Gateways sur ce compte : {len(gateways)}")
+        lines.append("Diagnostic Kindle / envoi :")
 
         kindle_email = profile.get("kindle_email")
         if kindle_email:

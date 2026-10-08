@@ -137,6 +137,14 @@ async def test_valid_mcp_assertion_accepted(
     assert current.email == "u@example.test"
 
 
+async def test_valid_mcp_assertion_without_email_accepted(monkeypatch, ed25519_keys, rsa_keys):
+    private, public = ed25519_keys
+    _, rsa_public = rsa_keys
+    current = await _call_with_assertion(monkeypatch, token=_make_assertion(private, email=None),
+                                         public_pem=public, rsa_public_pem=rsa_public)
+    assert current.email == "u@example.test"
+
+
 async def test_wrong_audience_rejected(
     monkeypatch: pytest.MonkeyPatch, ed25519_keys, rsa_keys
 ) -> None:
@@ -288,7 +296,10 @@ async def test_verify_mcp_assertion_unit_helpers(ed25519_keys) -> None:
     original = deps.get_settings
     deps.get_settings = lambda: _S()  # type: ignore[assignment]
     try:
-        assert deps._verify_mcp_assertion(token) == "u@example.test"
+        assert deps._verify_mcp_assertion(token) == ("user_clerk_sub", "u@example.test")
+        assert deps._verify_mcp_assertion(_make_assertion(private_pem, email=None)) == (
+            "user_clerk_sub", None
+        )
         assert deps._verify_mcp_assertion(token[:-4]) is None
         assert deps._verify_mcp_assertion(_make_assertion(private_pem, sub=None)) is None
         assert deps._verify_mcp_assertion(_make_assertion(private_pem, ttl=400)) is None

@@ -3,7 +3,7 @@
 Recherche via l'API Gutendex (https://gutendex.com/), un index tiers en
 lecture seule du catalogue Gutenberg. Depuis certains datacenters gutendex
 repond 403 ou timeout : on utilise un User-Agent navigateur, un timeout
-court, un retry unique, puis un fallback HTML sur gutenberg.org. En cas
+court, sans retry, puis un fallback HTML sur gutenberg.org. En cas
 d'echec total, search() renvoie [] (jamais d'exception).
 """
 
@@ -31,7 +31,7 @@ USER_AGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
-_SEARCH_TIMEOUT = 5.0
+_SEARCH_TIMEOUT = 2.0
 _BOOK_ID_RE = re.compile(r"/ebooks/(\d+)")
 _RESULT_ID_RE = re.compile(r"^\d+$")
 
@@ -70,16 +70,7 @@ class GutenbergConnector:
     async def _search_gutendex(self, query: str) -> list[Result]:
         headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
         async with httpx.AsyncClient(timeout=_SEARCH_TIMEOUT, headers=headers) as client:
-            resp: httpx.Response | None = None
-            last_exc: Exception | None = None
-            for _ in range(2):  # 1 essai + 1 retry
-                try:
-                    resp = await client.get(GUTENDEX_URL, params={"search": query})
-                    break
-                except Exception as exc:
-                    last_exc = exc
-            if resp is None:
-                raise last_exc or RuntimeError("gutendex unreachable")
+            resp = await client.get(GUTENDEX_URL, params={"search": query})
             if resp.status_code == 403:
                 logger.warning("gutendex returned 403")
                 return []

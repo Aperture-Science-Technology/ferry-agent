@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 import jwt
 from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.config import get_settings
@@ -53,7 +54,8 @@ def hash_secret(value: str) -> str:
 
 
 async def _get_or_create_user(db: AsyncSession, email: str) -> User:
-    result = await db.execute(select(User).where(User.email == email))
+    # L'email peut etre partage : choix stable pour le mode dev / repli sans sub.
+    result = await db.execute(select(User).where(User.email == email).order_by(User.id).limit(1))
     user = result.scalar_one_or_none()
     if user is None:
         user = User(email=email)
@@ -61,6 +63,47 @@ async def _get_or_create_user(db: AsyncSession, email: str) -> User:
         await db.flush()
         await ensure_default_sources(db, user.id)
         await db.refresh(user)
+    return user
+
+
+async def _get_or_create_clerk_user(db: AsyncSession, sub: str, email: str | None = None) -> User:
+    """Resout le sujet verifie, sans jamais fusionner des comptes par email."""
+    result = await db.execute(select(User).where(User.clerk_sub == sub))
+    user = result.scalar_one_or_none()
+    changed = False
+    if user is None:
+        result = await db.execute(
+            select(User)
+            .where(User.email == sub, User.clerk_sub.is_(None))
+            .order_by(User.id)
+            .limit(1)
+            .with_for_update()
+        )
+        user = result.scalar_one_or_none()
+        if user is not None:
+            user.clerk_sub = sub
+            changed = True
+        else:
+            try:
+                async with db.begin_nested():
+                    user = User(clerk_sub=sub, email=email or sub)
+                    db.add(user)
+                    await db.flush()
+            except IntegrityError:
+                # Une autre requete peut avoir cree le meme sujet entre les SELECT.
+                result = await db.execute(select(User).where(User.clerk_sub == sub))
+                user = result.scalar_one_or_none()
+                if user is None:
+                    raise
+            else:
+                await ensure_default_sources(db, user.id)
+                await db.refresh(user)
+
+    if email and "@" in email and user.email.startswith("user_") and "@" not in user.email:
+        user.email = email
+        changed = True
+    if changed:
+        await db.commit()
     return user
 
 
@@ -76,8 +119,8 @@ def _load_mcp_assertion_public_key(public_key_b64: str) -> bytes | None:
         return None
 
 
-def _verify_mcp_assertion(token: str) -> str | None:
-    """Verifie une assertion MCP Ed25519. Retourne l'email, ou None si refusee.
+def _verify_mcp_assertion(token: str) -> tuple[str, str | None] | None:
+    """Verifie une assertion MCP Ed25519. Retourne (sub, email optionnel).
 
     Ne leve jamais d'exception vers l'appelant HTTP : une cle absente ou un
     jeton invalide se traduit par un refus (None) → 401 plus haut, pas un 500.
@@ -109,8 +152,7 @@ def _verify_mcp_assertion(token: str) -> str | None:
         return None
 
     email = payload.get("email")
-    if not isinstance(email, str) or not email.strip():
-        return None
+    email = email.strip() if isinstance(email, str) and email.strip() else None
 
     iat = payload.get("iat")
     exp = payload.get("exp")
@@ -119,7 +161,7 @@ def _verify_mcp_assertion(token: str) -> str | None:
     if exp - iat > _MCP_ASSERTION_MAX_TTL_SECONDS:
         return None
 
-    return email.strip()
+    return sub.strip(), email
 
 
 async def get_current_user(
@@ -147,7 +189,7 @@ async def get_current_user(
     jwks_client = getattr(request.app.state, "jwks_client", None)
     clerk_error: HTTPException | None = None
 
-    # Voie Clerk (web) — logique inchangee ; en cas d'echec on tente l'assertion MCP.
+    # Voie Clerk (web) ; en cas d'echec on tente l'assertion MCP.
     if jwks_client is not None:
         try:
             signing_key = jwks_client.get_signing_key_from_jwt(token)
@@ -171,7 +213,13 @@ async def get_current_user(
             if not email:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="JWT sans email/sub")
 
-            user = await _get_or_create_user(db, email)
+            sub = payload.get("sub")
+            if isinstance(sub, str) and sub.strip():
+                claim_email = payload.get("email")
+                claim_email = claim_email.strip() if isinstance(claim_email, str) else None
+                user = await _get_or_create_clerk_user(db, sub.strip(), claim_email or None)
+            else:
+                user = await _get_or_create_user(db, email)
             return CurrentUser(id=user.id, email=user.email)
         except HTTPException as exc:
             if exc.status_code != status.HTTP_401_UNAUTHORIZED:
@@ -185,9 +233,10 @@ async def get_current_user(
     elif not (getattr(settings, "mcp_assertion_public_key_b64", None) or "").strip():
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="JWKS non initialise")
 
-    assertion_email = _verify_mcp_assertion(token)
-    if assertion_email:
-        user = await _get_or_create_user(db, assertion_email)
+    assertion_identity = _verify_mcp_assertion(token)
+    if assertion_identity:
+        sub, email = assertion_identity
+        user = await _get_or_create_clerk_user(db, sub, email)
         return CurrentUser(id=user.id, email=user.email)
 
     if clerk_error is not None:
