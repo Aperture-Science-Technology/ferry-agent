@@ -197,6 +197,11 @@ services:
     restart: unless-stopped
     volumes:
       - /home/glados/deployments/ferry-agent/dist:/usr/share/nginx/html/bundle:ro
+      # Montage du RÉPERTOIRE, pas du fichier : un montage de fichier unitaire
+      # reste lié à l'inode d'origine, donc remplacer le fichier côté hôte
+      # (écriture atomique, cas de tout éditeur) ne change RIEN dans le conteneur.
+      # Observé le 2026-10-07 : la config corrigée était invisible après reload.
+      - /home/glados/projects/ferry-agent/deploy/nginx-bundle:/etc/nginx/conf.d:ro
     networks:
       - ferry-net
     labels:

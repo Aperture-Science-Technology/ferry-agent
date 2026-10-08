@@ -5,6 +5,12 @@ on:
     branches:
       - develop
       - main
+    # Sans ce déclencheur, pousser un tag `v*` ne lance RIEN : les jobs de release
+    # testent `startsWith(github.ref, 'refs/tags/v')`, condition inatteignable par
+    # un push de branche. Constaté le 2026-10-07 : le tag v0.1.1 n'a déclenché
+    # aucun run et la release n'a pu être produite que par dispatch manuel.
+    tags:
+      - "v*"
   pull_request:
     branches:
       - develop
