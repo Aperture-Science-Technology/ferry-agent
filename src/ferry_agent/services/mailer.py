@@ -169,3 +169,26 @@ async def send_file(
         raise
     logger.info("email envoye vers %s (kindle=%s, fichier=%s)", recipient_email, kindle, filename)
     return result
+
+
+def _send_test_sync(recipient: str) -> None:
+    settings = get_settings()
+    message = EmailMessage()
+    message["From"] = settings.smtp_from or settings.smtp_user
+    message["To"] = recipient
+    message["Subject"] = "Test Ferry"
+    message["Date"] = formatdate(localtime=False)
+    message["Message-ID"] = make_msgid()
+    message.set_content("Message de test envoyé par Ferry.")
+    message.add_attachment("Message de test Ferry. Bonne lecture !", subtype="plain", filename="test-ferry.txt")
+    with _connect() as smtp:
+        smtp.login(settings.smtp_user, settings.smtp_password)
+        refused = smtp.send_message(message)
+        if refused:
+            raise smtplib.SMTPRecipientsRefused(refused)
+
+
+async def send_test(recipient: str) -> None:
+    if not is_configured():
+        raise MailerNotConfigured("L’envoi par email est indisponible.")
+    await asyncio.to_thread(_send_test_sync, recipient)

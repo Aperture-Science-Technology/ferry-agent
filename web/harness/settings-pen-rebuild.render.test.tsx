@@ -1,3 +1,4 @@
+vi.mock("@/components/app/settings/system-health", () => ({ SystemHealthPanel: () => null }));
 /**
  * Pen Settings rebuild: Header/PageTitle + Form/Field + OPDS rows in Settings,
  * Compte / OPDS / Préférences sections (no standalone OPDS route).

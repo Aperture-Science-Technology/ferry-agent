@@ -317,6 +317,8 @@ class MailSettingsOut(BaseModel):
     sender_address: str
     reply_to: str | None
     allowed_domains: list[str]
+    sender_domain: str = ""
+    domains_allowed: list[str] = Field(default_factory=list)
     hourly_quota: int
     daily_quota: int
 
@@ -396,7 +398,7 @@ class DeliveryOut(BaseModel):
     def terminal(self) -> bool:
         """Email acceptance is final; cloud acceptance still needs an upload."""
         return self.status in (DeliveryStatus.delivered, DeliveryStatus.failed) or (
-            self.status == DeliveryStatus.sent and self.method == DeliveryMethod.email
+            self.status == DeliveryStatus.sent and self.method in (DeliveryMethod.email, DeliveryMethod.opds)
         )
 
 
@@ -404,3 +406,12 @@ class DeliveryPreview(BaseModel):
     """Format effectivement prévu, sans création de livraison."""
 
     target_format: str
+
+
+class MailTestRequest(BaseModel):
+    device_id: uuid.UUID | None = None
+
+
+class MailTestOut(BaseModel):
+    status: Literal["sent"] = "sent"
+    recipient: str

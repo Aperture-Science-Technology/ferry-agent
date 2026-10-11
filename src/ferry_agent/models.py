@@ -11,8 +11,8 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Enum as SAEnum
 from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -65,6 +65,7 @@ class DeliveryMethod(str, enum.Enum):
     drive = "drive"
     browser_code = "browser_code"
     usb = "usb"
+    opds = "opds"
 
 
 class PairingStatus(str, enum.Enum):
@@ -95,6 +96,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, nullable=False)
     clerk_sub: Mapped[str | None] = mapped_column(Text, nullable=True, unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
+    mail_test_sends: Mapped[list] = mapped_column(
+        JSONB, default=list, server_default=text("'[]'::jsonb"), nullable=False
+    )
     kindle_email: Mapped[str | None] = mapped_column(String, nullable=True)
     default_format: Mapped[str] = mapped_column(String, default="epub", nullable=False)
 
@@ -176,6 +180,7 @@ class DeliveryJob(Base):
         SAEnum(DeliveryStatus, name="delivery_status"), default=DeliveryStatus.queued, nullable=False
     )
     method: Mapped[DeliveryMethod] = mapped_column(SAEnum(DeliveryMethod, name="delivery_method"), nullable=False)
+    catalog_token_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     # Format exact demande (epub/mobi/azw3/pdf) ; sert surtout au telechargement
     # tier C pour ne jamais servir un autre format que celui choisi.
     target_format: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -257,6 +262,7 @@ class OpdsToken(Base):
     )
     label: Mapped[str] = mapped_column(String, nullable=False)
     token_hash: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    token_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=_utcnow, nullable=False)
     last_used_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)

@@ -1,3 +1,4 @@
+import { KindleTest } from "@/components/app/settings/kindle-test";
 import type { ReactNode } from "react";
 import { Link2, Pencil, Tablet, Trash2 } from "lucide-react";
 import { BrandBadge } from "@/components/app/devices/brand-badge";
@@ -212,6 +213,7 @@ export function DeviceRow({
           className="flex min-w-0 max-w-full flex-wrap items-center gap-2"
         >
           {actions}
+        {device.brand === "kindle" ? <KindleTest deviceId={device.id} /> : null}
         </div>
       ) : null}
     </article>

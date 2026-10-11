@@ -1,5 +1,7 @@
 "use client";
 
+import { SystemHealthPanel } from "./system-health";
+import { KindleTest } from "./kindle-test";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ChevronRight, CircleAlert, Copy, Eraser, Loader2 } from "lucide-react";
@@ -491,6 +493,7 @@ export function SettingsForm({
                     </p>
                     <p>{t("sendToKindleStep2")}</p>
                     <p>{t("sendToKindleNoBounce")}</p>
+                    <KindleTest />
                   </div>
                 </div>
               )}
@@ -510,6 +513,7 @@ export function SettingsForm({
           </section>
         </Reveal>
 
+        <SystemHealthPanel />
         <Reveal>
           <section
             className="flex min-w-0 flex-col gap-3"

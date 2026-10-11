@@ -16,11 +16,11 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.config import get_settings
-from ferry_agent.db import async_session_factory
+from ferry_agent.db import async_session_factory, engine
 from ferry_agent.models import (
     DeliveryJob,
     DeliveryMethod,
@@ -37,6 +37,7 @@ from ferry_agent.services import (
     kindle_formats,
     mail_policy,
     mailer,
+    opds,
     tierc,
 )
 from ferry_agent.services.library import user_facing_filename
@@ -282,6 +283,8 @@ async def deliver(
 ) -> str | None:
     """Route un DeliveryJob vers son tier. Retourne l'URL de telechargement
     pour le tier C (synchrone), sinon None."""
+    if job.status not in (None, DeliveryStatus.queued):
+        return None
     item_result = await db.execute(select(LibraryItem).where(LibraryItem.id == job.library_item_id))
     item = item_result.scalar_one_or_none()
     device_result = await db.execute(select(Device).where(Device.id == job.device_id))
@@ -292,6 +295,15 @@ async def deliver(
         return None
 
     try:
+        if job.method == DeliveryMethod.opds and device.delivery_tier in (DeliveryTier.C, DeliveryTier.D):
+            token, url = await opds.device_catalog(
+                db, device.user_id, device.name or f"{device.brand.value} {device.model or ''}".strip()
+            )
+            job.catalog_token_hash = token.token_hash
+            job.status = DeliveryStatus.sent
+            job.target_format = item.original_format
+            await db.commit()
+            return url
         if device.delivery_tier == DeliveryTier.A:
             user_result = await db.execute(select(User).where(User.id == item.user_id))
             user = user_result.scalar_one_or_none()
@@ -323,12 +335,35 @@ async def deliver(
         return None
 
 
+def job_lock_key(job_id: uuid.UUID) -> int:
+    return int.from_bytes(job_id.bytes[:8], "big", signed=True)
+
+
 async def run_delivery(job_id: uuid.UUID, requested_format: str | None = None) -> None:
-    """Point d'entree pour BackgroundTasks : ouvre sa propre session DB."""
-    async with async_session_factory() as db:
-        result = await db.execute(select(DeliveryJob).where(DeliveryJob.id == job_id))
-        job = result.scalar_one_or_none()
-        if job is None:
-            logger.warning("delivery job %s introuvable pour livraison en tache de fond", job_id)
+    """Hold a session lock across service commits so cancellation cannot race a send."""
+    async with engine.connect() as lock_connection:
+        key = job_lock_key(job_id)
+        locked = await lock_connection.scalar(text("SELECT pg_try_advisory_lock(:key)"), {"key": key})
+        if not locked:
             return
-        await deliver(db, job, requested_format)
+        try:
+            async with async_session_factory() as db:
+                job = (await db.execute(select(DeliveryJob).where(DeliveryJob.id == job_id))).scalar_one_or_none()
+                if job is not None and job.status == DeliveryStatus.queued:
+                    await deliver(db, job, requested_format or job.target_format)
+        finally:
+            await lock_connection.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": key})
+
+
+async def deliver_synchronously(db: AsyncSession, job: DeliveryJob, requested_format: str | None = None) -> str | None:
+    """The synchronous route uses the same exclusion as background deliveries."""
+    async with db.bind.connect() as lock_connection:
+        key = job_lock_key(job.id)
+        locked = await lock_connection.scalar(text("SELECT pg_try_advisory_lock(:key)"), {"key": key})
+        if not locked:
+            return None
+        try:
+            await db.refresh(job)
+            return await deliver(db, job, requested_format)
+        finally:
+            await lock_connection.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": key})
