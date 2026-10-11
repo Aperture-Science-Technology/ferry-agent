@@ -379,13 +379,26 @@ async def _fetch_all_methods(client: httpx.AsyncClient, device_id: str) -> list[
 # ---------------------------------------------------------------------------
 
 @mcp.tool
-async def search_library(query: str, scope: list[str] | None = None) -> ToolResult:
+async def search_library(
+    query: str,
+    scope: list[str] | None = None,
+    filters: dict[str, Any] | None = None,
+    sort: str | None = None,
+    limit: int | None = None,
+) -> ToolResult:
     """Recherche des ebooks dans les sources légales et les gateways appairées.
 
     Args:
         query: Titre, auteur ou mots-clés à rechercher.
         scope: Optionnel. Ex. ["legal"], ["gateways"], ou ["gateway:<uuid>"].
                Absent = legal + gateways (comportement API par défaut).
+        filters: Critères optionnels : language ("fr", "en"), formats (["epub", "pdf"]),
+                 author (partie du nom, sans distinction de casse ni d'accents),
+                 sources (["gutenberg", "standard_ebooks", "gateway"]), owned (booléen,
+                 déjà en bibliothèque), min_seeders (minimum de personnes partageant
+                 le fichier, gateways uniquement), max_size_bytes (taille maximale en octets).
+        sort: relevance (défaut), title, author, size ou seeders. Taille et partage décroissants.
+        limit: Nombre maximal de résultats, de 1 à 200. Absent = tous les résultats.
 
     Returns:
         Liste lisible et résultats structurés complets dans `results`.
@@ -394,6 +407,9 @@ async def search_library(query: str, scope: list[str] | None = None) -> ToolResu
     body: dict[str, Any] = {"query": query}
     if scope is not None:
         body["scope"] = scope
+    for name, value in (("filters", filters), ("sort", sort), ("limit", limit)):
+        if value is not None:
+            body[name] = value
 
     async with _client(_resolve_user_token()) as client:
         resp = await client.post("/api/v1/books/search", json=body)

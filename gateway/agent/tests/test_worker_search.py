@@ -220,3 +220,26 @@ async def test_handle_job_without_id_raises(
 
     with pytest.raises(ValueError, match="no id"):
         await agent.handle_job({"type": "search", "payload": {"query": "x"}})
+
+
+@pytest.mark.asyncio
+async def test_worker_applies_job_filters_before_posting(state_path, download_root):
+    from ferry_gateway_agent.prowlarr import ProwlarrClient
+
+    captured = []
+
+    def handler(request):
+        if "/search-results" in request.url.path:
+            captured.extend(json.loads(request.content))
+        return httpx.Response(200, json={})
+
+    rows = [{"guid": str(i), "title": str(i), "seeders": i, "size": i * 10} for i in range(4)]
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=rows))) as client:
+        prowlarr = ProwlarrClient("http://prowlarr.test", "private", client=client)
+        settings = make_settings(state_path=state_path, download_path=download_root,
+                                 gateway_id="gw-1", gateway_key="gw-key")
+        agent = make_agent(settings=settings, handler=handler, prowlarr=prowlarr)
+        await agent._handle_search(str(uuid4()), {
+            "query": "book", "filters": {"min_seeders": 2, "max_size_bytes": 20},
+        })
+    assert [r["title"] for r in captured] == ["2"]

@@ -265,7 +265,13 @@ async def search_books(
                 db,
                 gateway.id,
                 GatewayJobType.search,
-                {"query": payload.query},
+                {
+                    "query": payload.query,
+                    **(
+                        {"filters": payload.filters.model_dump(exclude_none=True)}
+                        if payload.filters is not None else {}
+                    ),
+                },
             )
             for gateway in gateways
         ]
@@ -352,7 +358,7 @@ async def search_books(
         out.owned = _is_owned(result)
         out.cover_url = validate_cover_url(out.cover_url)
         outs.append(out)
-    return outs
+    return library.filter_search_results(outs, payload)
 
 
 @router.post(

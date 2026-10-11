@@ -40,7 +40,7 @@ def _override(fake_db):
     override_app_deps(fake_db, user_id=_USER_ID, email=_USER_EMAIL)
 
 
-def _run_search(owned_rows, results):
+def _run_search(owned_rows, results, **criteria):
     """`owned_rows` : liste de tuples (LibraryItem-like, SourceType | None),
     simulant les lignes renvoyees par le join LibraryItem/Source."""
 
@@ -64,7 +64,7 @@ def _run_search(owned_rows, results):
             with TestClient(app) as client:
                 resp = client.post(
                     "/api/v1/books/search",
-                    json={"query": "dune", "scope": ["legal"]},
+                    json={"query": "dune", "scope": ["legal"], **criteria},
                 )
         assert resp.status_code == 200
         return resp.json()
@@ -224,3 +224,26 @@ class TestOwnedMatchingSourceRef:
 
         assert len(data) == 1
         assert data[0]["owned"] is False
+
+
+class TestOwnedFiltering:
+    def test_filter_matches_all_identity_layers_before_pagination(self):
+        owned = [
+            (_fake_owned_item(source_ref="gutenberg:1"), SourceType.gutenberg),
+            (_fake_owned_item(isbn="978-0-441-17271-9"), SourceType.gutenberg),
+        ]
+        results = [
+            Result(source="gutenberg", title="Unowned", result_id="0"),
+            Result(source="gutenberg", title="Reference", result_id="1"),
+            Result(source="standard_ebooks", title="ISBN", result_id="2", isbn="9780441172719"),
+            Result(source="gutenberg", title="Dune", author="Herbert", result_id="3"),
+        ]
+        data = _run_search(owned, results, filters={"owned": True}, offset=1, limit=2)
+        assert isinstance(data, list)
+        assert [row["title"] for row in data] == ["ISBN", "Dune"]
+        assert all(row["owned"] for row in data)
+
+    def test_empty_criteria_preserve_the_default_response(self):
+        results = [Result(source="gutenberg", title="Dune", result_id="1")]
+        baseline = _run_search([], results)
+        assert _run_search([], results, filters={}, sort="relevance", offset=0) == baseline
