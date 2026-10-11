@@ -22,6 +22,7 @@ from ferry_agent.config import get_settings
 from ferry_agent.connectors import Result
 from ferry_agent.connectors.registry import get_connector
 from ferry_agent.models import LibraryItem, Source, SourceType
+from ferry_agent.schemas import ResultOut, SearchRequest
 from ferry_agent.services.book_metadata import clean_release_title, extract_epub, extract_pdf, is_release_title
 from ferry_agent.services.covers import validate_cover_url
 from ferry_agent.services.errors import QUOTA_EXCEEDED_MESSAGE, QuotaExceededError
@@ -292,6 +293,50 @@ async def delete_library_item(db: AsyncSession, item: LibraryItem) -> None:
         Path(item.storage_path + ".cover" + extension).unlink(missing_ok=True)
     await db.delete(item)
     await db.commit()
+
+
+def _search_text(value: str) -> str:
+    return "".join(
+        char for char in unicodedata.normalize("NFKD", value.casefold())
+        if not unicodedata.combining(char)
+    )
+
+
+def filter_search_results(results: list[ResultOut], request: SearchRequest) -> list[ResultOut]:
+    """Filter enriched results, preserving source order, then sort and paginate."""
+    filters = request.filters
+    if filters is not None:
+        formats = {value.casefold() for value in filters.formats} if filters.formats is not None else None
+        sources = set(filters.sources) if filters.sources is not None else None
+
+        def matches(result: ResultOut) -> bool:
+            gateway = result.source.startswith("gateway:")
+            if filters.language is not None and (result.language or "").casefold() != filters.language.casefold():
+                return False
+            if formats is not None and result.format.casefold() not in formats:
+                return False
+            if filters.author is not None and _search_text(filters.author) not in _search_text(result.author):
+                return False
+            if sources is not None and result.source not in sources and not (gateway and "gateway" in sources):
+                return False
+            if filters.owned is not None and result.owned != filters.owned:
+                return False
+            if gateway and filters.min_seeders is not None:
+                if result.seeders is None or result.seeders < filters.min_seeders:
+                    return False
+            return filters.max_size_bytes is None or result.size_bytes <= filters.max_size_bytes
+
+        results = [result for result in results if matches(result)]
+
+    if request.sort in ("title", "author"):
+        results = sorted(results, key=lambda result: _search_text(getattr(result, request.sort)))
+    elif request.sort in ("size", "seeders"):
+        field = "size_bytes" if request.sort == "size" else "seeders"
+        results = sorted(results, key=lambda result: (
+            getattr(result, field) is None, -(getattr(result, field) or 0)
+        ))
+    end = None if request.limit is None else request.offset + request.limit
+    return results[request.offset:end]
 
 
 async def search_all(query: str, *, exclude: set[str] | None = None) -> list[Result]:

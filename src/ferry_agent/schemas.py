@@ -64,9 +64,23 @@ class BookImport(BaseModel):
 ConversionPreset = Literal["reader_6in", "reader_7in_plus", "tablet"]
 
 
+class SearchFilters(BaseModel):
+    language: str | None = None
+    formats: list[str] | None = None
+    author: str | None = None
+    sources: list[str] | None = None
+    owned: bool | None = None
+    min_seeders: int | None = None
+    max_size_bytes: int | None = None
+
+
 class SearchRequest(BaseModel):
     query: str
     scope: list[str] | None = None
+    filters: SearchFilters | None = None
+    sort: Literal["relevance", "title", "author", "size", "seeders"] | None = None
+    limit: int | None = Field(default=None, ge=1, le=200)
+    offset: int = Field(default=0, ge=0)
 
 
 class Result(BaseModel):

@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **FA-SEARCH-QUERY-01** — Filtres, tri et pagination de la recherche, transmis aux gateways et au MCP ; critères partageables dans l’URL de la bibliothèque.
+
 - **MCP lot 4 — assertion d'identité** — le MCP forge un JWT Ed25519 court
   (`iss=ferry-agent-mcp`, `aud=ferry-core`, TTL 120 s) après OAuth Clerk ;
   le cœur vérifie la clé publique (`MCP_ASSERTION_PUBLIC_KEY_B64`). ADR 0011.

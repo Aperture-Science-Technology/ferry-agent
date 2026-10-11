@@ -205,7 +205,11 @@ class GatewayAgent:
         query = str(payload.get("query") or "").strip()
         if not query:
             raise ValueError("Search job payload has no query")
-        results = await self.prowlarr.search(query)
+        filters = payload.get("filters")
+        if isinstance(filters, dict):
+            results = await self.prowlarr.search(query, filters=filters)
+        else:
+            results = await self.prowlarr.search(query)
         response = await self.platform.post(
             f"{self.settings.platform_url}/api/v1/gateways/jobs/{job_id}/search-results",
             headers=self._gateway_headers(),

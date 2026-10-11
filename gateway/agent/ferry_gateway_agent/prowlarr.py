@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import re
 import time
 from collections import OrderedDict
@@ -13,6 +14,7 @@ BOOK_CATEGORIES = (7000, 7020)
 EBOOK_EXTENSIONS = {"azw", "azw3", "epub", "mobi", "pdf"}
 CACHE_TTL_SECONDS = 3600
 CACHE_MAX_ENTRIES = 2048
+logger = logging.getLogger(__name__)
 
 
 class DownloadReferenceError(RuntimeError):
@@ -110,7 +112,13 @@ class ProwlarrClient:
             "Relancez la recherche puis choisissez à nouveau le livre."
         )
 
-    async def search(self, query: str) -> list[dict[str, Any]]:
+    async def search(self, query: str, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        filters = filters or {}
+        for name, value in filters.items():
+            if value is not None and name not in {"min_seeders", "max_size_bytes"}:
+                # Neither arbitrary keys nor values are safe to write to logs.
+                label = name if name in {"language", "formats", "author", "sources", "owned"} else "unknown"
+                logger.warning("Unsupported local search filter: %s", label)
         self._prune_cache()
         response = await self._client.get(
             f"{self.base_url}/api/v1/search",
@@ -127,6 +135,12 @@ class ProwlarrClient:
         for raw in response.json():
             if not isinstance(raw, dict):
                 continue
+            if filters.get("min_seeders") is not None:
+                if raw.get("seeders") is None or raw["seeders"] < filters["min_seeders"]:
+                    continue
+            if filters.get("max_size_bytes") is not None:
+                if int(raw.get("size") or 0) > filters["max_size_bytes"]:
+                    continue
             magnet = raw.get("magnetUrl")
             guid = raw.get("guid")
             if not (magnet or guid or raw.get("downloadUrl")):

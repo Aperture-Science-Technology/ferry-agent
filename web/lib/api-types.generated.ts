@@ -1513,12 +1513,39 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** SearchFilters */
+        SearchFilters: {
+            /** Author */
+            author?: string | null;
+            /** Formats */
+            formats?: string[] | null;
+            /** Language */
+            language?: string | null;
+            /** Max Size Bytes */
+            max_size_bytes?: number | null;
+            /** Min Seeders */
+            min_seeders?: number | null;
+            /** Owned */
+            owned?: boolean | null;
+            /** Sources */
+            sources?: string[] | null;
+        };
         /** SearchRequest */
         SearchRequest: {
+            filters?: components["schemas"]["SearchFilters"] | null;
+            /** Limit */
+            limit?: number | null;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
             /** Query */
             query: string;
             /** Scope */
             scope?: string[] | null;
+            /** Sort */
+            sort?: ("relevance" | "title" | "author" | "size" | "seeders") | null;
         };
         /**
          * SearchResults

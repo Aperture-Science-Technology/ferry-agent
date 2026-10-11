@@ -56,3 +56,23 @@ export type SourceType =
  * et services/delivery_methods.py), traduits cote frontend.
  */
 export type DeliveryMethodReasonCode = "smtp_not_configured" | "cloud_not_linked";
+
+/** Optional search criteria; response remains ResultOut[]. */
+export type SearchFilters = {
+  language?: string | null;
+  formats?: string[] | null;
+  author?: string | null;
+  sources?: string[] | null;
+  owned?: boolean | null;
+  min_seeders?: number | null;
+  max_size_bytes?: number | null;
+};
+export type SearchSort = "relevance" | "title" | "author" | "size" | "seeders";
+export type SearchRequest = {
+  query: string;
+  scope?: string[] | null;
+  filters?: SearchFilters | null;
+  sort?: SearchSort | null;
+  limit?: number | null;
+  offset?: number;
+};

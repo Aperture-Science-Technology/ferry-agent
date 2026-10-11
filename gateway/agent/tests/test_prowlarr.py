@@ -159,3 +159,38 @@ async def test_missing_title_and_unusable_guid_fail_explicitly():
             with pytest.raises(DownloadReferenceError, match="Relancez la recherche"):
                 await prowlarr.resolve(result["result_id"], title=title)
         assert len(requests) == 2
+
+
+@pytest.mark.parametrize("filters,expected", [
+    ({"min_seeders": 3}, ["large", "small"]),
+    ({"max_size_bytes": 20}, ["small", "unknown", "idle"]),
+    ({"min_seeders": 3, "max_size_bytes": 20}, ["small"]),
+    ({"min_seeders": 0, "max_size_bytes": 0}, ["idle"]),
+])
+async def test_search_filters_locally_and_keeps_repeated_categories(filters, expected):
+    rows = [
+        {"title": "large", "guid": "1", "seeders": 5, "size": 50},
+        {"title": "small", "guid": "2", "seeders": 3, "size": 20},
+        {"title": "unknown", "guid": "3", "size": 10},
+        {"title": "idle", "guid": "4", "seeders": 0, "size": 0},
+    ]
+
+    def handler(request):
+        assert request.url.params.get_list("categories") == ["7000", "7020"]
+        return httpx.Response(200, json=rows)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        results = await ProwlarrClient("http://prowlarr.test", "secret", client=client).search("book", filters)
+    assert [r["title"] for r in results] == expected
+
+
+async def test_unsupported_filters_warn_without_logging_keys_or_values(caplog):
+    filters = {"language": "secret-value", "formats": ["secret-value"], "owned": False,
+               "author": "secret-value", "sources": ["secret-value"], "secret-key": "secret-value"}
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=[]))) as client:
+        await ProwlarrClient("http://prowlarr.test", "private-api-key", client=client).search("book", filters)
+    assert len(caplog.records) == len(filters)
+    assert "Unsupported local search filter: language" in caplog.text
+    assert "secret-key" not in caplog.text
+    assert "secret-value" not in caplog.text
+    assert "private-api-key" not in caplog.text

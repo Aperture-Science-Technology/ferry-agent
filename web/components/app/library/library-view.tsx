@@ -61,6 +61,9 @@ import type {
   SearchResult,
 } from "@/lib/types";
 
+import { LibraryFilters } from "./library-filters";
+import { SEARCH_PAGE_SIZE, updateLibraryQuery, useLibraryQuery } from "./library-query";
+
 type BrowseMode = "mine" | "sources";
 type AddTab = "search" | "import";
 type ViewMode = "grid" | "list";
@@ -186,8 +189,24 @@ export function LibraryView({
   const isMobile = useIsMobile();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [query, setQuery] = useState("");
-  const [collectionQuery, setCollectionQuery] = useState("");
+  const criteria = useLibraryQuery();
+  const browseMode = criteria.mode;
+  const [draft, setDraft] = useState({ original: criteria.query, value: criteria.query });
+  if (draft.original !== criteria.query) {
+    setDraft({ original: criteria.query, value: criteria.query });
+  }
+  const query = draft.original === criteria.query ? draft.value : criteria.query;
+  function setQuery(value: string) { setDraft({ original: criteria.query, value }); }
+  const collectionQuery = criteria.query;
+  function setCollectionQuery(value: string) {
+    updateLibraryQuery({ mode: "mine", q: value, page: null });
+  }
+  function setBrowseMode(mode: BrowseMode) {
+    if (mode !== browseMode) updateLibraryQuery({ mode }, true);
+  }
+  const [searchAttempt, setSearchAttempt] = useState(0);
+  const [searchError, setSearchError] = useState(false);
+  const [hasNextSearchPage, setHasNextSearchPage] = useState(false);
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -201,7 +220,6 @@ export function LibraryView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [partialDismissed, setPartialDismissed] = useState(false);
   const [unavailableDismissed, setUnavailableDismissed] = useState(false);
-  const [browseMode, setBrowseMode] = useState<BrowseMode>("mine");
   const [addTab, setAddTab] = useState<AddTab>("search");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
@@ -220,7 +238,9 @@ export function LibraryView({
     return () => cancelAnimationFrame(frame);
   }, [browseMode, addTab]);
 
-  const filterCriteriaKey = `${collectionQuery}\0all\0all\0all\0added`;
+  const filterCriteriaKey = JSON.stringify([
+    collectionQuery, criteria.language, criteria.format, criteria.collectionSource, criteria.collectionSort,
+  ]);
   const [pageState, setPageState] = useState({
     criteriaKey: filterCriteriaKey,
     page: 1,
@@ -240,12 +260,12 @@ export function LibraryView({
     () =>
       filterAndSortLibraryItems(items, {
         textQuery: collectionQuery,
-        languageFilter: "all",
-        formatFilter: "all",
-        sourceFilter: "all",
-        sortBy: "added",
+        languageFilter: criteria.language || "all",
+        formatFilter: criteria.format,
+        sourceFilter: criteria.collectionSource,
+        sortBy: criteria.collectionSort,
       }),
-    [items, collectionQuery]
+    [items, collectionQuery, criteria.language, criteria.format, criteria.collectionSource, criteria.collectionSort]
   );
 
   const pageSlice = useMemo(
@@ -341,22 +361,49 @@ export function LibraryView({
     });
   }
 
-  async function runSearch() {
-    if (!query.trim()) return;
-    setBrowseMode("sources");
-    setAddTab("search");
-    setSearching(true);
-    try {
-      const found = await call<SearchResult[]>("/api/v1/books/search", {
-        method: "POST",
-        body: JSON.stringify({ query, scope: ["legal", "gateways"] }),
-      });
-      setResults(found);
-    } catch {
-      toast.error(t("toastSearchFailed"));
-    } finally {
-      setSearching(false);
+  const searchBody = JSON.stringify(criteria.request);
+  useEffect(() => {
+    if (browseMode !== "sources") return;
+    const controller = new AbortController();
+    async function search() {
+      if (!JSON.parse(searchBody).query.trim()) {
+        setResults(null);
+        setSearching(false);
+        return;
+      }
+      setSearching(true);
+      setSearchError(false);
+      setResults(null);
+      try {
+        const found = await call<SearchResult[]>("/api/v1/books/search", {
+          method: "POST",
+          body: searchBody,
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setResults(found.slice(0, SEARCH_PAGE_SIZE));
+        setHasNextSearchPage(found.length > SEARCH_PAGE_SIZE);
+      } catch {
+        if (controller.signal.aborted) return;
+        setSearchError(true);
+        toast.error(t("toastSearchFailed"));
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
     }
+    void search();
+    return () => controller.abort();
+  }, [browseMode, searchBody, searchAttempt, call, t]);
+
+  function runSearch() {
+    if (!query.trim()) return;
+    setAddTab("search");
+    updateLibraryQuery({ mode: "sources", q: query, page: null });
+    setSearchAttempt((value) => value + 1);
+  }
+
+  function changeFilters(values: Record<string, string | null>) {
+    updateLibraryQuery({ ...values, mode: browseMode, page: null });
   }
 
   async function addResult(result: SearchResult) {
@@ -799,6 +846,11 @@ export function LibraryView({
                 </Button>
               </div>
 
+              <LibraryFilters criteria={criteria} onChange={changeFilters} />
+              {searchError && !searching ? (
+                <p role="alert">{t("toastSearchFailed")}</p>
+              ) : null}
+
               {searching ? (
                 <motion.div
                   initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
@@ -877,6 +929,19 @@ export function LibraryView({
                   )}
                 </Reveal>
               ) : null}
+              {!searching && results !== null && (criteria.page > 1 || hasNextSearchPage) ? (
+                <nav className="flex items-center gap-3" aria-label={t("searchPagination")}>
+                  <Button variant="ghost" disabled={criteria.page <= 1}
+                    onClick={() => updateLibraryQuery({ page: String(criteria.page - 1) })}>
+                    <ChevronLeft />{t("paginationPrevious")}
+                  </Button>
+                  <span aria-live="polite">{t("searchPage", { page: criteria.page })}</span>
+                  <Button variant="ghost" disabled={!hasNextSearchPage}
+                    onClick={() => updateLibraryQuery({ page: String(criteria.page + 1) })}>
+                    {t("paginationNext")}<ChevronRight />
+                  </Button>
+                </nav>
+              ) : null}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -924,6 +989,7 @@ export function LibraryView({
           ) : null}
 
           {toolsRow}
+          <LibraryFilters criteria={criteria} onChange={changeFilters} />
 
           {displayedItems.length === 0 ? (
             <LibraryEmpty
@@ -934,7 +1000,7 @@ export function LibraryView({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setCollectionQuery("")}
+                  onClick={() => updateLibraryQuery({ mode: "mine" }, true)}
                 >
                   {t("resetFilters")}
                 </Button>
