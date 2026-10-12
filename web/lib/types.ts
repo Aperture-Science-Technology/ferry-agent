@@ -11,7 +11,7 @@ type Schemas = components["schemas"];
 export type DeviceBrand = Schemas["DeviceBrand"];
 export type DeliveryTier = Schemas["DeliveryTier"];
 export type DeliveryStatus = Schemas["DeliveryStatus"];
-export type DeliveryMethod = Schemas["DeliveryMethod"];
+export type DeliveryMethod = Schemas["DeliveryMethod"] | "opds";
 export type PairingStatus = Schemas["PairingStatus"];
 export type GatewayJobType = Schemas["GatewayJobType"];
 export type GatewayJobStatus = Schemas["GatewayJobStatus"];
@@ -34,8 +34,8 @@ export type DevicePatch = Schemas["DevicePatch"];
 export type Gateway = Schemas["GatewayOut"];
 export type GatewayCredentials = Schemas["GatewayCredentials"];
 export type GatewayJobStatusOut = Schemas["GatewayJobStatusOut"];
-export type DeliveryJob = Schemas["DeliveryOut"];
-export type MethodAvailability = Schemas["MethodAvailability"];
+export type DeliveryJob = Omit<Schemas["DeliveryOut"], "method"> & { method: DeliveryMethod };
+export type MethodAvailability = Omit<Schemas["MethodAvailability"], "method"> & { method: DeliveryMethod };
 export type Source = Schemas["SourceOut"];
 export type OpdsToken = Schemas["OpdsTokenOut"];
 export type OpdsTokenCreated = Schemas["OpdsTokenCreated"];
@@ -75,4 +75,14 @@ export type SearchRequest = {
   sort?: SearchSort | null;
   limit?: number | null;
   offset?: number;
+};
+
+
+export type SystemHealth = {
+  converters: { ebook_convert_available: boolean; ebook_convert_version: string | null };
+  mail: { configured: boolean; sender_address: string; domains_allowed: string[] };
+  storage: { used_bytes: number; quota_bytes: number; percentage: number | null };
+  gateways: { total: number; online: number; pending: number; revoked: number };
+  library: { items: number; deliveries_last_7_days: Record<DeliveryStatus, number> };
+  version: string | null;
 };

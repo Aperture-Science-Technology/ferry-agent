@@ -212,6 +212,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deliveries/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Delivery */
+        post: operations["cancel_delivery_api_v1_deliveries__job_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deliveries/{job_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Delivery */
+        post: operations["retry_delivery_api_v1_deliveries__job_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices": {
         parameters: {
             query?: never;
@@ -607,6 +641,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test Mail */
+        post: operations["test_mail_api_v1_mail_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/opds/tokens": {
         parameters: {
             query?: never;
@@ -674,6 +725,23 @@ export interface paths {
         head?: never;
         /** Update Source */
         patch: operations["update_source_api_v1_sources__source_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/system/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** System Health */
+        get: operations["system_health_api_v1_system_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/users/me": {
@@ -962,7 +1030,7 @@ export interface components {
          * DeliveryMethod
          * @enum {string}
          */
-        DeliveryMethod: "email" | "dropbox" | "drive" | "browser_code" | "usb";
+        DeliveryMethod: "email" | "dropbox" | "drive" | "browser_code" | "usb" | "opds";
         /** DeliveryOut */
         DeliveryOut: {
             /**
@@ -1337,12 +1405,36 @@ export interface components {
             configured: boolean;
             /** Daily Quota */
             daily_quota: number;
+            /** Domains Allowed */
+            domains_allowed?: string[];
             /** Hourly Quota */
             hourly_quota: number;
             /** Reply To */
             reply_to: string | null;
             /** Sender Address */
             sender_address: string;
+            /**
+             * Sender Domain
+             * @default
+             */
+            sender_domain: string;
+        };
+        /** MailTestOut */
+        MailTestOut: {
+            /** Recipient */
+            recipient: string;
+            /**
+             * Status
+             * @default sent
+             * @constant
+             * @enum {string}
+             */
+            status: "sent";
+        };
+        /** MailTestRequest */
+        MailTestRequest: {
+            /** Device Id */
+            device_id?: string | null;
         };
         /** MethodAvailability */
         MethodAvailability: {
@@ -2016,7 +2108,13 @@ export interface operations {
     };
     list_deliveries_api_v1_deliveries_get: {
         parameters: {
-            query?: never;
+            query?: {
+                q?: string | null;
+                status?: components["schemas"]["DeliveryStatus"] | null;
+                device_id?: string | null;
+                page?: number;
+                limit?: number;
+            };
             header?: {
                 authorization?: string | null;
                 "X-Dev-User"?: string | null;
@@ -2119,6 +2217,74 @@ export interface operations {
         };
     };
     get_delivery_api_v1_deliveries__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-Dev-User"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_delivery_api_v1_deliveries__job_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-Dev-User"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_delivery_api_v1_deliveries__job_id__retry_post: {
         parameters: {
             query?: never;
             header?: {
@@ -3023,6 +3189,42 @@ export interface operations {
             };
         };
     };
+    test_mail_api_v1_mail_test_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-Dev-User"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailTestRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailTestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_opds_tokens_api_v1_opds_tokens_get: {
         parameters: {
             query?: never;
@@ -3184,6 +3386,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SourceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    system_health_api_v1_system_health_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-Dev-User"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
                 };
             };
             /** @description Validation Error */

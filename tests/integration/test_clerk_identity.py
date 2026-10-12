@@ -271,7 +271,7 @@ def test_migration_backfill_unique_null_and_downgrade(fresh_db_url, alembic_run,
                     {"id": uuid.uuid4(), "email": email},
                 )
             before = conn.execute(text("SELECT * FROM users ORDER BY email")).mappings().all()
-        alembic_run(fresh_db_url, "head")
+        alembic_run(fresh_db_url, "0018_users_clerk_sub")
         with engine.connect() as conn:
             after = conn.execute(text("SELECT * FROM users ORDER BY email")).mappings().all()
             assert [{k: v for k, v in row.items() if k != "clerk_sub"} for row in after] == before

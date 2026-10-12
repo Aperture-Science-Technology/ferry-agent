@@ -1,5 +1,15 @@
 # Changelog
 
+## FA-DEVICE-DELIVERY-01
+
+- PocketBook et les autres liseuses du tier D disposent d’un catalogue OPDS ; le tier C peut aussi choisir ce mode. Les liens sont réutilisés par nom de liseuse, chiffrés avec la clé Fernet existante, et retirés du suivi après révocation. Un ancien accès conservé uniquement sous forme d’empreinte doit être révoqué explicitement avant de pouvoir retrouver un nouveau lien.
+- Test réel de l’adresse Kindle depuis les réglages du compte ou de la liseuse, avec domaines autorisés et quota partagé avec les livraisons. Un test accepté ne confirme pas sa réception par Amazon.
+- Recherche sans distinction de casse ou d’accents, filtres et pagination serveur de l’historique ; relance des échecs et annulation des envois en attente, protégées contre les envois déjà commencés. Outils MCP correspondants.
+- État du système dans les Réglages : conversion, email, espace utilisé, connexions personnelles et livraisons récentes.
+- Nettoyage borné et journalisé des données d’indexeur dans les tâches terminées avant suppression.
+- Révision 0019 additive et idempotente : enum OPDS en AUTOCOMMIT, extension unaccent, secrets OPDS chiffrés, référence privée du catalogue et réservations de quota des tests. Le retour arrière conserve ces ajouts.
+
+
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

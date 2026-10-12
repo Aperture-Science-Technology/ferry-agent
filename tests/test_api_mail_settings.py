@@ -54,7 +54,7 @@ def test_mail_settings_shape_when_not_configured(monkeypatch: pytest.MonkeyPatch
             "reply_to",
             "allowed_domains",
             "hourly_quota",
-            "daily_quota",
+            "daily_quota", "sender_domain", "domains_allowed",
         }
         # Ne doit pas reveler hote / port / identifiants.
         raw = resp.text.lower()

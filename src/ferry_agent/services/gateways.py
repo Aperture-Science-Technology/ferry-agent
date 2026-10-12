@@ -1,11 +1,12 @@
 """Peering et orchestration des jobs executes par les gateways detaches."""
 
+import logging
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import case, delete, or_, select, update
+from sqlalchemy import case, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import hash_secret
@@ -79,11 +80,7 @@ async def recreate_gateway_credentials(
 
 
 async def pair_gateway(db: AsyncSession, token: str) -> Gateway:
-    query = (
-        select(Gateway)
-        .where(Gateway.pairing_token_hash == hash_secret(token))
-        .with_for_update()
-    )
+    query = select(Gateway).where(Gateway.pairing_token_hash == hash_secret(token)).with_for_update()
     result = await db.execute(query)
     gateway = result.scalar_one_or_none()
     now = utcnow()
@@ -210,10 +207,7 @@ async def save_search_results(
         return job
     if job.status not in (GatewayJobStatus.pending, GatewayJobStatus.running):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="gateway job non actif")
-    sanitized = [
-        result.model_copy(update={"cover_url": validate_cover_url(result.cover_url)})
-        for result in results
-    ]
+    sanitized = [result.model_copy(update={"cover_url": validate_cover_url(result.cover_url)}) for result in results]
     job.payload = {
         **job.payload,
         "results": [result.model_dump(mode="json") for result in sanitized],
@@ -258,17 +252,44 @@ async def create_job(
     return job
 
 
-async def purge_finished_jobs(db: AsyncSession, retention_days: int) -> int:
-    """Supprime les ``GatewayJob`` termines (``done``/``failed``) trop anciens.
+def sanitize_finished_payload(payload: dict) -> dict:
+    """Copy results without retaining indexer handles, including nested results."""
+    sensitive = {"download_url", "magnet_url", "guid", "indexer_id"}
 
-    Les jobs ``running``/``pending`` sont conserves (reprise potentielle).
-    """
+    def clean(value):
+        if isinstance(value, dict):
+            return {key: clean(item) for key, item in value.items() if key not in sensitive}
+        if isinstance(value, list):
+            return [clean(item) for item in value]
+        return value
+
+    return {**payload, "results": clean(payload["results"])} if "results" in payload else dict(payload)
+
+
+async def purge_finished_jobs(db: AsyncSession, retention_days: int) -> int:
+    """Sanitize then delete at most 500 expired terminal jobs per sweep."""
     cutoff = utcnow() - timedelta(days=retention_days)
-    result = await db.execute(
-        delete(GatewayJob).where(
-            GatewayJob.status.in_([GatewayJobStatus.done, GatewayJobStatus.failed]),
-            GatewayJob.updated_at < cutoff,
+    jobs = (
+        (
+            await db.execute(
+                select(GatewayJob)
+                .where(
+                    GatewayJob.status.in_([GatewayJobStatus.done, GatewayJobStatus.failed]),
+                    GatewayJob.updated_at < cutoff,
+                )
+                .order_by(GatewayJob.updated_at, GatewayJob.id)
+                .limit(500)
+                .with_for_update(skip_locked=True)
+            )
         )
+        .scalars()
+        .all()
     )
+    for job in jobs:
+        job.payload = sanitize_finished_payload(job.payload)
+    await db.flush()
+    for job in jobs:
+        await db.delete(job)
     await db.commit()
-    return int(result.rowcount or 0)
+    logging.getLogger(__name__).info("gateway purge: %d expired terminal jobs sanitized and removed", len(jobs))
+    return len(jobs)

@@ -690,7 +690,7 @@ async def deliver(
         parts.append(f"liseuse: {data['device_label']}")
     msg = "Job de livraison créé.\n" + _kv(parts)
     if data.get("download_url"):
-        msg += f"\nURL de téléchargement (tier C): {data['download_url']}"
+        msg += f"\nLien pour récupérer le livre ou consulter le catalogue: {data['download_url']}"
     return msg
 
 
@@ -739,6 +739,25 @@ async def get_delivery_status(job_id: str) -> str:
         )
     return msg
 
+
+@mcp.tool
+async def retry_delivery(job_id: str) -> str:
+    """Relance une livraison en échec et retourne son nouvel état et son lien éventuel."""
+    async with _client(_resolve_user_token()) as client:
+        response = await client.post(f"/api/v1/deliveries/{job_id}/retry")
+    _raise_for(response)
+    data = response.json()
+    return _kv([f"job_id: {data['id']}", f"status: {data['status']}", f"lien: {data.get('download_url') or ''}"])
+
+
+@mcp.tool
+async def cancel_delivery(job_id: str) -> str:
+    """Annule une livraison encore en attente ; un envoi commencé ne peut plus être annulé."""
+    async with _client(_resolve_user_token()) as client:
+        response = await client.post(f"/api/v1/deliveries/{job_id}/cancel")
+    _raise_for(response)
+    data = response.json()
+    return _kv([f"job_id: {data['id']}", f"status: {data['status']}", f"message: {data.get('error') or ''}"])
 
 # ---------------------------------------------------------------------------
 # 8. list_gateways
@@ -1223,7 +1242,7 @@ async def set_source_enabled(source_id: str, enabled: bool) -> str:
 # ---------------------------------------------------------------------------
 
 @mcp.tool
-async def list_deliveries(limit: int = 20) -> str:
+async def list_deliveries(limit: int = 20, page: int = 1, q: str | None = None, status: str | None = None, device_id: str | None = None) -> str:
     """Liste les envois récents de l'utilisateur (triés du plus récent).
 
     Args:
@@ -1233,10 +1252,16 @@ async def list_deliveries(limit: int = 20) -> str:
         Par ligne : date, statut, méthode, titre, liseuse, erreur si échec.
         Rappel Amazon si au moins un envoi email est `sent`.
     """
-    if limit < 1:
-        limit = 1
+    limit = max(1, min(limit, 200))
+    params: dict[str, Any] = {"limit": limit, "page": max(1, page)}
+    if q:
+        params["q"] = q
+    if status:
+        params["status"] = status
+    if device_id:
+        params["device_id"] = device_id
     async with _client(_resolve_user_token()) as client:
-        resp = await client.get("/api/v1/deliveries")
+        resp = await client.get("/api/v1/deliveries", params=params)
     _raise_for(resp)
     jobs = resp.json()
     if not isinstance(jobs, list) or not jobs:

@@ -116,10 +116,10 @@ def test_tier_c_always_available() -> None:
 # --- tier D (non implemente) --------------------------------------------------
 
 
-def test_tier_d_has_no_candidate_methods() -> None:
+def test_tier_d_has_opds() -> None:
     device = make_device(delivery_tier=DeliveryTier.D, brand=DeviceBrand.other)
     methods = available_delivery_methods(device, smtp_configured=True)
-    assert methods == []
+    assert [m.method for m in methods] == [DeliveryMethod.opds]
 
 
 # --- is_method_allowed -------------------------------------------------------
@@ -156,7 +156,7 @@ async def test_get_delivery_methods_route_returns_helper_output(monkeypatch: pyt
 
     result = await devices.get_delivery_methods(device.id, user, db)
 
-    assert len(result) == 1
+    assert len(result) == 2
     assert result[0].method == DeliveryMethod.browser_code
     assert result[0].available is True
 

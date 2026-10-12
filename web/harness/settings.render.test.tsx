@@ -1,3 +1,4 @@
+vi.mock("@/components/app/settings/system-health", () => ({ SystemHealthPanel: () => null }));
 /**
  * Settings / OPDS: dirty detection, Kindle null PATCH, QR states,
  * create/revoke/copy without secret snapshots, unavailable≠empty.

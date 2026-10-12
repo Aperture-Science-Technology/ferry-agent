@@ -27,9 +27,9 @@ describe("Delivery truth", () => {
     expect(screen.getByText("Envoyé — accepté par le relais")).toBeTruthy();
     expect(screen.getByText("En cours d’envoi")).toBeTruthy();
     expect(screen.getByText("1 en cours")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "En cours" }));
+    fireEvent.click(screen.getByRole("button", { name: "En attente" }));
     expect(screen.queryByText(/Livre email →/)).toBeNull();
-    expect(screen.getByText(/Livre cloud →/)).toBeTruthy();
+    expect(screen.queryByText(/Livre cloud →/)).toBeNull();
   });
 
   it("shows API sender address, Amazon link and silent discard warning in feedback", async () => {

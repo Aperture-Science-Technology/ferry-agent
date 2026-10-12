@@ -22,7 +22,7 @@ export function isTerminalDeliveryStatus(job: Pick<DeliveryListItem, "status" | 
 
 export function deliveryStatusLabelKey(job: { status: string; method: string }) {
   const status = normalizeDeliveryStatus(job.status);
-  return status === "sent" && job.method === "email" ? "sentEmail" : status;
+  return status === "sent" && job.method === "email" ? "sentEmail" : status === "sent" && job.method === "opds" ? "catalogReady" : status;
 }
 
 /**
@@ -64,7 +64,7 @@ export function mergeDeliveryJobs<T extends DeliveryListItem & Record<string, un
     const merged: T = { ...prior, ...job };
     merged.terminal = job.terminal;
     for (const key of Object.keys(prior) as Array<keyof T>) {
-      if (key === "terminal" || key === "status") continue;
+      if (key === "terminal" || key === "status" || key === "error" || key === "delivered_at") continue;
       const nextVal = job[key];
       if (nextVal === null || nextVal === undefined || nextVal === "") {
         const prevVal = prior[key];

@@ -16,6 +16,7 @@ from ferry_agent import models  # noqa: F401  — peuple Base.metadata
 IRREVERSIBLE_ENUM_ADD_VALUE_REVISIONS = (
     "0002_gateway_pairing",  # source_type.torrent_gateway, pairing_status.revoked
     "0004_delivery_method_drive",  # delivery_method.drive
+    "0019_device_delivery",  # delivery_method.opds
 )
 
 # Allowlist nominative des FK autorisees a omettre ON DELETE, avec la

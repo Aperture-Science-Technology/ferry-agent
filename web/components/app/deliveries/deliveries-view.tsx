@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
 import { Loader2, RefreshCw, Send, Truck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -25,13 +26,13 @@ import {
 import { PageHeader } from "@/components/app/page-header";
 import { Reveal } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
-import type { DeliveryJob, DeliveryMethod } from "@/lib/types";
+import type { Device, DeliveryJob, DeliveryMethod } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 5000;
 const POLL_MAX_MS = 5 * 60 * 1000;
 
-type DeliveryFilter = "all" | "delivered" | "in_progress" | "failed";
+type DeliveryFilter = "all" | "delivered" | "in_progress" | "sent" | "failed";
 
 function formatRelativeWhen(
   iso: string,
@@ -74,7 +75,9 @@ function matchesFilter(job: DeliveryJob, filter: DeliveryFilter): boolean {
     case "failed":
       return normalized === "failed";
     case "in_progress":
-      return isActiveDeliveryStatus(job);
+      return normalized === "queued";
+    case "sent":
+      return normalized === "sent";
     default:
       return true;
   }
@@ -84,11 +87,13 @@ export function DeliveriesView({
   title,
   description,
   initialDeliveries,
+  initialDevices = [],
   deliveriesUnavailable,
 }: {
   title: string;
   description: string;
   initialDeliveries: DeliveryJob[];
+  initialDevices?: Device[];
   deliveriesUnavailable: boolean;
 }) {
   const t = useTranslations("deliveries");
@@ -106,8 +111,31 @@ export function DeliveriesView({
   const [detailId, setDetailId] = useState<string | null>(null);
   const [filter, setFilter] = useState<DeliveryFilter>("all");
 
+  const [query, setQuery] = useState("");
+  const [deviceId, setDeviceId] = useState("");
+  const devices = initialDevices;
+  const [page, setPage] = useState(1);
+  const [acting, setActing] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
+  const requestNumber = useRef(0);
+  const params = new URLSearchParams({ page: String(page), limit: "50" });
+  if (query) params.set("q", query);
+  if (deviceId) params.set("device_id", deviceId);
+  if (filter !== "all") params.set("status", filter === "in_progress" ? "queued" : filter);
+  const endpoint = `/api/v1/deliveries?${params}`;
+  const initialEndpoint = useRef(endpoint);
+
+
+  async function act(job: DeliveryJob, action: "retry" | "cancel") {
+    setActing(job.id); setActionError("");
+    try {
+      const result = await call<DeliveryJob>(`/api/v1/deliveries/${job.id}/${action}`, { method: "POST" });
+      setDeliveries(previous => previous.map(row => row.id === job.id ? result : row));
+    } catch { setActionError(t("actionError")); }
+    finally { setActing(null); }
+  }
+
   const pollStartedAt = useRef<number | null>(null);
-  const refreshingRef = useRef(false);
 
   function methodLabel(method: DeliveryMethod) {
     return tMethods(`methods.${method}`);
@@ -134,11 +162,11 @@ export function DeliveriesView({
 
   const refresh = useCallback(
     async (opts?: { silent?: boolean }) => {
-      if (refreshingRef.current) return;
-      refreshingRef.current = true;
+      const request = ++requestNumber.current;
       if (!opts?.silent) setRefreshing(true);
       try {
-        const fresh = await call<DeliveryJob[]>("/api/v1/deliveries");
+        const fresh = await call<DeliveryJob[]>(endpoint);
+        if (request !== requestNumber.current) return;
         let outcomeOk = true;
         let nextItems: DeliveryJob[] = [];
         setDeliveries((prev) => {
@@ -153,6 +181,7 @@ export function DeliveriesView({
           pollStartedAt.current = null;
         }
       } catch {
+        if (request !== requestNumber.current) return;
         let keptEmpty = true;
         setDeliveries((prev) => {
           const outcome = applyDeliveryFetchResult(prev, null);
@@ -165,12 +194,18 @@ export function DeliveriesView({
           setRefreshError(true);
         }
       } finally {
-        refreshingRef.current = false;
-        setRefreshing(false);
+        if (request === requestNumber.current) setRefreshing(false);
       }
     },
-    [call]
+    [call, endpoint]
   );
+
+  useEffect(() => {
+    if (initialEndpoint.current === endpoint) return;
+    initialEndpoint.current = endpoint;
+    const timer = window.setTimeout(() => { void refresh(); }, 250);
+    return () => window.clearTimeout(timer);
+  }, [endpoint, refresh]);
 
   useEffect(() => {
     if (!hasActiveDeliveries(deliveries)) {
@@ -240,7 +275,9 @@ export function DeliveriesView({
       case "delivered":
         return t("filterDelivered");
       case "in_progress":
-        return t("filterInProgress");
+        return t("filterQueued");
+      case "sent":
+        return t("filterSent");
       case "failed":
         return t("filterFailed");
     }
@@ -285,6 +322,7 @@ export function DeliveriesView({
           "all",
           "delivered",
           "in_progress",
+          "sent",
           "failed",
         ] as const satisfies DeliveryFilter[]
       ).map((value) => (
@@ -297,7 +335,7 @@ export function DeliveriesView({
             })
           )}
           aria-pressed={filter === value}
-          onClick={() => setFilter(value)}
+          onClick={() => { setPage(1); setFilter(value); }}
         >
           {filterLabel(value)}
         </button>
@@ -351,11 +389,13 @@ export function DeliveriesView({
                   </>
                 }
                 actions={
+                  <>
+                  {job.status === "failed" || job.status === "queued" ? <Button variant="outline" size="sm" disabled={acting !== null} onClick={() => void act(job, job.status === "failed" ? "retry" : "cancel")}>{t(job.status === "failed" ? "retryDelivery" : "cancelDelivery")}</Button> : null}
                   <DeliveryActions
                     job={job}
                     onTrack={() => setDetailId(job.id)}
                     trackLabel={failed ? t("trackFailed") : t("track")}
-                    downloadLabel={t("openDownload")}
+                    downloadLabel={t(job.method === "opds" ? "openCatalog" : "openDownload")}
                     trackAria={
                       failed
                         ? t("trackFailedAria", {
@@ -366,6 +406,7 @@ export function DeliveriesView({
                           })
                     }
                   />
+                  </>
                 }
               />
             </li>
@@ -447,9 +488,22 @@ export function DeliveriesView({
               </p>
             </div>
 
-            {deliveries.length > 0 ? filterChips : null}
+            <div className="flex flex-wrap gap-2 py-3">
+              <Input aria-label={t("search")} placeholder={t("search")} value={query} onChange={event => { setPage(1); setQuery(event.target.value); }} />
+              <select className="rounded-md border p-2" aria-label={t("deviceFilter")} value={deviceId} onChange={event => { setPage(1); setDeviceId(event.target.value); }}>
+                <option value="">{t("allDevices")}</option>
+                {devices.map(device => <option key={device.id} value={device.id}>{device.name || `${device.brand} ${device.model ?? ""}`}</option>)}
+              </select>
+            </div>
+            {filterChips}
+            {actionError ? <p role="alert">{actionError}</p> : null}
 
             <div data-testid="deliveries-body">{historyBody}</div>
+            <nav aria-label={t("pagination")} className="flex items-center gap-3 py-3">
+              <Button variant="outline" disabled={page === 1 || refreshing} onClick={() => setPage(value => value - 1)}>{t("previousPage")}</Button>
+              <span>{t("pageNumber", { page })}</span>
+              <Button variant="outline" disabled={deliveries.length < 50 || refreshing} onClick={() => setPage(value => value + 1)}>{t("nextPage")}</Button>
+            </nav>
           </section>
         </>
       )}

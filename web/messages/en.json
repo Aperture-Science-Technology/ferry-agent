@@ -329,7 +329,8 @@
       "dropbox": "Dropbox",
       "drive": "Google Drive",
       "browser_code": "Code in the browser",
-      "usb": "USB transfer"
+      "usb": "USB transfer",
+      "opds": "Reader catalog (OPDS)"
     },
     "methodUnavailable": {
       "smtp_not_configured": "Send-to-Kindle unavailable (SMTP not configured).",
@@ -727,9 +728,23 @@
       "delivered": "Delivered",
       "failed": "Failed",
       "unknown": "Unknown",
-      "sentEmail": "Sent — accepted by the mail relay"
+      "sentEmail": "Sent — accepted by the mail relay",
+      "catalogReady": "Catalog ready to browse"
     },
-    "statusHintSentEmail": "Accepted by the mail relay. Amazon does not confirm delivery: check your e-reader."
+    "statusHintSentEmail": "Accepted by the mail relay. Amazon does not confirm delivery: check your e-reader.",
+    "actionError": "Unable to complete this action. Refresh the delivery and try again.",
+    "filterQueued": "Queued",
+    "filterSent": "Sent / ready to collect",
+    "retryDelivery": "Retry delivery",
+    "cancelDelivery": "Cancel delivery",
+    "search": "Search for a book or reader",
+    "deviceFilter": "Filter by reader",
+    "allDevices": "All readers",
+    "pagination": "Delivery pages",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "pageNumber": "Page {page}",
+    "openCatalog": "Open catalog"
   },
   "deliveryDetail": {
     "title": "Delivery tracking",
@@ -1128,5 +1143,32 @@
       "ctaSignIn": "Sign in",
       "ctaDocs": "Read the guide"
     }
+  },
+  "systemHealth": {
+    "title": "System status",
+    "error": "Unable to load system status. Please try again.",
+    "retry": "Try again",
+    "loading": "Loading system status…",
+    "converters": "Book conversion (Calibre)",
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "mail": "Email delivery",
+    "storage": "Storage used",
+    "storageUsage": "{used, number} bytes of {quota, number} ({percent, number}%)",
+    "gateways": "Personal connections",
+    "gatewayCounts": "{total} total · {online} online · {pending} pending · {revoked} revoked",
+    "library": "Library",
+    "items": "{count} books",
+    "deliveries": "Deliveries over the last 7 days",
+    "deliveryCounts": "{queued} queued · {sent} sent or ready to collect · {delivered} delivered · {failed} failed",
+    "version": "Version",
+    "unknown": "Not available"
+  },
+  "kindleTest": {
+    "send": "Test Kindle address",
+    "sending": "Sending test…",
+    "sent": "Test accepted for {recipient}. Check your Kindle. Amazon does not confirm receipt.",
+    "error": "The test failed. Check your Kindle address and try again.",
+    "hint": "Approve the Ferry sender address in your Amazon settings before testing. Tests count towards your sending limit."
   }
 }
