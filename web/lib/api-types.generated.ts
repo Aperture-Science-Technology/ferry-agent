@@ -1408,9 +1408,7 @@ export interface components {
              */
             job_id: string;
             /** Payload */
-            payload: {
-                [key: string]: unknown;
-            };
+            payload: Record<string, never>;
             status: components["schemas"]["GatewayJobStatus"];
             type: components["schemas"]["GatewayJobType"];
         };
@@ -1436,9 +1434,7 @@ export interface components {
             /** Library Item Id */
             library_item_id?: string | null;
             /** Payload */
-            payload: {
-                [key: string]: unknown;
-            };
+            payload: Record<string, never>;
             status: components["schemas"]["GatewayJobStatus"];
             type: components["schemas"]["GatewayJobType"];
         };
@@ -1938,9 +1934,7 @@ export interface operations {
                      * Result
                      * @description Métadonnées du résultat, sous forme d'objet ou de texte JSON.
                      */
-                    result?: {
-                        [key: string]: unknown;
-                    } | string | null;
+                    result?: Record<string, never> | string | null;
                     /** Result Id */
                     result_id?: string | null;
                     /** Source */
@@ -1955,9 +1949,7 @@ export interface operations {
                      * Result
                      * @description Métadonnées du résultat, sous forme d'objet ou de texte JSON.
                      */
-                    result?: {
-                        [key: string]: unknown;
-                    } | string | null;
+                    result?: Record<string, never> | string | null;
                     /** Result Id */
                     result_id?: string | null;
                     /** Source */
@@ -3605,9 +3597,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": Record<string, never>;
                 };
             };
             /** @description Validation Error */
@@ -3673,8 +3663,6 @@ export interface operations {
                     default_format?: "epub" | "mobi" | "azw3" | "pdf";
                     /** Kindle Email */
                     kindle_email?: string | null;
-                } & {
-                    [key: string]: unknown;
                 };
             };
         };
@@ -3798,9 +3786,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": Record<string, never>;
                 };
             };
         };

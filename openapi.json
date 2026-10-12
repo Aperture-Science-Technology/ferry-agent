@@ -699,7 +699,6 @@
             "type": "string"
           },
           "payload": {
-            "additionalProperties": true,
             "title": "Payload",
             "type": "object"
           },
@@ -766,7 +765,6 @@
             "title": "Library Item Id"
           },
           "payload": {
-            "additionalProperties": true,
             "title": "Payload",
             "type": "object"
           },
@@ -2252,7 +2250,6 @@
                   "result": {
                     "anyOf": [
                       {
-                        "additionalProperties": true,
                         "type": "object"
                       },
                       {
@@ -2303,7 +2300,6 @@
                   "result": {
                     "anyOf": [
                       {
-                        "additionalProperties": true,
                         "type": "object"
                       },
                       {
@@ -6021,7 +6017,6 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
                   "title": "Response System Health Api V1 System Health Get",
                   "type": "object"
                 }
@@ -6151,7 +6146,6 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
                 "description": "Champs optionnels du profil. Absent = inchange ; null = efface (kindle_email).",
                 "properties": {
                   "default_format": {
@@ -6326,7 +6320,6 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
                   "title": "Response Healthz Healthz Get",
                   "type": "object"
                 }
