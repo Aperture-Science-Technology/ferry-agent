@@ -740,6 +740,25 @@ async def get_delivery_status(job_id: str) -> str:
     return msg
 
 
+@mcp.tool
+async def retry_delivery(job_id: str) -> str:
+    """Relance une livraison en échec et retourne son nouvel état et son lien éventuel."""
+    async with _client(_resolve_user_token()) as client:
+        response = await client.post(f"/api/v1/deliveries/{job_id}/retry")
+    _raise_for(response)
+    data = response.json()
+    return _kv([f"job_id: {data['id']}", f"status: {data['status']}", f"lien: {data.get('download_url') or ''}"])
+
+
+@mcp.tool
+async def cancel_delivery(job_id: str) -> str:
+    """Annule une livraison encore en attente ; un envoi commencé ne peut plus être annulé."""
+    async with _client(_resolve_user_token()) as client:
+        response = await client.post(f"/api/v1/deliveries/{job_id}/cancel")
+    _raise_for(response)
+    data = response.json()
+    return _kv([f"job_id: {data['id']}", f"status: {data['status']}", f"message: {data.get('error') or ''}"])
+
 # ---------------------------------------------------------------------------
 # 8. list_gateways
 # ---------------------------------------------------------------------------
@@ -2389,23 +2408,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
-@mcp.tool
-async def retry_delivery(job_id: str) -> str:
-    """Relance une livraison en échec et retourne son nouvel état et son lien éventuel."""
-    async with _client(_resolve_user_token()) as client:
-        response = await client.post(f"/api/v1/deliveries/{job_id}/retry")
-    _raise_for(response)
-    data = response.json()
-    return _kv([f"job_id: {data['id']}", f"status: {data['status']}", f"lien: {data.get('download_url') or ''}"])
-
-
-@mcp.tool
-async def cancel_delivery(job_id: str) -> str:
-    """Annule une livraison encore en attente ; un envoi commencé ne peut plus être annulé."""
-    async with _client(_resolve_user_token()) as client:
-        response = await client.post(f"/api/v1/deliveries/{job_id}/cancel")
-    _raise_for(response)
-    data = response.json()
-    return _kv([f"job_id: {data['id']}", f"status: {data['status']}", f"message: {data.get('error') or ''}"])
