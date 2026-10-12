@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { FilterBar, SortColumns } from "@/components/app/filter-bar";
+import { useUrlQuery, updateUrlQuery, queryPage } from "@/lib/use-url-query";
 import { Loader2, RefreshCw, Send, Truck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   applyDeliveryFetchResult,
   hasActiveDeliveries,
@@ -27,7 +28,6 @@ import { PageHeader } from "@/components/app/page-header";
 import { Reveal } from "@/components/motion/reveal";
 import { useApiClient } from "@/lib/api-client";
 import type { Device, DeliveryJob, DeliveryMethod } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 5000;
 const POLL_MAX_MS = 5 * 60 * 1000;
@@ -97,6 +97,7 @@ export function DeliveriesView({
   deliveriesUnavailable: boolean;
 }) {
   const t = useTranslations("deliveries");
+  const tFilters = useTranslations("enhance.filters");
   const tMethods = useTranslations("deliverDialog");
   const tCommon = useTranslations("common");
   const locale = useLocale();
@@ -109,12 +110,19 @@ export function DeliveriesView({
   const [refreshError, setRefreshError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<DeliveryFilter>("all");
+  const urlQuery = useUrlQuery();
+  const rawFilter = urlQuery.get("status") ?? "all";
+  const filter: DeliveryFilter = ["delivered", "in_progress", "sent", "failed"].includes(rawFilter) ? rawFilter as DeliveryFilter : "all";
+  const query = urlQuery.get("q") ?? "";
+  const deviceId = urlQuery.get("device_id") ?? "";
+  const sort = ["status", "device"].includes(urlQuery.get("sort") ?? "") ? urlQuery.get("sort")! : "date";
+  const descending = urlQuery.get("dir") !== "asc";
+  function changeFilters(values: Record<string, string | null>) { updateUrlQuery({ ...values, page: null }); }
+  function resetFilters() { updateUrlQuery({}, ["q", "status", "device_id", "sort", "dir", "page"]); }
 
-  const [query, setQuery] = useState("");
-  const [deviceId, setDeviceId] = useState("");
   const devices = initialDevices;
-  const [page, setPage] = useState(1);
+  const page = queryPage(urlQuery);
+  function setPage(value: number) { updateUrlQuery({ page: String(value) }); }
   const [acting, setActing] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
   const requestNumber = useRef(0);
@@ -123,7 +131,7 @@ export function DeliveriesView({
   if (deviceId) params.set("device_id", deviceId);
   if (filter !== "all") params.set("status", filter === "in_progress" ? "queued" : filter);
   const endpoint = `/api/v1/deliveries?${params}`;
-  const initialEndpoint = useRef(endpoint);
+  const initialEndpoint = useRef("/api/v1/deliveries?page=1&limit=50");
 
 
   async function act(job: DeliveryJob, action: "retry" | "cancel") {
@@ -203,6 +211,7 @@ export function DeliveriesView({
   useEffect(() => {
     if (initialEndpoint.current === endpoint) return;
     initialEndpoint.current = endpoint;
+    ++requestNumber.current;
     const timer = window.setTimeout(() => { void refresh(); }, 250);
     return () => window.clearTimeout(timer);
   }, [endpoint, refresh]);
@@ -247,10 +256,15 @@ export function DeliveriesView({
     [deliveries]
   );
 
-  const filteredDeliveries = useMemo(
-    () => deliveries.filter((job) => matchesFilter(job, filter)),
-    [deliveries, filter]
-  );
+  const filteredDeliveries = deliveries.filter(job => matchesFilter(job, filter)
+      && (!deviceId || job.device_id === deviceId)
+      && `${job.item_title ?? ""} ${job.device_label ?? ""}`.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase(locale).includes(query.trim().normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase(locale)))
+      .sort((a, b) => {
+        const order = sort === "status" ? t(`statuses.${deliveryStatusLabelKey(a)}`).localeCompare(t(`statuses.${deliveryStatusLabelKey(b)}`), locale)
+          : sort === "device" ? (a.device_label ?? "").localeCompare(b.device_label ?? "", locale)
+          : Date.parse(a.created_at) - Date.parse(b.created_at);
+        return descending ? -order : order;
+      });
 
   const queueSummary = useMemo(() => {
     if (activeCount > 0 && failedCount > 0) {
@@ -310,41 +324,15 @@ export function DeliveriesView({
     </Button>
   );
 
-  const filterChips = (
-    <div
-      className="flex flex-wrap items-center gap-2 pb-2"
-      role="group"
-      aria-label={t("filtersLabel")}
-      data-testid="deliveries-filters"
-    >
-      {(
-        [
-          "all",
-          "delivered",
-          "in_progress",
-          "sent",
-          "failed",
-        ] as const satisfies DeliveryFilter[]
-      ).map((value) => (
-        <button
-          key={value}
-          type="button"
-          className={cn(
-            buttonVariants({
-              variant: filter === value ? "default" : "ghost",
-            })
-          )}
-          aria-pressed={filter === value}
-          onClick={() => { setPage(1); setFilter(value); }}
-        >
-          {filterLabel(value)}
-        </button>
-      ))}
-      <span className="sr-only" aria-live="polite">
-        {t("filterActiveAnnouncement", { filter: filterLabel(filter) })}
-      </span>
-    </div>
-  );
+  const sortColumns = [{ value: "date", label: tFilters("date") }, { value: "status", label: tFilters("status") }, { value: "device", label: tFilters("device") }];
+  const filterBar = <FilterBar testId="deliveries-filters" label={t("filtersLabel")}
+    search={{ label: t("search"), value: query }} count={filteredDeliveries.length}
+    fields={[
+      { key: "status", label: tFilters("status"), value: filter, defaultValue: "all", kind: "buttons", options: (["all", "delivered", "in_progress", "sent", "failed"] as const).map(value => ({ value, label: filterLabel(value) })) },
+      { key: "device_id", label: t("deviceFilter"), value: deviceId, defaultValue: "", options: [{ value: "", label: t("allDevices") }, ...devices.map(device => ({ value: device.id, label: device.name || `${device.brand} ${device.model ?? ""}` }))] },
+      { key: "sort", label: tFilters("sort"), value: sort, defaultValue: "date", options: sortColumns },
+      { key: "dir", label: tFilters("direction"), value: descending ? "desc" : "asc", defaultValue: "desc", options: [{ value: "desc", label: tFilters("descending") }, { value: "asc", label: tFilters("ascending") }] },
+    ]} onChange={changeFilters} onReset={resetFilters} />;
 
   const rows = (
     <Reveal>
@@ -417,17 +405,19 @@ export function DeliveriesView({
   );
 
   const historyBody =
-    deliveries.length === 0 ? (
+    deliveries.length === 0 && !query && !deviceId && filter === "all" ? (
       <DeliveryEmpty
         icon={Send}
         title={t("emptyTitle")}
         description={t("emptyDescription")}
+        action={<Button nativeButton={false} render={<a href={`/${locale}/app/bibliotheque`} />}>{tFilters("openLibrary")}</Button>}
       />
     ) : filteredDeliveries.length === 0 ? (
       <DeliveryEmpty
         icon={Send}
         title={t("filterNoMatch")}
         description={t("filterNoMatchDescription")}
+        action={<Button variant="outline" onClick={resetFilters}>{tFilters("reset")}</Button>}
       />
     ) : (
       rows
@@ -488,21 +478,16 @@ export function DeliveriesView({
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2 py-3">
-              <Input aria-label={t("search")} placeholder={t("search")} value={query} onChange={event => { setPage(1); setQuery(event.target.value); }} />
-              <select className="rounded-md border p-2" aria-label={t("deviceFilter")} value={deviceId} onChange={event => { setPage(1); setDeviceId(event.target.value); }}>
-                <option value="">{t("allDevices")}</option>
-                {devices.map(device => <option key={device.id} value={device.id}>{device.name || `${device.brand} ${device.model ?? ""}`}</option>)}
-              </select>
-            </div>
-            {filterChips}
+            {filterBar}
+            <SortColumns columns={sortColumns} value={sort} descending={descending} onChange={(sort, desc) => updateUrlQuery({ sort, dir: desc ? "desc" : "asc" })} />
+            <p className="text-xs text-muted-foreground">{tFilters("currentPage")}</p>
             {actionError ? <p role="alert">{actionError}</p> : null}
 
             <div data-testid="deliveries-body">{historyBody}</div>
-            <nav aria-label={t("pagination")} className="flex items-center gap-3 py-3">
-              <Button variant="outline" disabled={page === 1 || refreshing} onClick={() => setPage(value => value - 1)}>{t("previousPage")}</Button>
+            <nav aria-label={t("pagination")} className="flex flex-wrap items-center gap-3 py-3">
+              <Button variant="outline" disabled={page === 1 || refreshing} onClick={() => setPage(page - 1)}>{t("previousPage")}</Button>
               <span>{t("pageNumber", { page })}</span>
-              <Button variant="outline" disabled={deliveries.length < 50 || refreshing} onClick={() => setPage(value => value + 1)}>{t("nextPage")}</Button>
+              <Button variant="outline" disabled={deliveries.length < 50 || refreshing} onClick={() => setPage(page + 1)}>{t("nextPage")}</Button>
             </nav>
           </section>
         </>

@@ -36,7 +36,7 @@ export function BookRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-4 border-b border-border py-3",
+        "flex flex-wrap items-center gap-4 border-b border-border py-3",
         selected && "bg-muted/40"
       )}
     >
@@ -67,7 +67,7 @@ export function BookRow({
           {t("authorFormat", { author, format })}
         </p>
       </button>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <Button
           type="button"
           variant="ghost"

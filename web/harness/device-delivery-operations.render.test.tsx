@@ -52,9 +52,22 @@ it("sends search, status, device and pagination to the server", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Suivante" }));
   await waitFor(() => expect(call.mock.lastCall?.[0]).toContain("page=2"));
   fireEvent.change(screen.getByRole("textbox", { name: "Rechercher un livre ou une liseuse" }), { target: { value: "été" } });
-  fireEvent.change(screen.getByRole("combobox", { name: "Filtrer par liseuse" }), { target: { value: "device" } });
+  fireEvent.click(screen.getByRole("combobox", { name: "Filtrer par liseuse" }));
+  const deviceOption = await screen.findByRole("option", { name: "Liseuse" });
+  fireEvent.pointerDown(deviceOption, { pointerType: "mouse" });
+  fireEvent.click(deviceOption);
+  await waitFor(() => expect(new URLSearchParams(window.location.search).get("device_id")).toBe("device"));
   fireEvent.click(screen.getByRole("button", { name: "Échec" }));
   await waitFor(() => expect(call.mock.lastCall?.[0]).toContain("status=failed"));
   const url = new URL(call.mock.lastCall![0], "https://example.test");
   expect(Object.fromEntries(url.searchParams)).toEqual({ page: "1", limit: "50", q: "été", device_id: "device", status: "failed" });
+});
+
+it("shows a storage gauge using the returned quota and warns above 90 percent", async () => {
+  call.mockResolvedValue({ converters: { ebook_convert_available: false, ebook_convert_version: null }, mail: { configured: false, sender_address: "", domains_allowed: [] }, storage: { used_bytes: 4.6 * 1024 ** 3, quota_bytes: 5 * 1024 ** 3, percentage: 92 }, gateways: { total: 0, online: 0, pending: 0, revoked: 0 }, library: { items: 1, deliveries_last_7_days: {} }, version: null });
+  wrap(<SystemHealthPanel />);
+  const gauge = await screen.findByRole("progressbar");
+  expect(gauge.getAttribute("aria-valuenow")).toBe("92");
+  expect(screen.getByText(/4,6 Go utilisés sur 5 Go/)).toBeTruthy();
+  expect(screen.getByRole("alert").textContent).toContain("presque plein");
 });

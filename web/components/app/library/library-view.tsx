@@ -43,8 +43,6 @@ import {
   applyLibraryItemsRefreshResult,
   filterAndSortLibraryItems,
   LIBRARY_COLLECTION_PAGE_SIZE,
-  libraryCollectionPageState,
-  pageAfterLibraryCriteriaChange,
   paginateLibraryItems,
 } from "@/components/app/library/library-collection";
 import { SearchCoverImage } from "@/components/app/library/cover-image";
@@ -61,7 +59,11 @@ import type {
   SearchResult,
 } from "@/lib/types";
 
-import { LibraryFilters } from "./library-filters";
+import { useUrlQuery, updateUrlQuery } from "@/lib/use-url-query";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActions } from "./bulk-actions";
+import { FilterBar } from "@/components/app/filter-bar";
+import { useLibraryFilterFields } from "./library-filter-fields";
 import { SEARCH_PAGE_SIZE, updateLibraryQuery, useLibraryQuery } from "./library-query";
 
 type BrowseMode = "mine" | "sources";
@@ -180,6 +182,7 @@ export function LibraryView({
   devices: Device[];
 }) {
   const t = useTranslations("library");
+  const tBulk = useTranslations("enhance.bulk");
   const tCommon = useTranslations("common");
   const tBrand = useTranslations("brand");
   const tDetail = useTranslations("bookDetail");
@@ -189,7 +192,9 @@ export function LibraryView({
   const isMobile = useIsMobile();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const urlQuery = useUrlQuery();
   const criteria = useLibraryQuery();
+  const filterFields = useLibraryFilterFields(criteria);
   const browseMode = criteria.mode;
   const [draft, setDraft] = useState({ original: criteria.query, value: criteria.query });
   if (draft.original !== criteria.query) {
@@ -217,10 +222,13 @@ export function LibraryView({
   const [deliverItem, setDeliverItem] = useState<LibraryItem | null>(null);
   const [pendingDelete, setPendingDelete] = useState<LibraryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selection, setSelection] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [partialDismissed, setPartialDismissed] = useState(false);
   const [unavailableDismissed, setUnavailableDismissed] = useState(false);
-  const [addTab, setAddTab] = useState<AddTab>("search");
+  const [localAddTab, setLocalAddTab] = useState<AddTab>("search");
+  const addTab = urlQuery.get("action") === "import" ? "import" : localAddTab;
+  function setAddTab(tab: AddTab) { updateUrlQuery({ action: null }); setLocalAddTab(tab); }
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   const canDeliver = devices.length > 0;
@@ -238,23 +246,7 @@ export function LibraryView({
     return () => cancelAnimationFrame(frame);
   }, [browseMode, addTab]);
 
-  const filterCriteriaKey = JSON.stringify([
-    collectionQuery, criteria.language, criteria.format, criteria.collectionSource, criteria.collectionSort,
-  ]);
-  const [pageState, setPageState] = useState({
-    criteriaKey: filterCriteriaKey,
-    page: 1,
-  });
-
-  const nextPageState = libraryCollectionPageState(pageState, filterCriteriaKey);
-  if (nextPageState !== pageState) {
-    setPageState(nextPageState);
-  }
-
-  const collectionPage =
-    pageState.criteriaKey === filterCriteriaKey
-      ? pageState.page
-      : pageAfterLibraryCriteriaChange();
+  const collectionPage = criteria.page;
 
   const displayedItems = useMemo(
     () =>
@@ -278,18 +270,17 @@ export function LibraryView({
     [displayedItems, collectionPage]
   );
 
-  if (
-    pageState.criteriaKey === filterCriteriaKey &&
-    pageSlice.page !== pageState.page
-  ) {
-    setPageState({ criteriaKey: filterCriteriaKey, page: pageSlice.page });
+  function setCollectionPage(nextPage: number) {
+    updateLibraryQuery({ page: String(nextPage) });
   }
 
-  function setCollectionPage(nextPage: number) {
-    setPageState({
-      criteriaKey: filterCriteriaKey,
-      page: nextPage,
-    });
+  const selectedBooks = items.filter(item => selection.has(item.id));
+  const pageSelected = pageSlice.items.length > 0 && pageSlice.items.every(item => selection.has(item.id));
+  function toggleSelection(id: string, checked: boolean) {
+    setSelection(previous => { const next = new Set(previous); if (checked) next.add(id); else next.delete(id); return next; });
+  }
+  function selectionBox(item: LibraryItem) {
+    return <Checkbox aria-label={tBulk("selectBook", { title: item.title })} checked={selection.has(item.id)} onCheckedChange={checked => toggleSelection(item.id, checked)} />;
   }
 
   function markOwned(resultKey: string) {
@@ -670,6 +661,7 @@ export function LibraryView({
     <ul className="flex flex-col" data-testid="library-book-list">
       {pageSlice.items.map((item) => (
         <li key={item.id}>
+          {selectionBox(item)}
           <BookRow
             item={item}
             selected={selectedId === item.id}
@@ -693,6 +685,7 @@ export function LibraryView({
         {pageSlice.items.map((item) => (
           <li key={item.id}>
             <RevealItem>
+              {selectionBox(item)}
               <BookGridItem
                 item={item}
                 selected={selectedId === item.id}
@@ -719,6 +712,7 @@ export function LibraryView({
           onTimeout={handleFetchTimeout}
         />
       ))}
+
 
       {/* Pen Header/Page — desktop; mobile empty Top when collection empty */}
       <div className="hidden md:block">
@@ -786,6 +780,10 @@ export function LibraryView({
         </div>
       )}
 
+          <BulkActions items={selectedBooks} devices={devices}
+            onDeleted={ids => { setItems(previous => previous.filter(item => !ids.includes(item.id))); if (detailItem && ids.includes(detailItem.id)) setDetailItem(null); }}
+            onFinished={ids => setSelection(previous => new Set([...previous].filter(id => !ids.includes(id))))} />
+
       {lastDelivery?.method === "email" ? (
         <DeliveryFeedback method="email" title={t("emailRequested")} />
       ) : null}
@@ -846,7 +844,7 @@ export function LibraryView({
                 </Button>
               </div>
 
-              <LibraryFilters criteria={criteria} onChange={changeFilters} />
+              <FilterBar fields={filterFields} search={{ label: headerSearchPlaceholder, value: headerSearchValue, external: true }} count={results?.length ?? null} onChange={changeFilters} onReset={() => updateLibraryQuery({ mode: browseMode }, true)} label={t("filtersLabel")} />
               {searchError && !searching ? (
                 <p role="alert">{t("toastSearchFailed")}</p>
               ) : null}
@@ -989,7 +987,15 @@ export function LibraryView({
           ) : null}
 
           {toolsRow}
-          <LibraryFilters criteria={criteria} onChange={changeFilters} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Checkbox id="library-select-page" checked={pageSelected} indeterminate={!pageSelected && pageSlice.items.some(item => selection.has(item.id))}
+              disabled={!pageSlice.items.length} onCheckedChange={checked => setSelection(previous => {
+                const next = new Set(previous); pageSlice.items.forEach(item => { if (checked) next.add(item.id); else next.delete(item.id); }); return next;
+              })} />
+            <Label htmlFor="library-select-page">{tBulk("selectPage")}</Label>
+          </div>
+
+          <FilterBar fields={filterFields} search={{ label: headerSearchPlaceholder, value: headerSearchValue, external: true }} count={displayedItems.length} onChange={changeFilters} onReset={() => updateLibraryQuery({ mode: browseMode }, true)} label={t("filtersLabel")} />
 
           {displayedItems.length === 0 ? (
             <LibraryEmpty
@@ -1016,9 +1022,9 @@ export function LibraryView({
       )}
 
       <BookDetailDialog
-        item={detailItem}
+        item={detailItem ?? items.find(item => item.id === urlQuery.get("book")) ?? null}
         devices={devices}
-        onOpenChange={(open) => !open && setDetailItem(null)}
+        onOpenChange={(open) => { if (!open) { setDetailItem(null); updateUrlQuery({ book: null }); } }}
         onUpdated={(updated) => {
           setItems((prev) =>
             prev.map((it) => (it.id === updated.id ? updated : it))

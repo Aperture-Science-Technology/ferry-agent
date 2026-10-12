@@ -277,7 +277,7 @@ describe("UI harness — app shell", () => {
     expect(shellHeader.className).not.toMatch(/h-\[56px\]/);
     expect(shellHeader.className).not.toMatch(/(?:^|\s)h-14(?:\s|$)/);
 
-    const trigger = within(shellHeader).getByRole("button");
+    const trigger = within(shellHeader).getByRole("button", { name: messages.common.toggleSidebar });
     expect(trigger.className).toMatch(/(?:^|\s)size-7(?:\s|$)/);
     expect(trigger.className).toMatch(/(?:^|\s)rounded-sm(?:\s|$)/);
     expect(trigger.className).not.toMatch(/(?:^|\s)size-10(?:\s|$)/);

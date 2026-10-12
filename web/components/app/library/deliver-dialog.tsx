@@ -27,6 +27,8 @@ import { deliveryStatusLabelKey } from "@/components/app/deliveries/deliveries-s
 import { ApiError, useApiClient } from "@/lib/api-client";
 import type { Device, DeliveryJob, DeliveryMethod, LibraryItem, MethodAvailability } from "@/lib/types";
 
+export type DeliveryChoice = { device_id: string; format: string; method: DeliveryMethod };
+
 const ALL_FORMATS = ["epub", "mobi", "azw3", "pdf"] as const;
 /** Kindle Send-to-Kindle (tier A): Amazon no longer accepts mobi/azw3. */
 const KINDLE_FORMATS = ["epub", "pdf"] as const;
@@ -145,12 +147,17 @@ export function DeliverDialog({
   devices,
   onOpenChange,
   onDelivered,
+  batchCount,
+  onBatchDeliver,
 }: {
   item: LibraryItem | null;
   devices: Device[];
   onOpenChange: (open: boolean) => void;
   onDelivered?: (job: DeliveryJob) => void;
+  batchCount?: number;
+  onBatchDeliver?: (choice: DeliveryChoice) => void;
 }) {
+  const tBulk = useTranslations("enhance.bulk");
   const tDeliveries = useTranslations("deliveries");
   const t = useTranslations("deliverDialog");
   const tCommon = useTranslations("common");
@@ -188,6 +195,8 @@ export function DeliverDialog({
 
   async function submit() {
     if (!item || !deviceId || !method) return;
+    if (submitting) return;
+    if (onBatchDeliver) { onBatchDeliver({ device_id: deviceId, format, method }); return; }
     setSubmitting(true);
     try {
       const job = await call<DeliveryJob>("/api/v1/deliveries", {
@@ -224,7 +233,7 @@ export function DeliverDialog({
       <DialogContent>
         <DialogHeader className="min-w-0">
           <DialogTitle className="break-words whitespace-normal">
-            {t("title", { title: item?.title ?? "" })}
+            {onBatchDeliver ? tBulk("deliverTitle", { count: batchCount ?? 0 }) : t("title", { title: item?.title ?? "" })}
           </DialogTitle>
           <DialogDescription className="whitespace-normal">
             {t("description")}

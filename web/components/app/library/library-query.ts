@@ -1,28 +1,13 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useUrlQuery, updateUrlQuery } from "@/lib/use-url-query";
 import type { SearchRequest, SearchSort } from "@/lib/types";
 import type { SortBy, SourceFilter } from "./library-collection";
 
-const URL_CHANGE = "library-query-change";
 export const SEARCH_PAGE_SIZE = 24;
 
-function subscribe(onChange: () => void) {
-  window.addEventListener("popstate", onChange);
-  window.addEventListener(URL_CHANGE, onChange);
-  return () => {
-    window.removeEventListener("popstate", onChange);
-    window.removeEventListener(URL_CHANGE, onChange);
-  };
-}
-
 export function useLibraryQuery() {
-  const queryString = useSyncExternalStore(
-    subscribe,
-    () => window.location.search,
-    () => ""
-  );
-  const params = new URLSearchParams(queryString);
+  const params = useUrlQuery();
   const mode = params.get("mode") === "mine" ? "mine"
     : params.get("mode") === "sources" || params.has("q") ? "sources" : "mine";
   const query = params.get("q") ?? "";
@@ -54,15 +39,5 @@ export function useLibraryQuery() {
 }
 
 export function updateLibraryQuery(values: Record<string, string | null>, reset = false) {
-  const params = new URLSearchParams(window.location.search);
-  if (reset) {
-    for (const key of ["q", "lang", "fmt", "src", "owned", "sort", "page"]) params.delete(key);
-  }
-  for (const [key, value] of Object.entries(values)) {
-    if (value === null || value === "" || value === "all") params.delete(key);
-    else params.set(key, value);
-  }
-  const search = params.toString();
-  window.history.replaceState(null, "", `${window.location.pathname}${search ? `?${search}` : ""}${window.location.hash}`);
-  window.dispatchEvent(new Event(URL_CHANGE));
+  updateUrlQuery(values, reset ? ["q", "lang", "fmt", "src", "owned", "sort", "page"] : []);
 }

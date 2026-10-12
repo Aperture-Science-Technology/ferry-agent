@@ -1,0 +1,207 @@
+[
+  {
+    "label": "library-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "selection-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "batch-delivery-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "batch-delete-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "library-list-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "devices-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "sheet-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "deliveries-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "onboarding-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "empty-library-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "empty-devices-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "empty-deliveries-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "palette-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "palette-empty-en-320",
+    "viewport": 320,
+    "document": 320
+  },
+  {
+    "label": "library-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "selection-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "batch-delivery-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "batch-delete-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "library-list-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "devices-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "sheet-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "deliveries-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "onboarding-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "empty-library-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "empty-devices-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "empty-deliveries-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "palette-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "palette-empty-en-390",
+    "viewport": 390,
+    "document": 390
+  },
+  {
+    "label": "library-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "selection-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "batch-delivery-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "batch-delete-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "library-list-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "devices-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "deliveries-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "onboarding-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "empty-library-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "empty-devices-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "empty-deliveries-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "palette-1280",
+    "viewport": 1280,
+    "document": 1280
+  },
+  {
+    "label": "palette-empty-en-1280",
+    "viewport": 1280,
+    "document": 1280
+  }
+]

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { StorageQuota } from "./storage-quota";
 import { Button } from "@/components/ui/button";
 import { useApiClient } from "@/lib/api-client";
 import type { SystemHealth } from "@/lib/types";
@@ -25,7 +26,7 @@ export function SystemHealthPanel() {
     {error ? <div role="alert"><p>{t("error")}</p><Button variant="outline" onClick={() => { setError(false); setAttempt(v => v + 1); }}>{t("retry")}</Button></div> : !data ? <p role="status">{t("loading")}</p> : <dl className="grid gap-3 text-sm">
       <div><dt>{t("converters")}</dt><dd>{t(data.converters.ebook_convert_available ? "available" : "unavailable")} {data.converters.ebook_convert_version}</dd></div>
       <div><dt>{t("mail")}</dt><dd>{t(data.mail.configured ? "available" : "unavailable")} · {data.mail.sender_address}</dd><dd>{data.mail.domains_allowed.join(", ")}</dd></div>
-      <div><dt>{t("storage")}</dt><dd>{t("storageUsage", { used: data.storage.used_bytes, quota: data.storage.quota_bytes, percent: data.storage.percentage ?? 0 })}</dd></div>
+      <div><dt>{t("storage")}</dt><dd><StorageQuota storage={data.storage} /></dd></div>
       <div><dt>{t("gateways")}</dt><dd>{t("gatewayCounts", { ...data.gateways })}</dd></div>
       <div><dt>{t("library")}</dt><dd>{t("items", { count: data.library.items })}</dd></div>
       <div><dt>{t("deliveries")}</dt><dd>{t("deliveryCounts", { ...data.library.deliveries_last_7_days })}</dd></div>
