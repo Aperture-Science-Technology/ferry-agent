@@ -10,3 +10,6 @@ dist/
 # gateway/dist/ contient les artefacts de distribution VERSIONNES (compose, install, lanceurs)
 !gateway/dist/
 !gateway/dist/**
+
+# Captures du harnais navigateur : preuves de recette, jamais versionnees.
+web/harness/browser/captures/*.png
