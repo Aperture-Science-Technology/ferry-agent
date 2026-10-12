@@ -248,13 +248,15 @@ async def test_opds_download_filename_and_embedded_cover(tmp_path, monkeypatch):
     item = LibraryItem(id=uuid.uuid4(), user_id=uuid.uuid4(), title="", original_format="epub", storage_path=str(path))
     library.enrich_from_file(item)
 
+    token_id = uuid.uuid4()
+
     async def token(*_args):
-        return SimpleNamespace(user_id=item.user_id)
+        return SimpleNamespace(id=token_id, user_id=item.user_id)
 
     monkeypatch.setattr(opds, "_require_token", token)
     monkeypatch.setattr(opds, "_enforce_rate_limit", lambda _: None)
     request = Request({"type": "http", "method": "GET", "path": "/", "headers": []})
-    response = await opds.opds_download("token", item.id, request, FakeSession([item]))
+    response = await opds.opds_download("token", item.id, request, FakeSession([item, token_id]))
     assert "J. R. R. Tolkien - Les Deux Tours.epub" in unquote(response.headers["content-disposition"])
     assert "uuid_private" not in response.headers["content-disposition"]
     feed = opds.opds_service.build_acquisition_feed(

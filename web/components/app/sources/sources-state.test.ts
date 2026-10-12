@@ -31,11 +31,28 @@ const standardOff: SourceLike = {
   type: "standard_ebooks",
   enabled: false,
 };
+const openLibraryOn: SourceLike = {
+  id: "o1",
+  type: "open_library",
+  enabled: true,
+};
+const internetArchiveOn: SourceLike = {
+  id: "i1",
+  type: "internet_archive",
+  enabled: true,
+};
 const upload: SourceLike = {
   id: "u1",
   type: "upload",
   enabled: true,
 };
+
+const allOpenAccess: SourceLike[] = [
+  gutenbergOn,
+  standardOff,
+  openLibraryOn,
+  internetArchiveOn,
+];
 
 describe("sourceRowKind / sourceGroup / display order", () => {
   it("splits open-access toggles from local upload and gateway rows", () => {
@@ -48,6 +65,8 @@ describe("sourceRowKind / sourceGroup / display order", () => {
     assert.deepEqual(SOURCE_DISPLAY_TYPES, [
       "gutenberg",
       "standard_ebooks",
+      "open_library",
+      "internet_archive",
       "upload",
       "torrent_gateway",
     ]);
@@ -147,14 +166,15 @@ describe("sourcesSurfaceState / hasPartialSources", () => {
     );
     assert.equal(
       sourcesSurfaceState({
-        sources: [gutenbergOn, standardOff, upload],
+        sources: [...allOpenAccess, upload],
         sourcesUnavailable: false,
         updateError: null,
       }),
       "success"
     );
     assert.equal(hasPartialSources([gutenbergOn], false), true);
-    assert.equal(hasPartialSources([gutenbergOn, standardOff], false), false);
+    assert.equal(hasPartialSources([gutenbergOn, standardOff], false), true);
+    assert.equal(hasPartialSources(allOpenAccess, false), false);
     assert.equal(hasPartialSources([], false), false);
     assert.equal(hasPartialSources([gutenbergOn], true), false);
   });

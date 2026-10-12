@@ -839,6 +839,159 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/opds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Basic Root */
+        get: operations["basic_root_opds_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opds/all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Basic All */
+        get: operations["basic_all_opds_all_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opds/author": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Basic Author */
+        get: operations["basic_author_opds_author_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opds/authors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Basic Authors */
+        get: operations["basic_authors_opds_authors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opds/cover/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Basic Cover */
+        get: operations["basic_cover_opds_cover__item_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opds/download/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Basic Download */
+        get: operations["basic_download_opds_download__item_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opds/opensearch.xml": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Basic Opensearch */
+        get: operations["basic_opensearch_opds_opensearch_xml_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opds/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Basic Recent */
+        get: operations["basic_recent_opds_recent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/opds/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Basic Search */
+        get: operations["basic_search_opds_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/opds/{token}": {
         parameters: {
             query?: never;
@@ -1292,6 +1445,8 @@ export interface components {
         GatewayJobType: "search" | "fetch";
         /** GatewayOut */
         GatewayOut: {
+            /** Agent Version */
+            agent_version?: string | null;
             /**
              * Gateway Id
              * Format: uuid
@@ -1446,11 +1601,15 @@ export interface components {
         };
         /** OpdsTokenCreate */
         OpdsTokenCreate: {
+            /** Expires In Days */
+            expires_in_days?: number | null;
             /**
              * Label
              * @default Liseuse
              */
             label: string;
+            /** Max Downloads */
+            max_downloads?: number | null;
         };
         /** OpdsTokenCreated */
         OpdsTokenCreated: {
@@ -1460,12 +1619,23 @@ export interface components {
              */
             created_at: string;
             /**
+             * Downloads Count
+             * @default 0
+             */
+            downloads_count: number;
+            /** Expires At */
+            expires_at?: string | null;
+            /**
              * Id
              * Format: uuid
              */
             id: string;
             /** Label */
             label: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Max Downloads */
+            max_downloads?: number | null;
             /** Token */
             token: string;
             /** Url */
@@ -1479,6 +1649,13 @@ export interface components {
              */
             created_at: string;
             /**
+             * Downloads Count
+             * @default 0
+             */
+            downloads_count: number;
+            /** Expires At */
+            expires_at?: string | null;
+            /**
              * Id
              * Format: uuid
              */
@@ -1487,6 +1664,8 @@ export interface components {
             label: string;
             /** Last Used At */
             last_used_at: string | null;
+            /** Max Downloads */
+            max_downloads?: number | null;
         };
         /** OpdsTokenRevoke */
         OpdsTokenRevoke: {
@@ -2985,6 +3164,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "x-gateway-version"?: string | null;
                 "X-Gateway-Key"?: string | null;
             };
             path?: never;
@@ -3607,6 +3787,263 @@ export interface operations {
                 };
                 content: {
                     "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    basic_root_opds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/atom+xml;profile=opds-catalog;kind=navigation": string;
+                };
+            };
+        };
+    };
+    basic_all_opds_all_get: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/atom+xml;profile=opds-catalog;kind=acquisition": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    basic_author_opds_author_get: {
+        parameters: {
+            query: {
+                name: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/atom+xml;profile=opds-catalog;kind=acquisition": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    basic_authors_opds_authors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/atom+xml;profile=opds-catalog;kind=navigation": string;
+                };
+            };
+        };
+    };
+    basic_cover_opds_cover__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                    "image/gif": string;
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    basic_download_opds_download__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                    "application/epub+zip": string;
+                    "application/octet-stream": string;
+                    "application/pdf": string;
+                    "application/vnd.amazon.ebook": string;
+                    "application/x-mobipocket-ebook": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    basic_opensearch_opds_opensearch_xml_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/opensearchdescription+xml": string;
+                };
+            };
+        };
+    };
+    basic_recent_opds_recent_get: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/atom+xml;profile=opds-catalog;kind=acquisition": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    basic_search_opds_search_get: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/atom+xml;profile=opds-catalog;kind=acquisition": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

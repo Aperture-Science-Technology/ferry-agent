@@ -282,7 +282,14 @@ async def search_books(
         disabled_result = await db.execute(
             select(Source.type).where(
                 Source.user_id == user.id,
-                Source.type.in_((SourceType.gutenberg, SourceType.standard_ebooks)),
+                Source.type.in_(
+                    (
+                        SourceType.gutenberg,
+                        SourceType.standard_ebooks,
+                        SourceType.open_library,
+                        SourceType.internet_archive,
+                    )
+                ),
                 Source.enabled.is_(False),
             )
         )

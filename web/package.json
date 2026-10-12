@@ -15,7 +15,9 @@
     "test:sources-settings": "node --experimental-strip-types --test components/app/sources/sources-state.test.ts components/app/settings/settings-state.test.ts",
     "test:final": "node --experimental-strip-types --test lib/gateway-job-state.test.ts",
     "test:product-truth": "node --experimental-strip-types --test lib/gateway-image.test.ts lib/product-truth.test.ts",
-    "test:ui-harness": "vitest run --config vitest.config.mts"
+    "test:ui-harness": "vitest run --config vitest.config.mts",
+    "test:ecosystem": "node --experimental-strip-types --test components/app/gateways/gateway-version-state.test.ts",
+    "test:ecosystem-ui": "vitest run --config ../tests/ecosystem.vitest.config.mts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

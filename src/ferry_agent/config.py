@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     pairing_token_ttl_minutes: int = 15
     gateway_online_seconds: int = 60
     gateway_search_wait_seconds: float = 15.0
+    # Plafond par connecteur pour search_all. Mesure IA seule « dumas monte
+    # cristo » : 6,8–8,8 s ; 15 s laisse le temps de rendre sans attendre le
+    # budget interne IA (45 s) qui retenait toute la recherche agrégée.
+    search_connector_timeout_seconds: float = 15.0
     gateway_job_retention_days: int = 7
     gateway_job_purge_interval_seconds: int = 3600
     gateway_job_max_attempts: int = 5

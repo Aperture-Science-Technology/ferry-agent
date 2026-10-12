@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "identifier": "prideprejudice0000jane",
+    "title": "Pride and Prejudice",
+    "creator": "Jane Austen",
+    "access-restricted-item": "true",
+    "collection": [
+      "internetarchivebooks",
+      "printdisabled",
+      "inlibrary"
+    ],
+    "mediatype": "texts"
+  },
+  "files": [
+    {
+      "name": "prideprejudice0000jane.epub",
+      "format": "EPUB",
+      "size": "1000"
+    }
+  ]
+}

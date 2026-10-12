@@ -4,6 +4,8 @@ import logging
 
 from ferry_agent.connectors import Connector
 from ferry_agent.connectors.gutenberg import GutenbergConnector
+from ferry_agent.connectors.internet_archive import InternetArchiveConnector
+from ferry_agent.connectors.open_library import OpenLibraryConnector
 from ferry_agent.connectors.standard_ebooks import StandardEbooksConnector
 from ferry_agent.connectors.upload import UploadConnector
 
@@ -12,11 +14,18 @@ logger = logging.getLogger(__name__)
 _CONNECTORS: dict[str, Connector] = {
     "gutenberg": GutenbergConnector(),
     "standard_ebooks": StandardEbooksConnector(),
+    "open_library": OpenLibraryConnector(),
+    "internet_archive": InternetArchiveConnector(),
     "upload": UploadConnector(),
 }
 
 # Connecteurs interroges par /api/v1/books/search (upload n'est pas cherchable).
-_SEARCHABLE = ("gutenberg", "standard_ebooks")
+_SEARCHABLE = (
+    "gutenberg",
+    "standard_ebooks",
+    "open_library",
+    "internet_archive",
+)
 
 
 def get_connector(name: str) -> Connector | None:

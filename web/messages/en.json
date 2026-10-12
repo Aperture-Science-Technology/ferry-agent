@@ -595,7 +595,9 @@
     "jobQueueCount": "{count, plural, one {# task} other {# tasks}}",
     "jobQueueUnavailable": "The queue appears when this module is connected.",
     "pair": "Pair",
-    "recreate": "Recreate"
+    "recreate": "Recreate",
+    "installedVersion": "Installed version: {version}",
+    "updateArchiveReminder": "A newer version is available. To update, download the archive again, then import it again into OrbStack or Docker Desktop."
   },
   "createAccess": {
     "title": "Create a Gateway",
@@ -641,6 +643,14 @@
       "standardEbooks": {
         "name": "Standard Ebooks",
         "description": "Public-domain classics, carefully proofread and formatted."
+      },
+      "openLibrary": {
+        "name": "Open Library",
+        "description": "Public-domain scans you can download freely from the Open Library catalog."
+      },
+      "internetArchive": {
+        "name": "Internet Archive",
+        "description": "Public-domain texts freely downloadable from the Internet Archive."
       },
       "upload": {
         "name": "Imported files",
@@ -838,7 +848,18 @@
       "statusActive": "Active",
       "statusRevoked": "Revoked",
       "tokenMeta": "Created {created} · Last used · {lastUsed}",
-      "createdLabel": "Created {created}"
+      "createdLabel": "Created {created}",
+      "downloadsUnlimited": "{count} download(s) · no limit",
+      "downloadsLimited": "{count} download(s) out of {max}",
+      "expiresOn": "Expires on {date}",
+      "noExpiration": "No expiration date",
+      "statusExpired": "Expired",
+      "statusExhausted": "Limit reached",
+      "maxDownloadsLabel": "Maximum downloads (optional)",
+      "expiresDaysLabel": "Valid for this many days (optional)",
+      "optionalLimitHint": "Leave blank for unlimited downloads.",
+      "optionalExpiryHint": "Leave blank for access with no end date.",
+      "invalidLimits": "Enter a positive whole number: at most 2,147,483,647 downloads and 36,500 days."
     },
     "devicesTitle": "Devices",
     "devicesDescription": "Manage your e-readers and how books arrive on them.",

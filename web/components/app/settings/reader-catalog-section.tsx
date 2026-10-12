@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 import {
   Ban,
@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { OpdsTokenUsage, parseOptionalLimit } from "./opds-limits";
 import { CatalogQrCode } from "@/components/app/settings/catalog-qr-code";
 import {
   OpdsTokenCard,
@@ -60,6 +61,16 @@ export function ReaderCatalogSection({
   const [tokens, setTokens] = useState(initialTokens);
   const [createOpen, setCreateOpen] = useState(false);
   const [label, setLabel] = useState("");
+  const [maxDownloads, setMaxDownloads] = useState("");
+  const [expiresInDays, setExpiresInDays] = useState("");
+  const quota = parseOptionalLimit(maxDownloads, 2147483647);
+  const days = parseOptionalLimit(expiresInDays, 36500);
+  const limitsValid = quota !== undefined && days !== undefined;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<OpdsTokenCreated | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -78,12 +89,17 @@ export function ReaderCatalogSection({
         : "ready";
 
   async function submit() {
+    if (!limitsValid) return;
     setSubmitting(true);
     setCreateError(null);
     try {
       const result = await call<OpdsTokenCreated>("/api/v1/opds/tokens", {
         method: "POST",
-        body: JSON.stringify({ label: displayLabel }),
+        body: JSON.stringify({
+          label: displayLabel,
+          ...(quota == null ? {} : { max_downloads: quota }),
+          ...(days == null ? {} : { expires_in_days: days }),
+        }),
       });
       setCreated(result);
       setCopyFailed(false);
@@ -92,7 +108,10 @@ export function ReaderCatalogSection({
           id: result.id,
           label: result.label,
           created_at: result.created_at,
-          last_used_at: null,
+          last_used_at: result.last_used_at ?? null,
+          max_downloads: result.max_downloads,
+          downloads_count: result.downloads_count,
+          expires_at: result.expires_at,
         },
         ...prev,
       ]);
@@ -109,6 +128,8 @@ export function ReaderCatalogSection({
     if (!nextOpen) {
       setCreated(null);
       setLabel("");
+      setMaxDownloads("");
+      setExpiresInDays("");
       setCreateError(null);
       setCopyFailed(false);
     }
@@ -116,7 +137,7 @@ export function ReaderCatalogSection({
   }
 
   function onCreateKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Enter" && !submitting && displayLabel) {
+    if (event.key === "Enter" && !submitting && displayLabel && limitsValid) {
       event.preventDefault();
       void submit();
     }
@@ -227,15 +248,19 @@ export function ReaderCatalogSection({
                 <OpdsTokenCard
                   tokenId={token.id}
                   title={token.label}
-                  badge={<OpdsTokenStatusBadge label={t("statusActive")} />}
-                  meta={t("tokenMeta", {
+                  badge={<OpdsTokenStatusBadge label={t(
+                    token.expires_at && new Date(token.expires_at).getTime() <= now ? "statusExpired"
+                      : token.max_downloads != null && (token.downloads_count ?? 0) >= token.max_downloads ? "statusExhausted"
+                      : "statusActive"
+                  )} />}
+                  meta={<><p>{t("tokenMeta", {
                     created: formatTokenCreatedDate(token.created_at, locale),
                     lastUsed: formatTokenLastUsed(
                       token.last_used_at,
                       locale,
                       t("neverUsed")
                     ),
-                  })}
+                  })}</p><OpdsTokenUsage token={token} /></>}
                   actions={
                     <Button
                       type="button"
@@ -364,6 +389,17 @@ export function ReaderCatalogSection({
                   autoComplete="off"
                 />
               </SettingsFormField>
+              <SettingsFormField htmlFor="catalog-max-downloads" label={t("maxDownloadsLabel")} hint={t("optionalLimitHint")}>
+                <Input id="catalog-max-downloads" type="number" min={1} max={2147483647} step={1}
+                  value={maxDownloads} onChange={(event) => setMaxDownloads(event.target.value)}
+                  onKeyDown={onCreateKeyDown} disabled={submitting} className={settingsFormControlClass} />
+              </SettingsFormField>
+              <SettingsFormField htmlFor="catalog-expires-days" label={t("expiresDaysLabel")} hint={t("optionalExpiryHint")}>
+                <Input id="catalog-expires-days" type="number" min={1} max={36500} step={1}
+                  value={expiresInDays} onChange={(event) => setExpiresInDays(event.target.value)}
+                  onKeyDown={onCreateKeyDown} disabled={submitting} className={settingsFormControlClass} />
+              </SettingsFormField>
+              {!limitsValid ? <p role="alert" className="text-sm text-destructive">{t("invalidLimits")}</p> : null}
               {createError ? (
                 <SettingsFeedback
                   role="alert"
@@ -386,7 +422,7 @@ export function ReaderCatalogSection({
                 <Button
                   type="button"
                   onClick={() => void submit()}
-                  disabled={submitting || !displayLabel}
+                  disabled={submitting || !displayLabel || !limitsValid}
                   className="whitespace-normal"
                 >
                   {submitting ? (

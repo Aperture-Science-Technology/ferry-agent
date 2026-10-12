@@ -59,7 +59,23 @@ export function GatewaysView({
   const tCreate = useTranslations("createAccess");
   const tCommon = useTranslations("common");
   const { call } = useApiClient();
+  const [appVersion, setAppVersion] = useState<string | null>(null);
   const [gateways, setGateways] = useState(initialGateways);
+  const hasKnownVersion = gateways.some((gateway) => Boolean(gateway.agent_version));
+  useEffect(() => {
+    if (!hasKnownVersion) return;
+    let cancelled = false;
+    async function loadVersion() {
+      try {
+        const health = await call<{ app_version?: string; version?: string }>("/api/v1/system/health");
+        if (!cancelled) setAppVersion(health?.app_version ?? health?.version ?? null);
+      } catch {
+        // Version information is optional; connection management remains available.
+      }
+    }
+    void loadVersion();
+    return () => { cancelled = true; };
+  }, [call, hasKnownVersion]);
   const [createOpen, setCreateOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<Gateway | null>(null);
   const [revoking, setRevoking] = useState(false);
@@ -228,6 +244,7 @@ export function GatewaysView({
             <RevealItem key={gateway.gateway_id}>
               <GatewayRow
                 gateway={gateway}
+                appVersion={appVersion}
                 now={now}
                 isPrimary={primary?.gateway_id === gateway.gateway_id}
                 recreating={recreatingId === gateway.gateway_id}

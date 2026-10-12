@@ -48,6 +48,8 @@ class SourceType(str, enum.Enum):
     upload = "upload"
     gutenberg = "gutenberg"
     standard_ebooks = "standard_ebooks"
+    open_library = "open_library"
+    internet_archive = "internet_archive"
     opds = "opds"
     torrent_gateway = "torrent_gateway"
 
@@ -214,6 +216,8 @@ class ShortCode(Base):
 class Gateway(Base):
     __tablename__ = "gateways"
 
+    agent_version: Mapped[str | None] = mapped_column(String, nullable=True)
+
     id: Mapped[uuid.UUID] = _uuid_pk()
     user_id: Mapped[uuid.UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
@@ -255,6 +259,10 @@ class OpdsToken(Base):
     """Jeton d'acces au catalogue OPDS sortant (secret hashe, jamais en clair)."""
 
     __tablename__ = "opds_tokens"
+
+    max_downloads: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    downloads_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    expires_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
     user_id: Mapped[uuid.UUID] = mapped_column(
