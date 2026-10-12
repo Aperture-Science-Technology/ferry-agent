@@ -342,16 +342,25 @@ def filter_search_results(results: list[ResultOut], request: SearchRequest) -> l
 async def search_all(query: str, *, exclude: set[str] | None = None) -> list[Result]:
     """Interroge les connecteurs cherchables (hors `exclude`) et fusionne les resultats.
 
-    Un echec sur un connecteur est isole (warning) : les autres continuent
-    a contribuer leurs resultats.
+    Un echec ou un depassement de delai sur un connecteur est isole (warning) :
+    les autres continuent a contribuer leurs resultats.
     """
     from ferry_agent.connectors.registry import get_search_connectors
 
     exclude = exclude or set()
+    timeout = get_settings().search_connector_timeout_seconds
+
     async def search_connector(connector) -> list[Result]:
         name = getattr(connector, "name", connector)
         try:
-            return await connector.search(query)
+            return await asyncio.wait_for(connector.search(query), timeout=timeout)
+        except TimeoutError:
+            logger.warning(
+                "recherche abandonnee pour le connecteur %s: delai de %.0fs depasse",
+                name,
+                timeout,
+            )
+            return []
         except Exception as exc:
             logger.warning("recherche echouee pour le connecteur %s: %s", name, exc)
             return []

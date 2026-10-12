@@ -7,6 +7,7 @@ import re
 import shutil
 import tempfile
 import time
+from importlib import metadata
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -178,9 +179,13 @@ class GatewayAgent:
 
     async def poll_once(self) -> dict[str, Any] | None:
         """Poll for one job. Platform returns GatewayJobOut JSON or HTTP 204."""
+        try:
+            agent_version = metadata.version("ferry_gateway_agent")
+        except metadata.PackageNotFoundError:
+            agent_version = "unknown"
         response = await self.platform.post(
             f"{self.settings.platform_url}/api/v1/gateways/poll",
-            headers=self._gateway_headers(),
+            headers={**self._gateway_headers(), "X-Gateway-Version": agent_version},
         )
         self._raise_platform_status(response, "poll jobs")
         if response.status_code == 204 or not response.content:

@@ -15,7 +15,7 @@ from ferry_agent.services.sources import DEFAULT_SOURCE_TYPES, ensure_default_so
 
 
 @pytest.mark.asyncio
-async def test_concurrent_ensure_default_sources_yields_exactly_three(
+async def test_concurrent_ensure_default_sources_yields_exactly_defaults(
     migrated_db: str,
 ) -> None:
     """Deux ensure_default_sources paralleles : UNIQUE empeche les doublons."""
@@ -41,7 +41,7 @@ async def test_concurrent_ensure_default_sources_yields_exactly_three(
                 .select_from(Source)
                 .where(Source.user_id == user_id)
             )
-            assert count == 3
+            assert count == len(DEFAULT_SOURCE_TYPES)
             types = set(
                 (
                     await check.execute(

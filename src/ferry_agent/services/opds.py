@@ -11,11 +11,11 @@ from __future__ import annotations
 import secrets
 import uuid
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote, urlencode, urlparse
 from xml.dom import minidom
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import hash_secret
@@ -70,7 +70,7 @@ def serialize_feed(root: ET.Element) -> bytes:
 
 def catalog_base_url(token: str) -> str:
     settings = get_settings()
-    return f"{settings.public_base_url.rstrip('/')}/opds/{token}"
+    return f"{settings.public_base_url.rstrip('/')}/opds" + (f"/{token}" if token else "")
 
 
 def public_catalog_url(token: str) -> str:
@@ -81,11 +81,17 @@ async def create_token(
     db: AsyncSession,
     user_id: uuid.UUID,
     label: str,
+    *,
+    max_downloads: int | None = None,
+    expires_in_days: int | None = None,
 ) -> tuple[OpdsToken, str]:
     raw = secrets.token_urlsafe(32)
     row = OpdsToken(
         user_id=user_id,
         label=label.strip() or "Liseuse",
+        max_downloads=max_downloads,
+        downloads_count=0,
+        expires_at=_utcnow() + timedelta(days=expires_in_days) if expires_in_days is not None else None,
         token_hash=hash_secret(raw),
         token_encrypted=crypto.encrypt(raw) if get_settings().fernet_key else None,
     )
@@ -102,7 +108,7 @@ async def device_catalog(db: AsyncSession, user_id: uuid.UUID, label: str) -> tu
     token = (
         await db.execute(
             select(OpdsToken)
-            .where(OpdsToken.user_id == user_id, OpdsToken.label == label, OpdsToken.revoked_at.is_(None))
+            .where(OpdsToken.user_id == user_id, OpdsToken.label == label, *_active_token_conditions(_utcnow()))
             .order_by(OpdsToken.created_at, OpdsToken.id)
             .limit(1)
         )
@@ -137,7 +143,7 @@ async def delivery_catalog_urls(db: AsyncSession, user_id: uuid.UUID, hashes: li
                 select(OpdsToken).where(
                     OpdsToken.user_id == user_id,
                     OpdsToken.token_hash.in_(hashes),
-                    OpdsToken.revoked_at.is_(None),
+                    *_active_token_conditions(_utcnow()),
                 )
             )
         )
@@ -172,21 +178,45 @@ async def revoke_token(db: AsyncSession, token_row: OpdsToken) -> None:
     await db.commit()
 
 
+def _active_token_conditions(now: datetime) -> tuple:
+    return (
+        OpdsToken.revoked_at.is_(None),
+        or_(OpdsToken.expires_at.is_(None), OpdsToken.expires_at > now),
+        or_(OpdsToken.max_downloads.is_(None), OpdsToken.downloads_count < OpdsToken.max_downloads),
+    )
+
+
 async def resolve_token(db: AsyncSession, raw_token: str) -> OpdsToken | None:
-    """Retourne le jeton actif ou None (inconnu / revoque → 404 cote route)."""
+    """Resolve an active token; unknown, revoked, expired and exhausted all stay opaque."""
+    now = _utcnow()
     result = await db.execute(
         select(OpdsToken).where(
             OpdsToken.token_hash == hash_secret(raw_token),
-            OpdsToken.revoked_at.is_(None),
+            *_active_token_conditions(now),
         )
     )
     row = result.scalar_one_or_none()
     if row is None:
         return None
-    row.last_used_at = _utcnow()
+    row.last_used_at = now
     await db.commit()
     await db.refresh(row)
     return row
+
+
+async def consume_download(db: AsyncSession, token_id: uuid.UUID) -> bool:
+    """Reserve one download atomically, rechecking expiry/revocation/quota under the row lock."""
+    now = _utcnow()
+    result = await db.execute(
+        update(OpdsToken)
+        .where(OpdsToken.id == token_id, *_active_token_conditions(now))
+        .values(downloads_count=OpdsToken.downloads_count + 1, last_used_at=now)
+        .returning(OpdsToken.id)
+        .execution_options(synchronize_session="fetch")
+    )
+    consumed = result.scalar_one_or_none() is not None
+    await db.commit()
+    return consumed
 
 
 def _link(

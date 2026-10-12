@@ -136,7 +136,7 @@ async def test_unknown_sub_provisions_default_sources(db_session):
     user = await deps._get_or_create_clerk_user(db_session, subject)
     sources = (await db_session.scalars(select(Source.type).where(Source.user_id == user.id))).all()
     assert set(sources) == set(DEFAULT_SOURCE_TYPES)
-    assert len(sources) == 3
+    assert len(sources) == len(DEFAULT_SOURCE_TYPES)
     assert user.email == subject
     again = await deps._get_or_create_clerk_user(db_session, subject)
     assert again.id == user.id
@@ -236,7 +236,7 @@ def test_model_email_is_not_unique():
     print("modele: email sans UNIQUE; ix_users_email non unique")
 
 
-async def test_concurrent_first_resolution_has_one_user_and_three_sources(migrated_db):
+async def test_concurrent_first_resolution_has_one_user_and_default_sources(migrated_db):
     engine = create_async_engine(migrated_db)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     subject = _sub()
@@ -251,8 +251,13 @@ async def test_concurrent_first_resolution_has_one_user_and_three_sources(migrat
         assert ids[0] == ids[1]
         async with sessions() as db:
             assert await db.scalar(select(func.count()).select_from(User).where(User.clerk_sub == subject)) == 1
-            assert await db.scalar(select(func.count()).select_from(Source).where(Source.user_id == ids[0])) == 3
-        print(f"concurrence: deux resolutions, une ligne {ids[0]}, trois sources")
+            assert await db.scalar(
+                select(func.count()).select_from(Source).where(Source.user_id == ids[0])
+            ) == len(DEFAULT_SOURCE_TYPES)
+        print(
+            f"concurrence: deux resolutions, une ligne {ids[0]}, "
+            f"{len(DEFAULT_SOURCE_TYPES)} sources"
+        )
     finally:
         await engine.dispose()
 

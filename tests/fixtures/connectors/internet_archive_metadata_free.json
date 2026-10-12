@@ -1,0 +1,24 @@
+{
+  "metadata": {
+    "identifier": "prideandprejudic42671gut",
+    "title": "Pride and Prejudice",
+    "creator": [
+      "Jane Austen"
+    ],
+    "rights": "Public domain in the USA.",
+    "collection": "gutenberg",
+    "mediatype": "texts"
+  },
+  "files": [
+    {
+      "name": "pg42671.epub",
+      "format": "EPUB",
+      "size": "281287"
+    },
+    {
+      "name": "42671.txt",
+      "format": "Text",
+      "size": "725090"
+    }
+  ]
+}

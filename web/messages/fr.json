@@ -595,7 +595,9 @@
     "jobQueueCount": "{count, plural, one {# tâche} other {# tâches}}",
     "jobQueueUnavailable": "La file s’affiche quand ce module est connecté.",
     "pair": "Appairer",
-    "recreate": "Recréer"
+    "recreate": "Recréer",
+    "installedVersion": "Version installée : {version}",
+    "updateArchiveReminder": "Une version plus récente est disponible. Pour mettre à jour, retéléchargez puis réimportez l’archive dans OrbStack ou Docker Desktop."
   },
   "createAccess": {
     "title": "Créer un Gateway",
@@ -641,6 +643,14 @@
       "standardEbooks": {
         "name": "Standard Ebooks",
         "description": "Des classiques du domaine public, relus et mis en forme avec soin."
+      },
+      "openLibrary": {
+        "name": "Open Library",
+        "description": "Des scans du domaine public librement téléchargeables depuis le catalogue Open Library."
+      },
+      "internetArchive": {
+        "name": "Internet Archive",
+        "description": "Des textes du domaine public librement téléchargeables depuis Internet Archive."
       },
       "upload": {
         "name": "Fichiers importés",
@@ -838,7 +848,18 @@
       "statusActive": "Actif",
       "statusRevoked": "Révoqué",
       "tokenMeta": "Créé le {created} · Dernier usage · {lastUsed}",
-      "createdLabel": "Créé le {created}"
+      "createdLabel": "Créé le {created}",
+      "downloadsUnlimited": "{count} téléchargement(s) · sans limite",
+      "downloadsLimited": "{count} téléchargement(s) sur {max}",
+      "expiresOn": "Expire le {date}",
+      "noExpiration": "Sans date d’expiration",
+      "statusExpired": "Expiré",
+      "statusExhausted": "Limite atteinte",
+      "maxDownloadsLabel": "Nombre maximal de téléchargements (facultatif)",
+      "expiresDaysLabel": "Durée de validité en jours (facultatif)",
+      "optionalLimitHint": "Laissez vide pour télécharger sans limite.",
+      "optionalExpiryHint": "Laissez vide pour un accès sans date de fin.",
+      "invalidLimits": "Indiquez un nombre entier positif : au plus 2 147 483 647 téléchargements et 36 500 jours."
     },
     "devicesTitle": "Appareils",
     "devicesDescription": "Gérez vos liseuses et la façon dont les livres y arrivent.",

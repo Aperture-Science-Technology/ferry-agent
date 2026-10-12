@@ -31,14 +31,19 @@ export type Device = Omit<Schemas["DeviceOut"], "conversion_profile"> & {
 };
 export type DeviceCreate = Schemas["DeviceCreate"];
 export type DevicePatch = Schemas["DevicePatch"];
-export type Gateway = Schemas["GatewayOut"];
+export type Gateway = Schemas["GatewayOut"] & { agent_version?: string | null };
 export type GatewayCredentials = Schemas["GatewayCredentials"];
 export type GatewayJobStatusOut = Schemas["GatewayJobStatusOut"];
 export type DeliveryJob = Omit<Schemas["DeliveryOut"], "method"> & { method: DeliveryMethod };
 export type MethodAvailability = Omit<Schemas["MethodAvailability"], "method"> & { method: DeliveryMethod };
 export type Source = Schemas["SourceOut"];
-export type OpdsToken = Schemas["OpdsTokenOut"];
-export type OpdsTokenCreated = Schemas["OpdsTokenCreated"];
+type OpdsTokenLimits = {
+  max_downloads?: number | null;
+  downloads_count?: number;
+  expires_at?: string | null;
+};
+export type OpdsToken = Schemas["OpdsTokenOut"] & OpdsTokenLimits;
+export type OpdsTokenCreated = Schemas["OpdsTokenCreated"] & OpdsTokenLimits & { last_used_at?: string | null };
 
 /**
  * UI-only : `SourceOut.type` est un `string` libre cote OpenAPI ;
@@ -48,6 +53,8 @@ export type SourceType =
   | "upload"
   | "gutenberg"
   | "standard_ebooks"
+  | "open_library"
+  | "internet_archive"
   | "opds"
   | "torrent_gateway";
 

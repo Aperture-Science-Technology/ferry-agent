@@ -49,6 +49,39 @@ async def test_search_all_isolates_connector_failures(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.asyncio
+async def test_search_all_isolates_connector_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Un connecteur trop lent est abandonne ; les autres resultats restent."""
+    import time
+
+    from ferry_agent.config import Settings
+
+    class _SlowConnector:
+        name = "slow"
+
+        async def search(self, query: str) -> list[Result]:
+            await asyncio.sleep(1.0)
+            return [Result(source=self.name, title=query, result_id="slow", format="epub")]
+
+    monkeypatch.setattr(
+        "ferry_agent.connectors.registry.get_search_connectors",
+        lambda: [_SlowConnector(), _OkConnector()],
+    )
+    monkeypatch.setattr(
+        library,
+        "get_settings",
+        lambda: Settings(search_connector_timeout_seconds=0.05),
+    )
+
+    start = time.perf_counter()
+    results = await library.search_all("pride")
+    elapsed = time.perf_counter() - start
+
+    assert len(results) == 1
+    assert results[0].source == "ok"
+    assert elapsed < 0.5
+
+
+@pytest.mark.asyncio
 async def test_search_all_skips_excluded_connectors(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "ferry_agent.connectors.registry.get_search_connectors",

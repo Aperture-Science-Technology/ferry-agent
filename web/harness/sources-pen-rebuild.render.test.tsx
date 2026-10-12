@@ -92,6 +92,16 @@ const filledSources: Source[] = [
     enabled: true,
   }),
   baseSource({
+    id: "44444444-4444-4444-8444-444444444444",
+    type: "open_library",
+    enabled: true,
+  }),
+  baseSource({
+    id: "55555555-5555-4555-8555-555555555555",
+    type: "internet_archive",
+    enabled: true,
+  }),
+  baseSource({
     id: "33333333-3333-4333-8333-333333333333",
     type: "upload",
     enabled: true,
@@ -130,7 +140,7 @@ describe("UI harness — Pen sources composition", () => {
     expect(document.querySelector("table")).toBeNull();
 
     const rows = screen.getAllByTestId("source-row");
-    expect(rows.length).toBe(4);
+    expect(rows.length).toBe(6);
 
     expect(
       within(rows[0]!).getByRole("heading", {
@@ -147,16 +157,26 @@ describe("UI harness — Pen sources composition", () => {
     ).toBeTruthy();
     expect(
       within(rows[2]!).getByRole("heading", {
+        name: messagesFr.sources.providers.openLibrary.name,
+      })
+    ).toBeTruthy();
+    expect(
+      within(rows[3]!).getByRole("heading", {
+        name: messagesFr.sources.providers.internetArchive.name,
+      })
+    ).toBeTruthy();
+    expect(
+      within(rows[4]!).getByRole("heading", {
         name: messagesFr.sources.providers.upload.name,
       })
     ).toBeTruthy();
-    expect(rows[2]!.getAttribute("data-source-availability")).toBe("always_on");
+    expect(rows[4]!.getAttribute("data-source-availability")).toBe("always_on");
     expect(
-      within(rows[3]!).getByRole("heading", {
+      within(rows[5]!).getByRole("heading", {
         name: messagesFr.sources.providers.torrentGateway.name,
       })
     ).toBeTruthy();
-    expect(rows[3]!.getAttribute("data-source-availability")).toBe("gateway");
+    expect(rows[5]!.getAttribute("data-source-availability")).toBe("gateway");
 
     await waitFor(() => {
       expect(
@@ -190,7 +210,7 @@ describe("UI harness — Pen sources composition", () => {
     expect(screen.getByText(messagesFr.sources.gatewayHintBody)).toBeTruthy();
     expect(screen.getByTestId("sources-panel")).toBeTruthy();
     expect(screen.getByText(messagesFr.sources.localSourcesTitle)).toBeTruthy();
-    expect(screen.getByText("4 sources")).toBeTruthy();
+    expect(screen.getByText("6 sources")).toBeTruthy();
     expect(screen.queryByText(messagesFr.sources.sectionTitle)).toBeNull();
     expect(screen.queryByText(messagesFr.sources.openAccessTitle)).toBeNull();
     expect(screen.queryByText(messagesFr.sources.supportedHint)).toBeNull();
@@ -235,6 +255,6 @@ describe("UI harness — Pen sources composition", () => {
     expect(screen.getByTestId("sources-body")).toBeTruthy();
     expect(screen.getByTestId("sources-panel")).toBeTruthy();
     expect(layout.querySelector("table")).toBeNull();
-    expect(screen.getAllByTestId("source-row").length).toBe(4);
+    expect(screen.getAllByTestId("source-row").length).toBe(6);
   });
 });

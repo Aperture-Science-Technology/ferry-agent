@@ -167,6 +167,16 @@ describe("UI harness — sources", () => {
           type: "standard_ebooks",
           enabled: false,
         }),
+        baseSource({
+          id: "77777777-7777-4777-8777-777777777777",
+          type: "open_library",
+          enabled: true,
+        }),
+        baseSource({
+          id: "88888888-8888-4888-8888-888888888888",
+          type: "internet_archive",
+          enabled: true,
+        }),
       ],
     });
     expect(document.querySelector('[data-sources-state="success"]')).toBeTruthy();
