@@ -2,8 +2,8 @@
 
 Generation Atom via `xml.etree.ElementTree` (stdlib) : les textes et
 attributs sont echappes par ET (equivalent systematique de
-`html.escape` cote tier C). Le secret du jeton n'est jamais persiste —
-seul le hash SHA-256 (voir `hash_secret`) l'est.
+`html.escape` cote tier C). Le hash SHA-256 authentifie les requetes. Avec une cle Fernet configuree,
+le secret chiffre permet au proprietaire de retrouver l'acces de sa liseuse.
 """
 
 from __future__ import annotations
@@ -20,7 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.api.deps import hash_secret
 from ferry_agent.config import get_settings
-from ferry_agent.models import LibraryItem, OpdsToken
+from ferry_agent.models import LibraryItem, OpdsToken, User
+from ferry_agent.services import crypto
 from ferry_agent.services.covers import embedded_cover
 from ferry_agent.services.file_validation import content_type_for_filename
 from ferry_agent.services.library import user_facing_filename
@@ -86,11 +87,75 @@ async def create_token(
         user_id=user_id,
         label=label.strip() or "Liseuse",
         token_hash=hash_secret(raw),
+        token_encrypted=crypto.encrypt(raw) if get_settings().fernet_key else None,
     )
     db.add(row)
     await db.commit()
     await db.refresh(row)
     return row, raw
+
+
+async def device_catalog(db: AsyncSession, user_id: uuid.UUID, label: str) -> tuple[OpdsToken, str]:
+    """Serialize per owner to reuse one active labelled token, including concurrent deliveries."""
+    await db.execute(select(User.id).where(User.id == user_id).with_for_update())
+    label = label.strip() or "Liseuse"
+    token = (
+        await db.execute(
+            select(OpdsToken)
+            .where(OpdsToken.user_id == user_id, OpdsToken.label == label, OpdsToken.revoked_at.is_(None))
+            .order_by(OpdsToken.created_at, OpdsToken.id)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if token is not None:
+        if not token.token_encrypted:
+            raise RuntimeError(
+                "Cet accès au catalogue existe déjà, mais son lien ne peut pas être retrouvé. "
+                "Révoquez cet accès dans les Réglages, puis relancez la livraison."
+            )
+        try:
+            raw = crypto.decrypt(token.token_encrypted)
+        except crypto.CryptoError as exc:
+            raise RuntimeError(
+                "Le lien du catalogue est temporairement indisponible. Contactez l’administrateur."
+            ) from exc
+        return token, public_catalog_url(raw)
+    if not get_settings().fernet_key:
+        raise RuntimeError(
+            "L’accès au catalogue est indisponible. Demandez à l’administrateur d’activer la protection des liens."
+        )
+    token, raw = await create_token(db, user_id, label)
+    return token, public_catalog_url(raw)
+
+
+async def delivery_catalog_urls(db: AsyncSession, user_id: uuid.UUID, hashes: list[str]) -> dict[str, str]:
+    if not hashes:
+        return {}
+    tokens = (
+        (
+            await db.execute(
+                select(OpdsToken).where(
+                    OpdsToken.user_id == user_id,
+                    OpdsToken.token_hash.in_(hashes),
+                    OpdsToken.revoked_at.is_(None),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    urls = {}
+    for token in tokens:
+        if token.token_encrypted:
+            try:
+                urls[token.token_hash] = public_catalog_url(crypto.decrypt(token.token_encrypted))
+            except crypto.CryptoError:
+                continue
+    return urls
+
+
+async def delivery_catalog_url(db: AsyncSession, user_id: uuid.UUID, token_hash: str | None) -> str | None:
+    return (await delivery_catalog_urls(db, user_id, [token_hash] if token_hash else [])).get(token_hash)
 
 
 async def list_tokens(db: AsyncSession, user_id: uuid.UUID) -> list[OpdsToken]:

@@ -69,10 +69,12 @@ def available_delivery_methods(
         ]
 
     if device.delivery_tier == DeliveryTier.C:
-        return [MethodAvailability(method=DeliveryMethod.browser_code, available=True)]
+        return [
+            MethodAvailability(method=DeliveryMethod.browser_code, available=True),
+            MethodAvailability(method=DeliveryMethod.opds, available=True),
+        ]
 
-    # Tier D (marque "other") : aucun mode de livraison implemente.
-    return []
+    return [MethodAvailability(method=DeliveryMethod.opds, available=True)]
 
 
 def is_method_allowed(

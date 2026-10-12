@@ -3,9 +3,9 @@
  * Cover placeholder 96×128; header Envoyer disabled without selection.
  * Run: npm run test:ui-harness
  */
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LibraryView } from "@/components/app/library/library-view";
 import { LibraryCoverImage } from "@/components/app/library/cover-image";
@@ -14,6 +14,10 @@ import messagesFr from "@/messages/fr.json";
 import messagesEn from "@/messages/en.json";
 
 const callMock = vi.fn();
+beforeEach(() => {
+  window.history.replaceState(null, "", "/library");
+  callMock.mockReset().mockResolvedValue([]);
+});
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -252,5 +256,86 @@ describe("UI harness — cover fallback Pen YoLR8", () => {
       </NextIntlClientProvider>
     );
     expect(screen.getByText("Cover")).toBeTruthy();
+  });
+});
+
+
+describe("UI harness — search query criteria", () => {
+  it("replays a shared URL and applies the language filter on the server", async () => {
+    window.history.replaceState(null, "", "/library?q=book&lang=fr&fmt=epub&src=gutenberg&owned=1&sort=title");
+    callMock.mockImplementation(async (_path, init) => {
+      const body = JSON.parse(init.body);
+      return body.filters.language === "fr" ? [{
+        source: "gutenberg", result_id: "1", title: "Livre français", author: "Auteur",
+        format: "epub", owned: true,
+      }] : [];
+    });
+    renderLibrary("fr");
+    expect(screen.getByRole("group", { name: "Filtres et affichage" })).toBeTruthy();
+    expect(await screen.findByText("Livre français")).toBeTruthy();
+    expect(JSON.parse(callMock.mock.calls[0][1].body)).toEqual({
+      query: "book", scope: ["legal", "gateways"],
+      filters: { language: "fr", formats: ["epub"], sources: ["gutenberg"], owned: true },
+      sort: "title", limit: 25, offset: 0,
+    });
+    expect(screen.getByRole("switch", { name: "Déjà en bibliothèque" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.change(screen.getByLabelText("Langue"), { target: { value: "en" } });
+    await waitFor(() => expect(screen.queryByText("Livre français")).toBeNull());
+    expect(await screen.findByText(messagesFr.library.noResultsHint)).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get("lang")).toBe("en");
+    expect(JSON.parse(callMock.mock.lastCall![1].body).filters.language).toBe("en");
+  });
+
+  it("restores collection criteria and updates the URL when filtering", () => {
+    window.history.replaceState(null, "", "/library?mode=mine&lang=fr&fmt=epub&src=manual&sort=title");
+    renderLibrary("fr", { initialItems: [items[0], { ...items[1], language: "en" }] });
+    expect(screen.getByText(items[0].title)).toBeTruthy();
+    expect(screen.queryByText(items[1].title)).toBeNull();
+    fireEvent.change(screen.getByLabelText("Langue"), { target: { value: "en" } });
+    expect(screen.queryByText(items[0].title)).toBeNull();
+    expect(screen.getByText(items[1].title)).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).get("lang")).toBe("en");
+    expect(callMock).not.toHaveBeenCalled();
+  });
+
+  it("requests the next page and resets it when filters change", async () => {
+    window.history.replaceState(null, "", "/library?q=book");
+    callMock.mockImplementation(async (_path, init) => {
+      const body = JSON.parse(init.body);
+      return Array.from({ length: body.offset ? 1 : 25 }, (_, index) => ({
+        source: "gutenberg", result_id: String(body.offset + index),
+        title: `Book ${body.offset + index}`, format: "epub", author: "Author",
+      }));
+    });
+    renderLibrary("en");
+    expect(await screen.findByText("Book 0")).toBeTruthy();
+    expect(screen.queryByText("Book 24")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    expect(await screen.findByText("Book 24")).toBeTruthy();
+    expect(JSON.parse(callMock.mock.lastCall![1].body).offset).toBe(24);
+    expect(screen.getByRole("button", { name: "Next page" })).toHaveProperty("disabled", true);
+    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "fr" } });
+    expect(await screen.findByText("Book 0")).toBeTruthy();
+    expect(JSON.parse(callMock.mock.lastCall![1].body).offset).toBe(0);
+  });
+
+  it("ignores an older response and restores criteria on browser navigation", async () => {
+    window.history.replaceState(null, "", "/library?q=book&lang=fr");
+    let resolveOld!: (value: unknown[]) => void;
+    callMock.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }))
+      .mockResolvedValue([]);
+    renderLibrary("en");
+    await waitFor(() => expect(callMock).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(messagesEn.library.searching)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "en" } });
+    expect(await screen.findByText(messagesEn.library.noResultsHint)).toBeTruthy();
+    await act(async () => resolveOld([{ title: "Stale result", source: "gutenberg", result_id: "1" }]));
+    expect(screen.queryByText("Stale result")).toBeNull();
+    act(() => {
+      window.history.replaceState(null, "", "/library?q=book&lang=de");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await waitFor(() => expect(JSON.parse(callMock.mock.lastCall![1].body).filters.language).toBe("de"));
+    expect(screen.getByLabelText("Language")).toHaveProperty("value", "de");
   });
 });

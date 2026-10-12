@@ -43,8 +43,6 @@ import {
   applyLibraryItemsRefreshResult,
   filterAndSortLibraryItems,
   LIBRARY_COLLECTION_PAGE_SIZE,
-  libraryCollectionPageState,
-  pageAfterLibraryCriteriaChange,
   paginateLibraryItems,
 } from "@/components/app/library/library-collection";
 import { SearchCoverImage } from "@/components/app/library/cover-image";
@@ -60,6 +58,13 @@ import type {
   PaginatedLibraryItems,
   SearchResult,
 } from "@/lib/types";
+
+import { useUrlQuery, updateUrlQuery } from "@/lib/use-url-query";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActions } from "./bulk-actions";
+import { FilterBar } from "@/components/app/filter-bar";
+import { useLibraryFilterFields } from "./library-filter-fields";
+import { SEARCH_PAGE_SIZE, updateLibraryQuery, useLibraryQuery } from "./library-query";
 
 type BrowseMode = "mine" | "sources";
 type AddTab = "search" | "import";
@@ -177,6 +182,7 @@ export function LibraryView({
   devices: Device[];
 }) {
   const t = useTranslations("library");
+  const tBulk = useTranslations("enhance.bulk");
   const tCommon = useTranslations("common");
   const tBrand = useTranslations("brand");
   const tDetail = useTranslations("bookDetail");
@@ -186,8 +192,26 @@ export function LibraryView({
   const isMobile = useIsMobile();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const [query, setQuery] = useState("");
-  const [collectionQuery, setCollectionQuery] = useState("");
+  const urlQuery = useUrlQuery();
+  const criteria = useLibraryQuery();
+  const filterFields = useLibraryFilterFields(criteria);
+  const browseMode = criteria.mode;
+  const [draft, setDraft] = useState({ original: criteria.query, value: criteria.query });
+  if (draft.original !== criteria.query) {
+    setDraft({ original: criteria.query, value: criteria.query });
+  }
+  const query = draft.original === criteria.query ? draft.value : criteria.query;
+  function setQuery(value: string) { setDraft({ original: criteria.query, value }); }
+  const collectionQuery = criteria.query;
+  function setCollectionQuery(value: string) {
+    updateLibraryQuery({ mode: "mine", q: value, page: null });
+  }
+  function setBrowseMode(mode: BrowseMode) {
+    if (mode !== browseMode) updateLibraryQuery({ mode }, true);
+  }
+  const [searchAttempt, setSearchAttempt] = useState(0);
+  const [searchError, setSearchError] = useState(false);
+  const [hasNextSearchPage, setHasNextSearchPage] = useState(false);
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -198,11 +222,13 @@ export function LibraryView({
   const [deliverItem, setDeliverItem] = useState<LibraryItem | null>(null);
   const [pendingDelete, setPendingDelete] = useState<LibraryItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selection, setSelection] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [partialDismissed, setPartialDismissed] = useState(false);
   const [unavailableDismissed, setUnavailableDismissed] = useState(false);
-  const [browseMode, setBrowseMode] = useState<BrowseMode>("mine");
-  const [addTab, setAddTab] = useState<AddTab>("search");
+  const [localAddTab, setLocalAddTab] = useState<AddTab>("search");
+  const addTab = urlQuery.get("action") === "import" ? "import" : localAddTab;
+  function setAddTab(tab: AddTab) { updateUrlQuery({ action: null }); setLocalAddTab(tab); }
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
 
   const canDeliver = devices.length > 0;
@@ -220,32 +246,18 @@ export function LibraryView({
     return () => cancelAnimationFrame(frame);
   }, [browseMode, addTab]);
 
-  const filterCriteriaKey = `${collectionQuery}\0all\0all\0all\0added`;
-  const [pageState, setPageState] = useState({
-    criteriaKey: filterCriteriaKey,
-    page: 1,
-  });
-
-  const nextPageState = libraryCollectionPageState(pageState, filterCriteriaKey);
-  if (nextPageState !== pageState) {
-    setPageState(nextPageState);
-  }
-
-  const collectionPage =
-    pageState.criteriaKey === filterCriteriaKey
-      ? pageState.page
-      : pageAfterLibraryCriteriaChange();
+  const collectionPage = criteria.page;
 
   const displayedItems = useMemo(
     () =>
       filterAndSortLibraryItems(items, {
         textQuery: collectionQuery,
-        languageFilter: "all",
-        formatFilter: "all",
-        sourceFilter: "all",
-        sortBy: "added",
+        languageFilter: criteria.language || "all",
+        formatFilter: criteria.format,
+        sourceFilter: criteria.collectionSource,
+        sortBy: criteria.collectionSort,
       }),
-    [items, collectionQuery]
+    [items, collectionQuery, criteria.language, criteria.format, criteria.collectionSource, criteria.collectionSort]
   );
 
   const pageSlice = useMemo(
@@ -258,18 +270,17 @@ export function LibraryView({
     [displayedItems, collectionPage]
   );
 
-  if (
-    pageState.criteriaKey === filterCriteriaKey &&
-    pageSlice.page !== pageState.page
-  ) {
-    setPageState({ criteriaKey: filterCriteriaKey, page: pageSlice.page });
+  function setCollectionPage(nextPage: number) {
+    updateLibraryQuery({ page: String(nextPage) });
   }
 
-  function setCollectionPage(nextPage: number) {
-    setPageState({
-      criteriaKey: filterCriteriaKey,
-      page: nextPage,
-    });
+  const selectedBooks = items.filter(item => selection.has(item.id));
+  const pageSelected = pageSlice.items.length > 0 && pageSlice.items.every(item => selection.has(item.id));
+  function toggleSelection(id: string, checked: boolean) {
+    setSelection(previous => { const next = new Set(previous); if (checked) next.add(id); else next.delete(id); return next; });
+  }
+  function selectionBox(item: LibraryItem) {
+    return <Checkbox aria-label={tBulk("selectBook", { title: item.title })} checked={selection.has(item.id)} onCheckedChange={checked => toggleSelection(item.id, checked)} />;
   }
 
   function markOwned(resultKey: string) {
@@ -341,22 +352,49 @@ export function LibraryView({
     });
   }
 
-  async function runSearch() {
-    if (!query.trim()) return;
-    setBrowseMode("sources");
-    setAddTab("search");
-    setSearching(true);
-    try {
-      const found = await call<SearchResult[]>("/api/v1/books/search", {
-        method: "POST",
-        body: JSON.stringify({ query, scope: ["legal", "gateways"] }),
-      });
-      setResults(found);
-    } catch {
-      toast.error(t("toastSearchFailed"));
-    } finally {
-      setSearching(false);
+  const searchBody = JSON.stringify(criteria.request);
+  useEffect(() => {
+    if (browseMode !== "sources") return;
+    const controller = new AbortController();
+    async function search() {
+      if (!JSON.parse(searchBody).query.trim()) {
+        setResults(null);
+        setSearching(false);
+        return;
+      }
+      setSearching(true);
+      setSearchError(false);
+      setResults(null);
+      try {
+        const found = await call<SearchResult[]>("/api/v1/books/search", {
+          method: "POST",
+          body: searchBody,
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setResults(found.slice(0, SEARCH_PAGE_SIZE));
+        setHasNextSearchPage(found.length > SEARCH_PAGE_SIZE);
+      } catch {
+        if (controller.signal.aborted) return;
+        setSearchError(true);
+        toast.error(t("toastSearchFailed"));
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
     }
+    void search();
+    return () => controller.abort();
+  }, [browseMode, searchBody, searchAttempt, call, t]);
+
+  function runSearch() {
+    if (!query.trim()) return;
+    setAddTab("search");
+    updateLibraryQuery({ mode: "sources", q: query, page: null });
+    setSearchAttempt((value) => value + 1);
+  }
+
+  function changeFilters(values: Record<string, string | null>) {
+    updateLibraryQuery({ ...values, mode: browseMode, page: null });
   }
 
   async function addResult(result: SearchResult) {
@@ -623,6 +661,7 @@ export function LibraryView({
     <ul className="flex flex-col" data-testid="library-book-list">
       {pageSlice.items.map((item) => (
         <li key={item.id}>
+          {selectionBox(item)}
           <BookRow
             item={item}
             selected={selectedId === item.id}
@@ -646,6 +685,7 @@ export function LibraryView({
         {pageSlice.items.map((item) => (
           <li key={item.id}>
             <RevealItem>
+              {selectionBox(item)}
               <BookGridItem
                 item={item}
                 selected={selectedId === item.id}
@@ -672,6 +712,7 @@ export function LibraryView({
           onTimeout={handleFetchTimeout}
         />
       ))}
+
 
       {/* Pen Header/Page — desktop; mobile empty Top when collection empty */}
       <div className="hidden md:block">
@@ -739,6 +780,10 @@ export function LibraryView({
         </div>
       )}
 
+          <BulkActions items={selectedBooks} devices={devices}
+            onDeleted={ids => { setItems(previous => previous.filter(item => !ids.includes(item.id))); if (detailItem && ids.includes(detailItem.id)) setDetailItem(null); }}
+            onFinished={ids => setSelection(previous => new Set([...previous].filter(id => !ids.includes(id))))} />
+
       {lastDelivery?.method === "email" ? (
         <DeliveryFeedback method="email" title={t("emailRequested")} />
       ) : null}
@@ -798,6 +843,11 @@ export function LibraryView({
                   {t("search")}
                 </Button>
               </div>
+
+              <FilterBar fields={filterFields} search={{ label: headerSearchPlaceholder, value: headerSearchValue, external: true }} count={results?.length ?? null} onChange={changeFilters} onReset={() => updateLibraryQuery({ mode: browseMode }, true)} label={t("filtersLabel")} />
+              {searchError && !searching ? (
+                <p role="alert">{t("toastSearchFailed")}</p>
+              ) : null}
 
               {searching ? (
                 <motion.div
@@ -877,6 +927,19 @@ export function LibraryView({
                   )}
                 </Reveal>
               ) : null}
+              {!searching && results !== null && (criteria.page > 1 || hasNextSearchPage) ? (
+                <nav className="flex items-center gap-3" aria-label={t("searchPagination")}>
+                  <Button variant="ghost" disabled={criteria.page <= 1}
+                    onClick={() => updateLibraryQuery({ page: String(criteria.page - 1) })}>
+                    <ChevronLeft />{t("paginationPrevious")}
+                  </Button>
+                  <span aria-live="polite">{t("searchPage", { page: criteria.page })}</span>
+                  <Button variant="ghost" disabled={!hasNextSearchPage}
+                    onClick={() => updateLibraryQuery({ page: String(criteria.page + 1) })}>
+                    {t("paginationNext")}<ChevronRight />
+                  </Button>
+                </nav>
+              ) : null}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
@@ -924,6 +987,15 @@ export function LibraryView({
           ) : null}
 
           {toolsRow}
+          <div className="flex flex-wrap items-center gap-2">
+            <Checkbox id="library-select-page" checked={pageSelected} indeterminate={!pageSelected && pageSlice.items.some(item => selection.has(item.id))}
+              disabled={!pageSlice.items.length} onCheckedChange={checked => setSelection(previous => {
+                const next = new Set(previous); pageSlice.items.forEach(item => { if (checked) next.add(item.id); else next.delete(item.id); }); return next;
+              })} />
+            <Label htmlFor="library-select-page">{tBulk("selectPage")}</Label>
+          </div>
+
+          <FilterBar fields={filterFields} search={{ label: headerSearchPlaceholder, value: headerSearchValue, external: true }} count={displayedItems.length} onChange={changeFilters} onReset={() => updateLibraryQuery({ mode: browseMode }, true)} label={t("filtersLabel")} />
 
           {displayedItems.length === 0 ? (
             <LibraryEmpty
@@ -934,7 +1006,7 @@ export function LibraryView({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setCollectionQuery("")}
+                  onClick={() => updateLibraryQuery({ mode: "mine" }, true)}
                 >
                   {t("resetFilters")}
                 </Button>
@@ -950,9 +1022,9 @@ export function LibraryView({
       )}
 
       <BookDetailDialog
-        item={detailItem}
+        item={detailItem ?? items.find(item => item.id === urlQuery.get("book")) ?? null}
         devices={devices}
-        onOpenChange={(open) => !open && setDetailItem(null)}
+        onOpenChange={(open) => { if (!open) { setDetailItem(null); updateUrlQuery({ book: null }); } }}
         onUpdated={(updated) => {
           setItems((prev) =>
             prev.map((it) => (it.id === updated.id ? updated : it))

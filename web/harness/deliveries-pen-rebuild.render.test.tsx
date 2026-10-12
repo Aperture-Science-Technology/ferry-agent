@@ -221,7 +221,7 @@ describe("UI harness — Pen deliveries composition", () => {
     expect(screen.queryByText(/Ferry Notes/)).toBeNull();
     expect(screen.queryByText(/Catalogues silencieux/)).toBeNull();
 
-    fireEvent.click(within(filters).getByRole("button", { name: "En cours" }));
+    fireEvent.click(within(filters).getByRole("button", { name: "En attente" }));
     const activeRows = screen.getAllByTestId("delivery-status-row");
     expect(activeRows.length).toBe(1);
     expect(screen.queryByText(/Ink & Transfer/)).toBeNull();

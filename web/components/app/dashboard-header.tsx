@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
+import { CommandPalette } from "@/components/app/command-palette";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -26,13 +27,14 @@ export function DashboardHeader() {
     return (
       <header
         data-testid="dashboard-shell-header"
-        className="hidden h-16 shrink-0 items-center gap-2 px-4 md:flex"
+        className="flex h-16 shrink-0 items-center gap-2 px-4"
       >
         <SidebarTrigger className="size-7 rounded-sm" />
         <Separator
           orientation="vertical"
           className="h-4 self-center data-vertical:h-4 data-vertical:self-center"
         />
+        <CommandPalette />
       </header>
     );
   }
@@ -52,6 +54,7 @@ export function DashboardHeader() {
           {title}
         </h1>
       </div>
+      <CommandPalette />
     </header>
   );
 }

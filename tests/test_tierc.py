@@ -194,6 +194,7 @@ async def test_deliver_tier_c_fails_when_requested_format_cannot_be_produced(
 
 
 async def test_create_delivery_returns_download_url_for_tier_c(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(delivery, "deliver_synchronously", delivery.deliver)
     monkeypatch.setattr(
         tierc, "get_settings", lambda: SimpleNamespace(public_base_url="https://ferry.example.test")
     )

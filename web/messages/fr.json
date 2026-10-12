@@ -232,6 +232,13 @@
     "noMatchDescription": "Élargissez ou réinitialisez les filtres pour revoir toute votre collection.",
     "resetFilters": "Réinitialiser les filtres",
     "filtersActive": "Filtres actifs",
+    "filterOwned": "Déjà en bibliothèque",
+    "sortRelevance": "Pertinence",
+    "sortSize": "Taille",
+    "sortSeeders": "Nombre de personnes partageant le fichier",
+    "sourceGateway": "Gateway (accès personnel)",
+    "searchPagination": "Pages des résultats",
+    "searchPage": "Page {page}",
     "sortLabel": "Trier par",
     "sortAdded": "Ajouté récemment",
     "sortTitle": "Titre",
@@ -322,7 +329,8 @@
       "dropbox": "Dropbox",
       "drive": "Google Drive",
       "browser_code": "Code dans le navigateur",
-      "usb": "Transfert USB"
+      "usb": "Transfert USB",
+      "opds": "Catalogue sur la liseuse (OPDS)"
     },
     "methodUnavailable": {
       "smtp_not_configured": "Send-to-Kindle indisponible (SMTP non configuré).",
@@ -720,9 +728,23 @@
       "delivered": "Livré",
       "failed": "Échec",
       "unknown": "Inconnu",
-      "sentEmail": "Envoyé — accepté par le relais"
+      "sentEmail": "Envoyé — accepté par le relais",
+      "catalogReady": "Catalogue prêt à consulter"
     },
-    "statusHintSentEmail": "Accepté par le relais d’envoi. Amazon ne confirme pas la remise : vérifiez sur votre liseuse."
+    "statusHintSentEmail": "Accepté par le relais d’envoi. Amazon ne confirme pas la remise : vérifiez sur votre liseuse.",
+    "actionError": "Action impossible. Actualisez la livraison et réessayez.",
+    "filterQueued": "En attente",
+    "filterSent": "Envoyées / à récupérer",
+    "retryDelivery": "Relancer l’envoi",
+    "cancelDelivery": "Annuler l’envoi",
+    "search": "Rechercher un livre ou une liseuse",
+    "deviceFilter": "Filtrer par liseuse",
+    "allDevices": "Toutes les liseuses",
+    "pagination": "Pages des livraisons",
+    "previousPage": "Précédente",
+    "nextPage": "Suivante",
+    "pageNumber": "Page {page}",
+    "openCatalog": "Ouvrir le catalogue"
   },
   "deliveryDetail": {
     "title": "Suivi de l’envoi",
@@ -1120,6 +1142,130 @@
       "hint": "Vous avez déjà un compte ? Connectez-vous. Sinon, demandez à la personne qui vous a invité : elle peut renvoyer votre invitation.",
       "ctaSignIn": "Se connecter",
       "ctaDocs": "Lire le guide"
+    }
+  },
+  "systemHealth": {
+    "title": "État du système",
+    "error": "Impossible de consulter l’état du système. Réessayez.",
+    "retry": "Réessayer",
+    "loading": "Chargement de l’état du système…",
+    "converters": "Conversion des livres (Calibre)",
+    "available": "Disponible",
+    "unavailable": "Indisponible",
+    "mail": "Envoi par email",
+    "storage": "Espace utilisé",
+    "storageUsage": "{used, number} octets sur {quota, number} ({percent, number} %)",
+    "gateways": "Connexions personnelles",
+    "gatewayCounts": "{total} au total · {online} en ligne · {pending} en attente · {revoked} révoquées",
+    "library": "Bibliothèque",
+    "items": "{count} livres",
+    "deliveries": "Livraisons des 7 derniers jours",
+    "deliveryCounts": "{queued} en attente · {sent} envoyées ou prêtes à récupérer · {delivered} remises · {failed} en échec",
+    "version": "Version",
+    "unknown": "Non renseignée"
+  },
+  "kindleTest": {
+    "send": "Tester l’adresse Kindle",
+    "sending": "Envoi du test…",
+    "sent": "Test accepté pour {recipient}. Vérifiez votre Kindle. Amazon ne confirme pas sa réception.",
+    "error": "Le test a échoué. Vérifiez votre adresse Kindle et réessayez.",
+    "hint": "Approuvez l’adresse d’envoi Ferry dans vos réglages Amazon avant le test. Le test compte dans votre limite d’envois."
+  },
+  "enhance": {
+    "filters": {
+      "title": "Filtres et tri",
+      "description": "Affinez les résultats, puis fermez ce panneau pour les consulter.",
+      "remove": "Retirer le filtre : {label}",
+      "count": "{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}",
+      "reset": "Réinitialiser",
+      "sort": "Trier par",
+      "sortBy": "Trier par {label} · {direction}",
+      "ascending": "Ordre croissant",
+      "descending": "Ordre décroissant",
+      "direction": "Sens du tri",
+      "date": "Date",
+      "syncDate": "Dernière synchronisation",
+      "status": "Statut",
+      "device": "Liseuse",
+      "brand": "Marque",
+      "cloud": "Liaison cloud",
+      "all": "Tous",
+      "searchDevices": "Rechercher une liseuse",
+      "emptyTitle": "Aucune liseuse ne correspond",
+      "emptyDescription": "Retirez un filtre ou modifiez votre recherche.",
+      "openLibrary": "Choisir un livre",
+      "currentPage": "Le tri porte sur les livraisons de la page affichée."
+    },
+    "quota": {
+      "usage": "{used} Go utilisés sur {quota} Go",
+      "warning": "Votre espace est presque plein. Supprimez des livres pour libérer de la place.",
+      "unavailable": "Espace disponible : information indisponible."
+    },
+    "bulk": {
+      "selected": "{count, plural, one {# livre sélectionné} other {# livres sélectionnés}}",
+      "selectBook": "Sélectionner {title}",
+      "selectPage": "Tout sélectionner sur cette page",
+      "deliver": "Livrer la sélection",
+      "delete": "Supprimer la sélection",
+      "deliverTitle": "Livrer {count, plural, one {# livre} other {# livres}}",
+      "deleteTitle": "Supprimer {count, plural, one {# livre} other {# livres}} ?",
+      "deleteDescription": "{count, plural, one {Ce livre sera retiré} other {Ces # livres seront retirés}} de votre bibliothèque. Cette action est définitive.",
+      "progress": "{completed} sur {total} demandes traitées…",
+      "deliveryResult": "{success, plural, one {# demande d’envoi acceptée} other {# demandes d’envoi acceptées}} · {failed, plural, one {# échec} other {# échecs}}. Suivez leur progression dans Livraisons.",
+      "deleteResult": "{success, plural, one {# livre supprimé} other {# livres supprimés}} · {failed, plural, one {# échec} other {# échecs}}."
+    },
+    "commands": {
+      "open": "Rechercher et naviguer",
+      "title": "Où souhaitez-vous aller ?",
+      "description": "Recherchez un livre, une page ou une action. Utilisez les flèches et Entrée pour choisir.",
+      "search": "Rechercher un livre, une page ou une action",
+      "results": "Pages, actions et livres",
+      "loading": "Recherche de livres…",
+      "failed": "Impossible de rechercher vos livres pour le moment.",
+      "retry": "Réessayer",
+      "empty": "Aucun résultat. Essayez un autre titre ou un nom de page.",
+      "addBooks": "Ajouter des livres",
+      "newDevice": "Nouvelle liseuse",
+      "createGateway": "Créer un accès Gateway",
+      "regenerate": "Régénérer mes codes",
+      "chooseGateway": "Choisissez le Gateway concerné. Ses anciens codes seront remplacés : vous devrez mettre à jour les deux codes dans votre module.",
+      "noGateway": "Vous n’avez pas encore de Gateway."
+    },
+    "onboarding": {
+      "title": "Vos premiers pas",
+      "description": "Quatre étapes pour préparer votre prochaine lecture.",
+      "dismiss": "Masquer ce guide",
+      "done": "Fait",
+      "unknown": "État indisponible pour le moment.",
+      "books": {
+        "title": "Ajoutez un livre",
+        "description": "Retrouvez vos livres dans votre bibliothèque.",
+        "action": "Ajouter des livres"
+      },
+      "devices": {
+        "title": "Ajoutez une liseuse",
+        "description": "Choisissez où recevoir vos livres.",
+        "action": "Ajouter une liseuse"
+      },
+      "deliveries": {
+        "title": "Livrez votre premier livre",
+        "description": "Envoyez un livre depuis votre bibliothèque, puis suivez son arrivée.",
+        "action": "Voir les livraisons"
+      },
+      "gateways": {
+        "title": "Créez un accès Gateway",
+        "description": "Reliez votre module personnel à votre compte.",
+        "action": "Créer un accès"
+      }
+    },
+    "home": {
+      "description": "Retrouvez vos livres et préparez votre prochaine lecture.",
+      "library": "Choisissez un livre ou ajoutez-en de nouveaux.",
+      "deliveries": "Suivez les envois vers vos liseuses.",
+      "devices": "Ajoutez et gérez vos liseuses.",
+      "sources": "Choisissez où rechercher des livres.",
+      "access": "Connectez votre module personnel.",
+      "settings": "Gérez vos préférences et votre espace disponible."
     }
   }
 }

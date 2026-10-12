@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Download, Eye } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DeliveryStatusBadge } from "@/components/app/deliveries/delivery-status-badge";
 import type { DeliveryJob } from "@/lib/types";
 
@@ -22,17 +23,11 @@ export function DeliveryActions({
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
       {job.download_url ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="min-w-0 whitespace-normal"
-          render={
-            <a href={job.download_url} target="_blank" rel="noreferrer">
-              <Download />
-              {downloadLabel}
-            </a>
-          }
-        />
+        <a href={job.download_url} target="_blank" rel="noreferrer"
+          className={cn(buttonVariants({ size: "sm", variant: "ghost" }), "min-w-0 whitespace-normal")}>
+          <Download />
+          {downloadLabel}
+        </a>
       ) : null}
       <Button
         size="sm"

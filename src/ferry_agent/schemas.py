@@ -64,9 +64,23 @@ class BookImport(BaseModel):
 ConversionPreset = Literal["reader_6in", "reader_7in_plus", "tablet"]
 
 
+class SearchFilters(BaseModel):
+    language: str | None = None
+    formats: list[str] | None = None
+    author: str | None = None
+    sources: list[str] | None = None
+    owned: bool | None = None
+    min_seeders: int | None = None
+    max_size_bytes: int | None = None
+
+
 class SearchRequest(BaseModel):
     query: str
     scope: list[str] | None = None
+    filters: SearchFilters | None = None
+    sort: Literal["relevance", "title", "author", "size", "seeders"] | None = None
+    limit: int | None = Field(default=None, ge=1, le=200)
+    offset: int = Field(default=0, ge=0)
 
 
 class Result(BaseModel):
@@ -303,6 +317,8 @@ class MailSettingsOut(BaseModel):
     sender_address: str
     reply_to: str | None
     allowed_domains: list[str]
+    sender_domain: str = ""
+    domains_allowed: list[str] = Field(default_factory=list)
     hourly_quota: int
     daily_quota: int
 
@@ -382,7 +398,7 @@ class DeliveryOut(BaseModel):
     def terminal(self) -> bool:
         """Email acceptance is final; cloud acceptance still needs an upload."""
         return self.status in (DeliveryStatus.delivered, DeliveryStatus.failed) or (
-            self.status == DeliveryStatus.sent and self.method == DeliveryMethod.email
+            self.status == DeliveryStatus.sent and self.method in (DeliveryMethod.email, DeliveryMethod.opds)
         )
 
 
@@ -390,3 +406,12 @@ class DeliveryPreview(BaseModel):
     """Format effectivement prévu, sans création de livraison."""
 
     target_format: str
+
+
+class MailTestRequest(BaseModel):
+    device_id: uuid.UUID | None = None
+
+
+class MailTestOut(BaseModel):
+    status: Literal["sent"] = "sent"
+    recipient: str

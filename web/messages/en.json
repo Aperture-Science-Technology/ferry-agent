@@ -232,6 +232,13 @@
     "noMatchDescription": "Widen or reset the filters to see your full collection again.",
     "resetFilters": "Reset filters",
     "filtersActive": "Filters active",
+    "filterOwned": "Already in your library",
+    "sortRelevance": "Relevance",
+    "sortSize": "Size",
+    "sortSeeders": "Number of people sharing the file",
+    "sourceGateway": "Gateway (personal access)",
+    "searchPagination": "Search result pages",
+    "searchPage": "Page {page}",
     "sortLabel": "Sort by",
     "sortAdded": "Recently added",
     "sortTitle": "Title",
@@ -322,7 +329,8 @@
       "dropbox": "Dropbox",
       "drive": "Google Drive",
       "browser_code": "Code in the browser",
-      "usb": "USB transfer"
+      "usb": "USB transfer",
+      "opds": "Reader catalog (OPDS)"
     },
     "methodUnavailable": {
       "smtp_not_configured": "Send-to-Kindle unavailable (SMTP not configured).",
@@ -720,9 +728,23 @@
       "delivered": "Delivered",
       "failed": "Failed",
       "unknown": "Unknown",
-      "sentEmail": "Sent — accepted by the mail relay"
+      "sentEmail": "Sent — accepted by the mail relay",
+      "catalogReady": "Catalog ready to browse"
     },
-    "statusHintSentEmail": "Accepted by the mail relay. Amazon does not confirm delivery: check your e-reader."
+    "statusHintSentEmail": "Accepted by the mail relay. Amazon does not confirm delivery: check your e-reader.",
+    "actionError": "Unable to complete this action. Refresh the delivery and try again.",
+    "filterQueued": "Queued",
+    "filterSent": "Sent / ready to collect",
+    "retryDelivery": "Retry delivery",
+    "cancelDelivery": "Cancel delivery",
+    "search": "Search for a book or reader",
+    "deviceFilter": "Filter by reader",
+    "allDevices": "All readers",
+    "pagination": "Delivery pages",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "pageNumber": "Page {page}",
+    "openCatalog": "Open catalog"
   },
   "deliveryDetail": {
     "title": "Delivery tracking",
@@ -1120,6 +1142,130 @@
       "hint": "Already have an account? Sign in. Otherwise, ask the person who invited you: they can send your invitation again.",
       "ctaSignIn": "Sign in",
       "ctaDocs": "Read the guide"
+    }
+  },
+  "systemHealth": {
+    "title": "System status",
+    "error": "Unable to load system status. Please try again.",
+    "retry": "Try again",
+    "loading": "Loading system status…",
+    "converters": "Book conversion (Calibre)",
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "mail": "Email delivery",
+    "storage": "Storage used",
+    "storageUsage": "{used, number} bytes of {quota, number} ({percent, number}%)",
+    "gateways": "Personal connections",
+    "gatewayCounts": "{total} total · {online} online · {pending} pending · {revoked} revoked",
+    "library": "Library",
+    "items": "{count} books",
+    "deliveries": "Deliveries over the last 7 days",
+    "deliveryCounts": "{queued} queued · {sent} sent or ready to collect · {delivered} delivered · {failed} failed",
+    "version": "Version",
+    "unknown": "Not available"
+  },
+  "kindleTest": {
+    "send": "Test Kindle address",
+    "sending": "Sending test…",
+    "sent": "Test accepted for {recipient}. Check your Kindle. Amazon does not confirm receipt.",
+    "error": "The test failed. Check your Kindle address and try again.",
+    "hint": "Approve the Ferry sender address in your Amazon settings before testing. Tests count towards your sending limit."
+  },
+  "enhance": {
+    "filters": {
+      "title": "Filters and sorting",
+      "description": "Narrow down the results, then close this panel to view them.",
+      "remove": "Remove filter: {label}",
+      "count": "{count, plural, =0 {No results} one {# result} other {# results}}",
+      "reset": "Reset",
+      "sort": "Sort by",
+      "sortBy": "Sort by {label} · {direction}",
+      "ascending": "Ascending",
+      "descending": "Descending",
+      "direction": "Sort direction",
+      "date": "Date",
+      "syncDate": "Last synced",
+      "status": "Status",
+      "device": "E-reader",
+      "brand": "Brand",
+      "cloud": "Cloud connection",
+      "all": "All",
+      "searchDevices": "Search e-readers",
+      "emptyTitle": "No matching e-readers",
+      "emptyDescription": "Remove a filter or change your search.",
+      "openLibrary": "Choose a book",
+      "currentPage": "Sorting applies to deliveries on the current page."
+    },
+    "quota": {
+      "usage": "{used} GB used out of {quota} GB",
+      "warning": "Your storage is almost full. Delete books to make room.",
+      "unavailable": "Available storage: information unavailable."
+    },
+    "bulk": {
+      "selected": "{count, plural, one {# book selected} other {# books selected}}",
+      "selectBook": "Select {title}",
+      "selectPage": "Select all on this page",
+      "deliver": "Deliver selection",
+      "delete": "Delete selection",
+      "deliverTitle": "Deliver {count, plural, one {# book} other {# books}}",
+      "deleteTitle": "Delete {count, plural, one {# book} other {# books}}?",
+      "deleteDescription": "{count, plural, one {This book will be removed} other {These # books will be removed}} from your library. This cannot be undone.",
+      "progress": "{completed} of {total} requests processed…",
+      "deliveryResult": "{success, plural, one {# delivery request accepted} other {# delivery requests accepted}} · {failed, plural, one {# failure} other {# failures}}. Track their progress in Deliveries.",
+      "deleteResult": "{success, plural, one {# book deleted} other {# books deleted}} · {failed, plural, one {# failure} other {# failures}}."
+    },
+    "commands": {
+      "open": "Search and navigate",
+      "title": "Where would you like to go?",
+      "description": "Search for a book, page or action. Use the arrow keys and Enter to choose.",
+      "search": "Search for a book, page or action",
+      "results": "Pages, actions and books",
+      "loading": "Searching books…",
+      "failed": "Your books could not be searched right now.",
+      "retry": "Retry",
+      "empty": "No results. Try another title or page name.",
+      "addBooks": "Add books",
+      "newDevice": "New e-reader",
+      "createGateway": "Create Gateway access",
+      "regenerate": "Regenerate my codes",
+      "chooseGateway": "Choose a Gateway. Its old codes will be replaced: you will need to update both codes in your module.",
+      "noGateway": "You do not have a Gateway yet."
+    },
+    "onboarding": {
+      "title": "Getting started",
+      "description": "Four steps to prepare your next read.",
+      "dismiss": "Hide this guide",
+      "done": "Done",
+      "unknown": "Status currently unavailable.",
+      "books": {
+        "title": "Add a book",
+        "description": "Keep your books together in your library.",
+        "action": "Add books"
+      },
+      "devices": {
+        "title": "Add an e-reader",
+        "description": "Choose where to receive your books.",
+        "action": "Add an e-reader"
+      },
+      "deliveries": {
+        "title": "Deliver your first book",
+        "description": "Send a book from your library, then track its arrival.",
+        "action": "View deliveries"
+      },
+      "gateways": {
+        "title": "Create Gateway access",
+        "description": "Link your personal module to your account.",
+        "action": "Create access"
+      }
+    },
+    "home": {
+      "description": "Find your books and prepare your next read.",
+      "library": "Choose a book or add new ones.",
+      "deliveries": "Track deliveries to your e-readers.",
+      "devices": "Add and manage your e-readers.",
+      "sources": "Choose where to search for books.",
+      "access": "Connect your personal module.",
+      "settings": "Manage your preferences and available storage."
     }
   }
 }

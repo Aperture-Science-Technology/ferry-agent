@@ -41,6 +41,8 @@ def _compute_tier(brand: DeviceBrand, model: str | None) -> DeliveryTier:
         return DeliveryTier.C
     if brand == DeviceBrand.tolino:
         return DeliveryTier.C
+    if brand == DeviceBrand.pocketbook:
+        return DeliveryTier.D
     return DeliveryTier.D
 
 

@@ -9,7 +9,21 @@ import jwt
 from fastapi import FastAPI
 from sqlalchemy import delete
 
-from ferry_agent.api import books, covers, deliveries, devices, downloads, gateways, health, mail, opds, sources, tierc, users
+from ferry_agent.api import (
+    books,
+    covers,
+    deliveries,
+    devices,
+    downloads,
+    gateways,
+    health,
+    mail,
+    opds,
+    sources,
+    system,
+    tierc,
+    users,
+)
 from ferry_agent.config import Settings, get_settings
 from ferry_agent.connectors.registry import log_startup
 from ferry_agent.db import async_session_factory
@@ -110,6 +124,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Ferry Agent", version="0.1.0", lifespan=lifespan)
 
+app.include_router(system.router)
 app.include_router(health.router)
 app.include_router(books.router)
 app.include_router(downloads.router)

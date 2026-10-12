@@ -10,11 +10,11 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import DateTime, cast, func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ferry_agent.config import get_settings
-from ferry_agent.models import DeliveryJob, DeliveryMethod, Device
+from ferry_agent.models import DeliveryJob, DeliveryMethod, Device, User
 
 _QUOTA_EXCEEDED_MESSAGE = "quota d'envois atteint, réessayez plus tard"
 
@@ -67,7 +67,16 @@ async def count_recent_email_sends(
     )
     if user_id is not None:
         stmt = stmt.join(Device, DeliveryJob.device_id == Device.id).where(Device.user_id == user_id)
-    result = await db.execute(stmt)
+    sends = func.jsonb_array_elements_text(User.mail_test_sends).table_valued("value").lateral()
+    tests = (
+        select(func.count())
+        .select_from(User)
+        .join(sends, true())
+        .where(cast(sends.c.value, DateTime(timezone=True)) >= since)
+    )
+    if user_id is not None:
+        tests = tests.where(User.id == user_id)
+    result = await db.execute(select(stmt.scalar_subquery() + tests.scalar_subquery()))
     return int(result.scalar_one_or_none() or 0)
 
 
