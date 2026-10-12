@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useUrlQuery, updateUrlQuery } from "@/lib/use-url-query";
 import { toast } from "sonner";
 import { Radio, Plus, Ban, Trash2, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -52,6 +53,8 @@ export function GatewaysView({
   initialGateways: Gateway[];
   gatewaysUnavailable: boolean;
 }) {
+  const urlQuery = useUrlQuery();
+  const tCommands = useTranslations("enhance.commands");
   const t = useTranslations("access");
   const tCreate = useTranslations("createAccess");
   const tCommon = useTranslations("common");
@@ -343,9 +346,17 @@ export function GatewaysView({
 
       <div data-testid="gateways-body">{body}</div>
 
+      <Dialog open={urlQuery.get("action") === "regenerate"} onOpenChange={open => !open && updateUrlQuery({ action: null })}>
+        <DialogContent><DialogHeader><DialogTitle>{tCommands("regenerate")}</DialogTitle><DialogDescription>{tCommands("chooseGateway")}</DialogDescription></DialogHeader>
+          <div className="flex max-h-80 flex-col gap-2 overflow-y-auto">
+            {gateways.map(gateway => <Button key={gateway.gateway_id} variant="outline" className="h-auto whitespace-normal break-words" onClick={() => { updateUrlQuery({ action: null }); void recreate(gateway); }}>{gateway.name}</Button>)}
+            {!gateways.length ? <><p>{tCommands("noGateway")}</p><Button onClick={() => updateUrlQuery({ action: "new" })}>{tCommands("createGateway")}</Button></> : null}
+          </div>
+        </DialogContent>
+      </Dialog>
       <CreateGatewayDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
+        open={createOpen || urlQuery.get("action") === "new"}
+        onOpenChange={open => { updateUrlQuery({ action: null }); setCreateOpen(open); }}
         onCreated={(gateway) => setGateways((prev) => [gateway, ...prev])}
       />
 

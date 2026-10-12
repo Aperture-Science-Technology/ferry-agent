@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FilterBar, SortColumns } from "@/components/app/filter-bar";
+import { useUrlQuery, updateUrlQuery } from "@/lib/use-url-query";
 import { toast } from "sonner";
 import {
   Tablet,
@@ -69,6 +71,14 @@ export function DevicesView({
   cloudLinkStatus?: "ok" | "error";
 }) {
   const t = useTranslations("devices");
+  const tFilters = useTranslations("enhance.filters");
+  const urlQuery = useUrlQuery();
+  const query = urlQuery.get("q") ?? "";
+  const brand = urlQuery.get("brand") ?? "all";
+  const cloud = urlQuery.get("cloud") ?? "all";
+  const sort = urlQuery.get("sort") ?? "device";
+  const descending = urlQuery.get("dir") === "desc";
+  function resetFilters() { updateUrlQuery({}, ["q", "brand", "cloud", "sort", "dir"]); }
   const tCloud = useTranslations("cloudLink");
   const tEditDevice = useTranslations("editDevice");
   const tNewDevice = useTranslations("newDevice");
@@ -244,6 +254,24 @@ export function DevicesView({
     ? deviceDisplayName(deleteTarget, brandLabel(deleteTarget.brand))
     : "";
 
+  const displayedDevices = devices.filter(device => (brand === "all" || device.brand === brand)
+    && (cloud === "all" || device.cloud_linked === (cloud === "linked"))
+    && `${displayName(device)} ${device.brand} ${device.model ?? ""}`.toLocaleLowerCase(locale).includes(query.trim().toLocaleLowerCase(locale)))
+    .sort((a, b) => {
+      const order = sort === "date" ? (Date.parse(a.last_synced_at ?? "") || 0) - (Date.parse(b.last_synced_at ?? "") || 0)
+        : sort === "brand" ? brandLabel(a.brand).localeCompare(brandLabel(b.brand), locale)
+        : sort === "cloud" ? Number(a.cloud_linked) - Number(b.cloud_linked)
+        : displayName(a).localeCompare(displayName(b), locale);
+      return descending ? -order : order;
+    });
+  const sortColumns = [{ value: "device", label: tFilters("device") }, { value: "brand", label: tFilters("brand") }, { value: "date", label: tFilters("syncDate") }, { value: "cloud", label: tFilters("cloud") }];
+  const filterBar = <FilterBar search={{ label: tFilters("searchDevices"), value: query }} count={displayedDevices.length} onChange={updateUrlQuery} onReset={resetFilters} fields={[
+    { key: "brand", label: tFilters("brand"), value: brand, defaultValue: "all", options: [{ value: "all", label: tFilters("all") }, ...Array.from(new Set(devices.map(device => device.brand))).map(value => ({ value, label: brandLabel(value) }))] },
+    { key: "cloud", label: tFilters("cloud"), value: cloud, defaultValue: "all", options: [{ value: "all", label: tFilters("all") }, { value: "linked", label: t("linked") }, { value: "unlinked", label: t("notLinked") }] },
+    { key: "sort", label: tFilters("sort"), value: sort, defaultValue: "device", options: sortColumns },
+    { key: "dir", label: tFilters("direction"), value: descending ? "desc" : "asc", defaultValue: "asc", options: [{ value: "asc", label: tFilters("ascending") }, { value: "desc", label: tFilters("descending") }] },
+  ]} />;
+
   const rows = (
     <Reveal>
       <ul
@@ -252,7 +280,7 @@ export function DevicesView({
         data-testid="devices-rows"
         className="flex min-w-0 flex-col"
       >
-        {devices.map((device) => {
+        {displayedDevices.map((device) => {
           const hasCustomName = Boolean(device.name?.trim());
           const name = displayName(device);
           const delivery = t(`tiers.${device.delivery_tier}`);
@@ -320,6 +348,8 @@ export function DevicesView({
         description={t("emptyDescription")}
         action={createAction}
       />
+    ) : displayedDevices.length === 0 ? (
+      <DeviceEmpty icon={Tablet} title={tFilters("emptyTitle")} description={tFilters("emptyDescription")} action={<Button variant="outline" onClick={resetFilters}>{tFilters("reset")}</Button>} />
     ) : (
       rows
     );
@@ -391,14 +421,16 @@ export function DevicesView({
               </p>
             </div>
 
+            {filterBar}
+            <SortColumns columns={sortColumns} value={sort} descending={descending} onChange={(sort, desc) => updateUrlQuery({ sort, dir: desc ? "desc" : "asc" })} />
             <div data-testid="devices-body">{listBody}</div>
           </section>
         </>
       )}
 
       <NewDeviceDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
+        open={createOpen || urlQuery.get("action") === "new"}
+        onOpenChange={open => { updateUrlQuery({ action: null }); setCreateOpen(open); }}
         onCreated={(device) => setDevices((prev) => [device, ...prev])}
       />
       <EditDeviceDialog

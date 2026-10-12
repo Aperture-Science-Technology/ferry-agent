@@ -1,5 +1,15 @@
 # Changelog
 
+## FA-UI-ENHANCE-01
+
+- Filtres communs à la bibliothèque, aux recherches, aux livraisons et aux liseuses : critères visibles et retirables, remise à zéro, résultats comptés et liens qui conservent les choix. Sur mobile, les filtres s’ouvrent dans un panneau.
+- Sélection de plusieurs livres, livraison avec un choix unique de liseuse et de format, suppression confirmée et bilan des réussites et des échecs. Trois demandes au maximum sont traitées simultanément ; une demande acceptée ne signifie pas que le livre est arrivé.
+- Recherche et navigation rapide avec Ctrl/Cmd + K ou le bouton d’en-tête : pages, ajout de livres et de liseuses, accès Gateway, nouveaux codes et détails des livres.
+- Espace utilisé dans Réglages avec jauge, pourcentage et alerte au-delà de 90 %, d’après le quota réel du compte.
+- Accueil `/app` avec quatre étapes guidées fondées sur les données du compte. Le masquage est mémorisé par compte et le guide disparaît une fois terminé.
+- Tri des liseuses et de la page de livraisons affichée, avec indication du sens du tri. États vides avec une action pour poursuivre.
+- Vérifications de régression et captures du harnais à 320, 390 et 1280 px, y compris les dialogues, la navigation clavier et le retour du focus.
+
 ## FA-DEVICE-DELIVERY-01
 
 - PocketBook et les autres liseuses du tier D disposent d’un catalogue OPDS ; le tier C peut aussi choisir ce mode. Les liens sont réutilisés par nom de liseuse, chiffrés avec la clé Fernet existante, et retirés du suivi après révocation. Un ancien accès conservé uniquement sous forme d’empreinte doit être révoqué explicitement avant de pouvoir retrouver un nouveau lien.
