@@ -3,7 +3,7 @@
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,7 +29,6 @@ from ferry_agent.services import library
 from ferry_agent.services.errors import FileTooLargeError, QuotaExceededError, UnknownFormatError
 from ferry_agent.services.file_validation import read_limited, sniff_ebook_format
 from ferry_agent.services.virustotal import is_known_malicious
-
 
 router = APIRouter(prefix="/api/v1/gateways", tags=["gateways"])
 
@@ -142,9 +141,13 @@ async def delete_gateway(
 
 @router.post("/poll", response_model=GatewayJobOut, responses={204: {"description": "Aucun travail disponible."}})
 async def poll_gateway(
+    x_gateway_version: str | None = Header(default=None, max_length=128),
     gateway: Gateway = Depends(get_gateway),
     db: AsyncSession = Depends(get_db),
 ) -> GatewayJobOut | Response:
+    if x_gateway_version is not None:
+        gateway.agent_version = x_gateway_version
+        await db.commit()
     job = await gateway_service.poll_job(db, gateway.id)
     if job is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)

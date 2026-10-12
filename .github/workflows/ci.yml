@@ -204,6 +204,12 @@ jobs:
       - name: UI render harness
         run: npm run test:ui-harness
 
+      - name: Ecosystem state suites
+        run: npm run test:ecosystem
+
+      - name: Ecosystem UI suites
+        run: npm run test:ecosystem-ui
+
       - name: Web ESLint
         run: npm run lint
 

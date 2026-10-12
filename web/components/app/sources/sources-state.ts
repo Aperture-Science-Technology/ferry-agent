@@ -6,6 +6,8 @@
 export type KnownSourceType =
   | "gutenberg"
   | "standard_ebooks"
+  | "open_library"
+  | "internet_archive"
   | "upload"
   | "torrent_gateway";
 
@@ -45,6 +47,8 @@ export type SourcesSurfaceState =
 export const OPEN_ACCESS_TYPES: readonly KnownSourceType[] = [
   "gutenberg",
   "standard_ebooks",
+  "open_library",
+  "internet_archive",
 ];
 
 export const LOCAL_TYPES: readonly KnownSourceType[] = [

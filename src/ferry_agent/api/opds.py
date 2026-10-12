@@ -1,11 +1,12 @@
 """Catalogue OPDS public (`/opds/...`) et gestion des jetons (`/api/v1/opds`).
 
-Auth catalogue : jeton dans le chemin (pas de Basic). Jeton inconnu ou
-revoque → 404 (pas 403). Rate limit par IP sur tout le prefixe `/opds/`.
+Auth catalogue : jeton dans le chemin ou mot de passe Basic. Jeton inutilisable → 404. Rate limit par IP sur tout le prefixe `/opds/`.
 """
 
 from __future__ import annotations
 
+import base64
+import binascii
 import uuid
 from pathlib import Path
 from urllib.parse import urlencode
@@ -28,6 +29,7 @@ from ferry_agent.services.library import user_facing_filename
 from ferry_agent.services.rate_limit import opds_rate_limiter
 
 catalog_router = APIRouter(prefix="/opds", tags=["opds"])
+_path_catalog_router = APIRouter()
 tokens_router = APIRouter(prefix="/api/v1/opds", tags=["opds-tokens"])
 
 
@@ -48,7 +50,19 @@ def _enforce_rate_limit(request: Request) -> None:
         )
 
 
-async def _require_token(raw_token: str, db: AsyncSession) -> OpdsToken:
+async def _require_token(raw_token: str, db: AsyncSession, request: Request) -> OpdsToken:
+    authorization = request.headers.get("authorization")
+    if authorization is not None:
+        try:
+            scheme, encoded = authorization.split(" ", 1)
+            if scheme.lower() != "basic":
+                raise ValueError
+            decoded = base64.b64decode(encoded, validate=True).decode("utf-8")
+            _username, raw_token = decoded.split(":", 1)
+        except (ValueError, UnicodeError, binascii.Error):
+            raise HTTPException(status_code=404, detail="introuvable") from None
+    if not raw_token:
+        raise HTTPException(status_code=404, detail="introuvable")
     row = await opds_service.resolve_token(db, raw_token)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="introuvable")
@@ -71,13 +85,20 @@ async def create_opds_token(
     db: AsyncSession = Depends(get_db),
 ) -> OpdsTokenCreated:
     payload = payload or OpdsTokenCreate()
-    row, raw = await opds_service.create_token(db, user.id, payload.label)
+    row, raw = await opds_service.create_token(
+        db, user.id, payload.label,
+        max_downloads=payload.max_downloads, expires_in_days=payload.expires_in_days,
+    )
     return OpdsTokenCreated(
         id=row.id,
         label=row.label,
         token=raw,
         url=opds_service.public_catalog_url(raw),
         created_at=row.created_at,
+        max_downloads=row.max_downloads,
+        downloads_count=row.downloads_count,
+        expires_at=row.expires_at,
+        last_used_at=row.last_used_at,
     )
 
 
@@ -115,7 +136,7 @@ async def revoke_opds_token(
 # ---------------------------------------------------------------------------
 
 
-@catalog_router.get(
+@_path_catalog_router.get(
     "/{token}",
     response_class=Response,
     responses=content_response(opds_service.NAV_CONTENT_TYPE),
@@ -126,11 +147,11 @@ async def opds_root(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _enforce_rate_limit(request)
-    await _require_token(token, db)
+    await _require_token(token, db, request)
     return _atom_response(opds_service.build_root_navigation(token), opds_service.NAV_CONTENT_TYPE)
 
 
-@catalog_router.get(
+@_path_catalog_router.get(
     "/{token}/all",
     response_class=Response,
     responses=content_response(opds_service.ACQ_CONTENT_TYPE),
@@ -142,7 +163,7 @@ async def opds_all(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _enforce_rate_limit(request)
-    row = await _require_token(token, db)
+    row = await _require_token(token, db, request)
     total = await opds_service.count_items(db, row.user_id)
     items = await opds_service.list_items_page(db, row.user_id, page=page)
     base = opds_service.catalog_base_url(token)
@@ -158,7 +179,7 @@ async def opds_all(
     return _atom_response(body, opds_service.ACQ_CONTENT_TYPE)
 
 
-@catalog_router.get(
+@_path_catalog_router.get(
     "/{token}/recent",
     response_class=Response,
     responses=content_response(opds_service.ACQ_CONTENT_TYPE),
@@ -170,7 +191,7 @@ async def opds_recent(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _enforce_rate_limit(request)
-    row = await _require_token(token, db)
+    row = await _require_token(token, db, request)
     total = await opds_service.count_items(db, row.user_id)
     items = await opds_service.list_items_page(
         db, row.user_id, page=page, order_by_added=True
@@ -188,7 +209,7 @@ async def opds_recent(
     return _atom_response(body, opds_service.ACQ_CONTENT_TYPE)
 
 
-@catalog_router.get(
+@_path_catalog_router.get(
     "/{token}/authors",
     response_class=Response,
     responses=content_response(opds_service.NAV_CONTENT_TYPE),
@@ -199,7 +220,7 @@ async def opds_authors(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _enforce_rate_limit(request)
-    row = await _require_token(token, db)
+    row = await _require_token(token, db, request)
     authors = await opds_service.list_distinct_authors(db, row.user_id)
     return _atom_response(
         opds_service.build_authors_navigation(token, authors),
@@ -207,7 +228,7 @@ async def opds_authors(
     )
 
 
-@catalog_router.get(
+@_path_catalog_router.get(
     "/{token}/author",
     response_class=Response,
     responses=content_response(opds_service.ACQ_CONTENT_TYPE),
@@ -220,7 +241,7 @@ async def opds_by_author(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _enforce_rate_limit(request)
-    row = await _require_token(token, db)
+    row = await _require_token(token, db, request)
     total = await opds_service.count_items(db, row.user_id, author=name)
     items = await opds_service.list_items_page(
         db, row.user_id, page=page, author=name
@@ -239,7 +260,7 @@ async def opds_by_author(
     return _atom_response(body, opds_service.ACQ_CONTENT_TYPE)
 
 
-@catalog_router.get(
+@_path_catalog_router.get(
     "/{token}/search",
     response_class=Response,
     responses=content_response(opds_service.ACQ_CONTENT_TYPE),
@@ -252,7 +273,7 @@ async def opds_search(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _enforce_rate_limit(request)
-    row = await _require_token(token, db)
+    row = await _require_token(token, db, request)
     query = q.strip()
     total = await opds_service.count_items(db, row.user_id, query=query or None)
     items = await opds_service.list_items_page(
@@ -272,7 +293,7 @@ async def opds_search(
     return _atom_response(body, opds_service.ACQ_CONTENT_TYPE)
 
 
-@catalog_router.get(
+@_path_catalog_router.get(
     "/{token}/opensearch.xml",
     response_class=Response,
     responses=content_response(opds_service.OPENSEARCH_CONTENT_TYPE),
@@ -283,14 +304,14 @@ async def opds_opensearch(
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     _enforce_rate_limit(request)
-    await _require_token(token, db)
+    await _require_token(token, db, request)
     return _atom_response(
         opds_service.build_opensearch_description(token),
         opds_service.OPENSEARCH_CONTENT_TYPE,
     )
 
 
-@catalog_router.get("/{token}/download/{item_id}", response_class=FileResponse, responses=FILE_RESPONSES)
+@_path_catalog_router.get("/{token}/download/{item_id}", response_class=FileResponse, responses=FILE_RESPONSES)
 async def opds_download(
     token: str,
     item_id: uuid.UUID,
@@ -298,7 +319,7 @@ async def opds_download(
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     _enforce_rate_limit(request)
-    row = await _require_token(token, db)
+    row = await _require_token(token, db, request)
     result = await db.execute(
         select(LibraryItem).where(
             LibraryItem.id == item_id,
@@ -308,6 +329,8 @@ async def opds_download(
     item = result.scalar_one_or_none()
     if item is None or not item.storage_path or not Path(item.storage_path).is_file():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="introuvable")
+    if not await opds_service.consume_download(db, row.id):
+        raise HTTPException(status_code=404, detail="introuvable")
     filename = user_facing_filename(item, item.original_format)
     return FileResponse(
         item.storage_path,
@@ -316,7 +339,7 @@ async def opds_download(
     )
 
 
-@catalog_router.get("/{token}/cover/{item_id}", response_class=Response, responses=COVER_RESPONSES)
+@_path_catalog_router.get("/{token}/cover/{item_id}", response_class=Response, responses=COVER_RESPONSES)
 async def opds_cover(
     token: str,
     item_id: uuid.UUID,
@@ -325,7 +348,7 @@ async def opds_cover(
 ) -> Response:
     """Sert la couverture via le meme proxy allowliste que `/api/v1/covers`."""
     _enforce_rate_limit(request)
-    row = await _require_token(token, db)
+    row = await _require_token(token, db, request)
     result = await db.execute(
         select(LibraryItem).where(
             LibraryItem.id == item_id,
@@ -353,3 +376,59 @@ async def opds_cover(
     if path.is_file():
         return FileResponse(path, media_type=content_type_for_filename(path.name))
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="introuvable")
+
+
+# Register Basic paths before /{token}, which would otherwise match /all, /recent, etc.
+@catalog_router.get("", response_class=Response, responses=content_response(opds_service.NAV_CONTENT_TYPE))
+@catalog_router.get("/", response_class=Response, include_in_schema=False)
+async def basic_root(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    return await opds_root(token="", request=request, db=db)
+
+
+@catalog_router.get("/all", response_class=Response, responses=content_response(opds_service.ACQ_CONTENT_TYPE))
+async def basic_all(request: Request, page: int = Query(1, ge=1), db: AsyncSession = Depends(get_db)) -> Response:
+    return await opds_all(token="", request=request, page=page, db=db)
+
+
+@catalog_router.get("/recent", response_class=Response, responses=content_response(opds_service.ACQ_CONTENT_TYPE))
+async def basic_recent(request: Request, page: int = Query(1, ge=1), db: AsyncSession = Depends(get_db)) -> Response:
+    return await opds_recent(token="", request=request, page=page, db=db)
+
+
+@catalog_router.get("/authors", response_class=Response, responses=content_response(opds_service.NAV_CONTENT_TYPE))
+async def basic_authors(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    return await opds_authors(token="", request=request, db=db)
+
+
+@catalog_router.get("/author", response_class=Response, responses=content_response(opds_service.ACQ_CONTENT_TYPE))
+async def basic_author(
+    request: Request, name: str = Query(..., min_length=1), page: int = Query(1, ge=1),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    return await opds_by_author(token="", request=request, name=name, page=page, db=db)
+
+
+@catalog_router.get("/search", response_class=Response, responses=content_response(opds_service.ACQ_CONTENT_TYPE))
+async def basic_search(
+    request: Request, q: str = Query(""), page: int = Query(1, ge=1), db: AsyncSession = Depends(get_db),
+) -> Response:
+    return await opds_search(token="", request=request, q=q, page=page, db=db)
+
+
+@catalog_router.get("/opensearch.xml", response_class=Response,
+                    responses=content_response(opds_service.OPENSEARCH_CONTENT_TYPE))
+async def basic_opensearch(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    return await opds_opensearch(token="", request=request, db=db)
+
+
+@catalog_router.get("/download/{item_id}", response_class=FileResponse, responses=FILE_RESPONSES)
+async def basic_download(item_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)) -> FileResponse:
+    return await opds_download(token="", item_id=item_id, request=request, db=db)
+
+
+@catalog_router.get("/cover/{item_id}", response_class=Response, responses=COVER_RESPONSES)
+async def basic_cover(item_id: uuid.UUID, request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    return await opds_cover(token="", item_id=item_id, request=request, db=db)
+
+
+catalog_router.include_router(_path_catalog_router)

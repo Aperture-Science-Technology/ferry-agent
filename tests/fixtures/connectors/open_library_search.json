@@ -1,0 +1,46 @@
+{
+  "docs": [
+    {
+      "key": "/works/OL66554W",
+      "title": "Pride and Prejudice",
+      "author_name": [
+        "Jane Austen"
+      ],
+      "ia": [
+        "prideandprejudic42671gut"
+      ],
+      "public_scan_b": true,
+      "language": [
+        "eng"
+      ],
+      "cover_i": 14348537
+    },
+    {
+      "key": "/works/OL82563W",
+      "title": "Harry Potter and the Philosopher's Stone",
+      "author_name": [
+        "J. K. Rowling"
+      ],
+      "ia": [
+        "harrypottersorce0000rowl"
+      ],
+      "public_scan_b": false,
+      "language": [
+        "eng"
+      ],
+      "cover_i": 1,
+      "ebook_access": "borrowable"
+    },
+    {
+      "key": "/works/OL99999W",
+      "title": "No IA identifier",
+      "author_name": [
+        "Anon"
+      ],
+      "public_scan_b": true,
+      "language": [
+        "eng"
+      ]
+    }
+  ]
+}

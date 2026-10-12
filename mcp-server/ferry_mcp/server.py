@@ -2318,6 +2318,54 @@ async def revoke_opds_token(token_id: str, confirm: bool = False) -> str:
     return f"Jeton OPDS révoqué: **{label}** (id: {token_id})."
 
 
+# Read resources and reusable guidance (registered before the HTTP entry point).
+
+async def _library_resource_page(page: int, limit: int) -> dict[str, Any]:
+    async with _client(_resolve_user_token()) as client:
+        response = await client.get("/api/v1/books", params={"page": page, "limit": limit})
+    _raise_for(response)
+    return response.json()
+
+
+@mcp.resource("library://items", mime_type="application/json")
+async def library_items_resource() -> dict[str, Any]:
+    """Première page de la bibliothèque (50 livres). Pages suivantes : library://items/{page}/{limit}."""
+    return await _library_resource_page(1, 50)
+
+
+@mcp.resource("library://items/{page}/{limit}", mime_type="application/json")
+async def library_items_page_resource(page: int, limit: int) -> dict[str, Any]:
+    """Bibliothèque paginée : page à partir de 1, de 1 à 200 livres par page."""
+    return await _library_resource_page(page, limit)
+
+
+@mcp.resource("devices://list", mime_type="application/json")
+async def devices_list_resource() -> list[dict[str, Any]]:
+    """Liseuses de l'utilisateur connecté."""
+    async with _client(_resolve_user_token()) as client:
+        response = await client.get("/api/v1/devices")
+    _raise_for(response)
+    return response.json()
+
+
+@mcp.prompt(name="parcours-kindle")
+def parcours_kindle() -> str:
+    """Préparer un envoi Kindle avec les outils existants et l'accord de l'utilisateur."""
+    return (
+        "1. Appeler list_devices pour choisir la Kindle de l'utilisateur. "
+        "Si nécessaire, proposer add_device.\n"
+        "2. Vérifier son adresse Send-to-Kindle avec get_device et get_profile. "
+        "Si elle manque, demander l'adresse à l'utilisateur puis utiliser update_device "
+        "ou update_profile selon son choix.\n"
+        "3. Appeler get_mail_settings pour obtenir l'adresse d'envoi à approuver chez Amazon. "
+        "Demander à l'utilisateur de l'ajouter aux adresses approuvées dans ses réglages Amazon "
+        "et d'indiquer quand cette étape est faite.\n"
+        "4. Présenter le livre et la liseuse choisis, puis attendre l'accord explicite de "
+        "l'utilisateur avant d'appeler deliver_to_kindle avec item_id, device_id et confirm=True. "
+        "Suivre les indications de cet outil et utiliser get_delivery_status pour suivre l'envoi."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Point d'entrée
 # ---------------------------------------------------------------------------

@@ -13,6 +13,8 @@ from ferry_agent.models import Source, SourceType
 DEFAULT_SOURCE_TYPES: tuple[SourceType, ...] = (
     SourceType.gutenberg,
     SourceType.standard_ebooks,
+    SourceType.open_library,
+    SourceType.internet_archive,
     SourceType.upload,
 )
 

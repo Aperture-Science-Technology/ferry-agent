@@ -41,6 +41,8 @@ import {
 const PROVIDER_KEYS: Record<KnownSourceType, string> = {
   gutenberg: "gutenberg",
   standard_ebooks: "standardEbooks",
+  open_library: "openLibrary",
+  internet_archive: "internetArchive",
   upload: "upload",
   torrent_gateway: "torrentGateway",
 };

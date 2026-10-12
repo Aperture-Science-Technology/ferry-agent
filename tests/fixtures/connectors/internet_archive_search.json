@@ -1,0 +1,45 @@
+{
+  "response": {
+    "docs": [
+      {
+        "identifier": "prideandprejudic42671gut",
+        "title": "Pride and Prejudice",
+        "creator": [
+          "Jane Austen"
+        ],
+        "licenseurl": null,
+        "rights": "Public domain in the USA.",
+        "collection": [
+          "gutenberg"
+        ],
+        "mediatype": "texts"
+      },
+      {
+        "identifier": "prideprejudice0000jane",
+        "title": "Pride and Prejudice (lending)",
+        "creator": [
+          "Jane Austen"
+        ],
+        "licenseurl": null,
+        "rights": null,
+        "collection": [
+          "internetarchivebooks",
+          "printdisabled",
+          "inlibrary"
+        ],
+        "mediatype": "texts",
+        "access-restricted-item": "true"
+      },
+      {
+        "identifier": "dogri-pride-and-humility-tract",
+        "title": "Dogri Pride And Humility Tract",
+        "creator": "Free Gospel Tracts",
+        "licenseurl": "https://creativecommons.org/publicdomain/mark/1.0/",
+        "collection": [
+          "folkscanomy"
+        ],
+        "mediatype": "texts"
+      }
+    ]
+  }
+}

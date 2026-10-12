@@ -141,6 +141,8 @@ class GatewayRevoke(BaseModel):
 
 
 class GatewayOut(BaseModel):
+    agent_version: str | None = None
+
     model_config = ConfigDict(from_attributes=True)
 
     gateway_id: uuid.UUID = Field(validation_alias="id")
@@ -232,10 +234,16 @@ class DownloadLinkOut(BaseModel):
 
 
 class OpdsTokenCreate(BaseModel):
+    max_downloads: int | None = Field(default=None, ge=1, le=2_147_483_647)
+    expires_in_days: int | None = Field(default=None, ge=1, le=36500)
     label: str = Field(default="Liseuse", min_length=1, max_length=120)
 
 
 class OpdsTokenCreated(BaseModel):
+    max_downloads: int | None = None
+    downloads_count: int = 0
+    expires_at: datetime | None = None
+    last_used_at: datetime | None = None
     id: uuid.UUID
     label: str
     token: str
@@ -244,6 +252,9 @@ class OpdsTokenCreated(BaseModel):
 
 
 class OpdsTokenOut(BaseModel):
+    max_downloads: int | None = None
+    downloads_count: int = 0
+    expires_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -413,5 +424,6 @@ class MailTestRequest(BaseModel):
 
 
 class MailTestOut(BaseModel):
-    status: Literal["sent"] = "sent"
+    # Preserve the published enum across Pydantic versions (MCP also uses this environment).
+    status: Literal["sent"] = Field(default="sent", json_schema_extra={"enum": ["sent"]})
     recipient: str

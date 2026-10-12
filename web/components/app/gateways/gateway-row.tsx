@@ -1,5 +1,7 @@
 "use client";
 
+import { GatewayVersion } from "./gateway-version";
+
 import { Ban, Loader2, Radio, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
@@ -208,6 +210,7 @@ export function GatewayActions({
  * Adaptation for N gateways while Pen draws a single module.
  */
 export function GatewayRow({
+  appVersion,
   gateway,
   now,
   recreating,
@@ -222,6 +225,7 @@ export function GatewayRow({
 }: {
   gateway: Gateway;
   now: number;
+  appVersion?: string | null;
   locale?: string;
   neverLabel?: string;
   recreating: boolean;
@@ -266,6 +270,7 @@ export function GatewayRow({
             </p>
           ) : null}
         </div>
+        <GatewayVersion installed={gateway.agent_version} available={appVersion} />
         {gateway.status === "pending" ? (
           <GatewayPairingState
             gateway={gateway}
