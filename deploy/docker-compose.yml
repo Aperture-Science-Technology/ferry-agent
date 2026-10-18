@@ -116,11 +116,11 @@ services:
       start_period: 20s
       retries: 3
     networks:
-      - ferry-net
+      - ferry-agent-network
       - ferry-int
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=infrastructure_infra-network"
+      - "traefik.docker.network=ferry-agent-network"
       - "traefik.http.routers.ferry-agent-core.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/api/v1`) || PathPrefix(`/c/`) || PathPrefix(`/opds`))"
       - "traefik.http.routers.ferry-agent-core.priority=100"
       - "traefik.http.routers.ferry-agent-core.entrypoints=websecure"
@@ -146,10 +146,10 @@ services:
       BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:?required}
       NEXT_PUBLIC_BACKEND_BASE: ${NEXT_PUBLIC_BACKEND_BASE:?required}
     networks:
-      - ferry-net
+      - ferry-agent-network
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=infrastructure_infra-network"
+      - "traefik.docker.network=ferry-agent-network"
       - "traefik.http.routers.ferry-agent-web.rule=Host(`ferry-agent.aperture-agency.org`)"
       - "traefik.http.routers.ferry-agent-web.entrypoints=websecure"
       - "traefik.http.routers.ferry-agent-web.tls=true"
@@ -180,10 +180,10 @@ services:
       MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-*}
       PORT: 8000
     networks:
-      - ferry-net
+      - ferry-agent-network
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=infrastructure_infra-network"
+      - "traefik.docker.network=ferry-agent-network"
       - "traefik.http.routers.ferry-agent-mcp.rule=Host(`ferry-agent.aperture-agency.org`) && (PathPrefix(`/mcp`) || PathPrefix(`/oauth`) || PathPrefix(`/authorize`) || PathPrefix(`/token`) || PathPrefix(`/register`) || PathPrefix(`/consent`) || PathPrefix(`/auth/callback`) || PathPrefix(`/.well-known/oauth-`) || PathPrefix(`/.well-known/openid-configuration`))"
       - "traefik.http.routers.ferry-agent-mcp.priority=500"
       - "traefik.http.routers.ferry-agent-mcp.entrypoints=websecure"
@@ -204,7 +204,7 @@ services:
       # Observé le 2026-10-07 : la config corrigée était invisible après reload.
       - /home/glados/projects/ferry-agent/deploy/nginx-bundle:/etc/nginx/conf.d:ro
     networks:
-      - ferry-net
+      - ferry-agent-network
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.ferry-agent-bundle.rule=Host(`ferry-agent.aperture-agency.org`) && PathPrefix(`/bundle`)"
@@ -215,9 +215,10 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
 
 networks:
-  ferry-net:
-    name: infrastructure_infra-network
-    external: true
+  # Réseau de pile : Traefik s'y raccorde, les services publics y vivent seuls.
+  ferry-agent-network:
+    name: ferry-agent-network
+    driver: bridge
   # Réseau privé de la pile : la base et les jobs ne sont plus joignables
   # depuis les autres applications. `internal` coupe toute sortie Internet.
   ferry-int:
