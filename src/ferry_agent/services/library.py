@@ -29,6 +29,22 @@ from ferry_agent.services.errors import QUOTA_EXCEEDED_MESSAGE, QuotaExceededErr
 
 logger = logging.getLogger(__name__)
 
+# Un fichier de bibliotheque doit rester lisible par les autres processus du
+# meme volume (sauvegarde, indexation, inspection). `tempfile.mkstemp` cree en
+# 0600 et `shutil.move` conserve ce mode lors d'une copie inter-volumes : les
+# livres importes via un connecteur arrivaient donc en 0600, ce qui faisait
+# echouer `tar` (Permission denied) lors de la sauvegarde hebdomadaire.
+LIBRARY_FILE_MODE = 0o644
+
+
+def _make_readable(path: Path) -> None:
+    """Force le mode des fichiers deposes dans la bibliotheque (best effort)."""
+    try:
+        path.chmod(LIBRARY_FILE_MODE)
+    except OSError:  # systeme de fichiers sans permissions POSIX
+        logger.warning("chmod %s impossible sur %s", oct(LIBRARY_FILE_MODE), path)
+
+
 
 def user_facing_filename(item: LibraryItem, target_format: str) -> str:
     """Deterministic public name; storage and conversion paths remain private."""
@@ -156,6 +172,7 @@ async def import_from_connector(
 
     dest = _library_storage_path(fetched.name)
     shutil.move(str(fetched), str(dest))
+    _make_readable(dest)
 
     source_type = SourceType(source_name)
     source = await _get_or_create_source(db, user_id, source_type)
@@ -198,6 +215,7 @@ async def import_from_upload(
     """Persiste un fichier deja fourni par l'utilisateur (upload) dans la bibliotheque."""
     dest = _library_storage_path(filename)
     dest.write_bytes(content)
+    _make_readable(dest)
 
     source_type = SourceType.upload
     source = await _get_or_create_source(db, user_id, source_type)
@@ -249,6 +267,7 @@ async def import_from_gateway(
     safe_name = Path(filename).name or f"gateway-book.{detected_format}"
     dest = _library_storage_path(safe_name)
     dest.write_bytes(content)
+    _make_readable(dest)
 
     source = await _get_or_create_source(db, user_id, SourceType.torrent_gateway)
 
